@@ -19,7 +19,7 @@ const BANNER_SLIDES = [
     },
 ];
 
-const AUTO_PLAY_MS = 2000;
+const AUTO_PLAY_MS = 1250;
 
 export default function HeroBanner() {
     const [current, setCurrent] = useState(0);
@@ -81,9 +81,7 @@ export default function HeroBanner() {
                             />
                         ))}
                     </div>
-                </div>
-
-                {/* Right peek slide */}
+                </div>                {/* Right peek slide */}
                 <div className="bms-slide-peek bms-peek-right" onClick={next}>
                     <img src={BANNER_SLIDES[nextIdx].image} alt={BANNER_SLIDES[nextIdx].alt} draggable={false} />
                     <div className="bms-peek-dim" />

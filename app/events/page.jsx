@@ -1,3 +1,4 @@
+import HeroBanner from "@/components/HeroBanner";
 import Link from "next/link";
 
 const CATEGORIES = ["All", "Business", "Technology", "Finance", "Innovation", "Leadership"];
@@ -24,29 +25,17 @@ export default function EventsPage() {
     return (
         <main>
             {/* Page Hero Banner */}
-            <div style={{
-                paddingTop: "140px",
-                paddingBottom: "4rem",
-                background: "linear-gradient(135deg, #000000 0%, #111111 50%, #FDB913 100%)",
-                textAlign: "center",
-                color: "white",
-                position: "relative",
-                overflow: "hidden",
-            }}>
-                {/* Dot pattern overlay */}
-                <div style={{
-                    position: "absolute", inset: 0,
-                    backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                }} />
-                <div style={{ position: "relative", zIndex: 1 }}>
-                    <h1 style={{ fontSize: "3.5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
-                        Events
-                    </h1>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "rgba(255,255,255,0.7)", fontSize: "0.95rem" }}>
-                        <Link href="/" style={{ color: "rgba(255,255,255,0.7)", transition: "color 0.2s" }}>Home</Link>
+            <div style={{ paddingTop: "102px" }}>
+                <HeroBanner />
+            </div>
+
+            {/* Breadcrumb row */}
+            <div style={{ background: "#000", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                <div className="container">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", fontWeight: 600 }}>
+                        <Link href="/" style={{ color: "rgba(255,255,255,0.5)", transition: "color 0.2s" }}>Home</Link>
                         <span>›</span>
-                        <span style={{ color: "white" }}>Events</span>
+                        <span style={{ color: "#FDB913" }}>Events</span>
                     </div>
                 </div>
             </div>
@@ -77,7 +66,7 @@ export default function EventsPage() {
                     {/* 5 × 3 GRID */}
                     <div className="event-grid">
                         {EVENTS.map((event) => (
-                            <div className="event-card" key={event.id}>
+                            <Link href={`/events/${event.id}`} key={event.id} className="event-card">
                                 <img src={event.img} alt={event.title} className="event-card-img" />
                                 <div className="event-card-body">
                                     <span className="event-card-tag">{event.category}</span>
@@ -86,7 +75,7 @@ export default function EventsPage() {
                                     <p className="event-card-meta">📍 {event.location}</p>
                                     <button className="event-card-btn">Get Tickets</button>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

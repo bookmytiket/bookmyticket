@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const COMING_SOON_EVENTS = [
     {
@@ -125,7 +126,7 @@ export default function ComingSoonEvents() {
                 {/* Main Card */}
                 <div style={{
                     display: "flex",
-                    borderRadius: "20px",
+                    borderRadius: "16px",
                     overflow: "hidden",
                     boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
                     border: "1px solid #f0f0f0",
@@ -266,25 +267,29 @@ export default function ComingSoonEvents() {
                                 </div>
                             </div>
 
+
                             {/* Book Now Button */}
-                            <button style={{
-                                background: "#f97316",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: "10px",
-                                padding: "12px 28px",
-                                fontSize: "14px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                boxShadow: "0 4px 14px rgba(249,115,22,0.35)",
-                                transition: "all 0.2s",
-                                letterSpacing: "0.02em",
-                            }}
-                                onMouseEnter={e => { e.currentTarget.style.background = "#ea6c0a"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = "#f97316"; e.currentTarget.style.transform = "translateY(0)"; }}
-                            >
-                                Book Now
-                            </button>
+                            <Link href={`/events/${event.id}`}>
+                                <button style={{
+                                    background: "#f97316",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "10px",
+                                    padding: "12px 28px",
+                                    fontSize: "14px",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 14px rgba(249,115,22,0.35)",
+                                    transition: "all 0.2s",
+                                    letterSpacing: "0.02em",
+                                    width: "fit-content"
+                                }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "#ea6c0a"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "#f97316"; e.currentTarget.style.transform = "translateY(0)"; }}
+                                >
+                                    Book Now
+                                </button>
+                            </Link>
                         </div>
 
                         {/* Prev / Next arrows */}

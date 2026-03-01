@@ -2452,8 +2452,102 @@ nextjs-portal {
   border-color: #000;
 }
 
-@media (max-width: 768px) {
-  .slider-grid {
+/* ═══════════════════════════════════════════
+   EVENTS PAGE STYLES 
+═══════════════════════════════════════════ */
+.container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  width: 100%;
+}
+
+.event-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.event-card-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.event-card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.event-card-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #FDB913;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.event-card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.event-card-meta {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.event-card-btn {
+  margin-top: auto;
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 12px;
+  background: #FDB913;
+  color: black;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.event-card-btn:hover {
+  background: #e5a711;
+}
+
+@media (max-width: 1024px) {
+  .event-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .event-grid {
     grid-template-columns: 1fr;
   }
 }

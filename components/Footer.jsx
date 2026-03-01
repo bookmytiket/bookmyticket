@@ -51,7 +51,7 @@ export default function Footer() {
                     maxWidth: "1240px", margin: "0 auto",
                     padding: "60px 20px 40px",
                     display: "grid",
-                    gridTemplateColumns: "1.4fr 1fr 1.3fr 1.4fr",
+                    gridTemplateColumns: "1.4fr 1fr 1.3fr",
                     gap: "40px",
                 }}>
 
@@ -132,26 +132,7 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Col 4 — Gallery grid */}
-                    <div>
-                        <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#ffffff", margin: "0 0 20px" }}>
-                            Our Recent Event Gallery
-                        </h4>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
-                            {GALLERY_IMGS.map((img, i) => (
-                                <div key={i} style={{
-                                    borderRadius: "8px", overflow: "hidden",
-                                    aspectRatio: "1", cursor: "pointer",
-                                    transition: "opacity 0.2s",
-                                }}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = "0.75"}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                                >
-                                    <img src={img} alt={`Memory ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+
                 </div>
 
                 {/* Divider */}

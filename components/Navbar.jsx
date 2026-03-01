@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 const SUBNAV_LINKS = [
-  { href: "/#events", label: "Events" },
+  { href: "/events", label: "Events" },
   { href: "/#rsvp", label: "RSVP" },
   { href: "/movies", label: "Movies" },
 ];
@@ -188,12 +188,19 @@ export default function Navbar() {
     }
   };
 
+  const handleEventsClick = (e) => {
+    if (pathname === "/events") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
         <div className="header-top">
           <Link href="/" className="header-logo" onClick={handleLogoClick}>
-            <img src="/logo.png" alt="Logo" style={{ height: "45px", width: "auto", display: "block" }} />
+            <img src="/logo.png" alt="Logo" style={{ height: "65px", width: "auto", display: "block" }} />
           </Link>
 
           <div className="nav-search-wrap">
@@ -233,16 +240,20 @@ export default function Navbar() {
                   {user.name[0]}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <Link href="/login" className="nav-action-signin">Sign In</Link>
+            )}
           </div>
         </div>
 
 
-        {isHome && (
+        {(isHome || pathname === "/events") && (
           <div className="header-subnav">
             <div className="header-subnav-inner">
               {SUBNAV_LINKS.map(({ href, label }) => (
-                <a key={label} href={href} className="subnav-link">{label}</a>
+                <Link key={label} href={href} className="subnav-link" onClick={label === "Events" ? handleEventsClick : undefined}>
+                  {label}
+                </Link>
               ))}
 
               <span className="subnav-sep" />

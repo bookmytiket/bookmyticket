@@ -3,14 +3,13 @@ import React, { useState, useEffect } from 'react';
 import ScrollingBanner from '@/components/ScrollingBanner';
 import GridScan from '@/components/GridScan';
 import HeroBanner from '@/components/HeroBanner';
+import VideoHeroBanner from '@/components/VideoHeroBanner';
 import FeaturedEvents from '@/components/FeaturedEvents';
 import ComingSoonEvents from '@/components/ComingSoonEvents';
 import TrendingEvents from '@/components/TrendingEvents';
 import PopularEvents from '@/components/PopularEvents';
 import ExclusiveEvents from '@/components/ExclusiveEvents';
 import VirtualEvents from '@/components/VirtualEvents';
-import TeamSection from '@/components/TeamSection';
-import Testimonials from '@/components/Testimonials';
 import RecentMemories from '@/components/RecentMemories';
 import Sponsors from '@/components/Sponsors';
 import Footer from '@/components/Footer';
@@ -342,9 +341,14 @@ export default function Home() {
           }
         `}</style>
 
-        {/* 1) Hero Banner */}
+        {/* 0) Hero Banner (Carousel) */}
         <div style={{ width: '100%' }}>
           <HeroBanner />
+        </div>
+
+        {/* 1) Video Hero Banner */}
+        <div style={{ width: '100%' }}>
+          <VideoHeroBanner />
         </div>
 
         {/* 2) Featured Events */}
@@ -377,32 +381,22 @@ export default function Home() {
           <VirtualEvents />
         </div>
 
-        {/* 8) Business Breakthrough Team */}
-        <div style={{ width: '100%' }}>
-          <TeamSection />
-        </div>
-
-        {/* 9) Testimonials */}
-        <div style={{ width: '100%' }}>
-          <Testimonials />
-        </div>
-
-        {/* 10) Our Official Sponsors */}
-        <div style={{ width: '100%' }}>
-          <Sponsors />
-        </div>
-
-        {/* Additional Sections */}
+        {/* 8) Recent Memories */}
         <div style={{ width: '100%' }}>
           <RecentMemories />
         </div>
 
-        {/* Ticket Image Section */}
-        <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center', background: '#fff' }}>
+        {/* 9) Our Official Sponsors */}
+        <div style={{ width: '100%' }}>
+          <Sponsors />
+        </div>
+
+        {/* Dynamic Ticket Element before Footer */}
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
           <img
             src="/ticket.png"
-            alt="Ticket"
-            style={{ maxWidth: '1240px', width: '90%', height: 'auto', borderRadius: '12px' }}
+            alt="Floating Ticket"
+            style={{ width: '450px', height: 'auto', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.1))' }}
           />
         </div>
 
