@@ -1040,28 +1040,346 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 "use client";
 ;
 ;
-const BANNER_SLIDES = [
+const FEATURES = [
+    {
+        num: "01",
+        title: "Create Event Page",
+        sub: "Do-it-yourself approach"
+    },
+    {
+        num: "02",
+        title: "Easy Sign-Up",
+        sub: "Super quick activation"
+    },
+    {
+        num: "03",
+        title: "Simple Registration",
+        sub: "No hassle, no paperwork"
+    },
+    {
+        num: "04",
+        title: "Quick Setup",
+        sub: "No setup cost, zero fee"
+    }
+];
+/* Each slide can have either `image` (URL string) or `custom` (JSX / render fn) */ const BANNER_SLIDES = [
     {
         id: 1,
-        image: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1400&h=300&fit=crop",
+        image: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1400&h=300&fit=crop&auto=format",
         alt: "Ani Vs U1 Singalong Event"
     },
     {
         id: 2,
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1400&h=300&fit=crop",
+        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1400&h=300&fit=crop&auto=format",
         alt: "Rapport 26 Unplugged Concert"
     },
     {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1400&h=300&fit=crop",
+        /* ── Promo / sign-up banner slide ── */ id: 3,
+        custom: true
+    },
+    {
+        id: 4,
+        image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1400&h=300&fit=crop&auto=format",
         alt: "Tech Innovation Panel 2026"
     }
 ];
-const AUTO_PLAY_MS = 1250;
+const AUTO_PLAY_MS = 3500;
+/* ── Small helper: renders the promo banner content ── */ function PromoSlide() {
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        style: {
+            width: "100%",
+            height: "100%",
+            background: "linear-gradient(120deg,#0b0727 0%,#1a0640 40%,#2d0a6b 70%,#0b0727 100%)",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 5%",
+            gap: "48px",
+            position: "relative",
+            overflow: "hidden",
+            boxSizing: "border-box"
+        },
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    position: "absolute",
+                    width: "300px",
+                    height: "300px",
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle,#ff2d7840 0%,transparent 70%)",
+                    top: "-60px",
+                    left: "-60px",
+                    pointerEvents: "none"
+                }
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 51,
+                columnNumber: 13
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    position: "absolute",
+                    width: "350px",
+                    height: "350px",
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle,#7c3aed30 0%,transparent 70%)",
+                    bottom: "-80px",
+                    right: "10%",
+                    pointerEvents: "none"
+                }
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 52,
+                columnNumber: 13
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    flex: "0 0 auto",
+                    minWidth: "200px"
+                },
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        style: {
+                            margin: "0 0 4px",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            letterSpacing: "3px",
+                            color: "#f84464",
+                            textTransform: "uppercase"
+                        },
+                        children: "It's time to"
+                    }, void 0, false, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 56,
+                        columnNumber: 17
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                        style: {
+                            margin: 0,
+                            lineHeight: 0.9,
+                            fontWeight: 900,
+                            textTransform: "uppercase",
+                            fontSize: "clamp(36px,5vw,60px)",
+                            letterSpacing: "-2px",
+                            background: "linear-gradient(90deg,#fff 50%,#f84464 100%)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent"
+                        },
+                        children: [
+                            "ROCK",
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
+                                fileName: "[project]/components/HeroBanner.jsx",
+                                lineNumber: 63,
+                                columnNumber: 25
+                            }, this),
+                            "Events"
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 57,
+                        columnNumber: 17
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        style: {
+                            margin: "6px 0 0",
+                            fontStyle: "italic",
+                            fontSize: "16px",
+                            fontWeight: 700,
+                            color: "#e2a0ff"
+                        },
+                        children: "Calendar"
+                    }, void 0, false, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 65,
+                        columnNumber: 17
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 55,
+                columnNumber: 13
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    width: "1px",
+                    alignSelf: "stretch",
+                    background: "rgba(255,255,255,0.1)",
+                    flexShrink: 0
+                }
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 69,
+                columnNumber: 13
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
+                style: {
+                    listStyle: "none",
+                    padding: 0,
+                    margin: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    flex: 1
+                },
+                children: FEATURES.map((f)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
+                        style: {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px"
+                        },
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                style: {
+                                    fontWeight: 900,
+                                    fontSize: "11px",
+                                    color: "#f84464",
+                                    minWidth: "22px"
+                                },
+                                children: f.num
+                            }, void 0, false, {
+                                fileName: "[project]/components/HeroBanner.jsx",
+                                lineNumber: 75,
+                                columnNumber: 25
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        style: {
+                                            margin: 0,
+                                            fontWeight: 700,
+                                            fontSize: "11px",
+                                            color: "#e2d9f3",
+                                            letterSpacing: "1px",
+                                            textTransform: "uppercase",
+                                            lineHeight: 1
+                                        },
+                                        children: f.title
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/HeroBanner.jsx",
+                                        lineNumber: 77,
+                                        columnNumber: 29
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        style: {
+                                            margin: 0,
+                                            fontSize: "10px",
+                                            color: "#9d8ec2"
+                                        },
+                                        children: f.sub
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/HeroBanner.jsx",
+                                        lineNumber: 78,
+                                        columnNumber: 29
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/HeroBanner.jsx",
+                                lineNumber: 76,
+                                columnNumber: 25
+                            }, this)
+                        ]
+                    }, f.num, true, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 74,
+                        columnNumber: 21
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 72,
+                columnNumber: 13
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    flex: "0 0 auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "14px"
+                },
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    style: {
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "linear-gradient(90deg,#f84464,#c026d3)",
+                        padding: "10px 22px",
+                        borderRadius: "50px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        letterSpacing: "2px",
+                        textTransform: "uppercase",
+                        color: "#fff",
+                        whiteSpace: "nowrap",
+                        boxShadow: "0 4px 20px rgba(248,68,100,0.4)"
+                    },
+                    children: "🎟 All Events Start Here"
+                }, void 0, false, {
+                    fileName: "[project]/components/HeroBanner.jsx",
+                    lineNumber: 86,
+                    columnNumber: 17
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 85,
+                columnNumber: 13
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/components/HeroBanner.jsx",
+        lineNumber: 40,
+        columnNumber: 9
+    }, this);
+}
+/* ── Helper: thumbnail preview for peek slides ── */ function SlideThumbnail({ slide }) {
+    if (slide.custom) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            style: {
+                width: "100%",
+                height: "100%",
+                background: "linear-gradient(120deg,#0b0727,#2d0a6b)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            },
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                style: {
+                    color: "#e2a0ff",
+                    fontWeight: 900,
+                    fontSize: "14px",
+                    letterSpacing: "2px",
+                    textTransform: "uppercase"
+                },
+                children: "🎟 Events"
+            }, void 0, false, {
+                fileName: "[project]/components/HeroBanner.jsx",
+                lineNumber: 109,
+                columnNumber: 17
+            }, this)
+        }, void 0, false, {
+            fileName: "[project]/components/HeroBanner.jsx",
+            lineNumber: 104,
+            columnNumber: 13
+        }, this);
+    }
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+        src: slide.image,
+        alt: slide.alt,
+        draggable: false,
+        crossOrigin: "anonymous",
+        style: {
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+        }
+    }, void 0, false, {
+        fileName: "[project]/components/HeroBanner.jsx",
+        lineNumber: 113,
+        columnNumber: 12
+    }, this);
+}
 function HeroBanner() {
     const [current, setCurrent] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(0);
     const [sliding, setSliding] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [dir, setDir] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(1); // 1 = left, -1 = right
+    const [dir, setDir] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(1);
     const total = BANNER_SLIDES.length;
     const timerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const [isHovered, setIsHovered] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -1098,6 +1416,7 @@ function HeroBanner() {
     ]);
     const prevIdx = (current - 1 + total) % total;
     const nextIdx = (current + 1) % total;
+    const slide = BANNER_SLIDES[current];
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "bms-banner-wrap",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1109,161 +1428,85 @@ function HeroBanner() {
                     className: "bms-slide-peek bms-peek-left",
                     onClick: prev,
                     children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-                            src: BANNER_SLIDES[prevIdx].image,
-                            alt: BANNER_SLIDES[prevIdx].alt,
-                            draggable: false
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(SlideThumbnail, {
+                            slide: BANNER_SLIDES[prevIdx]
                         }, void 0, false, {
                             fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 66,
+                            lineNumber: 159,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "bms-peek-dim"
                         }, void 0, false, {
                             fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 67,
+                            lineNumber: 160,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/HeroBanner.jsx",
-                    lineNumber: 65,
+                    lineNumber: 158,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: `bms-slide-main ${sliding ? dir === 1 ? "slide-exit-left" : "slide-exit-right" : "slide-enter"}`,
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-                            src: BANNER_SLIDES[current].image,
-                            alt: BANNER_SLIDES[current].alt,
-                            draggable: false
-                        }, void 0, false, {
-                            fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 72,
-                            columnNumber: 21
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "bms-dots",
-                            children: BANNER_SLIDES.map((_, i)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                    className: `bms-dot${i === current ? " active" : ""}`,
-                                    onClick: (e)=>{
-                                        e.stopPropagation();
-                                        goTo(i, i > current ? 1 : -1);
-                                    },
-                                    "aria-label": `Slide ${i + 1}`
-                                }, i, false, {
-                                    fileName: "[project]/components/HeroBanner.jsx",
-                                    lineNumber: 76,
-                                    columnNumber: 29
-                                }, this))
-                        }, void 0, false, {
-                            fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 74,
-                            columnNumber: 21
-                        }, this)
-                    ]
-                }, void 0, true, {
+                    children: slide.custom ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PromoSlide, {}, void 0, false, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 166,
+                        columnNumber: 25
+                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                        src: slide.image,
+                        alt: slide.alt,
+                        draggable: false,
+                        crossOrigin: "anonymous",
+                        style: {
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover"
+                        }
+                    }, void 0, false, {
+                        fileName: "[project]/components/HeroBanner.jsx",
+                        lineNumber: 168,
+                        columnNumber: 25
+                    }, this)
+                }, void 0, false, {
                     fileName: "[project]/components/HeroBanner.jsx",
-                    lineNumber: 71,
+                    lineNumber: 164,
                     columnNumber: 17
                 }, this),
-                "                ",
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "bms-slide-peek bms-peek-right",
                     onClick: next,
                     children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-                            src: BANNER_SLIDES[nextIdx].image,
-                            alt: BANNER_SLIDES[nextIdx].alt,
-                            draggable: false
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(SlideThumbnail, {
+                            slide: BANNER_SLIDES[nextIdx]
                         }, void 0, false, {
                             fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 86,
+                            lineNumber: 176,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "bms-peek-dim"
                         }, void 0, false, {
                             fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 87,
+                            lineNumber: 177,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/HeroBanner.jsx",
-                    lineNumber: 85,
-                    columnNumber: 17
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                    className: "bms-arrow bms-arrow-left",
-                    onClick: prev,
-                    "aria-label": "Previous slide",
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
-                        width: "16",
-                        height: "16",
-                        viewBox: "0 0 24 24",
-                        fill: "none",
-                        stroke: "currentColor",
-                        strokeWidth: "2.5",
-                        strokeLinecap: "round",
-                        strokeLinejoin: "round",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("polyline", {
-                            points: "15 18 9 12 15 6"
-                        }, void 0, false, {
-                            fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 93,
-                            columnNumber: 25
-                        }, this)
-                    }, void 0, false, {
-                        fileName: "[project]/components/HeroBanner.jsx",
-                        lineNumber: 92,
-                        columnNumber: 21
-                    }, this)
-                }, void 0, false, {
-                    fileName: "[project]/components/HeroBanner.jsx",
-                    lineNumber: 91,
-                    columnNumber: 17
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                    className: "bms-arrow bms-arrow-right",
-                    onClick: next,
-                    "aria-label": "Next slide",
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
-                        width: "16",
-                        height: "16",
-                        viewBox: "0 0 24 24",
-                        fill: "none",
-                        stroke: "currentColor",
-                        strokeWidth: "2.5",
-                        strokeLinecap: "round",
-                        strokeLinejoin: "round",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("polyline", {
-                            points: "9 18 15 12 9 6"
-                        }, void 0, false, {
-                            fileName: "[project]/components/HeroBanner.jsx",
-                            lineNumber: 98,
-                            columnNumber: 25
-                        }, this)
-                    }, void 0, false, {
-                        fileName: "[project]/components/HeroBanner.jsx",
-                        lineNumber: 97,
-                        columnNumber: 21
-                    }, this)
-                }, void 0, false, {
-                    fileName: "[project]/components/HeroBanner.jsx",
-                    lineNumber: 96,
+                    lineNumber: 175,
                     columnNumber: 17
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/components/HeroBanner.jsx",
-            lineNumber: 59,
+            lineNumber: 152,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/components/HeroBanner.jsx",
-        lineNumber: 58,
+        lineNumber: 151,
         columnNumber: 9
     }, this);
 }

@@ -9,7 +9,6 @@
   "/events/page": "/events",
   "/favicon.ico/route": "/favicon.ico",
   "/icon.png/route": "/icon.png",
-  "/login/page": "/login",
   "/page": "/",
   "/rsvp/page": "/rsvp",
   "/signin/page": "/signin"

@@ -4,6 +4,6 @@ import Navbar from "@/components/Navbar";
 
 export default function ConditionalNavbar() {
     const pathname = usePathname();
-    if (pathname?.startsWith("/admin") || pathname?.startsWith("/organiser")) return null;
+    if (pathname?.startsWith("/admin") || pathname?.startsWith("/organiser") || pathname?.startsWith("/signin") || pathname?.startsWith("/login")) return null;
     return <Navbar />;
 }
