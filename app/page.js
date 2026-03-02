@@ -325,6 +325,15 @@ function SpotlightBanner({ events }) {
 }
 
 export default function Home() {
+  const [newOrgEvents, setNewOrgEvents] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('organiser_events');
+    if (saved) {
+      setNewOrgEvents(JSON.parse(saved));
+    }
+  }, []);
+
   return (
     <>
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '102px' }}>
@@ -345,6 +354,38 @@ export default function Home() {
         <div style={{ width: '100%' }}>
           <HeroBanner />
         </div>
+
+        {/* Dynamic: Newly Published by Organisers */}
+        {newOrgEvents.length > 0 && (
+          <section style={{ padding: "60px 0", backgroundColor: "#f8fafc", width: "100%", display: "flex", justifyContent: "center" }}>
+            <div style={{ maxWidth: "1240px", width: "100%", padding: "0 20px" }}>
+              <h2 style={{ fontSize: "28px", fontWeight: 800, marginBottom: "8px", color: "#1e293b" }}>Newly Published Events</h2>
+              <p style={{ color: "#64748b", fontSize: "15px", marginBottom: "32px" }}>Directly from our verified event organisers</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+                {newOrgEvents.map(ev => (
+                  <div key={ev.id} style={{ backgroundColor: "#fff", borderRadius: "20px", overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", transition: "0.2s" }}>
+                    <div style={{ position: "relative", height: "180px" }}>
+                      <img src={ev.img} alt={ev.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <div style={{ position: "absolute", top: "12px", right: "12px", background: "rgba(255,255,255,0.9)", color: "#f84464", padding: "4px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 800 }}>LIVE</div>
+                    </div>
+                    <div style={{ padding: "20px" }}>
+                      <p style={{ margin: "0 0 8px", fontSize: "11px", fontWeight: 800, color: "#f84464", letterSpacing: "1px" }}>{ev.type.toUpperCase()}</p>
+                      <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 6px", color: "#0f172a" }}>{ev.title}</h3>
+                      <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px" }}>{ev.venue || "Online Access"}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
+                        <div>
+                          <p style={{ margin: 0, fontSize: "10px", color: "#94a3b8", fontWeight: 700 }}>STARTING FROM</p>
+                          <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>{ev.date}</p>
+                        </div>
+                        <button style={{ padding: "10px 18px", background: "linear-gradient(90deg,#f84464,#ef4444)", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(248,68,100,0.2)" }}>Details</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* 1) Video Hero Banner */}
         <div style={{ width: '100%' }}>

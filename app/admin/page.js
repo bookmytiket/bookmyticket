@@ -15,13 +15,43 @@ export default function AdminHomePage() {
         { id: 1, username: "john_doe", email: "john@example.com", status: "Active", balance: "₹1,200" },
         { id: 2, username: "event_pro", email: "pro@events.com", status: "Banned", balance: "₹0" },
         { id: 3, username: "new_guy", email: "new@example.com", status: "KYC Pending", balance: "₹500" },
+        { id: 4, username: "tech_fest", email: "tech@university.edu", status: "Active", balance: "₹25,000" },
+        { id: 5, username: "local_gigs", email: "gigs@local.com", status: "Active", balance: "₹3,450" },
+        { id: 6, username: "scammer_hub", email: "scam@redflag.com", status: "Banned", balance: "₹0" },
+        { id: 7, username: "pending_kyc", email: "audit@test.com", status: "KYC Pending", balance: "₹0" },
     ]);
 
     const [newOrg, setNewOrg] = useState({ username: "", password: "", email: "" });
+    const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
+    const [emailTemplates, setEmailTemplates] = useState([
+        { id: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", autoSend: true },
+        { id: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", autoSend: true },
+        { id: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", autoSend: true },
+        { id: "organiser_welcome", name: "New Organiser Welcome & Credentials", subject: "Your Organiser Account is Ready!", autoSend: true },
+        { id: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", autoSend: true },
+    ]);
+    const [activeTemplate, setActiveTemplate] = useState(null);
+    const [disclaimerContent, setDisclaimerContent] = useState({
+        booking_header: "Disclaimer: All ticket bookings are final. Please review event details, date, and venue carefully before payment.",
+        payment_terms: "By proceeding with the payment, you agree to our Terms of Service and Privacy Policy. Platform fees and taxes are non-refundable.",
+        event_disclaimer: "Organizers are solely responsible for event content, performance, and management. BookMyTicket is only a ticketing platform.",
+        cancellation_policy: "Refunds are subject to individual event organizer policies. If an event is cancelled, refunds will be processed within 7-10 business days."
+    });
     const [ssoConfigs, setSsoConfigs] = useState({
         facebook: false,
         google: false
     });
+
+    useEffect(() => {
+        const savedSso = localStorage.getItem('sso_configs');
+        if (savedSso) {
+            setSsoConfigs(JSON.parse(savedSso));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('sso_configs', JSON.stringify(ssoConfigs));
+    }, [ssoConfigs]);
 
     const [siteBranding, setSiteBranding] = useState({
         name: "book my ticket",
@@ -335,6 +365,8 @@ export default function AdminHomePage() {
                             <div className="submenu">
                                 {[
                                     { label: "Email Integration", id: "email_settings" },
+                                    { label: "Email Templates", id: "email_templates" },
+                                    { label: "Disclaimer & Policies", id: "disclaimer_settings" },
                                     { label: "SSO & OAuth2", id: "sso_settings" },
                                     { label: "Payment Gateways", id: "payment_settings" },
                                     { label: "API Configuration", id: "api_settings" },
@@ -454,10 +486,12 @@ export default function AdminHomePage() {
                 </header>
 
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "subnav" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "subnav" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
-                            {(["email_settings", "sso_settings", "payment_settings", "api_settings"].includes(activeTab) ? [
+                            {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
+                                { id: "email_templates", label: "Templates", icon: ImageIcon },
+                                { id: "disclaimer_settings", label: "Disclaimer", icon: Shield },
                                 { id: "sso_settings", label: "SSO / OAuth2", icon: Lock },
                                 { id: "payment_settings", label: "Payments", icon: CreditCard },
                                 { id: "api_settings", label: "API Keys", icon: Code },
@@ -623,57 +657,191 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "all_org" && (
+                    {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance"].includes(activeTab) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Manage Organizers</h3>
-                                <button
-                                    onClick={() => setShowCreateModal(true)}
-                                    className="tab-btn" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <Plus size={18} /> Create Organiser
-                                </button>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
+                                    {activeTab === "all_org" ? "Manage Organizers" :
+                                        activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                </h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search organizers..."
+                                            style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", width: "200px" }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="tab-btn" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
+                                        <Plus size={18} /> Create Organiser
+                                    </button>
+                                </div>
                             </div>
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                <thead>
-                                    <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                        <th style={{ padding: "12px", color: t.textSub }}>Username</th>
-                                        <th style={{ padding: "12px", color: t.textSub }}>Email</th>
-                                        <th style={{ padding: "12px", color: t.textSub }}>Status</th>
-                                        <th style={{ padding: "12px", color: t.textSub }}>Balance</th>
-                                        <th style={{ padding: "12px", color: t.textSub }}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {organizers.map((org) => (
-                                        <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                            <td style={{ padding: "12px", fontWeight: 600 }}>{org.username}</td>
-                                            <td style={{ padding: "12px", color: t.textSub }}>{org.email}</td>
-                                            <td style={{ padding: "12px" }}>
-                                                <span style={{
-                                                    padding: "4px 8px",
-                                                    borderRadius: "4px",
-                                                    fontSize: "12px",
-                                                    backgroundColor: org.status === 'Active' ? '#22c55e20' : org.status === 'Banned' ? '#ef444420' : '#f9731620',
-                                                    color: org.status === 'Active' ? '#22c55e' : org.status === 'Banned' ? '#ef4444' : '#f97316'
-                                                }}>
-                                                    {org.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: "12px" }}>{org.balance}</td>
-                                            <td style={{ padding: "12px" }}>
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <button title="Edit" style={{ padding: "6px", borderRadius: "4px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer" }}><Save size={14} /></button>
-                                                    <button title="Ban" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Banned' } : o))} style={{ padding: "6px", borderRadius: "4px", border: `1px solid ${t.border}`, background: "none", color: "#f97316", cursor: "pointer" }}><Bell size={14} /></button>
-                                                    <button title="Reject" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Rejected' } : o))} style={{ padding: "6px", borderRadius: "4px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><X size={14} /></button>
-                                                    <button title="Delete" onClick={() => setOrganizers(organizers.filter(o => o.id !== org.id))} style={{ padding: "6px", borderRadius: "4px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
-                                                </div>
-                                            </td>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Username</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Balance</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {organizers.filter(org => {
+                                            if (activeTab === "active_org") return org.status === "Active";
+                                            if (activeTab === "banned_org") return org.status === "Banned";
+                                            if (activeTab === "kyc_pending") return org.status === "KYC Pending";
+                                            if (activeTab === "with_balance") return parseInt(org.balance.replace(/[^\d]/g, '')) > 0;
+                                            // Mock filters for others since we don't have enough data fields
+                                            if (activeTab === "email_unverified") return org.id % 2 === 0;
+                                            if (activeTab === "mobile_unverified") return org.id % 3 === 0;
+                                            if (activeTab === "kyc_unverified") return org.status !== "KYC Pending" && org.status !== "Active";
+                                            return true; // all_org
+                                        }).map((org) => (
+                                            <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{org.username}</td>
+                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{org.email}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{
+                                                        padding: "4px 10px",
+                                                        borderRadius: "20px",
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        backgroundColor:
+                                                            org.status === 'Active' ? '#22c55e15' :
+                                                                org.status === 'Banned' ? '#ef444415' :
+                                                                    org.status === 'KYC Pending' ? '#f9731615' : '#64748b15',
+                                                        color:
+                                                            org.status === 'Active' ? '#22c55e' :
+                                                                org.status === 'Banned' ? '#ef4444' :
+                                                                    org.status === 'KYC Pending' ? '#f97316' : t.textSub
+                                                    }}>
+                                                        {org.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        <button title="Edit" style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#3b82f610"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Save size={14} /></button>
+                                                        {org.status === 'KYC Pending' && (
+                                                            <>
+                                                                <button title="View KYC Details" onClick={() => {
+                                                                    alert(`KYC DETAILS FOR ${org.username.toUpperCase()}:\n\n- Org Type: Individual\n- Aadhar: Verified\n- PAN: Verified\n- Venue License: Attached\n- Status: Pending Admin Approval`);
+                                                                }} style={{ padding: "6px", borderRadius: "6px", border: `2px solid #3b82f6`, background: "#3b82f615", color: "#3b82f6", cursor: "pointer" }}><FileText size={14} /></button>
+
+                                                                <button title="Approve KYC" onClick={() => {
+                                                                    setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Active' } : o));
+                                                                    alert(`Organiser ${org.username} KYC has been approved! They now have full portal access.`);
+                                                                }} style={{ padding: "6px", borderRadius: "6px", border: `2px solid #22c55e`, background: "#22c55e15", color: "#22c55e", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#22c55e25"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#22c55e15"}><CheckCircle size={14} /></button>
+                                                            </>
+                                                        )}
+                                                        {org.status === 'Active' && (
+                                                            <button title="Ban" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Banned' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#f97316", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9731610"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Bell size={14} /></button>
+                                                        )}
+                                                        {org.status === 'Banned' && (
+                                                            <button title="Activate" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Active' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#22c55e", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#22c55e10"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><CheckCircle size={14} /></button>
+                                                        )}
+                                                        <button title="Reject" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Rejected' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><X size={14} /></button>
+                                                        <button title="Delete" onClick={() => setOrganizers(organizers.filter(o => o.id !== org.id))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Trash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
+                    {activeTab === "send_notif" && (
+                        <div style={{ maxWidth: "800px" }}>
+                            <div style={{ marginBottom: "24px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Broadcast Notification</h2>
+                                <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Send email and system notifications to organisers on your platform</p>
+                            </div>
+
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Select Target Audience</label>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
+                                            {[
+                                                { id: 'all', label: 'All Organisers', count: organizers.length },
+                                                { id: 'active', label: 'Active Only', count: organizers.filter(o => o.status === 'Active').length },
+                                                { id: 'pending', label: 'KYC Pending', count: organizers.filter(o => o.status === 'KYC Pending').length }
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.id}
+                                                    type="button"
+                                                    onClick={() => setNotificationForm({ ...notificationForm, target: opt.id })}
+                                                    style={{
+                                                        padding: "16px",
+                                                        borderRadius: "12px",
+                                                        border: `2px solid ${notificationForm.target === opt.id ? "#3b82f6" : t.border}`,
+                                                        backgroundColor: notificationForm.target === opt.id ? "#3b82f610" : "transparent",
+                                                        color: notificationForm.target === opt.id ? "#3b82f6" : t.textSub,
+                                                        textAlign: "left",
+                                                        cursor: "pointer",
+                                                        transition: "0.2s"
+                                                    }}>
+                                                    <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>{opt.label}</p>
+                                                    <p style={{ margin: "4px 0 0", fontSize: "11px", opacity: 0.8 }}>{opt.count} Recipients</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Email Subject</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter notification subject..."
+                                            value={notificationForm.subject}
+                                            onChange={(e) => setNotificationForm({ ...notificationForm, subject: e.target.value })}
+                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px" }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Notification Message</label>
+                                        <textarea
+                                            placeholder="Write your message here... You can use HTML formatting."
+                                            rows={8}
+                                            value={notificationForm.message}
+                                            onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })}
+                                            style={{ width: "100%", padding: "16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", resize: "vertical", fontFamily: "inherit" }}
+                                        />
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", backgroundColor: "#fef9c330", borderRadius: "10px", border: "1px solid #fde04730" }}>
+                                        <Shield size={18} color="#eab308" />
+                                        <p style={{ margin: 0, fontSize: "12px", color: "#eab308" }}>Notifications will be sent via the SMTP server configured in Email Settings.</p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!notificationForm.subject || !notificationForm.message) return alert("Please fill in both subject and message.");
+                                            const targetCount = notificationForm.target === 'all' ? organizers.length :
+                                                notificationForm.target === 'active' ? organizers.filter(o => o.status === 'Active').length :
+                                                    organizers.filter(o => o.status === 'KYC Pending').length;
+                                            alert(`Broadcast initiated! Sending notifications to ${targetCount} organisers...`);
+                                            setNotificationForm({ subject: "", message: "", target: "all" });
+                                        }}
+                                        style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px", borderRadius: "10px", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "0.2s" }}
+                                        onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
+                                        onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
+                                        <Mail size={18} /> Send Broadcast Notification
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
 
                     {activeTab === "payment_settings" && (
                         <div style={{ maxWidth: "850px" }}>
@@ -811,15 +979,196 @@ export default function AdminHomePage() {
                                         <input type="text" placeholder="Ticketing Tool" style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
                                     </div>
 
-                                    <div style={{ gridColumn: "span 2", marginTop: "12px" }}>
+                                    <div style={{ gridColumn: "span 2", marginTop: "12px", display: "flex", gap: "12px" }}>
                                         <button style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
                                             Save Email Settings
+                                        </button>
+                                        <button
+                                            onClick={() => alert("Verification mail sent! Please check your inbox.")}
+                                            style={{ backgroundColor: "transparent", color: "#3b82f6", border: "1px solid #3b82f6", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}
+                                            onMouseOver={(e) => e.target.style.backgroundColor = "#3b82f610"}
+                                            onMouseOut={(e) => e.target.style.backgroundColor = "transparent"}
+                                        >
+                                            Send Test Mail
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
+
+                    {activeTab === "email_templates" && (
+                        <div style={{ maxWidth: "1000px" }}>
+                            <div style={{ marginBottom: "20px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Email Templates</h2>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Manage the content and auto-send behavior of system-generated emails</p>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "24px" }}>
+                                {/* Left Side: Template List */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    {emailTemplates.map(tmp => (
+                                        <div
+                                            key={tmp.id}
+                                            onClick={() => setActiveTemplate(tmp)}
+                                            style={{
+                                                padding: "16px",
+                                                borderRadius: "12px",
+                                                border: `1.5px solid ${activeTemplate?.id === tmp.id ? "#3b82f6" : t.border}`,
+                                                backgroundColor: activeTemplate?.id === tmp.id ? "#3b82f610" : t.cardBg,
+                                                cursor: "pointer",
+                                                transition: "0.2s"
+                                            }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <h4 style={{ margin: 0, fontSize: "14px", color: t.textMain }}>{tmp.name}</h4>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: tmp.autoSend ? "#22c55e" : "#cbd5e1" }}></div>
+                                            </div>
+                                            <p style={{ margin: "4px 0 0", fontSize: "11px", color: t.textSub }}>Subject: {tmp.subject.substring(0, 30)}...</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Right Side: Editor */}
+                                <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    {activeTemplate ? (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Edit {activeTemplate.name}</h3>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                    <span style={{ fontSize: "12px", color: t.textSub }}>Auto-send:</span>
+                                                    <button
+                                                        onClick={() => setEmailTemplates(emailTemplates.map(t => t.id === activeTemplate.id ? { ...t, autoSend: !t.autoSend } : t))}
+                                                        style={{
+                                                            width: "44px", height: "22px", borderRadius: "11px",
+                                                            backgroundColor: activeTemplate.autoSend ? "#3b82f6" : "#cbd5e1",
+                                                            border: "none", cursor: "pointer", position: "relative", transition: "0.3s"
+                                                        }}>
+                                                        <div style={{
+                                                            position: "absolute", top: "2px", left: activeTemplate.autoSend ? "24px" : "2px",
+                                                            width: "18px", height: "18px", borderRadius: "50%", background: "#fff", transition: "0.3s"
+                                                        }} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Email Subject</label>
+                                                <input
+                                                    type="text"
+                                                    value={activeTemplate.subject}
+                                                    onChange={(e) => setEmailTemplates(emailTemplates.map(t => t.id === activeTemplate.id ? { ...t, subject: e.target.value } : t))}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none" }}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Message Content (HTML Supported)</label>
+                                                <textarea
+                                                    rows={10}
+                                                    placeholder="HTML content here..."
+                                                    defaultValue={`Hello {{user_name}},\n\nYour ticket for {{event_name}} has been confirmed successfully.\nTicket ID: {{ticket_id}}\nBooking Date: {{booking_date}}\n\nThank you for booking with us!`}
+                                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", fontFamily: "monospace" }}
+                                                />
+                                            </div>
+
+                                            <div style={{ display: "flex", gap: "10px", padding: "12px", backgroundColor: "#3b82f610", borderRadius: "8px", border: "1px solid #3b82f630" }}>
+                                                <Code size={16} color="#3b82f6" />
+                                                <div style={{ fontSize: "11px", color: "#3b82f6" }}>
+                                                    <strong>Available Variables:</strong> {"{{event_name}}, {{user_name}}, {{ticket_id}}, {{booking_date}}, {{otp}}"}
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={() => {
+                                                    alert("Template saved successfully!");
+                                                }}
+                                                style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
+                                                Save Template Changes
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                            <Mail size={48} color={t.textSub} style={{ opacity: 0.2, marginBottom: "16px" }} />
+                                            <p style={{ color: t.textSub, fontSize: "14px" }}>Select a template to edit</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === "disclaimer_settings" && (
+                        <div style={{ maxWidth: "850px" }}>
+                            <div style={{ marginBottom: "24px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Legal Disclaimer & Policies</h2>
+                                <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Configure platform-wide legal text and booking-related disclaimers</p>
+                            </div>
+
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+
+                                    <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                                            <div style={{ backgroundColor: "#3b82f620", padding: "8px", borderRadius: "8px" }}><Ticket size={18} color="#3b82f6" /></div>
+                                            <label style={{ fontSize: "15px", fontWeight: 700, color: t.textMain }}>Booking Header Disclaimer</label>
+                                        </div>
+                                        <textarea
+                                            value={disclaimerContent.booking_header}
+                                            onChange={(e) => setDisclaimerContent({ ...disclaimerContent, booking_header: e.target.value })}
+                                            rows={3}
+                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
+                                        />
+                                        <p style={{ margin: "6px 0 0", fontSize: "11px", color: t.textSub }}>Displayed at the top of the event booking page.</p>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                                            <div style={{ backgroundColor: "#22c55e20", padding: "8px", borderRadius: "8px" }}><CreditCard size={18} color="#22c55e" /></div>
+                                            <label style={{ fontSize: "15px", fontWeight: 700, color: t.textMain }}>Payment Terms Disclaimer</label>
+                                        </div>
+                                        <textarea
+                                            value={disclaimerContent.payment_terms}
+                                            onChange={(e) => setDisclaimerContent({ ...disclaimerContent, payment_terms: e.target.value })}
+                                            rows={3}
+                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
+                                        />
+                                        <p style={{ margin: "6px 0 0", fontSize: "11px", color: t.textSub }}>Shown above the 'Pay Now' button during checkout.</p>
+                                    </div>
+
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Event Content Policy</label>
+                                            <textarea
+                                                value={disclaimerContent.event_disclaimer}
+                                                onChange={(e) => setDisclaimerContent({ ...disclaimerContent, event_disclaimer: e.target.value })}
+                                                rows={5}
+                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Cancellation & Refund Policy</label>
+                                            <textarea
+                                                value={disclaimerContent.cancellation_policy}
+                                                onChange={(e) => setDisclaimerContent({ ...disclaimerContent, cancellation_policy: e.target.value })}
+                                                rows={5}
+                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ mt: "8px" }}>
+                                        <button
+                                            onClick={() => alert("Legal policies updated successfully!")}
+                                            style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px 28px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", transition: "0.2s", width: "100%" }}
+                                            onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
+                                            onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
+                                            Save All Policy Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
 
                     {activeTab === "sso_settings" && (
                         <div style={{ maxWidth: "850px" }}>
@@ -1043,7 +1392,7 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "payment_settings", "email_settings", "sso_settings", "api_settings"].includes(activeTab)) && (
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
@@ -1087,8 +1436,10 @@ export default function AdminHomePage() {
                                     <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
                                         <button
                                             onClick={() => {
-                                                setOrganizers([...organizers, { ...newOrg, id: Date.now(), status: "Active", balance: "₹0" }]);
+                                                const finalOrg = { ...newOrg, id: Date.now(), status: "Active", balance: "₹0" };
+                                                setOrganizers([...organizers, finalOrg]);
                                                 setShowCreateModal(false);
+                                                alert(`Organiser account created! Login credentials have been sent to ${newOrg.email}`);
                                                 setNewOrg({ username: "", password: "", email: "" });
                                             }}
                                             style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>

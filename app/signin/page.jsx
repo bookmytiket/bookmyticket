@@ -115,6 +115,18 @@ export default function SignInPage() {
     const [showPass, setShowPass] = useState(false);
     const [role, setRole] = useState("organiser");
     const [error, setError] = useState("");
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
+
+    // Sync SSO settings from localStorage
+    useEffect(() => {
+        const loadSso = () => {
+            const saved = localStorage.getItem('sso_configs');
+            if (saved) setSsoConfigs(JSON.parse(saved));
+        };
+        loadSso();
+        window.addEventListener('storage', loadSso); // Sync across tabs
+        return () => window.removeEventListener('storage', loadSso);
+    }, []);
 
     const handleLogin = (e) => {
         e.preventDefault();
@@ -142,22 +154,25 @@ export default function SignInPage() {
                 </div>
 
                 <div style={{ width: "100%", maxWidth: "420px" }}>
+                    {/* Welcome Text */}
+                    <div style={{ textAlign: "center", marginBottom: "32px" }}>
+                        <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>Welcome to BookMyTicket</h2>
+                        <p style={{ fontSize: "15px", color: "#64748b" }}>Please select your portal to continue</p>
+                    </div>
 
-                    {/* Heading */}
-                    <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px", textAlign: "center" }}>
-                        Good to see you again 👋
-                    </h2>
-                    <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 28px", textAlign: "center" }}>
-                        Don't have an account?{" "}
-                        <a href="#" style={{ color: "#f84464", fontWeight: 700, textDecoration: "none" }}>Create one now</a>
-                    </p>
-
-                    {/* Error */}
-                    {error && (
-                        <div style={{ background: "#fff5f5", border: "1px solid #fca5a5", color: "#b91c1c", padding: "12px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, marginBottom: "20px" }}>
-                            ⚠️ {error}
-                        </div>
-                    )}
+                    {/* Role Selector */}
+                    <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "12px", marginBottom: "28px", border: "1px solid #e2e8f0" }}>
+                        <button
+                            onClick={() => setRole("admin")}
+                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: role === 'admin' ? "#fff" : "transparent", color: role === 'admin' ? "#0f172a" : "#64748b", fontWeight: 700, cursor: "pointer", fontSize: "14px", boxShadow: role === 'admin' ? "0 2px 8px rgba(0,0,0,0.05)" : "none" }}>
+                            Admin Portal
+                        </button>
+                        <button
+                            onClick={() => setRole("organiser")}
+                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: role === 'organiser' ? "#fff" : "transparent", color: role === 'organiser' ? "#0f172a" : "#64748b", fontWeight: 700, cursor: "pointer", fontSize: "14px", boxShadow: role === 'organiser' ? "0 2px 8px rgba(0,0,0,0.05)" : "none" }}>
+                            Organiser Hub
+                        </button>
+                    </div>
 
                     <form onSubmit={handleLogin}>
                         {/* Email */}
@@ -210,21 +225,33 @@ export default function SignInPage() {
                         </button>
                     </form>
 
-                    {/* OR divider */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "0 0 16px", color: "#94a3b8", fontSize: "12px" }}>
-                        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
-                        OR
-                        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
-                    </div>
+                    {/* SSO Logic - Only show if any enabled */}
+                    {(ssoConfigs.google || ssoConfigs.facebook) && (
+                        <>
+                            {/* OR divider */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "24px 0 16px", color: "#94a3b8", fontSize: "12px" }}>
+                                <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+                                OR
+                                <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+                            </div>
 
-                    {/* Google */}
-                    <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer", transition: "border-color .2s" }}
-                        onMouseOver={e => e.currentTarget.style.borderColor = "#94a3b8"}
-                        onMouseOut={e => e.currentTarget.style.borderColor = "#e2e8f0"}
-                    >
-                        <img src="https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7IFH0LqJD9mi_SS9BW9Xm73Yp3eX9XvMSh5AR9Lp5rdKCAd3pXW18mI73R199Xp4G1fG3WvOT5xvBy2P5p" alt="G" style={{ width: "20px" }} />
-                        Continue with Google
-                    </button>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                {ssoConfigs.google && (
+                                    <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer", transition: "0.2s" }} onMouseOver={e => e.currentTarget.style.borderColor = "#94a3b8"} onMouseOut={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
+                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "18px" }} />
+                                        Continue with Google
+                                    </button>
+                                )}
+
+                                {ssoConfigs.facebook && (
+                                    <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer", transition: "0.2s" }} onMouseOver={e => e.currentTarget.style.borderColor = "#94a3b8"} onMouseOut={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
+                                        <div style={{ width: "18px", height: "18px", background: "#1877F2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "#fff", fontSize: "12px", fontWeight: 900 }}>f</div>
+                                        Continue with Facebook
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
 
                     <p style={{ marginTop: "20px", fontSize: "11px", color: "#94a3b8", textAlign: "center", lineHeight: "1.6" }}>
                         By continuing you agree to our{" "}
