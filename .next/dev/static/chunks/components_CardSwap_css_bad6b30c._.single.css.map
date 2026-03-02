@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/components/CardSwap.css"],"sourcesContent":[".card-swap-container {\n    position: relative;\n    /* Let the parent's flexbox handle centering */\n    margin: auto;\n\n    perspective: 900px;\n    overflow: visible;\n}\n\n.card {\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    border-radius: 12px;\n    border: 1px solid #fff;\n    background: #000;\n\n    transform-style: preserve-3d;\n    will-change: transform;\n    backface-visibility: hidden;\n    -webkit-backface-visibility: hidden;\n}\n\n@media (max-width: 768px) {\n    .card-swap-container {\n        transform: scale(0.75);\n    }\n}\n\n@media (max-width: 480px) {\n    .card-swap-container {\n        transform: scale(0.55);\n    }\n}"],"names":[],"mappings":"AAAA;;;;;;;AASA;;;;;;;;;;;;AAcA;EACI;;;;;AAKJ;EACI"}}]
-}
