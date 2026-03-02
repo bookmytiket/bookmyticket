@@ -1,0 +1,33 @@
+/* [project]/components/CardSwap.css [app-client] (css) */
+.card-swap-container {
+  perspective: 900px;
+  margin: auto;
+  position: relative;
+  overflow: visible;
+}
+
+.card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 12px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+@media (max-width: 768px) {
+  .card-swap-container {
+    transform: scale(.75);
+  }
+}
+
+@media (max-width: 480px) {
+  .card-swap-container {
+    transform: scale(.55);
+  }
+}
+
+/*# sourceMappingURL=components_CardSwap_css_bad6b30c._.single.css.map*/

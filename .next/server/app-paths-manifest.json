@@ -1,0 +1,16 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/otp/send/route": "app/api/otp/send/route.js",
+  "/api/tickets/[id]/route": "app/api/tickets/[id]/route.js",
+  "/api/tickets/route": "app/api/tickets/route.js",
+  "/events/[id]/page": "app/events/[id]/page.js",
+  "/events/page": "app/events/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/icon.png/route": "app/icon.png/route.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/rsvp/page": "app/rsvp/page.js",
+  "/signin/page": "app/signin/page.js"
+}
