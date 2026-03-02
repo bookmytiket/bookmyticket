@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ScrollingBanner from '@/components/ScrollingBanner';
 import GridScan from '@/components/GridScan';
 import HeroBanner from '@/components/HeroBanner';
@@ -324,8 +325,27 @@ function SpotlightBanner({ events }) {
   );
 }
 
+const ALL_EVENTS = [
+  ...FEATURED_EVENTS.map(ev => ({ ...ev, category: "Concert" })),
+  { id: 101, title: "Laughter Night with Zakir", date: "Apr 05", location: "Chennai", img: "https://images.unsplash.com/photo-1527224857830-43a7ae858368?w=600", category: "Comedy", type: "Paid" },
+  { id: 102, title: "IPL 2026: RCB vs CSK", date: "May 10", location: "Bengaluru", img: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=600", category: "Sports", type: "Paid" },
+  { id: 103, title: "Sunburn Festival Goa", date: "Dec 28", location: "Goa", img: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600", category: "Festival", type: "Paid" },
+  { id: 104, title: "Shakespeare in the Park", date: "Jun 15", location: "Mumbai", img: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600", category: "Theatre", type: "Free" },
+  { id: 105, title: "React Workshop 2026", date: "Jul 20", location: "Online", img: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600", category: "Workshop", type: "Free" },
+  { id: 106, title: "Vocal Magic: Anirudh Live", date: "Aug 12", location: "Coimbatore", img: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=600", category: "Music", type: "Paid" },
+  { id: 107, title: "Magical Wonders Show", date: "Sep 30", location: "Chennai", img: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=600", category: "Live Shows", type: "Paid" },
+];
+
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeCat = searchParams.get("category");
   const [newOrgEvents, setNewOrgEvents] = useState([]);
+
+  const filteredEvents = useMemo(() => {
+    if (!activeCat) return [];
+    return ALL_EVENTS.filter(ev => ev.category === activeCat);
+  }, [activeCat]);
 
   useEffect(() => {
     const saved = localStorage.getItem('organiser_events');
@@ -387,59 +407,94 @@ export default function Home() {
           </section>
         )}
 
-        {/* 1) Video Hero Banner */}
-        <div style={{ width: '100%' }}>
-          <VideoHeroBanner />
-        </div>
+        {activeCat ? (
+          <section style={{ width: '100%', maxWidth: '1240px', padding: '40px 20px', minHeight: '600px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
+              <div>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{activeCat} Events</h1>
+                <p style={{ color: '#666', marginTop: '4px' }}>Discover the best {activeCat.toLowerCase()} experiences in your city.</p>
+              </div>
+              <button
+                onClick={() => router.push('/')}
+                style={{ background: '#eee', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, fontSize: '14px' }}
+              >
+                Clear Filter
+              </button>
+            </div>
 
-        {/* 2) Featured Events */}
-        <div style={{ width: '100%' }}>
-          <FeaturedEvents />
-        </div>
+            {filteredEvents.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '30px' }}>
+                {filteredEvents.map(event => (
+                  <div key={event.id} style={{ transform: 'scale(1.1)', transformOrigin: 'top left' }}>
+                    <TicketCard event={event} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎪</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700 }}>No {activeCat} events found right now.</h3>
+                <p style={{ color: '#666' }}>Try selecting another category or check back later!</p>
+              </div>
+            )}
+          </section>
+        ) : (
+          <>
+            {/* 1) Video Hero Banner */}
+            <div style={{ width: '100%' }}>
+              <VideoHeroBanner />
+            </div>
 
-        {/* 3) Coming Soon Events */}
-        <div style={{ width: '100%' }}>
-          <ComingSoonEvents />
-        </div>
+            {/* 2) Featured Events */}
+            <div style={{ width: '100%' }}>
+              <FeaturedEvents />
+            </div>
 
-        {/* 4) Trending Events */}
-        <div style={{ width: '100%' }}>
-          <TrendingEvents />
-        </div>
+            {/* 3) Coming Soon Events */}
+            <div style={{ width: '100%' }}>
+              <ComingSoonEvents />
+            </div>
 
-        {/* 5) Explore Popular Events */}
-        <div style={{ width: '100%' }}>
-          <PopularEvents />
-        </div>
+            {/* 4) Trending Events */}
+            <div style={{ width: '100%' }}>
+              <TrendingEvents />
+            </div>
 
-        {/* 6) Exclusive Events */}
-        <div style={{ width: '100%' }}>
-          <ExclusiveEvents />
-        </div>
+            {/* 5) Explore Popular Events */}
+            <div style={{ width: '100%' }}>
+              <PopularEvents />
+            </div>
 
-        {/* 7) Virtual Events */}
-        <div style={{ width: '100%' }}>
-          <VirtualEvents />
-        </div>
+            {/* 6) Exclusive Events */}
+            <div style={{ width: '100%' }}>
+              <ExclusiveEvents />
+            </div>
 
-        {/* 8) Recent Memories */}
-        <div style={{ width: '100%' }}>
-          <RecentMemories />
-        </div>
+            {/* 7) Virtual Events */}
+            <div style={{ width: '100%' }}>
+              <VirtualEvents />
+            </div>
 
-        {/* 9) Our Official Sponsors */}
-        <div style={{ width: '100%' }}>
-          <Sponsors />
-        </div>
+            {/* 8) Recent Memories */}
+            <div style={{ width: '100%' }}>
+              <RecentMemories />
+            </div>
 
-        {/* Dynamic Ticket Element before Footer */}
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-          <img
-            src="/ticket.png"
-            alt="Floating Ticket"
-            style={{ width: '450px', height: 'auto', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.1))' }}
-          />
-        </div>
+            {/* 9) Our Official Sponsors */}
+            <div style={{ width: '100%' }}>
+              <Sponsors />
+            </div>
+
+            {/* Dynamic Ticket Element before Footer */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+              <img
+                src="/ticket.png"
+                alt="Floating Ticket"
+                style={{ width: '450px', height: 'auto', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.1))' }}
+              />
+            </div>
+          </>
+        )}
 
       </main>
 

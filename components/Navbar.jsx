@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const SUBNAV_LINKS = [
   { href: "/events", label: "Events" },
   { href: "/#rsvp", label: "RSVP" },
-  { href: "/movies", label: "Movies" },
+  { href: "/movies", label: "Surprise Me" },
 ];
 
 const CATEGORIES = [
@@ -107,7 +107,19 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeCat, setActiveCat] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeCat = searchParams.get("category") || "";
+
+  const setActiveCat = (cat) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (cat === activeCat || !cat) {
+      params.delete("category");
+    } else {
+      params.set("category", cat);
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
 
   /* Location modal */

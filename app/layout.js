@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Space_Grotesk, Figtree } from 'next/font/google';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
@@ -26,8 +27,10 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${figtree.variable}`}>
         <AuthProvider>
-          <ConditionalNavbar />
-          {children}
+          <Suspense fallback={null}>
+            <ConditionalNavbar />
+            {children}
+          </Suspense>
         </AuthProvider>
       </body>
     </html>

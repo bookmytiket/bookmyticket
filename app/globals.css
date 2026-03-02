@@ -375,7 +375,7 @@ nextjs-portal {
 }
 
 .header-scrolled .header-subnav {
-  background: rgba(0, 0, 0, 0.65) !important;
+  background: transparent !important;
   backdrop-filter: blur(24px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -624,7 +624,7 @@ nextjs-portal {
 /* Row 2 */
 .header-subnav {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(252, 225, 93, 0.35);
+  background: transparent;
   height: 44px;
   display: flex;
   align-items: center;
@@ -733,7 +733,7 @@ nextjs-portal {
 
 .subnav-cat.active {
   color: #000;
-  background: rgba(252, 225, 93, 0.5);
+  background: transparent;
 }
 
 .subnav-cat.active::after {
