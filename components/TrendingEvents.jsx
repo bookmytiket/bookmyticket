@@ -100,7 +100,7 @@ function EventCard({ event }) {
     );
 }
 
-export default function TrendingEvents() {
+export default function TrendingEvents({ events = DEFAULT_TRENDING }) {
     const scrollRef = useRef(null);
 
     const scroll = (dir) => {
@@ -137,7 +137,7 @@ export default function TrendingEvents() {
                     ref={scrollRef}
                     style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px" }}
                 >
-                    {list.length > 0 ? list.map(event => <EventCard key={event.id} event={event} />) : (
+                    {events && events.length > 0 ? events.map(event => <EventCard key={event.id} event={event} />) : (
                         <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
                             Explore what's trending soon.
                         </div>

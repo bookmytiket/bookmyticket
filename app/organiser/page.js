@@ -603,7 +603,7 @@ function OrganiserPanel() {
     );
 
     // MFA View Component
-    const MFAView = () => (
+    const renderMFAView = () => (
         <div style={{ maxWidth: "450px", margin: "100px auto", textAlign: "center", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
             <div style={{ backgroundColor: "#3b82f615", width: "80px", height: "80px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
                 <Shield size={40} color="#3b82f6" />
@@ -628,7 +628,7 @@ function OrganiserPanel() {
     );
 
     // KYC Document View
-    const KYCDocsView = () => (
+    const renderKYCDocsView = () => (
         <div style={{ maxWidth: "600px", margin: "60px auto", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
             <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>Identity Verification (KYC)</h2>
             <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "32px" }}>Step 1: Upload Your Documents</p>
@@ -657,7 +657,7 @@ function OrganiserPanel() {
     );
 
     // KYC Form View
-    const KYCFormView = () => (
+    const renderKYCFormView = () => (
         <div style={{ maxWidth: "700px", margin: "50px auto", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
             <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>Organiser Details</h2>
             <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "32px" }}>Step 2: Complete Your Profile (Auto-filled from Documents)</p>
@@ -716,7 +716,7 @@ function OrganiserPanel() {
     );
 
     // Pending View
-    const PendingView = () => (
+    const renderPendingView = () => (
         <div style={{ maxWidth: "550px", margin: "100px auto", textAlign: "center", backgroundColor: t.cardBg, padding: "50px 40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
             <div style={{ backgroundColor: "#f9731615", width: "90px", height: "90px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 30px" }}>
                 <Clock size={45} color="#f97316" className="spin-slow" />
@@ -742,7 +742,7 @@ function OrganiserPanel() {
     );
 
     // Main Dashboard View (Approved)
-    const DashboardView = () => {
+    const renderDashboardView = () => {
         const renderTabContent = () => {
             switch (activeTab) {
                 case "dashboard":
@@ -782,7 +782,7 @@ function OrganiserPanel() {
                                 <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                     <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Event Booking Monthly Income (2026)</p>
                                     <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
-                                        {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m, i) => (
+                                        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
                                             <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
                                                 <div style={{ width: "100%", height: "60px", backgroundColor: "#3b82f620", borderRadius: "4px", border: "1px solid #3b82f640" }} />
                                                 <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
@@ -797,7 +797,7 @@ function OrganiserPanel() {
                                 <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                     <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Monthly Event Bookings (2026)</p>
                                     <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
-                                        {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m) => (
+                                        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
                                             <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
                                                 <div style={{ width: "100%", height: "60px", backgroundColor: "#8b5cf620", borderRadius: "4px", border: "1px solid #8b5cf640" }} />
                                                 <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
@@ -1379,7 +1379,7 @@ function OrganiserPanel() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                             <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Event Booking</h3>
                             <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-                                {["all","completed","pending","rejected","report"].map(id => (
+                                {["all", "completed", "pending", "rejected", "report"].map(id => (
                                     <button key={id} onClick={() => setEventBookingsTab(id)} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: eventBookingsTab === id ? "#3b82f6" : t.bg, color: eventBookingsTab === id ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
                                         {id === "all" ? "All Bookings" : id === "report" ? "Report" : id.charAt(0).toUpperCase() + id.slice(1) + " Bookings"}
                                     </button>
@@ -1671,7 +1671,7 @@ function OrganiserPanel() {
     };
 
     // Restricted Sidebar for Stages (MFA/KYC/Pending)
-    const RestrictedSidebar = ({ children }) => (
+    const renderRestrictedSidebar = (children) => (
         <div className="admin-container">
             {styles}
             <aside className="sidebar">
@@ -1747,17 +1747,17 @@ function OrganiserPanel() {
     // Main Stage Dispatcher
     switch (currentStage) {
         case "mfa":
-            return <RestrictedSidebar><MFAView /></RestrictedSidebar>;
+            return renderRestrictedSidebar(renderMFAView());
         case "kyc_docs":
-            return <RestrictedSidebar><KYCDocsView /></RestrictedSidebar>;
+            return renderRestrictedSidebar(renderKYCDocsView());
         case "kyc_form":
-            return <RestrictedSidebar><KYCFormView /></RestrictedSidebar>;
+            return renderRestrictedSidebar(renderKYCFormView());
         case "pending":
-            return <RestrictedSidebar><PendingView /></RestrictedSidebar>;
+            return renderRestrictedSidebar(renderPendingView());
         case "approved":
-            return <DashboardView />;
+            return renderDashboardView();
         default:
-            return <DashboardView />;
+            return renderDashboardView();
     }
 }
 
