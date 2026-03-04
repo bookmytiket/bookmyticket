@@ -1,15 +1,7 @@
 import React from "react";
 import CardSwap, { Card } from './CardSwap';
 
-const MEMORIES = [
-    { id: 1, img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80", alt: "Concert VIPs" },
-    { id: 2, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80", alt: "Music Festival" },
-    { id: 3, img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80", alt: "Tech Conference" },
-    { id: 4, img: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=80", alt: "Night Party" },
-    { id: 5, img: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=800&q=80", alt: "Live Music" }
-];
-
-export default function RecentMemories() {
+export default function RecentMemories({ memories = [] }) {
     return (
         <section style={{ width: "100%", background: "#fff", padding: "80px 0", overflow: "hidden" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
@@ -24,30 +16,36 @@ export default function RecentMemories() {
 
                 {/* Animated Cards Container */}
                 <div style={{ height: '350px', position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '80px' }}>
-                    <CardSwap
-                        width={280}
-                        height={200}
-                        cardDistance={30}
-                        verticalDistance={40}
-                        delay={5000}
-                        pauseOnHover={false}
-                    >
-                        {MEMORIES.map((mem) => (
-                            <Card key={mem.id} style={{ padding: '0', overflow: 'hidden' }}>
-                                <img
-                                    src={mem.img}
-                                    alt={mem.alt}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                                <div style={{
-                                    position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '30px 20px',
-                                    background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', color: '#fff'
-                                }}>
-                                    <h3 style={{ margin: 0, fontSize: '28px', fontWeight: 800 }}>{mem.alt}</h3>
-                                </div>
-                            </Card>
-                        ))}
-                    </CardSwap>
+                    {memories.length > 0 ? (
+                        <CardSwap
+                            width={280}
+                            height={200}
+                            cardDistance={30}
+                            verticalDistance={40}
+                            delay={5000}
+                            pauseOnHover={false}
+                        >
+                            {memories.map((mem) => (
+                                <Card key={mem.id} style={{ padding: '0', overflow: 'hidden' }}>
+                                    <img
+                                        src={mem.img}
+                                        alt={mem.alt}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    <div style={{
+                                        position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '30px 20px',
+                                        background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', color: '#fff'
+                                    }}>
+                                        <h3 style={{ margin: 0, fontSize: '28px', fontWeight: 800 }}>{mem.alt}</h3>
+                                    </div>
+                                </Card>
+                            ))}
+                        </CardSwap>
+                    ) : (
+                        <div style={{ textAlign: "center", color: "#9ca3af" }}>
+                            Captured moments will be displayed here.
+                        </div>
+                    )}
                 </div>
 
                 {/* View all button */}

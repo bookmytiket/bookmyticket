@@ -1,25 +1,129 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive } from "lucide-react";
+import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
+import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
 export default function AdminHomePage() {
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [theme, setTheme] = useState("dark");
-    const [isOrganizersOpen, setIsOrganizersOpen] = useState(true);
+    const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
     const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isGrowthOpen, setIsGrowthOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    // Payment gateways: which config modal is open + saved configs per gateway
+    const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
+    const [paymentGateways, setPaymentGateways] = useState({
+        Stripe: { enabled: false, apiKey: "", secretKey: "", webhookSecret: "" },
+        Razorpay: { enabled: false, apiKey: "", secretKey: "" },
+        PayU: { enabled: false, apiKey: "", secretKey: "" },
+        PhonePe: { enabled: false, apiKey: "", secretKey: "" },
+        Paytm: { enabled: false, apiKey: "", secretKey: "" }
+    });
 
-    const [organizers, setOrganizers] = useState([
-        { id: 1, username: "john_doe", email: "john@example.com", status: "Active", balance: "₹1,200" },
-        { id: 2, username: "event_pro", email: "pro@events.com", status: "Banned", balance: "₹0" },
-        { id: 3, username: "new_guy", email: "new@example.com", status: "KYC Pending", balance: "₹500" },
-        { id: 4, username: "tech_fest", email: "tech@university.edu", status: "Active", balance: "₹25,000" },
-        { id: 5, username: "local_gigs", email: "gigs@local.com", status: "Active", balance: "₹3,450" },
-        { id: 6, username: "scammer_hub", email: "scam@redflag.com", status: "Banned", balance: "₹0" },
-        { id: 7, username: "pending_kyc", email: "audit@test.com", status: "KYC Pending", balance: "₹0" },
+    // Bookings (ticket orders) — sync with homepage/organiser events
+    const [bookings, setBookings] = useState([]);
+    // Customers CRM
+    const [customers, setCustomers] = useState([]);
+    // Promotions: coupon codes & BOGO
+    const [promotions, setPromotions] = useState([]);
+    const [newPromo, setNewPromo] = useState({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
+    // Archive: hide events from main list (home IDs + organiser events with archived flag)
+    const [archivedHomeIds, setArchivedHomeIds] = useState([]);
+    // Event-specific meta (keywords, adsId) for home events — organiser events use events[].meta
+    const [eventMetaOverrides, setEventMetaOverrides] = useState({});
+
+    const [organizers, setOrganizers] = useState([]);
+    const [events, setEvents] = useState([]);
+    const [slides, setSlides] = useState([]);
+    const [subnavItems, setSubnavItems] = useState([
+        { id: 1, label: "Concert", icon: "🎫" },
+        { id: 2, label: "Sports", icon: "🏆" },
+        { id: 3, label: "Comedy", icon: "🎭" },
+        { id: 4, label: "Theatre", icon: "🎭" },
+        { id: 5, label: "Music", icon: "🎵" },
+        { id: 6, label: "Workshop", icon: "🎪" },
+        { id: 7, label: "Festival", icon: "🎡" },
+        { id: 8, label: "Live Shows", icon: "🎬" }
     ]);
+    const [categories, setCategories] = useState([
+        { id: 1, name: "Concert", slug: "concert", count: 0, icon: "🎫" },
+        { id: 2, name: "Sports", slug: "sports", count: 0, icon: "🏆" },
+        { id: 3, name: "Comedy", slug: "comedy", count: 0, icon: "🎭" },
+        { id: 4, name: "Theatre", slug: "theatre", count: 0, icon: "🎭" },
+        { id: 5, name: "Music", slug: "music", count: 0, icon: "🎵" },
+        { id: 6, name: "Workshop", slug: "workshop", count: 0, icon: "🎪" },
+        { id: 7, name: "Festival", slug: "festival", count: 0, icon: "🎡" },
+        { id: 8, name: "Live Shows", slug: "live-shows", count: 0, icon: "🎬" },
+        { id: 9, name: "Conference", slug: "conference", count: 0, icon: "📋" },
+        { id: 10, name: "Exhibition", slug: "exhibition", count: 0, icon: "🖼️" },
+        { id: 11, name: "Marathon", slug: "marathon", count: 0, icon: "🏃" },
+        { id: 12, name: "Others", slug: "others", count: 0, icon: "📁" },
+        { id: 13, name: "Competition", slug: "competition", count: 0, icon: "🏆" },
+        { id: 14, name: "Classical Dance", slug: "classical-dance", count: 0, icon: "💃" }
+    ]);
+    const [categoryModal, setCategoryModal] = useState(null);
+    const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
+
+    // Combined events: homepage + organiser (Admin + Home integration); exclude archived
+    const allEvents = useMemo(() => {
+        const organiserList = (Array.isArray(events) ? events : []).filter(e => !e.archived);
+        const homeList = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).filter(e => !archivedHomeIds.includes(e.id));
+        return [...homeList.map(e => ({ ...e, source: "home" })), ...organiserList.map(e => ({ ...e, id: e.id || Date.now() + Math.random(), title: e.title || "Event", category: e.category || "Others", type: e.type || "Paid", source: "organiser" }))];
+    }, [events, archivedHomeIds]);
+
+    useEffect(() => {
+        const tab = searchParams.get("tab");
+        if (tab === "categories") setActiveTab("categories");
+    }, [searchParams]);
+
+    // Persistence — integrate with homepage & organiser panel
+    useEffect(() => {
+        const savedOrgs = localStorage.getItem('admin_organizers');
+        const savedEvents = localStorage.getItem('organiser_events');
+        const savedBookings = localStorage.getItem('admin_bookings');
+        const savedCustomers = localStorage.getItem('admin_customers');
+        const savedPromos = localStorage.getItem('admin_promotions');
+        if (savedOrgs) try { setOrganizers(JSON.parse(savedOrgs)); } catch (_) {}
+        if (savedEvents) try { setEvents(JSON.parse(savedEvents)); } catch (_) {}
+        if (savedBookings) try { setBookings(JSON.parse(savedBookings)); } catch (_) {}
+        if (savedCustomers) try { setCustomers(JSON.parse(savedCustomers)); } catch (_) {}
+        if (savedPromos) try { setPromotions(JSON.parse(savedPromos)); } catch (_) {}
+        const savedArchived = localStorage.getItem('admin_archived_home_ids');
+        if (savedArchived) try { setArchivedHomeIds(JSON.parse(savedArchived)); } catch (_) {}
+        const savedGateways = localStorage.getItem('admin_payment_gateways');
+        if (savedGateways) try { setPaymentGateways(prev => ({ ...prev, ...JSON.parse(savedGateways) })); } catch (_) {}
+        const savedMeta = localStorage.getItem('admin_event_meta_overrides');
+        if (savedMeta) try { setEventMetaOverrides(JSON.parse(savedMeta)); } catch (_) {}
+        const savedSlides = localStorage.getItem('admin_hero_slides');
+        if (savedSlides) try { setSlides(JSON.parse(savedSlides)); } catch (_) {}
+        else if (Array.isArray(HERO_BANNER_SLIDES) && HERO_BANNER_SLIDES.length > 0) setSlides(HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })));
+        const savedSubnav = localStorage.getItem('admin_subnav_items');
+        if (savedSubnav) try { const parsed = JSON.parse(savedSubnav); if (Array.isArray(parsed) && parsed.length > 0) setSubnavItems(parsed); } catch (_) {}
+        const savedCategories = localStorage.getItem('admin_categories');
+        if (savedCategories) try { const parsed = JSON.parse(savedCategories); if (Array.isArray(parsed) && parsed.length > 0) setCategories(parsed); } catch (_) {}
+    }, []);
+    useEffect(() => { try { localStorage.setItem('admin_bookings', JSON.stringify(bookings)); } catch (_) {} }, [bookings]);
+    useEffect(() => { try { localStorage.setItem('admin_customers', JSON.stringify(customers)); } catch (_) {} }, [customers]);
+    useEffect(() => { try { localStorage.setItem('admin_promotions', JSON.stringify(promotions)); } catch (_) {} }, [promotions]);
+    useEffect(() => { try { localStorage.setItem('admin_archived_home_ids', JSON.stringify(archivedHomeIds)); } catch (_) {} }, [archivedHomeIds]);
+    useEffect(() => { try { localStorage.setItem('admin_payment_gateways', JSON.stringify(paymentGateways)); } catch (_) {} }, [paymentGateways]);
+    useEffect(() => { try { localStorage.setItem('admin_event_meta_overrides', JSON.stringify(eventMetaOverrides)); } catch (_) {} }, [eventMetaOverrides]);
+    useEffect(() => { try { localStorage.setItem('admin_hero_slides', JSON.stringify(slides)); } catch (_) {} }, [slides]);
+    useEffect(() => { try { localStorage.setItem('admin_categories', JSON.stringify(categories)); } catch (_) {} }, [categories]);
+
+    useEffect(() => {
+        localStorage.setItem('admin_organizers', JSON.stringify(organizers));
+    }, [organizers]);
+
+    useEffect(() => {
+        // Sync events specifically when they change in admin (e.g. status updates)
+        localStorage.setItem('organiser_events', JSON.stringify(events));
+    }, [events]);
 
     const [newOrg, setNewOrg] = useState({ username: "", password: "", email: "" });
     const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
@@ -59,6 +163,16 @@ export default function AdminHomePage() {
         logoUrl: "/logo.png"
     });
 
+
+    const [metaSettings, setMetaSettings] = useState({
+        global: {
+            title: "BookMyTicket - Best Event Ticketing Platform",
+            keywords: "tickets, events, concerts, sports, theater",
+            description: "Book tickets for your favorite events, concerts, movies and more.",
+            metaAdsCode: "<!-- Meta Ad Pixel Code -->\n<script>!function(f,b,e,v,n,t,s)...</script>"
+        }
+    });
+
     const colors = {
         light: {
             bg: "#f0f4f8",
@@ -88,37 +202,15 @@ export default function AdminHomePage() {
 
     const t = colors[theme];
 
-    const [slides, setSlides] = useState([
-        { id: 1, url: "/events/chennai-concert", alt: "Slide Event 1", img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=300&h=200&fit=crop" },
-        { id: 2, url: "/events/chennai-concert", alt: "Slide Event 2", img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=300&h=200&q=80" },
-        { id: 3, url: "/events/chennai-concert", alt: "Slide Event 3", img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=300&h=200&q=80" }
-    ]);
-    const [subnavItems, setSubnavItems] = useState([
-        { id: 1, label: "Concert", icon: "🎫" },
-        { id: 2, label: "Sports", icon: "🏆" },
-        { id: 3, label: "Comedy", icon: "🎭" },
-        { id: 4, label: "Theatre", icon: "🎭" },
-        { id: 5, label: "Music", icon: "🎵" },
-        { id: 6, label: "Workshop", icon: "🎪" },
-        { id: 7, label: "Festival", icon: "🎡" },
-        { id: 8, label: "Live Shows", icon: "🎬" }
-    ]);
-    const [categories, setCategories] = useState([
-        { id: 1, name: "Concert", slug: "concert", count: 24, icon: "🎫" },
-        { id: 2, name: "Sports", slug: "sports", count: 12, icon: "🏆" },
-        { id: 3, name: "Comedy", slug: "comedy", count: 8, icon: "🎭" },
-        { id: 4, name: "Theatre", slug: "theatre", count: 5, icon: "🎭" },
-        { id: 5, name: "Music", slug: "music", count: 15, icon: "🎵" },
-        { id: 6, name: "Workshop", slug: "workshop", count: 7, icon: "🎪" }
-    ]);
-
     const addSlide = () => {
         const newId = slides.length > 0 ? Math.max(...slides.map(s => s.id)) + 1 : 1;
         setSlides([...slides, {
             id: newId,
-            url: "",
-            alt: `New Slide ${newId}`,
-            img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=300&h=200&fit=crop"
+            img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1200&h=480&fit=crop",
+            title: "",
+            sub: "",
+            alt: `Slide ${newId}`,
+            url: ""
         }]);
     };
 
@@ -342,13 +434,94 @@ export default function AdminHomePage() {
                 </div>
 
                 <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
+                    {/* Overview */}
+                    <p className="section-header">Overview</p>
                     <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
                         <LayoutDashboard size={20} /> Dashboard
                     </button>
-                    <button onClick={() => setActiveTab("reports")} className={`sidebar-item ${activeTab === "reports" ? "active" : ""}`}>
-                        <Users size={20} /> Reports
+
+                    {/* Operations */}
+                    <p className="section-header">Operations</p>
+                    <button onClick={() => setActiveTab("all_events")} className={`sidebar-item ${activeTab === "all_events" ? "active" : ""}`}>
+                        <Calendar size={20} /> Events
+                    </button>
+                    <button onClick={() => setActiveTab("bookings")} className={`sidebar-item ${activeTab === "bookings" ? "active" : ""}`}>
+                        <ShoppingCart size={20} /> Bookings
                     </button>
 
+                    {/* Customers */}
+                    <p className="section-header">Customers</p>
+                    <button onClick={() => setActiveTab("customers")} className={`sidebar-item ${activeTab === "customers" ? "active" : ""}`}>
+                        <UserCircle size={20} /> Customers
+                    </button>
+
+                    {/* Growth */}
+                    <p className="section-header">Growth</p>
+                    <div style={{ marginBottom: "4px" }}>
+                        <button
+                            onClick={() => setIsGrowthOpen(!isGrowthOpen)}
+                            className={`sidebar-item ${isGrowthOpen ? "expanded-parent" : ""}`}
+                            style={{ display: "flex", justifyContent: "space-between" }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Gift size={20} /> Growth
+                            </div>
+                            <Menu size={14} style={{ transform: isGrowthOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
+                        </button>
+                        {isGrowthOpen && (
+                            <div className="submenu">
+                                <div onClick={() => setActiveTab("promotions")} className={`submenu-item ${activeTab === "promotions" ? "active-sub" : ""}`}>
+                                    <div className="dot-icon"></div>
+                                    <span style={{ flex: 1 }}>Promotions</span>
+                                </div>
+                                <div onClick={() => setActiveTab("send_notif")} className={`submenu-item ${activeTab === "send_notif" ? "active-sub" : ""}`}>
+                                    <div className="dot-icon"></div>
+                                    <span style={{ flex: 1 }}>Push Notifications</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Partners */}
+                    <p className="section-header">Partners</p>
+                    <div style={{ marginBottom: "4px" }}>
+                        <button
+                            onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
+                            className={`sidebar-item ${isOrganizersOpen ? "expanded-parent" : ""}`}
+                            style={{ display: "flex", justifyContent: "space-between" }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Users size={20} /> Organizers
+                            </div>
+                            <Menu size={14} style={{ transform: isOrganizersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
+                        </button>
+                        {isOrganizersOpen && (
+                            <div className="submenu">
+                                {[
+                                    { label: "All Organizers", id: "all_org" },
+                                    { label: "Active Organizers", id: "active_org" },
+                                    { label: "KYC Pending", id: "kyc_pending" },
+                                    { label: "Banned Organizers", id: "banned_org" },
+                                    { label: "With Balance", id: "with_balance" },
+                                    { label: "Send Notification", id: "send_notif" },
+                                ].map((sub) => (
+                                    <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
+                                        <div className="dot-icon"></div>
+                                        <span style={{ flex: 1 }}>{sub.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Reports */}
+                    <p className="section-header">Reports</p>
+                    <button onClick={() => setActiveTab("financials")} className={`sidebar-item ${activeTab === "financials" ? "active" : ""}`}>
+                        <BarChart3 size={20} /> Financials
+                    </button>
+
+                    {/* System */}
+                    <p className="section-header">System</p>
                     <div style={{ marginBottom: "4px" }}>
                         <button
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -360,61 +533,20 @@ export default function AdminHomePage() {
                             </div>
                             <Menu size={14} style={{ transform: isSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
                         </button>
-
                         {isSettingsOpen && (
                             <div className="submenu">
                                 {[
+                                    { label: "API Keys", id: "api_settings" },
+                                    { label: "Payment Gateways", id: "payment_settings" },
                                     { label: "Email Integration", id: "email_settings" },
+                                    { label: "SEO & Meta", id: "meta_management" },
                                     { label: "Email Templates", id: "email_templates" },
                                     { label: "Disclaimer & Policies", id: "disclaimer_settings" },
                                     { label: "SSO & OAuth2", id: "sso_settings" },
-                                    { label: "Payment Gateways", id: "payment_settings" },
-                                    { label: "API Configuration", id: "api_settings" },
                                 ].map((sub) => (
                                     <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
                                         <div className="dot-icon"></div>
                                         <span style={{ flex: 1 }}>{sub.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <p className="section-header">Administration</p>
-
-                    {/* Organizers Menu matching Image */}
-                    <div style={{ marginBottom: "4px" }}>
-                        <button
-                            onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
-                            className={`sidebar-item ${isOrganizersOpen ? "expanded-parent" : ""}`}
-                            style={{ display: "flex", justifyContent: "space-between" }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Users size={20} /> Organizers
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span className="badge-orange">!</span>
-                                <Menu size={14} style={{ transform: isOrganizersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
-                            </div>
-                        </button>
-
-                        {isOrganizersOpen && (
-                            <div className="submenu">
-                                {[
-                                    { label: "Active Organizers", id: "active_org" },
-                                    { label: "Banned Organizers", id: "banned_org" },
-                                    { label: "Email Unverified", id: "email_unverified" },
-                                    { label: "Mobile Unverified", id: "mobile_unverified" },
-                                    { label: "KYC Unverified", id: "kyc_unverified", badge: "9" },
-                                    { label: "KYC Pending", id: "kyc_pending" },
-                                    { label: "With Balance", id: "with_balance" },
-                                    { label: "All Organizers", id: "all_org" },
-                                    { label: "Send Notification", id: "send_notif" },
-                                ].map((sub) => (
-                                    <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                        <div className="dot-icon"></div>
-                                        <span style={{ flex: 1 }}>{sub.label}</span>
-                                        {sub.badge && <span className="badge-blue">{sub.badge}</span>}
                                     </div>
                                 ))}
                             </div>
@@ -428,18 +560,18 @@ export default function AdminHomePage() {
                             style={{ display: "flex", justifyContent: "space-between" }}
                         >
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Settings size={20} /> Home Page Settings
+                                <Globe size={20} /> Home Page
                             </div>
                             <Menu size={14} style={{ transform: isHomeSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
                         </button>
-
                         {isHomeSettingsOpen && (
                             <div className="submenu">
                                 {[
+                                    { label: "Hero Banner", id: "hero" },
                                     { label: "Branding", id: "branding" },
-                                    { label: "Sub Nav Bar", id: "subnav" },
                                     { label: "Featured Events", id: "events_settings" },
                                     { label: "Sections Order", id: "sections" },
+                                    { label: "SEO & Meta Ads", id: "meta_management" },
                                 ].map((sub) => (
                                     <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
                                         <div className="dot-icon"></div>
@@ -451,7 +583,7 @@ export default function AdminHomePage() {
                     </div>
 
                     {[
-                        { id: "categories", icon: LayoutDashboard, label: "Categories" },
+                        { id: "categories", icon: LayoutGrid, label: "Categories" },
                     ].map((item) => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)} className={`sidebar-item ${activeTab === item.id ? "active" : ""}`}>
                             <item.icon size={20} /> {item.label}
@@ -459,7 +591,7 @@ export default function AdminHomePage() {
                     ))}
 
                     <div style={{ marginTop: "24px", borderTop: `1px solid ${t.sidebarBorder}`, paddingTop: "12px" }}>
-                        <button className="sidebar-item"><Users size={20} /> Profile</button>
+                        <button className="sidebar-item"><UserCircle size={20} /> Profile</button>
                         <button className="sidebar-item" style={{ color: "#ef4444" }}><X size={20} /> Logout</button>
                     </div>
                 </nav>
@@ -469,8 +601,12 @@ export default function AdminHomePage() {
             <div className="main-content">
                 <header className="top-header">
                     <div>
-                        <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Dashboard</h1>
-                        <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>Overview & stats</p>
+                        <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
+                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "categories" ? "Event Categories" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                        </h1>
+                        <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>
+                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "categories" ? "Manage event categories" : ""}
+                        </p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div style={{ display: "none", alignItems: "center", gap: "8px", padding: "6px 12px", border: `1px solid ${t.border}`, borderRadius: "6px", color: t.textSub, fontSize: "13px" }}>
@@ -485,8 +621,20 @@ export default function AdminHomePage() {
                     </div>
                 </header>
 
+                {activeTab === "categories" && (
+                    <div style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#f8fafc" : "#1e293b", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: t.textSub }}>Event Categories</span>
+                        <button
+                            onClick={() => setCategoryModal("add")}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
+                        >
+                            <Plus size={18} /> Create a Category
+                        </button>
+                    </div>
+                )}
+
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "subnav" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
                             {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
@@ -496,10 +644,11 @@ export default function AdminHomePage() {
                                 { id: "payment_settings", label: "Payments", icon: CreditCard },
                                 { id: "api_settings", label: "API Keys", icon: Code },
                             ] : [
+                                { id: "hero", label: "Hero Banner", icon: ImageIcon },
                                 { id: "branding", label: "Branding", icon: Sparkles },
-                                { id: "subnav", label: "Sub Nav Bar", icon: Sparkles },
                                 { id: "events_settings", label: "Featured Events", icon: Ticket },
-                                { id: "sections", label: "Sections Order", icon: Menu },
+                                { id: "sections", label: "Sections Order", icon: LayoutDashboard },
+                                { id: "meta_management", label: "SEO & Ads", icon: Globe },
                             ]).map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="tab-btn"
                                     style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: activeTab === tab.id ? (theme === 'light' ? "#eff6ff" : "#1e293b") : "transparent", color: activeTab === tab.id ? "#3b82f6" : t.textSub, whiteSpace: "nowrap" }}>
@@ -511,10 +660,10 @@ export default function AdminHomePage() {
                     {activeTab === "dashboard" && (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
                             {[
-                                { label: "TOTAL EVENTS", value: "124", color: "#0ea5e9", icon: Ticket },
-                                { label: "TOTAL REVENUE", value: "₹45,200", color: "#22c55e", icon: LayoutDashboard },
-                                { label: "TOTAL ORGANIZERS", value: "15", color: "#10b981", icon: Users },
-                                { label: "PAYOUTS PENDING", value: "3", color: "#64748b", icon: LayoutDashboard },
+                                { label: "TOTAL EVENTS", value: allEvents.length.toString(), color: "#0ea5e9", icon: Ticket },
+                                { label: "TOTAL REVENUE", value: "₹0", color: "#22c55e", icon: LayoutDashboard },
+                                { label: "TOTAL ORGANIZERS", value: organizers.length.toString(), color: "#10b981", icon: Users },
+                                { label: "PAYOUTS PENDING", value: "0", color: "#64748b", icon: LayoutDashboard },
                             ].map((stat, i) => (
                                 <div key={i} className="stat-card" style={{ backgroundColor: theme === 'light' ? `${stat.color}05` : `${stat.color}15`, borderLeft: `4px solid ${stat.color}` }}>
                                     <div className="stat-icon-wrapper" style={{ backgroundColor: stat.color, width: "36px", height: "36px", right: "12px", top: "12px" }}>
@@ -528,29 +677,248 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "dashboard" && (
+                    {activeTab === "dashboard" && (() => {
+                        const categoryLabels = ["Music", "Sports", "Theatre", "Comedy", "Fest"];
+                        const byCat = categoryLabels.map(label => allEvents.filter(e => (e.category || "").toLowerCase().includes(label.toLowerCase())).length);
+                        const maxCat = Math.max(1, ...byCat);
+                        const paidCount = allEvents.filter(e => (e.type || "").toLowerCase() === "paid").length;
+                        const paidPct = allEvents.length ? Math.round((paidCount / allEvents.length) * 100) : 0;
+                        return (
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                             <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                                 <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Bookings by Category</h3>
                                 <div style={{ height: "140px", display: "flex", alignItems: "flex-end", gap: "16px", padding: "0 10px" }}>
-                                    {[60, 40, 80, 50, 70, 45].map((h, i) => (
-                                        <div key={i} style={{ flex: 1, height: `${h}%`, backgroundColor: "#3b82f6", borderRadius: "3px 3px 0 0" }}></div>
+                                    {byCat.map((count, i) => (
+                                        <div key={i} style={{ flex: 1, height: `${(count / maxCat) * 100}%`, backgroundColor: "#3b82f6", borderRadius: "3px 3px 0 0", minHeight: count ? "8px" : "0" }}></div>
                                     ))}
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "11px", color: t.textSub }}>
-                                    <span>Music</span><span>Sports</span><span>Theatre</span><span>Comedy</span><span>Fest</span>
+                                    {categoryLabels.map((l, i) => <span key={i}>{l}</span>)}
                                 </div>
                             </div>
                             <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                                 <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Events by Type</h3>
                                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "140px" }}>
-                                    <div style={{ width: "110px", height: "110px", borderRadius: "50%", border: "18px solid #3b82f6", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <div style={{ textAlign: "center" }}>
-                                            <span style={{ fontSize: "18px", fontWeight: 800 }}>72%</span>
+                                    <div style={{ width: "110px", height: "110px", borderRadius: "50%", background: `conic-gradient(#3b82f6 0deg, #3b82f6 ${paidPct * 3.6}deg, ${t.border} ${paidPct * 3.6}deg)`, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <div style={{ width: "74px", height: "74px", borderRadius: "50%", backgroundColor: t.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "absolute" }}>
+                                            <span style={{ fontSize: "18px", fontWeight: 800 }}>{paidPct}%</span>
                                             <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>Paid</p>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        );
+                    })()}
+
+                    {activeTab === "all_events" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>All Events (Homepage + Organisers)</h3>
+                                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px", textDecoration: "none" }}><Plus size={18} /> Create event</a>
+                                    <input
+                                        type="text"
+                                        placeholder="Search events..."
+                                        style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event Title</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Venue / Location</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Date</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Source</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allEvents.length > 0 ? allEvents.map((ev) => (
+                                            <tr key={ev.id + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{ev.venue || ev.location || "—"}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{ev.date}{ev.time ? ` ${ev.time}` : ""}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
+                                                </td>
+                                                <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>{ev.source === "organiser" ? "Organiser" : "Homepage"}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
+                                                </td>
+                                                <td style={{ padding: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                                    {ev.source === "organiser" && (
+                                                        <>
+                                                            <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Edit</button>
+                                                            <button onClick={() => setEvents(events.map(x => x.id === ev.id ? { ...x, archived: true } : x))} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Archive size={14} /> Archive</button>
+                                                            <button style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                                                        </>
+                                                    )}
+                                                    {ev.source === "home" && (
+                                                        <button onClick={() => setArchivedHomeIds([...archivedHomeIds, ev.id])} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Archive size={14} /> Archive</button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No events found. Homepage events and organiser-created events appear here.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "bookings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Ticket Orders</h3>
+                                <input type="text" placeholder="Search by order ID, email, event..." style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px", minWidth: "220px" }} />
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Order ID</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Customer</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Tickets</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Amount</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bookings.length > 0 ? bookings.map((b) => (
+                                            <tr key={b.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>#{b.id}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.customerEmail}</td>
+                                                <td style={{ padding: "12px" }}>{b.tickets}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{b.amount}</td>
+                                                <td style={{ padding: "12px" }}><span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>{b.status || "Confirmed"}</span></td>
+                                                <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View</button></td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No bookings yet. Orders from homepage and organiser events will appear here.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "customers" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Customer CRM</h3>
+                                <input type="text" placeholder="Search by name, email, phone..." style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px", minWidth: "220px" }} />
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Bookings</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Last activity</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {customers.length > 0 ? customers.map((c) => (
+                                            <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{c.name}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{c.email}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{c.phone || "—"}</td>
+                                                <td style={{ padding: "12px" }}>{c.bookingsCount || 0}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.lastActivity || "—"}</td>
+                                                <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View history</button></td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="6" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. User history and contact info will appear here.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "promotions" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Coupon codes & BOGO</h3>
+                                <button onClick={() => setPromotions([...promotions, { id: Date.now(), code: newPromo.code || "SAVE10", type: newPromo.type, value: newPromo.value || "10", bogo: newPromo.bogo, validUntil: newPromo.validUntil || "2026-12-31", usage: 0 }])} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Plus size={18} /> Create promotion</button>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                <div style={{ padding: "16px", border: `1px solid ${t.border}`, borderRadius: "10px" }}>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textSub }}>Code</label>
+                                    <input type="text" placeholder="e.g. SAVE10" value={newPromo.code} onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} />
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", marginTop: "10px", color: t.textSub }}>Type</label>
+                                    <select value={newPromo.type} onChange={(e) => setNewPromo({ ...newPromo, type: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}>
+                                        <option value="percent">Percentage off</option>
+                                        <option value="fixed">Fixed amount off</option>
+                                    </select>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", marginTop: "10px", color: t.textSub }}>Value</label>
+                                    <input type="text" placeholder={newPromo.type === "percent" ? "10" : "50"} value={newPromo.value} onChange={(e) => setNewPromo({ ...newPromo, value: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} />
+                                    <label style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={newPromo.bogo} onChange={(e) => setNewPromo({ ...newPromo, bogo: e.target.checked })} />
+                                        <span style={{ fontSize: "13px" }}>Buy 1 Get 1</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Code</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Type</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Value</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>BOGO</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Valid until</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Usage</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {promotions.length > 0 ? promotions.map((p) => (
+                                            <tr key={p.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 700 }}>{p.code}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{p.type === "percent" ? "Percent" : "Fixed"}</td>
+                                                <td style={{ padding: "12px" }}>{p.type === "percent" ? p.value + "%" : "₹" + p.value}</td>
+                                                <td style={{ padding: "12px" }}>{p.bogo ? "Yes" : "No"}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{p.validUntil}</td>
+                                                <td style={{ padding: "12px" }}>{p.usage || 0}</td>
+                                                <td style={{ padding: "12px" }}><button onClick={() => setPromotions(promotions.filter(x => x.id !== p.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Delete</button></td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No promotions yet. Create coupon codes or Buy 1 Get 1 offers above.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "financials" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Financial reports</h3>
+                            <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Export CSV or PDF for accounting and reconciliation.</p>
+                            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                                <button onClick={() => { const csv = "Date,Event,Order ID,Amount,Status\n" + (bookings.length ? bookings.map(b => `${new Date().toISOString().split("T")[0]},${b.eventName || ""},${b.id},${b.amount || "0"},${b.status || "Confirmed"}`).join("\n") : "No data"); const a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "financials-report.csv"; a.click(); }} style={{ padding: "12px 24px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><FileText size={18} /> Export CSV</button>
+                                <button onClick={() => window.print()} style={{ padding: "12px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><FileText size={18} /> Export PDF (print)</button>
+                            </div>
+                            <div style={{ marginTop: "24px", padding: "20px", border: `1px solid ${t.border}`, borderRadius: "10px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a" }}>
+                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>Summary</h4>
+                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total events: <strong>{allEvents.length}</strong></p>
+                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total bookings: <strong>{bookings.length}</strong></p>
+                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total revenue (sample): <strong>₹0</strong></p>
                             </div>
                         </div>
                     )}
@@ -559,8 +927,8 @@ export default function AdminHomePage() {
                         <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                                 <h3 style={{ fontSize: "16px", fontWeight: 700 }}>Event Categories</h3>
-                                <button style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-                                    + Add Category
+                                <button onClick={() => setCategoryModal("add")} style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                    <Plus size={16} /> Add Category
                                 </button>
                             </div>
                             <div style={{ border: `1px solid ${t.border}`, borderRadius: "8px", overflow: "hidden" }}>
@@ -575,20 +943,188 @@ export default function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {categories.map((cat) => (
+                                        {categories.map((cat) => {
+                                            const count = allEvents.filter(e => eventMatchesCategory(e, cat)).length;
+                                            return (
                                             <tr key={cat.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px 16px", fontSize: "18px" }}>{cat.icon}</td>
                                                 <td style={{ padding: "12px 16px", fontSize: "14px", fontWeight: 500 }}>{cat.name}</td>
                                                 <td style={{ padding: "12px 16px", fontSize: "14px", color: t.textSub }}>{cat.slug}</td>
-                                                <td style={{ padding: "12px 16px", fontSize: "14px" }}><span style={{ backgroundColor: "#eff6ff", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>{cat.count}</span></td>
+                                                <td style={{ padding: "12px 16px", fontSize: "14px" }}><span style={{ backgroundColor: theme === "light" ? "#eff6ff" : "#1e3a5f", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>{count}</span></td>
                                                 <td style={{ padding: "12px 16px" }}>
                                                     <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", marginRight: "12px" }}>Edit</button>
                                                     <button onClick={() => setCategories(categories.filter(c => c.id !== cat.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
                                                 </td>
                                             </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "hero" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Hero Banner Management</h3>
+                                <button onClick={addSlide} className="tab-btn" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
+                                    <Plus size={18} /> Add New Slide
+                                </button>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+                                {slides.map((slide) => (
+                                    <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: t.bg }}>
+                                        <div style={{ position: "relative", height: "150px" }}>
+                                            <img src={slide.img || "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=600&h=300&fit=crop"} alt={slide.alt || "Slide"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            <button onClick={() => removeSlide(slide.id)} style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+                                        </div>
+                                        <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Image URL</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Slide Image URL"
+                                                value={slide.img || ""}
+                                                onChange={(e) => updateSlide(slide.id, 'img', e.target.value)}
+                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
+                                            />
+                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Title</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Live Concerts"
+                                                value={slide.title || ""}
+                                                onChange={(e) => updateSlide(slide.id, 'title', e.target.value)}
+                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
+                                            />
+                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Subtitle</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Book your favourite artists"
+                                                value={slide.sub || ""}
+                                                onChange={(e) => updateSlide(slide.id, 'sub', e.target.value)}
+                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
+                                            />
+                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Alt Text (accessibility)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Alt Text"
+                                                value={slide.alt || ""}
+                                                onChange={(e) => updateSlide(slide.id, 'alt', e.target.value)}
+                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
+                                            />
+                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Target URL (optional)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="/events or full URL"
+                                                value={slide.url || ""}
+                                                onChange={(e) => updateSlide(slide.id, 'url', e.target.value)}
+                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                {slides.length === 0 && (
+                                    <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px" }}>
+                                        <ImageIcon size={48} color={t.textSub} style={{ opacity: 0.3, marginBottom: "16px" }} />
+                                        <p style={{ color: t.textSub }}>No slides added yet. Click 'Add New Slide' to get started.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "subnav" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Manage Sub Navigation Menu</h3>
+                                <button
+                                    onClick={() => { try { localStorage.setItem('admin_subnav_items', JSON.stringify(subnavItems)); alert('Sub navigation menu saved.'); } catch (_) { alert('Could not save.'); } }}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
+                                >
+                                    <Save size={18} /> Save
+                                </button>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+                                {subnavItems.map((item) => (
+                                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "8px" }}>
+                                        <span style={{ fontSize: "20px" }}>{item.icon}</span>
+                                        <input
+                                            type="text"
+                                            value={item.label}
+                                            onChange={(e) => setSubnavItems(subnavItems.map(si => si.id === item.id ? { ...si, label: e.target.value } : si))}
+                                            style={{ flex: 1, padding: "4px 8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                        />
+                                        <button onClick={() => setSubnavItems(subnavItems.filter(si => si.id !== item.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={() => setSubnavItems([...subnavItems, { id: Date.now(), label: "New Item", icon: "✨" }])}
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", border: `2px dashed ${t.border}`, borderRadius: "8px", background: "none", cursor: "pointer", color: t.textSub }}>
+                                    <Plus size={18} /> Add Menu Item
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "events_settings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "24px" }}>Featured Events Selection</h3>
+                            <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "20px" }}>Toggle which events appear in the 'Featured' section on the Home Page.</p>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Category</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Is Featured?</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {events.map((ev) => (
+                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
+                                                <td style={{ padding: "12px", color: t.textSub }}>{ev.category}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <button
+                                                        onClick={() => setEvents(events.map(e => e.id === ev.id ? { ...e, isFeatured: !e.isFeatured } : e))}
+                                                        style={{
+                                                            padding: "6px 12px",
+                                                            borderRadius: "6px",
+                                                            border: "none",
+                                                            backgroundColor: ev.isFeatured ? "#22c55e" : "#f1f5f9",
+                                                            color: ev.isFeatured ? "#fff" : "#64748b",
+                                                            cursor: "pointer",
+                                                            fontSize: "12px",
+                                                            fontWeight: 600
+                                                        }}>
+                                                        {ev.isFeatured ? "Featured" : "No"}
+                                                    </button>
+                                                </td>
+                                            </tr>
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "sections" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "24px" }}>Sections Display Order</h3>
+                            <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "20px" }}>Drag or use arrows to reorder sections on the home page.</p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                {["Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"].map((sect, idx) => (
+                                    <div key={sect} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: "8px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <span style={{ color: t.textSub, fontWeight: "bold" }}>#{idx + 1}</span>
+                                            <span style={{ fontWeight: 600 }}>{sect}</span>
+                                        </div>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <button style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} style={{ transform: "rotate(45deg)" }} /></button>
+                                            <button style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} /></button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -852,12 +1388,16 @@ export default function AdminHomePage() {
 
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
                                 {[
-                                    { name: "Stripe", status: "Connected", desc: "Global payments, Cards, Apple Pay", color: "#6366f1" },
-                                    { name: "Razorpay", status: "Inactive", desc: "Cards, UPI, Netbanking (India)", color: "#339af0" },
-                                    { name: "PayU", status: "Inactive", desc: "Enterprise checkout & UPI solutions", color: "#a4c639" },
-                                    { name: "PhonePe", status: "Inactive", desc: "Direct UPI & merchant payments", color: "#6739b7" },
-                                    { name: "Paytm", status: "Connected", desc: "Wallet, UPI & Netbanking payments", color: "#00b9f1" }
-                                ].map((gw) => (
+                                    { name: "Stripe", desc: "Global payments, Cards, Apple Pay", color: "#6366f1" },
+                                    { name: "Razorpay", desc: "Cards, UPI, Netbanking (India)", color: "#339af0" },
+                                    { name: "PayU", desc: "Enterprise checkout & UPI solutions", color: "#a4c639" },
+                                    { name: "PhonePe", desc: "Direct UPI & merchant payments", color: "#6739b7" },
+                                    { name: "Paytm", desc: "Wallet, UPI & Netbanking payments", color: "#00b9f1" }
+                                ].map((gw) => {
+                                    const config = paymentGateways[gw.name] || {};
+                                    const isConnected = config.enabled && (config.apiKey || "").trim().length > 0;
+                                    const status = isConnected ? "Connected" : "Inactive";
+                                    return (
                                     <div key={gw.name} style={{
                                         backgroundColor: theme === 'light' ? '#ffffff' : t.cardBg,
                                         padding: "20px",
@@ -886,29 +1426,116 @@ export default function AdminHomePage() {
                                                 fontWeight: 700,
                                                 padding: "3px 8px",
                                                 borderRadius: "20px",
-                                                backgroundColor: gw.status === 'Connected' ? '#22c55e20' : '#f1f5f9',
-                                                color: gw.status === 'Connected' ? '#22c55e' : '#64748b'
-                                            }}>{gw.status.toUpperCase()}</span>
+                                                backgroundColor: status === 'Connected' ? '#22c55e20' : '#f1f5f9',
+                                                color: status === 'Connected' ? '#22c55e' : '#64748b'
+                                            }}>{status.toUpperCase()}</span>
                                         </div>
                                         <h4 style={{ fontSize: "15px", fontWeight: 700, color: t.textMain, margin: "0 0 6px 0" }}>{gw.name}</h4>
                                         <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0", lineHeight: "1.4" }}>{gw.desc}</p>
-                                        <button style={{
-                                            width: "100%",
-                                            padding: "8px",
-                                            borderRadius: "8px",
-                                            border: `1px solid ${t.border}`,
-                                            backgroundColor: "transparent",
-                                            color: t.textMain,
-                                            fontSize: "12px",
-                                            fontWeight: 600,
-                                            cursor: "pointer",
-                                            transition: "0.2s"
-                                        }} onMouseOver={(e) => { e.target.style.backgroundColor = t.bg; }} onMouseOut={(e) => { e.target.style.backgroundColor = "transparent"; }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentGatewayConfig(gw.name)}
+                                            style={{
+                                                width: "100%",
+                                                padding: "8px",
+                                                borderRadius: "8px",
+                                                border: `1px solid ${t.border}`,
+                                                backgroundColor: "transparent",
+                                                color: t.textMain,
+                                                fontSize: "12px",
+                                                fontWeight: 600,
+                                                cursor: "pointer",
+                                                transition: "0.2s"
+                                            }}
+                                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = t.bg; }}
+                                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                                        >
                                             Configure Settings
                                         </button>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
+
+                            {/* Payment gateway config modal */}
+                            {paymentGatewayConfig && (() => {
+                                const gw = paymentGatewayConfig;
+                                const cfg = paymentGateways[gw] || { enabled: false, apiKey: "", secretKey: "", webhookSecret: "" };
+                                const hasWebhook = gw === "Stripe";
+                                return (
+                                    <div
+                                        style={{
+                                            position: "fixed",
+                                            inset: 0,
+                                            backgroundColor: "rgba(0,0,0,0.5)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            zIndex: 9999,
+                                            padding: "20px"
+                                        }}
+                                        onClick={() => setPaymentGatewayConfig(null)}
+                                    >
+                                        <div
+                                            style={{
+                                                backgroundColor: t.cardBg,
+                                                borderRadius: "12px",
+                                                border: `1px solid ${t.border}`,
+                                                padding: "24px",
+                                                maxWidth: "440px",
+                                                width: "100%",
+                                                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                                <h3 style={{ fontSize: "18px", fontWeight: 700, color: t.textMain, margin: 0 }}>Configure {gw}</h3>
+                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, padding: "4px" }}><X size={20} /></button>
+                                            </div>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", cursor: "pointer" }}>
+                                                <input type="checkbox" checked={!!cfg.enabled} onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], enabled: e.target.checked } }))} />
+                                                <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Enable this gateway</span>
+                                            </label>
+                                            <div style={{ marginBottom: "12px" }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>API Key / Publishable Key</label>
+                                                <input
+                                                    type="password"
+                                                    placeholder="pk_live_... or key id"
+                                                    value={cfg.apiKey || ""}
+                                                    onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], apiKey: e.target.value } }))}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ marginBottom: "12px" }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Secret Key</label>
+                                                <input
+                                                    type="password"
+                                                    placeholder="sk_live_... or secret"
+                                                    value={cfg.secretKey || ""}
+                                                    onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], secretKey: e.target.value } }))}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            {hasWebhook && (
+                                                <div style={{ marginBottom: "12px" }}>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Webhook Secret (optional)</label>
+                                                    <input
+                                                        type="password"
+                                                        placeholder="whsec_..."
+                                                        value={cfg.webhookSecret || ""}
+                                                        onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], webhookSecret: e.target.value } }))}
+                                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
+                                                    />
+                                                </div>
+                                            )}
+                                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "20px" }}>
+                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontSize: "14px" }}>Cancel</button>
+                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}>Save</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 
@@ -1392,7 +2019,132 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings"].includes(activeTab)) && (
+                    {activeTab === "meta_management" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                                    <Globe size={20} color="#3b82f6" />
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Global SEO & Meta Ads</h3>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Site Title</label>
+                                            <input
+                                                type="text"
+                                                value={metaSettings.global.title}
+                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, title: e.target.value } })}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Keywords (Comma separated)</label>
+                                            <textarea
+                                                value={metaSettings.global.keywords}
+                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, keywords: e.target.value } })}
+                                                rows={3}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Meta Description</label>
+                                            <textarea
+                                                value={metaSettings.global.description}
+                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, description: e.target.value } })}
+                                                rows={3}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Meta Ads / Tracking Pixels (Head Scripts)</label>
+                                        <textarea
+                                            value={metaSettings.global.metaAdsCode}
+                                            onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, metaAdsCode: e.target.value } })}
+                                            rows={12}
+                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontFamily: "monospace", fontSize: "12px" }}
+                                            placeholder="Paste your Meta Pixel or Ad scripts here..."
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => alert("Global Meta Settings Saved!")}
+                                    style={{ marginTop: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}>
+                                    Save Global Settings
+                                </button>
+                            </div>
+
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                                    <Megaphone size={20} color="#f97316" />
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Event-Specific Meta Ads Management</h3>
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event Title</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Meta Keywords</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Meta Ad ID / Tracking</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {allEvents.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>No events yet. Add events on the Homepage data or create them in the Organiser panel.</td>
+                                                </tr>
+                                            ) : allEvents.map((ev) => {
+                                                const isOrganiser = ev.source === "organiser";
+                                                const keywords = isOrganiser ? (ev.meta?.keywords ?? "") : (eventMetaOverrides[ev.id]?.keywords ?? "");
+                                                const adsId = isOrganiser ? (ev.meta?.adsId ?? "") : (eventMetaOverrides[ev.id]?.adsId ?? "");
+                                                return (
+                                                <tr key={(ev.id ?? "") + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
+                                                    </td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <input
+                                                            type="text"
+                                                            value={keywords}
+                                                            onChange={(e) => isOrganiser
+                                                                ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), keywords: e.target.value } } : event))
+                                                                : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), keywords: e.target.value } }))}
+                                                            style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
+                                                            placeholder="Keywords for SEO/ads"
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <input
+                                                            type="text"
+                                                            value={adsId}
+                                                            onChange={(e) => isOrganiser
+                                                                ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), adsId: e.target.value } } : event))
+                                                                : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), adsId: e.target.value } }))}
+                                                            style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
+                                                            placeholder="Pixel ID or Ad Set ID"
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <button
+                                                            onClick={() => alert(`Meta Ads updated for ${ev.title}`)}
+                                                            style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
+                                                            Update
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "hero", "video"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
@@ -1450,6 +2202,35 @@ export default function AdminHomePage() {
                                             style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "transparent", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 600, cursor: "pointer" }}>
                                             Cancel
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {categoryModal === "add" && (
+                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }} onClick={() => setCategoryModal(null)}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", width: "380px", border: `1px solid ${t.border}` }} onClick={e => e.stopPropagation()}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Create a Category</h3>
+                                    <button type="button" onClick={() => setCategoryModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub }}><X size={20} /></button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Name</label>
+                                        <input type="text" value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value, slug: e.target.value.toLowerCase().trim().replace(/\s+/g, "-") }))} placeholder="e.g. Concert" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Slug</label>
+                                        <input type="text" value={categoryForm.slug} onChange={e => setCategoryForm(f => ({ ...f, slug: e.target.value }))} placeholder="e.g. concert" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Icon (emoji)</label>
+                                        <input type="text" value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value || "📁" }))} placeholder="🎫" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                    </div>
+                                    <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                                        <button type="button" onClick={() => setCategoryModal(null)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontWeight: 600 }}>Cancel</button>
+                                        <button type="button" onClick={() => { const name = (categoryForm.name || "").trim(); const slug = (categoryForm.slug || name.toLowerCase().replace(/\s+/g, "-")).trim(); if (!name) return; const newId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1; setCategories([...categories, { id: newId, name, slug: slug || "category", count: 0, icon: categoryForm.icon || "📁" }]); setCategoryForm({ name: "", slug: "", icon: "📁" }); setCategoryModal(null); }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save</button>
                                     </div>
                                 </div>
                             </div>

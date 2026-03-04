@@ -1,14 +1,7 @@
 "use client";
 
 const QUICK_LINKS = ["About Us", "Our Blogs", "Event Listing", "Pricing Plan", "Contact Us"];
-const GALLERY_IMGS = [
-    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=200&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=200&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&h=200&fit=crop",
-];
+const GALLERY_IMGS = [];
 
 const SOCIALS = [
     {

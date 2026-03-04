@@ -4,14 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "face-api.js": "^0.22.2",
+    "face-api.js": "^0.20.0",
     "framer-motion": "^12.34.3",
     "gsap": "^3.14.2",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
     "postprocessing": "^6.38.3",

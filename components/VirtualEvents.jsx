@@ -1,52 +1,9 @@
 "use client";
 import { useRef, useState } from "react";
-
-const VIRTUAL_EVENTS = [
-    {
-        id: 1,
-        title: "Every Founder Must Know These 21 Business Retreats",
-        date: "Mar 21, 2026",
-        type: "Free",
-        img: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=700&h=394&fit=crop",
-    },
-    {
-        id: 2,
-        title: "Colours of Wildlife – Budding Artist Award",
-        date: "Mar 1, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=700&h=394&fit=crop",
-    },
-    {
-        id: 3,
-        title: "Cybersecurity For Entrepreneurs",
-        date: "Feb 28, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=700&h=394&fit=crop",
-    },
-    {
-        id: 4,
-        title: "Digital Raaga",
-        date: "Feb 28, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=700&h=394&fit=crop",
-    },
-    {
-        id: 5,
-        title: "Online Marketing Bootcamp 2026",
-        date: "Apr 10, 2026",
-        type: "Free",
-        img: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&h=394&fit=crop",
-    },
-    {
-        id: 6,
-        title: "AI & Future of Work – Webinar",
-        date: "May 5, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=700&h=394&fit=crop",
-    },
-];
-
 import Link from "next/link";
+import { HOME_EVENTS } from "@/app/data/homeEvents";
+
+const VIRTUAL_EVENTS = HOME_EVENTS.filter((e) => e.virtual);
 
 function VirtualCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -182,7 +139,11 @@ export default function VirtualEvents() {
                         ref={scrollRef}
                         style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px", paddingRight: "48px" }}
                     >
-                        {VIRTUAL_EVENTS.map(event => <VirtualCard key={event.id} event={event} />)}
+                        {VIRTUAL_EVENTS.length > 0 ? VIRTUAL_EVENTS.map(event => <VirtualCard key={event.id} event={event} />) : (
+                            <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
+                                Virtual experiences coming soon.
+                            </div>
+                        )}
                     </div>
 
                     {/* Right-edge arrow */}

@@ -1,74 +1,9 @@
 "use client";
 import { useState } from "react";
-
-const POPULAR_EVENTS = [
-    {
-        id: 1,
-        title: "Aora – Garc 2026 Faculty",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Jul 16, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&h=394&fit=crop",
-    },
-    {
-        id: 2,
-        title: "AORA – GARC 2026",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Jul 16, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&h=394&fit=crop",
-    },
-    {
-        id: 3,
-        title: "Kaber Vasuki – Frangipani Tour 2026",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Apr 25, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=700&h=394&fit=crop",
-    },
-    {
-        id: 4,
-        title: "Top Model Of Tamil Nadu 2026",
-        location: "Coimbatore, Tamil Nadu 641004, India",
-        date: "Apr 5, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1529139574466-a303027614b2?w=700&h=394&fit=crop",
-    },
-    {
-        id: 5,
-        title: "Harmony Summer Music Festival",
-        location: "Hyderabad, Telangana, India",
-        date: "Jun 15, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=700&h=394&fit=crop",
-    },
-    {
-        id: 6,
-        title: "Startup Pitch Battle 2026",
-        location: "Chennai, Tamil Nadu, India",
-        date: "May 22, 2026",
-        type: "Free",
-        img: "https://images.unsplash.com/photo-1542626991-cbc4e32524cc?w=700&h=394&fit=crop",
-    },
-    {
-        id: 7,
-        title: "Tech Innovation Summit 2026",
-        location: "Bengaluru, Karnataka, India",
-        date: "Aug 10, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=700&h=394&fit=crop",
-    },
-    {
-        id: 8,
-        title: "Rapport'26 Unplugged",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Feb 28, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=700&h=394&fit=crop",
-    },
-];
-
 import Link from "next/link";
+import { HOME_EVENTS } from "@/app/data/homeEvents";
+
+const POPULAR_EVENTS = HOME_EVENTS;
 
 function PopularCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -195,12 +130,16 @@ export default function PopularEvents() {
                 <div
                     aria-labelledby="popular-events-heading"
                     style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4, 1fr)",
+                        display: POPULAR_EVENTS.length > 0 ? "grid" : "block",
+                        gridTemplateColumns: POPULAR_EVENTS.length > 0 ? "repeat(4, 1fr)" : "none",
                         gap: "16px",
                     }}
                 >
-                    {POPULAR_EVENTS.map(event => <PopularCard key={event.id} event={event} />)}
+                    {POPULAR_EVENTS.length > 0 ? POPULAR_EVENTS.map(event => <PopularCard key={event.id} event={event} />) : (
+                        <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>
+                            Popular events will appear here soon.
+                        </div>
+                    )}
                 </div>
 
             </div>

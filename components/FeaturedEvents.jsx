@@ -1,65 +1,12 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import Link from "next/link";
+import { HOME_EVENTS } from "@/app/data/homeEvents";
 
-const FEATURED_EVENTS = [
-    {
-        id: 1,
-        title: "Saree, These Are Just Jokes",
-        date: "Mar 13, 2026",
-        location: "Coimbatore",
-        img: "https://images.unsplash.com/photo-1603190287605-e6ade32fa852?w=500&h=650&fit=crop",
-        verified: true,
-        type: "Paid",
-    },
-    {
-        id: 2,
-        title: "Rapport'26 Unplugged",
-        date: "Feb 28, 2026",
-        location: "Coimbatore",
-        img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=650&fit=crop",
-        verified: true,
-        type: "Paid",
-    },
-    {
-        id: 3,
-        title: "Startup Founders Meet",
-        date: "Apr 10, 2026",
-        location: "Chennai",
-        img: "https://images.unsplash.com/photo-1542626991-cbc4e32524cc?w=500&h=650&fit=crop",
-        verified: true,
-        type: "Paid",
-    },
-    {
-        id: 4,
-        title: "Tech Innovation Panel 2026",
-        date: "May 22, 2026",
-        location: "Bengaluru",
-        img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=500&h=650&fit=crop",
-        verified: false,
-        type: "Free",
-    },
-    {
-        id: 5,
-        title: "Harmony Music Festival",
-        date: "Jun 15, 2026",
-        location: "Hyderabad",
-        img: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=500&h=650&fit=crop",
-        verified: true,
-        type: "Paid",
-    },
-    {
-        id: 6,
-        title: "Kaber Vasuki Frangipani Tour",
-        date: "Apr 25, 2026",
-        location: "Coimbatore",
-        img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=650&fit=crop",
-        verified: true,
-        type: "Paid",
-    },
-];
+const DEFAULT_FEATURED = HOME_EVENTS.filter((e) => e.featured);
 
-export default function FeaturedEvents() {
+export default function FeaturedEvents({ events }) {
+    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_FEATURED), [events]);
     const scrollRef = useRef(null);
 
     const scroll = (dir) => {
@@ -137,7 +84,7 @@ export default function FeaturedEvents() {
                 >
 
 
-                    {FEATURED_EVENTS.map((event) => (
+                    {list.length > 0 ? list.map((event) => (
                         <Link
                             key={event.id}
                             href={`/events/${event.id}`}
@@ -253,7 +200,11 @@ export default function FeaturedEvents() {
                                 </div>
                             </div>
                         </Link>
-                    ))}
+                    )) : (
+                        <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
+                            No featured events available right now.
+                        </div>
+                    )}
                 </div>
             </div>
 

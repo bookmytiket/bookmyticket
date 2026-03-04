@@ -19,43 +19,27 @@ import {
     Heart
 } from 'lucide-react';
 
-const MOCK_EVENTS = {
-    "1": {
-        id: 1,
-        title: "Saree, These Are Just Jokes!",
-        date: "Mar 13, 2026",
-        time: "7:30 PM onwards",
-        location: "Medai The Stage - Coimbatore",
-        venue: "Medai The Stage - Coimbatore",
-        city: "Coimbatore",
-        category: "Comedy Show",
-        img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=400&fit=crop",
-        ageLimit: "Adults 18+ years",
-        language: "English",
-        description: `She's worn the saree, broken the rules, and lived to tell the tale—now Sharul Channa comes to India with 'Saree, These Are Just Jokes!'
-    In her newest comedy special, the Singapore-born comic returns with fresh stories, bigger laughs, and a delightfully mischievous take on modern life.
-    From social expectations and self-made pressure to relationships, reinvention, and the chaos of knowing "better" but doing it anyway, Sharul dissects it all with razor-sharp humour and infectious charm. Her storytelling is fearless, her observations spot-on, and her timing impeccable.
-    This is stand-up that's honest without being heavy, clever without trying too hard, and unapologetically fun. Come for the laughs—stay for the cathartic release.`,
-        features: [
-            { icon: <ShieldCheck className="w-5 h-5" />, label: "All safety measures enabled" },
-            { icon: <Armchair className="w-5 h-5" />, label: "Seating (FCFS)" },
-            { icon: <CheckCircle className="w-5 h-5" />, label: "Mandatory Check-In" },
-            { icon: <Warehouse className="w-5 h-5" />, label: "Indoor Event" }
-        ],
-        tags: ["Comedy Show"],
-        parking: "Paid Parking Available at the Venue.",
-        refundPolicy: [
-            "Organizer-Managed Cancellations",
-            "No Refund for Missed Events",
-            "Event Cancellations or Postponements"
-        ]
-    },
-    // Add other events if needed, but 1 is main reference
-};
+const MOCK_EVENTS = {};
 
 export default function EventDetailPage({ params }) {
     const { id } = React.use(params);
-    const event = MOCK_EVENTS[id] || MOCK_EVENTS["1"]; // Fallback for demo
+    const event = MOCK_EVENTS[id];
+
+    if (!event) {
+        return (
+            <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '150px', textAlign: 'center' }}>
+                <div className="container">
+                    <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#111827' }}>Event Not Found</h2>
+                    <p style={{ color: '#6b7280', marginTop: '10px' }}>The event you are looking for does not exist or has been removed.</p>
+                    <Link href="/">
+                        <button style={{ marginTop: '20px', padding: '12px 24px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                            Back to Home
+                        </button>
+                    </Link>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px' }}>

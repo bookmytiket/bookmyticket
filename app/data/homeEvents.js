@@ -1,0 +1,49 @@
+// External client advertisements — same format & size as Spotlight banner, auto-scroll 3s
+export const EXTERNAL_CLIENT_ADS = [
+  { id: 1, img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=400&fit=crop", alt: "Live concert event", title: "Live Concerts", link: "/events" },
+  { id: 2, img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1200&h=400&fit=crop", alt: "Sports & marathon", title: "Sports & Marathons", link: "/events?category=Sports" },
+  { id: 3, img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&h=400&fit=crop", alt: "Comedy & live shows", title: "Comedy & Live Shows", link: "/events?category=Comedy" },
+  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&h=400&fit=crop", alt: "Festival experience", title: "Festivals & More", link: "/events" },
+];
+
+// Banner slides for image-based hero carousel (above video)
+export const HERO_BANNER_SLIDES = [
+  { id: 1, img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=480&fit=crop", title: "Live Concerts", sub: "Book your favourite artists" },
+  { id: 2, img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1200&h=480&fit=crop", title: "Sports & Marathons", sub: "Events near you" },
+  { id: 3, img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&h=480&fit=crop", title: "Comedy & Live Shows", sub: "Laugh out loud" },
+  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&h=480&fit=crop", title: "Festivals & More", sub: "Discover experiences" },
+];
+
+// Single list of events; sections filter by flags. Card: id, title, img, date, location, type (Paid/Free), category, featured, trending, exclusive, virtual, spotlight
+export const HOME_EVENTS = [
+  { id: 1, title: "Kaber Vasuki - Frangipani Tour 2026", date: "Apr 25, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Concert", img: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: true },
+  { id: 2, title: "Top Model Of Tamil Nadu 2026", date: "Apr 5, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Competition", img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: false },
+  { id: 3, title: "Ani Vs U1 A Singalong By Strums N Beats", date: "Mar 14, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Musics", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: true, virtual: false, spotlight: false },
+  { id: 4, title: "Saree, These Are Just Jokes!", date: "Mar 13, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Comedy Show", img: "https://images.unsplash.com/photo-1585699324551-f6f0e9a120eb?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: false },
+  { id: 5, title: "AORA - GARC 2026", date: "Jul 16, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Conference", img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop", featured: true, trending: false, exclusive: true, virtual: false, spotlight: false },
+  { id: 6, title: "Bharathanatyam Recital By Harinie Jeevitha", date: "Mar 28, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Classical Dance", img: "https://images.unsplash.com/photo-1503095396549-807759245b35?w=500&h=280&fit=crop", featured: false, trending: true, exclusive: false, virtual: false, spotlight: true },
+  { id: 7, title: "Flames - A Tamil Sing Along Event", date: "Mar 15, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Live Shows", img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=280&fit=crop", featured: false, trending: true, exclusive: false, virtual: false, spotlight: false },
+  { id: 8, title: "Thadam 360 - Education Expo & Job Fair 2026", date: "Mar 27, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Free", category: "Exhibition", img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: true, virtual: false, spotlight: false },
+  { id: 9, title: "Coimbatore Kidz Run", date: "Mar 8, 2026", location: "Decathlon Sports, Coimbatore", type: "Paid", category: "Marathon", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: true },
+  { id: 10, title: "Every Founder Must Know These 10 Business Contracts", date: "Mar 21, 2026", location: "Online", type: "Free", category: "Conference", img: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: false, virtual: true, spotlight: false },
+  { id: 11, title: "Financial Wellness Workshop", date: "Mar 6, 2026", location: "Online", type: "Free", category: "Conference", img: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: false, virtual: true, spotlight: false },
+  { id: 12, title: "Colours Of Wildlife - Budding Artist Award Mar 2026", date: "Mar 1, 2026", location: "Online", type: "Paid", category: "Exhibition", img: "https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: false, virtual: true, spotlight: false },
+  { id: 13, title: "Digital Raaga - Online Singing Contest", date: "Feb 28, 2026", location: "Online", type: "Paid", category: "Musics", img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: false, virtual: true, spotlight: false },
+  { id: 14, title: "Holi Blast 2026", date: "Mar 8, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Others", img: "https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: false },
+  { id: 15, title: "Women's Day Marathon 2026", date: "Mar 8, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Marathon", img: "https://images.unsplash.com/photo-1452626038303-9dae5c870eb7?w=500&h=280&fit=crop", featured: true, trending: false, exclusive: false, virtual: false, spotlight: false },
+];
+
+export const MEMORIES = [
+  { id: 1, img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop", alt: "Concert Night" },
+  { id: 2, img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=300&fit=crop", alt: "Marathon 2025" },
+  { id: 3, img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=300&fit=crop", alt: "Live Music" },
+  { id: 4, img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=300&fit=crop", alt: "Festival" },
+  { id: 5, img: "https://images.unsplash.com/photo-1585699324551-f6f0e9a120eb?w=400&h=300&fit=crop", alt: "Comedy Show" },
+];
+
+export const FEATURED_ORGANISERS = [
+  { id: 1, name: "BookMyShow LIVE", logo: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=120&h=120&fit=crop", eventCount: 12 },
+  { id: 2, name: "Medai Coimbatore", logo: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=120&h=120&fit=crop", eventCount: 5 },
+  { id: 3, name: "Unherd Music Community", logo: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=120&fit=crop", eventCount: 3 },
+  { id: 4, name: "LEA360 Community", logo: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=120&h=120&fit=crop", eventCount: 2 },
+];

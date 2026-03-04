@@ -4,14 +4,8 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const SUBNAV_LINKS = [
-  { href: "/events", label: "Events" },
+  { href: "/", label: "Events" },
   { href: "/#rsvp", label: "RSVP" },
-  { href: "/movies", label: "Surprise Me" },
-];
-
-const CATEGORIES = [
-  "Concert", "Sports", "Comedy", "Theatre",
-  "Music", "Workshop", "Festival", "Live Shows",
 ];
 
 const COUNTRIES = [
@@ -103,13 +97,49 @@ const ALL_CITIES_BY_COUNTRY = {
   "United States": ["New York City", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
 };
 
+const DEFAULT_CATEGORIES = [
+  "Concert", "Sports", "Comedy", "Theatre",
+  "Music", "Workshop", "Festival", "Live Shows",
+];
+
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, selectedCity, updateCity } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
+  const [navCategories, setNavCategories] = useState(DEFAULT_CATEGORIES);
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCat = searchParams.get("category") || "";
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("admin_categories") : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
+          if (names.length > 0) setNavCategories(names);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e) => {
+      if (e.key === "admin_categories" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
+            if (names.length > 0) setNavCategories(names);
+          }
+        } catch (_) {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const setActiveCat = (cat) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -124,7 +154,6 @@ export default function Navbar() {
 
   /* Location modal */
   const [locOpen, setLocOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState("Coimbatore");
   const [locSearch, setLocSearch] = useState("");
   const [activeCountry, setActiveCountry] = useState("India");
   const [showOtherCities, setShowOtherCities] = useState(false);
@@ -132,25 +161,38 @@ export default function Navbar() {
 
   const handleGeoLocation = () => {
     setGeoLoading(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          // Mock: In real app, we would reverse-geocode pos.coords to a city
-          setTimeout(() => {
-            setSelectedCity("Coimbatore"); // Fallback mock result
-            setLocOpen(false);
-            setGeoLoading(false);
-          }, 800);
-        },
-        (err) => {
-          setGeoLoading(false);
-          alert("Location permission denied. Please search manually.");
-        }
-      );
-    } else {
+    if (!("geolocation" in navigator)) {
       setGeoLoading(false);
       alert("Geolocation is not supported by your browser.");
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { "Accept-Language": "en", "User-Agent": "BookMyTicket/1.0" } }
+          );
+          const data = await res.json();
+          const addr = data?.address || {};
+          const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || addr.state || data?.name || "Your location";
+          const country = (addr.country || "").trim();
+          updateCity(city);
+          if (country && COUNTRIES.some((c) => c.label === country)) setActiveCountry(country);
+          setLocOpen(false);
+        } catch {
+          updateCity("Coimbatore");
+          setLocOpen(false);
+        }
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeoLoading(false);
+        alert("Location permission denied or unavailable. Please search manually.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   /* Organiser modal */
@@ -201,7 +243,7 @@ export default function Navbar() {
   };
 
   const handleEventsClick = (e) => {
-    if (pathname === "/events") {
+    if (pathname === "/") {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -259,24 +301,24 @@ export default function Navbar() {
         </div>
 
 
-        {(isHome || pathname === "/events") && (
+        {(isHome || pathname === "/") && (
           <div className="header-subnav">
             <div className="header-subnav-inner">
-              {SUBNAV_LINKS.map(({ href, label }) => (
-                <Link key={label} href={href} className="subnav-link" onClick={label === "Events" ? handleEventsClick : undefined}>
-                  {label}
-                </Link>
-              ))}
-
-              <span className="subnav-sep" />
-
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  className={`subnav-cat${activeCat === cat ? " active" : ""}`}
-                  onClick={() => setActiveCat(cat === activeCat ? "" : cat)}
-                >{cat}</button>
-              ))}
+              <div className="header-subnav-left">
+                {SUBNAV_LINKS.map(({ href, label }) => (
+                  <Link key={label} href={href} className="subnav-link" onClick={label === "Events" ? handleEventsClick : undefined}>
+                    {label}
+                  </Link>
+                ))}
+                <span className="subnav-sep" />
+                {navCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`subnav-cat${activeCat === cat ? " active" : ""}`}
+                    onClick={() => setActiveCat(cat === activeCat ? "" : cat)}
+                  >{cat}</button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -345,7 +387,7 @@ export default function Navbar() {
                 <button
                   key={city.name}
                   className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
-                  onClick={() => { setSelectedCity(city.name); setLocOpen(false); }}
+                  onClick={() => { updateCity(city.name); setLocOpen(false); }}
                 >
                   <div className="loc-city-icon-wrap" style={{ background: CITY_GRADIENTS[(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).indexOf(city) % CITY_GRADIENTS.length] }}>
                     <span className="loc-city-emoji">{city.icon}</span>
@@ -369,7 +411,7 @@ export default function Navbar() {
                       <div
                         key={city}
                         className={`loc-dropdown-item ${selectedCity === city ? 'selected' : ''}`}
-                        onClick={() => { setSelectedCity(city); setLocOpen(false); setShowOtherCities(false); }}
+                        onClick={() => { updateCity(city); setLocOpen(false); setShowOtherCities(false); }}
                       >
                         {city}
                         {selectedCity === city && <span className="loc-check">✓</span>}

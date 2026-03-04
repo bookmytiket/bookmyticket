@@ -1,57 +1,9 @@
 "use client";
-import { useRef, useState } from "react";
-
-const TRENDING_EVENTS = [
-    {
-        id: 1,
-        title: "Kaber Vasuki – Frangipani Tour 2026",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Apr 25, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=700&h=394&fit=crop",
-    },
-    {
-        id: 2,
-        title: "Top Model Of Tamil Nadu 2026",
-        location: "Coimbatore, Tamil Nadu 641004, India",
-        date: "Apr 5, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1529139574466-a303027614b2?w=700&h=394&fit=crop",
-    },
-    {
-        id: 3,
-        title: "Aora – Garc 2026 Faculty",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Jul 16, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&h=394&fit=crop",
-    },
-    {
-        id: 4,
-        title: "Harmony Summer Music Festival",
-        location: "Hyderabad, Telangana, India",
-        date: "Jun 15, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=700&h=394&fit=crop",
-    },
-    {
-        id: 5,
-        title: "Startup Pitch Battle 2026",
-        location: "Chennai, Tamil Nadu, India",
-        date: "May 22, 2026",
-        type: "Free",
-        img: "https://images.unsplash.com/photo-1542626991-cbc4e32524cc?w=700&h=394&fit=crop",
-    },
-    {
-        id: 6,
-        title: "Tech Innovation Summit",
-        location: "Bengaluru, Karnataka, India",
-        date: "Aug 10, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=700&h=394&fit=crop",
-    },
-];
+import { useRef, useState, useMemo } from "react";
 import Link from "next/link";
+import { HOME_EVENTS } from "@/app/data/homeEvents";
+
+const DEFAULT_TRENDING = HOME_EVENTS.filter((e) => e.trending);
 
 function EventCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -185,7 +137,11 @@ export default function TrendingEvents() {
                     ref={scrollRef}
                     style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px" }}
                 >
-                    {TRENDING_EVENTS.map(event => <EventCard key={event.id} event={event} />)}
+                    {list.length > 0 ? list.map(event => <EventCard key={event.id} event={event} />) : (
+                        <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
+                            Explore what's trending soon.
+                        </div>
+                    )}
                 </div>
 
             </div>

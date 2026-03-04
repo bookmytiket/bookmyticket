@@ -1,6 +1,0 @@
-[
-    { "id": "1004", "title": "Export tickets to CSV", "category": "Feature Request", "prio": "medium", "status": "Approved", "created": "Feb 26, 2026", "time": "12:29", "organiser": "Raj" },
-    { "id": "1003", "title": "Dashboard loading slowly", "category": "Performance", "prio": "medium", "status": "Resolved", "created": "Feb 26, 2026", "time": "12:29", "organiser": "Raj" },
-    { "id": "1002", "title": "Password reset not working", "category": "Technical", "prio": "urgent", "status": "In Progress", "created": "Feb 26, 2026", "time": "12:29", "organiser": "Arjun" },
-    { "id": "1001", "title": "Feature request: Dark mode", "category": "Feature Request", "prio": "low", "status": "Open", "created": "Feb 26, 2026", "time": "12:29", "organiser": "Raj" }
-]

@@ -1,58 +1,9 @@
 "use client";
 import { useRef, useState } from "react";
-
-const EXCLUSIVE_EVENTS = [
-    {
-        id: 1,
-        title: "Kaber Vasuki – Frangipani Tour 2026",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Apr 25, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=700&h=394&fit=crop",
-    },
-    {
-        id: 2,
-        title: "Top Model Of Tamil Nadu 2026",
-        location: "Coimbatore, Tamil Nadu 641004, India",
-        date: "Apr 5, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1529139574466-a303027614b2?w=700&h=394&fit=crop",
-    },
-    {
-        id: 3,
-        title: "Thadam 360 – Education Expo & Job Fair",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Mar 27, 2026",
-        type: "Free",
-        img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&h=394&fit=crop",
-    },
-    {
-        id: 4,
-        title: "Thadam 360 – Stalls",
-        location: "Coimbatore, Tamil Nadu, India",
-        date: "Mar 27, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&h=394&fit=crop",
-    },
-    {
-        id: 5,
-        title: "Harmony Summer Music Festival",
-        location: "Hyderabad, Telangana, India",
-        date: "Jun 15, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=700&h=394&fit=crop",
-    },
-    {
-        id: 6,
-        title: "Tech Innovation Summit 2026",
-        location: "Bengaluru, Karnataka, India",
-        date: "Aug 10, 2026",
-        type: "Paid",
-        img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=700&h=394&fit=crop",
-    },
-];
-
 import Link from "next/link";
+import { HOME_EVENTS } from "@/app/data/homeEvents";
+
+const EXCLUSIVE_EVENTS = HOME_EVENTS.filter((e) => e.exclusive);
 
 function ExclusiveCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -171,7 +122,11 @@ export default function ExclusiveEvents() {
                         ref={scrollRef}
                         style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px", paddingRight: "48px" }}
                     >
-                        {EXCLUSIVE_EVENTS.map(event => <ExclusiveCard key={event.id} event={event} />)}
+                        {EXCLUSIVE_EVENTS.length > 0 ? EXCLUSIVE_EVENTS.map(event => <ExclusiveCard key={event.id} event={event} />) : (
+                            <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
+                                Exclusive event collection coming soon.
+                            </div>
+                        )}
                     </div>
 
                     {/* Right-edge arrow (like Ticket9) */}

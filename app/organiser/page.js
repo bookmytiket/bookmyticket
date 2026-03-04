@@ -1,54 +1,483 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import Link from "next/link";
+
+class OrganiserErrorBoundary extends Component {
+    state = { error: null };
+    static getDerivedStateFromError(error) { return { error }; }
+    componentDidCatch(error, info) {
+        console.error("OrganiserPanel error:", error, info);
+    }
+    render() {
+        if (this.state.error) {
+            return (
+                <div style={{ minHeight: "100vh", padding: "24px", background: "#0f172a", color: "#e2e8f0", fontFamily: "monospace" }}>
+                    <h2 style={{ color: "#f87171" }}>Organiser panel error</h2>
+                    <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{this.state.error?.message || String(this.state.error)}</pre>
+                    <button onClick={() => this.setState({ error: null })} style={{ marginTop: "16px", padding: "8px 16px", cursor: "pointer" }}>Try again</button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 import {
     LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles,
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
-    ArrowRight, FileText, Calendar, Clock, MapPin, Building
+    ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight
 } from "lucide-react";
 
-export default function OrganiserPanel() {
+function LocationPickerModal({
+    t, theme, tempLocation, setTempLocation, postEvent, setPostEvent,
+    setShowMapModal, isGeoLoading, setIsGeoLoading, geoError, setGeoError,
+    mapRef, markerRef
+}) {
+    const mapContainerRef = useRef(null);
+
+    useEffect(() => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        link.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
+        link.crossOrigin = "";
+        document.head.appendChild(link);
+        return () => { if (link.parentNode) link.parentNode.removeChild(link); };
+    }, []);
+
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
+        const L = require("leaflet");
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+            iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+            shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+        });
+        const map = L.map(mapContainerRef.current).setView([tempLocation.lat, tempLocation.lng], 12);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+        const marker = L.marker([tempLocation.lat, tempLocation.lng], { draggable: true }).addTo(map);
+        mapRef.current = map;
+        markerRef.current = marker;
+
+        marker.on("moveend", () => {
+            const latlng = marker.getLatLng();
+            setTempLocation({ lat: latlng.lat, lng: latlng.lng });
+        });
+        map.on("click", (e) => {
+            marker.setLatLng(e.latlng);
+            setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+        });
+
+        return () => {
+            map.remove();
+            mapRef.current = null;
+            markerRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!markerRef.current || !mapRef.current) return;
+        const L = require("leaflet");
+        markerRef.current.setLatLng([tempLocation.lat, tempLocation.lng]);
+        mapRef.current.setView([tempLocation.lat, tempLocation.lng], mapRef.current.getZoom());
+    }, [tempLocation.lat, tempLocation.lng]);
+
+    const handleUseLocation = async () => {
+        try {
+            setIsGeoLoading(true);
+            setGeoError("");
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${tempLocation.lat}&lon=${tempLocation.lng}`);
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            const addr = data.address || {};
+            setPostEvent(pe => ({
+                ...pe,
+                latitude: String(tempLocation.lat),
+                longitude: String(tempLocation.lng),
+                address: data.display_name || pe.address,
+                country: addr.country || pe.country,
+                city: addr.city || addr.town || addr.village || pe.city,
+                zipCode: addr.postcode || pe.zipCode
+            }));
+            setShowMapModal(false);
+        } catch (err) {
+            setGeoError("Unable to fetch address. You can still save lat/long manually.");
+        } finally {
+            setIsGeoLoading(false);
+        }
+    };
+
+    const handleSetOnlyLatLng = () => {
+        setPostEvent(pe => ({
+            ...pe,
+            latitude: String(tempLocation.lat),
+            longitude: String(tempLocation.lng)
+        }));
+        setShowMapModal(false);
+    };
+
+    return (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200, padding: "20px" }}>
+            <div style={{ width: "100%", maxWidth: "840px", backgroundColor: t.cardBg, borderRadius: "20px", overflow: "hidden", border: `1px solid ${t.border}` }}>
+                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${t.border}` }}>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Location Picker</h3>
+                    <button type="button" onClick={() => setShowMapModal(false)} style={{ border: "none", background: "none", cursor: "pointer", color: t.textSub }}><X size={18} /></button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "2.1fr 1fr", height: "420px" }}>
+                    <div ref={mapContainerRef} style={{ height: "100%", minHeight: "320px" }} />
+                    <div style={{ padding: "14px 16px", borderLeft: `1px solid ${t.border}`, display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Drag the map marker or click the map to set location. Adjust lat/long below if needed.</p>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>Latitude</label>
+                            <input
+                                type="number"
+                                step="any"
+                                value={tempLocation.lat}
+                                onChange={e => setTempLocation(prev => ({ ...prev, lat: parseFloat(e.target.value) || 0 }))}
+                                style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>Longitude</label>
+                            <input
+                                type="number"
+                                step="any"
+                                value={tempLocation.lng}
+                                onChange={e => setTempLocation(prev => ({ ...prev, lng: parseFloat(e.target.value) || 0 }))}
+                                style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }}
+                            />
+                        </div>
+                        {geoError && <p style={{ fontSize: "11px", color: "#f97316", margin: 0 }}>{geoError}</p>}
+                        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <button type="button" disabled={isGeoLoading} onClick={handleUseLocation} style={{ padding: "9px 14px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", opacity: isGeoLoading ? 0.8 : 1 }}>
+                                {isGeoLoading ? "Applying…" : "Use This Location & Autofill"}
+                            </button>
+                            <button type="button" onClick={handleSetOnlyLatLng} style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                                Set Only Latitude & Longitude
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function OrganiserPanel() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
-    const [currentStage, setCurrentStage] = useState("mfa");
+    const [currentStage, setCurrentStage] = useState("approved");
     const [activeTab, setActiveTab] = useState("dashboard");
     const [theme, setTheme] = useState("dark");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState({
+        eventManagement: true,
+        eventBookings: false,
+        supportTickets: false
+    });
+    const [menuSearch, setMenuSearch] = useState("");
+    const [eventBookingsTab, setEventBookingsTab] = useState("all");
+    const [supportTab, setSupportTab] = useState("all_tickets");
 
     // Organiser Profile State
     const [profile, setProfile] = useState({
         firstName: "",
         lastName: "",
         orgType: "Individual",
-        email: "organiser@example.com",
+        email: "",
         phone: "",
         kycStatus: "Pending"
     });
 
-    // Mock Wallet State
+    // Mock Wallet State (match reference KPI cards)
     const [wallet, setWallet] = useState({
-        balance: 15450,
-        currency: "₹",
-        transactions: [
-            { id: 1, type: "Booking", amount: 1200, date: "2026-03-01", status: "Completed" },
-            { id: 2, type: "Withdrawal", amount: -5000, date: "2026-02-25", status: "Pending" }
-        ]
+        balance: 48373.1,
+        currency: "$",
+        transactions: []
     });
 
-    const [events, setEvents] = useState([
-        { id: 1, title: "Grand Wedding Expo", type: "Venue", venue: "Grand Ballroom, Marriott", date: "2026-04-15", time: "10:00 AM", status: "Active" },
-        { id: 2, title: "Tech Innovators Summit", type: "Virtual", venue: "Zoom / Metaverse", date: "2026-05-10", time: "02:00 PM", status: "Active" }
-    ]);
+    const [events, setEvents] = useState([]);
+    const writeQueueRef = useRef([]);
+    const isWritingRef = useRef(false);
+    const eventsDebounceRef = useRef(null);
+    const draftDebounceRef = useRef(null);
+    const skipInitialDraftWriteRef = useRef(true);
+
+    // Multiple write operation: queue of { key, value }; process one at a time to avoid concurrent writes
+    const scheduleWrite = useCallback((key, value) => {
+        if (typeof window === "undefined") return;
+        writeQueueRef.current.push({ key, value });
+        const processQueue = () => {
+            if (isWritingRef.current || writeQueueRef.current.length === 0) return;
+            isWritingRef.current = true;
+            const { key: k, value: v } = writeQueueRef.current.shift();
+            try {
+                const str = typeof v === "string" ? v : JSON.stringify(v);
+                if (str !== undefined) localStorage.setItem(k, str);
+            } catch (_) { /* skip failed serialize */ }
+            finally {
+                isWritingRef.current = false;
+                if (writeQueueRef.current.length > 0) setTimeout(processQueue, 0);
+            }
+        };
+        processQueue();
+    }, []);
+
+    // Write 1: events — debounced so rapid updates queue one write per burst
+    useEffect(() => {
+        if (eventsDebounceRef.current) clearTimeout(eventsDebounceRef.current);
+        eventsDebounceRef.current = setTimeout(() => {
+            scheduleWrite("organiser_events", events);
+            eventsDebounceRef.current = null;
+        }, 100);
+        return () => { if (eventsDebounceRef.current) clearTimeout(eventsDebounceRef.current); };
+    }, [events, scheduleWrite]);
+
+    // When opening Add Event tab, show type selection (Online / Venue) first
+    useEffect(() => {
+        if (activeTab === "post_event") setAddEventStep("select_type");
+    }, [activeTab]);
+
+    // Tab navigation: single state update per key (Arrow Up/Down), no repeat; ignore when focus is in input/textarea/select
+    const TAB_IDS = ["dashboard", "post_event", "manage_events", "venue_events", "online_events", "seat_map", "event_bookings", "withdraw", "transactions", "pwa_scanner", "support_tickets", "edit_profile", "change_password"];
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (e.repeat || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+            const el = document.activeElement;
+            if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
+            e.preventDefault();
+            const i = TAB_IDS.indexOf(activeTab);
+            const next = e.key === "ArrowDown" ? (i + 1) % TAB_IDS.length : (i - 1 + TAB_IDS.length) % TAB_IDS.length;
+            setActiveTab(TAB_IDS[next]);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [activeTab]);
 
     // State for Modals
     const [showCreateEvent, setShowCreateEvent] = useState(false);
     const [showPayoutModal, setShowPayoutModal] = useState(false);
+    const [selectedEventForSeatMap, setSelectedEventForSeatMap] = useState(null);
     const [newEvent, setNewEvent] = useState({
-        title: "",
-        type: "Venue",
-        venue: "",
+        title: "", type: "Venue", venue: "",
         slots: [{ date: "", time: "" }]
     });
+
+    // Add Event: first step is choosing Online vs Venue (image format)
+    const [addEventStep, setAddEventStep] = useState("select_type"); // 'select_type' | 'form'
+    const [multiSlots, setMultiSlots] = useState([{ date: "", time: "" }]);
+    const [showMapModal, setShowMapModal] = useState(false);
+    const [tempLocation, setTempLocation] = useState({ lat: 28.6139, lng: 77.209 });
+    const [isGeoLoading, setIsGeoLoading] = useState(false);
+    const [geoError, setGeoError] = useState("");
+    const mapRef = useRef(null);
+    const markerRef = useRef(null);
+    const thumbnailInputRef = useRef(null);
+    const galleryInputRef = useRef(null);
+
+    // Event categories: from Admin (localStorage admin_categories) so organiser sees same list as home/admin
+    const DEFAULT_EVENT_CATEGORY_NAMES = ["Concert", "Sports", "Comedy", "Theatre", "Music", "Workshop", "Festival", "Live Shows", "Conference", "Exhibition", "Marathon", "Others"];
+    const [eventCategoryNames, setEventCategoryNames] = useState(DEFAULT_EVENT_CATEGORY_NAMES);
+
+    // ── Seat-based Event Posting State ───────────────────────────────────────
+    const [postEvent, setPostEvent] = useState({
+        title: "", category: "Concert", type: "Venue", venue: "", date: "", time: "",
+        dateType: "single", countdownStatus: "active",
+        description: "", banner: null, bannerPreview: null,
+        galleryImages: [], galleryPreviews: [],
+        address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
+        seatingEnabled: true,
+        normalTicketCapacity: "",
+        normalTicketPrice: "",
+        rows: 6, cols: 10,
+        categories: [
+            { name: "VIP", color: "#f59e0b", rowStart: 1, rowEnd: 2, price: 2500 },
+            { name: "Premium", color: "#6366f1", rowStart: 3, rowEnd: 4, price: 1500 },
+            { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
+        ]
+    });
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const raw = localStorage.getItem("admin_categories");
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
+                    if (names.length > 0) {
+                        setEventCategoryNames(names);
+                        setPostEvent((prev) => (prev.category && names.includes(prev.category) ? prev : { ...prev, category: names[0] }));
+                    }
+                }
+            }
+        } catch (_) { /* ignore */ }
+    }, []);
+
+    // Load persisted data on mount; defer draft load so it doesn't overwrite first keystroke
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const saved = localStorage.getItem("organiser_events");
+            if (saved) setEvents(JSON.parse(saved));
+        } catch (_) { /* ignore */ }
+        const loadDraft = () => {
+            try {
+                const draft = localStorage.getItem("organiser_draft");
+                if (!draft) return;
+                const parsed = JSON.parse(draft);
+                if (!parsed || typeof parsed !== "object") return;
+                const defaultCategories = [
+                    { name: "VIP", color: "#f59e0b", rowStart: 1, rowEnd: 2, price: 2500 },
+                    { name: "Premium", color: "#6366f1", rowStart: 3, rowEnd: 4, price: 1500 },
+                    { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
+                ];
+                const merged = {
+                    title: "", category: "Concert", type: "Venue", venue: "", date: "", time: "",
+                    dateType: "single", countdownStatus: "active",
+                    description: "", banner: null, bannerPreview: null,
+                    galleryImages: [], galleryPreviews: [],
+                    address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
+                    seatingEnabled: true, normalTicketCapacity: "", normalTicketPrice: "",
+                    rows: 6, cols: 10,
+                    categories: defaultCategories,
+                    ...parsed,
+                    categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : defaultCategories,
+                };
+                setPostEvent(merged);
+            } catch (_) { /* ignore */ }
+        };
+        const t = setTimeout(loadDraft, 0);
+        return () => clearTimeout(t);
+    }, []);
+
+    // Write 2: Add Event draft — after postEvent is defined; debounced, skip first run
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        if (skipInitialDraftWriteRef.current) { skipInitialDraftWriteRef.current = false; return; }
+        if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current);
+        draftDebounceRef.current = setTimeout(() => {
+            try {
+                scheduleWrite("organiser_draft", postEvent);
+            } catch (_) { /* ignore */ }
+            draftDebounceRef.current = null;
+        }, 300);
+        return () => { if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current); };
+    }, [postEvent, scheduleWrite]);
+
+    // Generate row labels A, B, C …
+    const ROW_LABELS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+    // Derive seat category for a given row index (0-based)
+    const getSeatCategory = (rowIdx) => {
+        const categories = postEvent.categories || [];
+        for (const cat of categories) {
+            if (rowIdx + 1 >= cat.rowStart && rowIdx + 1 <= cat.rowEnd) return cat;
+        }
+        return { name: "General", color: "#94a3b8", price: 0 };
+    };
+
+    // Mock booked seats for existing events (for the Seat Map view)
+    const mockBookedSeats = useMemo(() => {
+        const booked = {};
+        events.forEach(ev => {
+            booked[ev.id] = new Set();
+            const count = Math.floor(Math.random() * 30) + 10;
+            for (let i = 0; i < count; i++) {
+                const r = String.fromCharCode(65 + Math.floor(Math.random() * 6));
+                const c = Math.floor(Math.random() * 10) + 1;
+                booked[ev.id].add(`${r}${c}`);
+            }
+        });
+        return booked;
+    }, [events.length]);
+
+    const handleBannerChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => setPostEvent(pe => ({ ...pe, banner: file, bannerPreview: reader.result }));
+        reader.readAsDataURL(file);
+        e.target.value = "";
+    };
+
+    const addGalleryFromFiles = (fileList) => {
+        const files = Array.from(fileList || []).filter(f => f.type.startsWith("image/"));
+        if (files.length === 0) return;
+        const previews = new Array(files.length);
+        let loaded = 0;
+        files.forEach((file, idx) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                previews[idx] = reader.result;
+                loaded++;
+                if (loaded === files.length) {
+                    setPostEvent(pe => ({
+                        ...pe,
+                        galleryImages: [...(pe.galleryImages || []), ...files],
+                        galleryPreviews: [...(pe.galleryPreviews || []), ...previews]
+                    }));
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleGalleryChange = (e) => {
+        addGalleryFromFiles(e.target.files);
+        e.target.value = "";
+    };
+
+    const removeGalleryImage = (idx) => {
+        setPostEvent(pe => ({
+            ...pe,
+            galleryImages: (pe.galleryImages || []).filter((_, i) => i !== idx),
+            galleryPreviews: (pe.galleryPreviews || []).filter((_, i) => i !== idx)
+        }));
+    };
+
+    const publishSeatEvent = () => {
+        if (!postEvent.title || !postEvent.venue) {
+            alert("Please fill in Title and Venue.");
+            return;
+        }
+        const isMultiple = (postEvent.dateType || "single") === "multiple";
+        const effectiveSlots = isMultiple ? multiSlots.filter(s => s.date) : [{ date: postEvent.date, time: postEvent.time || "" }];
+        const firstSlot = effectiveSlots[0];
+        if (!firstSlot || !firstSlot.date) {
+            alert(isMultiple ? "Please add at least one date in Schedule (Multi-Date & Time)." : "Please fill in Date.");
+            return;
+        }
+        if (postEvent.type === "Venue" && (!postEvent.latitude || !postEvent.longitude)) {
+            alert("Please set venue location using the map (click Show Map and choose a location).");
+            return;
+        }
+        const isSeating = postEvent.seatingEnabled !== false;
+        const totalSeats = isSeating ? postEvent.rows * postEvent.cols : (parseInt(postEvent.normalTicketCapacity, 10) || 0);
+        if (totalSeats <= 0) {
+            alert(isSeating ? "Please set at least 1 row and 1 seat per row." : "Please set Total Capacity for normal ticketing.");
+            return;
+        }
+        const ev = {
+            ...postEvent,
+            id: Date.now(),
+            date: firstSlot.date,
+            time: firstSlot.time || "TBA",
+            slots: effectiveSlots,
+            status: "Active",
+            seatingEnabled: isSeating,
+            totalSeats,
+            bookedSeats: 0,
+            meta: { keywords: "", adsId: "" },
+            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:")) ? postEvent.bannerPreview : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop"
+        };
+        setEvents(prev => [...prev, ev]);
+        alert(isSeating ? `✅ "${ev.title}" published with ${totalSeats} seats (Seating Based)!` : `✅ "${ev.title}" published with ${totalSeats} tickets (Normal Ticketing)!`);
+        setActiveTab("manage_events");
+    };
 
     const addDateSlot = () => {
         setNewEvent({ ...newEvent, slots: [...newEvent.slots, { date: "", time: "" }] });
@@ -86,8 +515,8 @@ export default function OrganiserPanel() {
         }
     };
 
-    const t = colors[theme];
-    const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
+    const t = colors[theme] || colors.dark;
+    const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
     const styles = (
         <style>{`
@@ -318,24 +747,68 @@ export default function OrganiserPanel() {
             switch (activeTab) {
                 case "dashboard":
                     return (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "8px" }}>Total Ticket Revenue</p>
-                                <h2 style={{ fontSize: "28px", fontWeight: 800 }}>{wallet.currency}{wallet.balance.toLocaleString()}</h2>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "12px", marginTop: "12px", fontWeight: 600 }}>
-                                    <Plus size={14} /> 12% from last month
+                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                                <div style={{ backgroundColor: "#3b82f6", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Wallet size={24} /></div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>My Balance</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{wallet.currency}{Number(wallet.balance).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div style={{ backgroundColor: "#22c55e", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={24} /></div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Events</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{Math.max(events.length, 9)}</p>
+                                    </div>
+                                </div>
+                                <div style={{ backgroundColor: "#ef4444", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Monitor size={24} /></div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Event Bookings</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>6</p>
+                                    </div>
+                                </div>
+                                <div style={{ backgroundColor: "#8b5cf6", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><ArrowLeftRight size={24} /></div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Transaction</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>294</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "8px" }}>Events Managed</p>
-                                <h2 style={{ fontSize: "28px", fontWeight: 800 }}>{events.length}</h2>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#3b82f6", fontSize: "12px", marginTop: "12px", fontWeight: 600 }}>
-                                    Currently active
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Event Booking Monthly Income (2026)</p>
+                                    <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
+                                        {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m, i) => (
+                                            <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                                                <div style={{ width: "100%", height: "60px", backgroundColor: "#3b82f620", borderRadius: "4px", border: "1px solid #3b82f640" }} />
+                                                <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                                        <div style={{ width: "12px", height: "12px", backgroundColor: "#3b82f6", borderRadius: "2px" }} />
+                                        <span style={{ fontSize: "12px", color: t.textSub }}>Monthly Income</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "8px" }}>Total Tickets Sold</p>
-                                <h2 style={{ fontSize: "28px", fontWeight: 800 }}>1,245</h2>
+                                <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Monthly Event Bookings (2026)</p>
+                                    <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
+                                        {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m) => (
+                                            <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                                                <div style={{ width: "100%", height: "60px", backgroundColor: "#8b5cf620", borderRadius: "4px", border: "1px solid #8b5cf640" }} />
+                                                <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                                        <div style={{ width: "12px", height: "12px", backgroundColor: "#8b5cf6", borderRadius: "2px" }} />
+                                        <span style={{ fontSize: "12px", color: t.textSub }}>Monthly Event Bookings</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     );
@@ -344,8 +817,8 @@ export default function OrganiserPanel() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Active Events</h3>
-                                <button onClick={() => setShowCreateEvent(true)} style={{ padding: "10px 20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                                    <Plus size={18} /> Create New Event
+                                <button onClick={() => setActiveTab("post_event")} style={{ padding: "10px 20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                                    <Plus size={18} /> Post New Event
                                 </button>
                             </div>
                             <div style={{ overflowX: "auto" }}>
@@ -354,7 +827,7 @@ export default function OrganiserPanel() {
                                         <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Venue Type</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
                                         </tr>
@@ -376,18 +849,28 @@ export default function OrganiserPanel() {
                                                     <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time}</p>
                                                 </td>
                                                 <td style={{ padding: "16px" }}>
-                                                    <span style={{ fontSize: "12px", color: t.textSub, display: "flex", alignItems: "center", gap: "6px" }}>
-                                                        {ev.type === 'Venue' ? <MapPin size={14} /> : <Video size={14} />} {ev.type}
-                                                    </span>
+                                                    {ev.totalSeats ? (
+                                                        <div>
+                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
+                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
+                                                                <div style={{ height: "100%", width: `${((ev.bookedSeats || 0) / ev.totalSeats) * 100}%`, background: "#f84464", borderRadius: 3 }} />
+                                                            </div>
+                                                        </div>
+                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
                                                 </td>
                                                 <td style={{ padding: "16px" }}>
                                                     <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
                                                 </td>
                                                 <td style={{ padding: "16px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
-                                                        <button title="Edit" style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: t.activeText, cursor: "pointer" }}><Save size={14} /></button>
-                                                        <button title="Reschedule" style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#f97316", cursor: "pointer" }}><Clock size={14} /></button>
-                                                        <button title="Delete" style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                        {ev.seatingEnabled !== false ? (
+                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                                                <Grid size={14} /> Seat Map
+                                                            </button>
+                                                        ) : (
+                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
+                                                        )}
+                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -395,6 +878,427 @@ export default function OrganiserPanel() {
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    );
+                case "post_event":
+                    // Step 1: Choose Online or Venue (image format)
+                    if (addEventStep === "select_type") {
+                        return (
+                            <div style={{ backgroundColor: t.bg, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "700px", width: "100%" }}>
+                                    <button
+                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Online" })); setAddEventStep("form"); }}
+                                        style={{
+                                            background: t.cardBg,
+                                            border: `1px solid ${t.border}`,
+                                            borderRadius: "16px",
+                                            padding: "48px 32px",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            gap: "16px",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+                                        }}
+                                    >
+                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <CloudUpload size={40} color="#fff" />
+                                        </div>
+                                        <span style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, letterSpacing: "0.5px" }}>ONLINE EVENT</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Venue" })); setAddEventStep("form"); }}
+                                        style={{
+                                            background: t.cardBg,
+                                            border: `1px solid ${t.border}`,
+                                            borderRadius: "16px",
+                                            padding: "48px 32px",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            gap: "16px",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+                                        }}
+                                    >
+                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f97316", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <MapPin size={40} color="#fff" />
+                                        </div>
+                                        <span style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, letterSpacing: "0.5px" }}>VENUE EVENT</span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+                    // Step 2: Full form (image format: Gallery, Thumbnail, Date Type, Countdown, English section, etc.)
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}`, maxWidth: "900px", margin: "0 auto" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Add Event</h3>
+                                <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                                    <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} /> Back
+                                </button>
+                            </div>
+                            {/* Gallery & Thumbnail — image format */}
+                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
+                            <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
+                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Gallery Images**</label>
+                                    <div
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => galleryInputRef.current?.click()}
+                                        onKeyDown={e => e.key === "Enter" && galleryInputRef.current?.click()}
+                                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.currentTarget.style.borderColor = "#3b82f6"; }}
+                                        onDragLeave={e => { e.preventDefault(); e.currentTarget.style.borderColor = t.border; }}
+                                        onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = t.border; addGalleryFromFiles(e.dataTransfer.files); }}
+                                        style={{ border: `2px dashed ${t.border}`, borderRadius: "12px", padding: "32px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "100px" }}
+                                    >
+                                        {(postEvent.galleryPreviews || []).length > 0 ? (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+                                                {(postEvent.galleryPreviews || []).map((src, idx) => (
+                                                    <div key={idx} style={{ position: "relative" }}>
+                                                        <img src={src} alt={`Gallery ${idx + 1}`} style={{ width: "80px", height: "50px", objectFit: "cover", borderRadius: "8px" }} />
+                                                        <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-6px", right: "-6px", width: "20px", height: "20px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "12px", lineHeight: 1 }}>×</button>
+                                                    </div>
+                                                ))}
+                                                <button type="button" onClick={e => { e.stopPropagation(); galleryInputRef.current?.click(); }} style={{ alignSelf: "center", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px", cursor: "pointer" }}>Add more</button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p style={{ margin: 0, fontSize: "14px", color: t.textSub }}>Drop files here or click to upload</p>
+                                                <p style={{ margin: "8px 0 0", fontSize: "12px", color: t.textSub }}>Image Size 1170x570</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Thumbnail Image*</label>
+                                    <div style={{ border: `2px dashed ${t.border}`, borderRadius: "12px", padding: "24px", textAlign: "center", backgroundColor: t.bg, minHeight: "140px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                        {postEvent.bannerPreview ? (
+                                            <>
+                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ maxWidth: "100%", maxHeight: "120px", objectFit: "contain", borderRadius: "8px" }} />
+                                                <div style={{ marginTop: "8px", display: "flex", gap: "8px", justifyContent: "center" }}>
+                                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}>Change</button>
+                                                    <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textSub, fontSize: "11px", cursor: "pointer" }}>Remove</button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ImageIcon size={32} color={t.textSub} style={{ marginBottom: "8px" }} />
+                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>NO IMAGE FOUND</p>
+                                                <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ marginTop: "12px", padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
+                                            </>
+                                        )}
+                                        <p style={{ margin: "8px 0 0", fontSize: "11px", color: t.textSub }}>Image Size: 320x230</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Date Type & Countdown Status */}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date Type*</label>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        {["Single", "Multiple"].map(opt => (
+                                            <button key={opt} type="button" onClick={() => setPostEvent(pe => ({ ...pe, dateType: opt.toLowerCase() }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.dateType || "single") === opt.toLowerCase() ? "#3b82f6" : t.bg, color: (postEvent.dateType || "single") === opt.toLowerCase() ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{opt}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Countdown Status*</label>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        {["Active", "Deactive"].map(opt => (
+                                            <button key={opt} type="button" onClick={() => setPostEvent(pe => ({ ...pe, countdownStatus: opt === "Active" ? "active" : "inactive" }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.countdownStatus || "active") === (opt === "Active" ? "active" : "inactive") ? "#3b82f6" : t.bg, color: (postEvent.countdownStatus || "active") === (opt === "Active" ? "active" : "inactive") ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{opt}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Schedule (Multi-Date & Time) — shown when Date Type is Multiple */}
+                            {(postEvent.dateType || "single") === "multiple" && (
+                                <div style={{ marginBottom: "24px", padding: "16px", backgroundColor: theme === "dark" ? "#1e293b" : "#f1f5f9", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "12px" }}>Schedule (Multi-Date & Time)*</label>
+                                    {multiSlots.map((slot, idx) => (
+                                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "end", marginBottom: idx < multiSlots.length - 1 ? "12px" : 0 }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px", color: t.textSub }}>Date</label>
+                                                <input type="date" value={slot.date} onChange={e => setMultiSlots(prev => prev.map((s, i) => i === idx ? { ...s, date: e.target.value } : s))} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px", color: t.textSub }}>Time</label>
+                                                <input type="time" value={slot.time} onChange={e => setMultiSlots(prev => prev.map((s, i) => i === idx ? { ...s, time: e.target.value } : s))} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                            </div>
+                                            <button type="button" onClick={() => setMultiSlots(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)} style={{ padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: "#ef4444", cursor: "pointer" }} title="Remove slot"><Trash2 size={18} /></button>
+                                        </div>
+                                    ))}
+                                    <button type="button" onClick={() => setMultiSlots(prev => [...prev, { date: "", time: "" }])} style={{ marginTop: "12px", padding: "10px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <Plus size={16} /> Add Slot
+                                    </button>
+                                </div>
+                            )}
+                            {/* English Language (Default) — purple bar */}
+                            <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "10px 18px", borderRadius: "8px", marginBottom: "20px" }}>
+                                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>English Language (Default)</p>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Event Title</label>
+                                    <input
+                                        id="organiser-event-title"
+                                        type="text"
+                                        value={postEvent.title ?? ""}
+                                        onChange={e => {
+                                            const v = e.target.value;
+                                            setPostEvent(prev => ({ ...prev, title: v }));
+                                        }}
+                                        placeholder="e.g. Rock Concert 2026"
+                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Category</label>
+                                    <select value={postEvent.category} onChange={e => setPostEvent(prev => ({ ...prev, category: e.target.value }))} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}>
+                                        {eventCategoryNames.map((name) => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Venue</label>
+                                    <input type="text" value={postEvent.venue} onChange={e => setPostEvent(prev => ({ ...prev, venue: e.target.value }))} placeholder="Stadium Name" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                </div>
+                                {postEvent.type === "Venue" && (
+                                    <>
+                                        <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Address</label>
+                                                <input type="text" value={postEvent.address} onChange={e => setPostEvent(prev => ({ ...prev, address: e.target.value }))} placeholder="Enter address" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                            </div>
+                                            <button type="button" onClick={() => { setTempLocation({ lat: parseFloat(postEvent.latitude) || 28.6139, lng: parseFloat(postEvent.longitude) || 77.209 }); setShowMapModal(true); setGeoError(""); }} style={{ padding: "12px 20px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <MapPin size={18} /> Show Map
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Latitude</label>
+                                            <input type="text" value={postEvent.latitude} onChange={e => setPostEvent(prev => ({ ...prev, latitude: e.target.value }))} placeholder="Set via map" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Longitude</label>
+                                            <input type="text" value={postEvent.longitude} onChange={e => setPostEvent(prev => ({ ...prev, longitude: e.target.value }))} placeholder="Set via map" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div style={{ gridColumn: "span 2" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Country*</label>
+                                            <input type="text" value={postEvent.country || ""} onChange={e => setPostEvent(prev => ({ ...prev, country: e.target.value }))} placeholder="Select a Country" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>City*</label>
+                                            <input type="text" value={postEvent.city || ""} onChange={e => setPostEvent(prev => ({ ...prev, city: e.target.value }))} placeholder="Select a City" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Zip/Post Code</label>
+                                            <input type="text" value={postEvent.zipCode || ""} onChange={e => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))} placeholder="Enter Zip/Post Code" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div style={{ gridColumn: "span 2" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Description*</label>
+                                            <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={4} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, resize: "vertical" }} />
+                                        </div>
+                                    </>
+                                )}
+                                {/* Seating format: Enable = Seating Based, Disable = Normal Ticketing */}
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "10px" }}>Ticket / Seating Type</label>
+                                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPostEvent(pe => ({ ...pe, seatingEnabled: true }))}
+                                            style={{
+                                                padding: "12px 20px",
+                                                borderRadius: "10px",
+                                                border: `2px solid ${postEvent.seatingEnabled !== false ? "#3b82f6" : t.border}`,
+                                                backgroundColor: postEvent.seatingEnabled !== false ? "#3b82f615" : "transparent",
+                                                color: postEvent.seatingEnabled !== false ? "#3b82f6" : t.textSub,
+                                                fontSize: "13px",
+                                                fontWeight: 700,
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px"
+                                            }}
+                                        >
+                                            <Grid size={18} /> Seating Based (Event-Based Seating)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPostEvent(pe => ({ ...pe, seatingEnabled: false }))}
+                                            style={{
+                                                padding: "12px 20px",
+                                                borderRadius: "10px",
+                                                border: `2px solid ${postEvent.seatingEnabled === false ? "#22c55e" : t.border}`,
+                                                backgroundColor: postEvent.seatingEnabled === false ? "#22c55e15" : "transparent",
+                                                color: postEvent.seatingEnabled === false ? "#22c55e" : t.textSub,
+                                                fontSize: "13px",
+                                                fontWeight: 700,
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px"
+                                            }}
+                                        >
+                                            <Ticket size={18} /> Normal Ticketing
+                                        </button>
+                                        <span style={{ fontSize: "12px", fontWeight: 600, marginLeft: "8px", padding: "6px 12px", borderRadius: "8px", backgroundColor: postEvent.seatingEnabled !== false ? "#3b82f620" : "#64748b30", color: postEvent.seatingEnabled !== false ? "#3b82f6" : t.textSub }}>
+                                            Seating: {postEvent.seatingEnabled !== false ? "Enabled" : "Disabled"}
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "8px", margin: 0 }}>
+                                        {postEvent.seatingEnabled !== false ? "Seating Based: tickets are generated per seat (rows, categories). Set rates per category below." : "Normal Ticketing: sell by quantity only (no seat selection)."}
+                                    </p>
+                                </div>
+                                {(postEvent.dateType || "single") === "single" && (
+                                    <>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
+                                            <input type="date" value={postEvent.date} onChange={e => setPostEvent(prev => ({ ...prev, date: e.target.value }))} placeholder="dd/mm/yyyy" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
+                                            <input type="time" value={postEvent.time} onChange={e => setPostEvent(prev => ({ ...prev, time: e.target.value }))} placeholder="--:--" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                    </>
+                                )}
+                                {postEvent.seatingEnabled === false && (
+                                    <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", padding: "16px", backgroundColor: theme === "dark" ? "#0f172a" : "#f0fdf4", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Total Capacity*</label>
+                                            <input type="number" min={1} value={postEvent.normalTicketCapacity} onChange={e => setPostEvent(prev => ({ ...prev, normalTicketCapacity: e.target.value }))} placeholder="e.g. 500" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Default Price (optional)</label>
+                                            <input type="number" min={0} value={postEvent.normalTicketPrice} onChange={e => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} placeholder="e.g. 299" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                        </div>
+                                        <p style={{ gridColumn: "span 2", margin: 0, fontSize: "12px", color: t.textSub }}>Normal ticketing: no seat map. Tickets are sold by quantity only.</p>
+                                    </div>
+                                )}
+                                {postEvent.seatingEnabled !== false && (
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
+                                                <input type="number" min={1} value={postEvent.rows} onChange={e => setPostEvent(prev => ({ ...prev, rows: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
+                                                <input type="number" min={1} value={postEvent.cols} onChange={e => setPostEvent(prev => ({ ...prev, cols: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                            </div>
+                                        </div>
+                                        <div style={{ marginBottom: "20px" }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Seating categories & rates</label>
+                                            <p style={{ fontSize: "11px", color: t.textSub, marginBottom: "12px", margin: 0 }}>Set name, row range, and price per category. Rows are 1-based (e.g. 1–2 = rows A–B).</p>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                {(postEvent.categories || []).map((cat, idx) => (
+                                                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "minmax(80px,1fr) 60px minmax(60px,1fr) minmax(60px,1fr) 100px", gap: "10px", alignItems: "end", padding: "12px", backgroundColor: theme === "dark" ? "#1e293b" : "#f8fafc", borderRadius: "10px", border: `1px solid ${t.border}` }}>
+                                                        <div>
+                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Name</label>
+                                                            <input type="text" value={cat.name} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, name: e.target.value } : c) }))} placeholder="e.g. VIP" style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Color</label>
+                                                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                                <input type="color" value={cat.color || "#94a3b8"} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, color: e.target.value } : c) }))} style={{ width: "32px", height: "28px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }} />
+                                                                <input type="text" value={cat.color || ""} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, color: e.target.value } : c) }))} placeholder="#hex" style={{ width: "100%", padding: "6px 6px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "11px" }} />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Row from</label>
+                                                            <input type="number" min={1} value={cat.rowStart} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, rowStart: parseInt(e.target.value, 10) || 1 } : c) }))} style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Row to</label>
+                                                            <input type="number" min={1} value={cat.rowEnd} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, rowEnd: parseInt(e.target.value, 10) || 1 } : c) }))} style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Rate (₹)</label>
+                                                            <input type="number" min={0} value={cat.price ?? ""} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, price: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0 } : c) }))} placeholder="0" style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+                                                {[...Array(Math.max(1, postEvent.rows))].map((_, rIdx) => {
+                                                    const cat = getSeatCategory(rIdx);
+                                                    return (
+                                                        <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                            <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
+                                                            {[...Array(Math.max(1, postEvent.cols))].map((_, cIdx) => (
+                                                                <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                                <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
+                                                <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <button onClick={publishSeatEvent} style={{ width: "100%", padding: "16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "12px", fontWeight: 800, cursor: "pointer" }}>
+                                        {postEvent.seatingEnabled !== false ? "Publish Event & Layout" : "Publish Event (Normal Ticketing)"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                case "seat_map":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
+                            {!selectedEventForSeatMap ? (
+                                <div style={{ textAlign: "center", padding: "40px" }}>
+                                    <p style={{ color: t.textSub }}>Please select an event from 'Manage Events' to view its seat map.</p>
+                                    <button onClick={() => setActiveTab("manage_events")} style={{ color: "#3b82f6", background: "none", border: "none", fontWeight: 700, cursor: "pointer" }}>Go to Manage Events</button>
+                                </div>
+                            ) : selectedEventForSeatMap.seatingEnabled === false ? (
+                                <div style={{ textAlign: "center", padding: "40px" }}>
+                                    <p style={{ color: t.textSub }}>This event uses Normal Ticketing (no seat selection). Seat map is not available.</p>
+                                    <button onClick={() => setActiveTab("manage_events")} style={{ color: "#3b82f6", background: "none", border: "none", fontWeight: 700, cursor: "pointer" }}>Back to Manage Events</button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                        <div>
+                                            <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedEventForSeatMap.title} — Real-time Seat Map</h3>
+                                            <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>{selectedEventForSeatMap.venue} | {selectedEventForSeatMap.date}</p>
+                                        </div>
+                                        <div style={{ display: "flex", gap: "16px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#3b82f6" }}></div><span style={{ fontSize: "12px" }}>Available</span></div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f84464" }}></div><span style={{ fontSize: "12px" }}>Booked</span></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "40px", borderRadius: "16px", overflowX: "auto" }}>
+                                        {[...Array(selectedEventForSeatMap.rows || 6)].map((_, rIdx) => {
+                                            const rowLabel = ROW_LABELS[rIdx];
+                                            return (
+                                                <div key={rIdx} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                                    <span style={{ width: "24px", textAlign: "center", fontWeight: 800, fontSize: "12px", color: t.textSub }}>{rowLabel}</span>
+                                                    {[...Array(selectedEventForSeatMap.cols || 10)].map((_, cIdx) => {
+                                                        const seatId = `${rowLabel}${cIdx + 1}`;
+                                                        const isBooked = mockBookedSeats[selectedEventForSeatMap.id]?.has(seatId);
+                                                        return (
+                                                            <div key={cIdx} title={seatId} style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: isBooked ? "#f84464" : "#3b82f630", border: `1px solid ${isBooked ? "#f84464" : "#3b82f6"}`, transition: "0.2s", cursor: "pointer" }} />
+                                                        );
+                                                    })}
+                                                </div>
+                                            )
+                                        })}
+                                        <div style={{ marginTop: "40px", width: "60%", height: "4px", backgroundColor: t.border, borderRadius: "2px", border: "1.5px solid #3b82f650" }} />
+                                        <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "2px", color: t.textSub, marginTop: "10px" }}>STAGE / SCREEN THIS WAY</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     );
                 case "wallet":
@@ -454,6 +1358,82 @@ export default function OrganiserPanel() {
                             </div>
                         </div>
                     );
+                case "venue_events":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Venue Events</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>List of venue-based events. Same as All Events filtered by type.</p>
+                            <div style={{ marginTop: "16px" }}>{events.filter(ev => (ev.type || "Venue") === "Venue").length} events</div>
+                        </div>
+                    );
+                case "online_events":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Online Events</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>List of online events.</p>
+                            <div style={{ marginTop: "16px" }}>{events.filter(ev => ev.type === "Online").length} events</div>
+                        </div>
+                    );
+                case "event_bookings":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Event Booking</h3>
+                            <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                                {["all","completed","pending","rejected","report"].map(id => (
+                                    <button key={id} onClick={() => setEventBookingsTab(id)} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: eventBookingsTab === id ? "#3b82f6" : t.bg, color: eventBookingsTab === id ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                                        {id === "all" ? "All Bookings" : id === "report" ? "Report" : id.charAt(0).toUpperCase() + id.slice(1) + " Bookings"}
+                                    </button>
+                                ))}
+                            </div>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Booking list and filters will appear here.</p>
+                        </div>
+                    );
+                case "withdraw":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Withdraw</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Request withdrawals to your linked bank account.</p>
+                        </div>
+                    );
+                case "transactions":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Transactions</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>View your transaction history.</p>
+                        </div>
+                    );
+                case "pwa_scanner":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Pwa Scanner</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Scan tickets at the venue.</p>
+                        </div>
+                    );
+                case "support_tickets":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Support Tickets</h3>
+                            <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                                <button onClick={() => setSupportTab("all_tickets")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "all_tickets" ? "#3b82f6" : t.bg, color: supportTab === "all_tickets" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>All Tickets</button>
+                                <button onClick={() => setSupportTab("add_ticket")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "add_ticket" ? "#3b82f6" : t.bg, color: supportTab === "add_ticket" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Add Ticket</button>
+                            </div>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Manage your support tickets.</p>
+                        </div>
+                    );
+                case "edit_profile":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Edit Profile</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Update your organiser profile details.</p>
+                        </div>
+                    );
+                case "change_password":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Change Password</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Update your account password.</p>
+                        </div>
+                    );
                 default:
                     return <div>Coming Soon</div>;
             }
@@ -503,9 +1483,7 @@ export default function OrganiserPanel() {
                                 <div style={{ gridColumn: "span 2", marginTop: "12px" }}>
                                     <button onClick={() => {
                                         const eventToSave = { ...newEvent, id: Date.now(), date: newEvent.slots[0]?.date || "TBA", time: newEvent.slots[0]?.time || "TBA", status: "Active", img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop" };
-                                        const existing = JSON.parse(localStorage.getItem('organiser_events') || '[]');
-                                        localStorage.setItem('organiser_events', JSON.stringify([...existing, eventToSave]));
-                                        setEvents([...events, eventToSave]);
+                                        setEvents(prev => [...prev, eventToSave]);
                                         alert("Event created successfully! It will now appear on the home page.");
                                         setShowCreateEvent(false);
                                     }} style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
@@ -535,53 +1513,121 @@ export default function OrganiserPanel() {
                     </div>
                 )}
 
-                {/* Approved Sidebar — Matches Admin Panel */}
+                {/* Location Picker modal — draggable map marker */}
+                {showMapModal && (
+                    <LocationPickerModal
+                        t={t}
+                        theme={theme}
+                        tempLocation={tempLocation}
+                        setTempLocation={setTempLocation}
+                        postEvent={postEvent}
+                        setPostEvent={setPostEvent}
+                        setShowMapModal={setShowMapModal}
+                        isGeoLoading={isGeoLoading}
+                        setIsGeoLoading={setIsGeoLoading}
+                        geoError={geoError}
+                        setGeoError={setGeoError}
+                        mapRef={mapRef}
+                        markerRef={markerRef}
+                    />
+                )}
+
+                {/* Sidebar — image format: Search + dropdown sections + sub-sidebar */}
                 <aside className="sidebar">
-                    <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <Link href="/" style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "10px",
-                            background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                            padding: '12px 10px',
-                            borderRadius: '12px',
-                            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
-                            textDecoration: "none",
-                            transition: 'all 0.3s ease'
-                        }}>
-                            <img
-                                src="/logo.png"
-                                alt="Logo"
-                                style={{
-                                    height: "44px",
-                                    objectFit: "contain",
-                                    maxWidth: "100%",
-                                    filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',
-                                    transition: 'filter 0.3s ease'
-                                }}
-                            />
-                        </Link>
-                        <div style={{ padding: "10px 12px", backgroundColor: "#3b82f610", borderRadius: "8px", border: "1px solid #3b82f630" }}>
-                            <p style={{ margin: 0, fontSize: "10px", fontWeight: 700, color: t.activeText, textTransform: "uppercase", letterSpacing: "1px" }}>Organiser Hub</p>
-                        </div>
+                    <div style={{ padding: "16px" }}>
+                        <input
+                            type="text"
+                            placeholder="Search Menu Here..."
+                            value={menuSearch}
+                            onChange={e => setMenuSearch(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: `1px solid ${t.border}`,
+                                backgroundColor: t.bg,
+                                color: t.textMain,
+                                fontSize: "13px"
+                            }}
+                        />
                     </div>
+                    <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "16px" }}>
+                        <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
+                            <Settings size={20} /> Dashboard
+                        </button>
 
-                    <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
-                        <p style={{ padding: "20px 20px 8px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 800, color: t.textMain, opacity: 0.5 }}>Main Menu</p>
-                        {[
-                            { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-                            { id: "manage_events", icon: Calendar, label: "Manage Events" },
-                            { id: "wallet", icon: Wallet, label: "Wallet & Earnings" },
-                            { id: "payout", icon: CreditCard, label: "Request Amount" },
-                        ].map(item => (
-                            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`sidebar-item ${activeTab === item.id ? "active" : ""}`}>
-                                <item.icon size={20} /> {item.label}
+                        {/* Event Management — collapsible */}
+                        <div>
+                            <button
+                                onClick={() => setSidebarOpen(s => ({ ...s, eventManagement: !s.eventManagement }))}
+                                className={`sidebar-item ${["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab) ? "active" : ""}`}
+                                style={{ width: "100%", justifyContent: "space-between" }}
+                            >
+                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Calendar size={20} /> Event Management
+                                </span>
+                                {(sidebarOpen.eventManagement || ["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab)) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                             </button>
-                        ))}
+                            {(sidebarOpen.eventManagement || ["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab)) && (
+                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
+                                    <button onClick={() => setActiveTab("post_event")} className={`sidebar-item ${activeTab === "post_event" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Add Event</button>
+                                    <button onClick={() => setActiveTab("manage_events")} className={`sidebar-item ${activeTab === "manage_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• All Events</button>
+                                    <button onClick={() => setActiveTab("venue_events")} className={`sidebar-item ${activeTab === "venue_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Venue Events</button>
+                                    <button onClick={() => setActiveTab("online_events")} className={`sidebar-item ${activeTab === "online_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Online Events</button>
+                                    <button onClick={() => setActiveTab("seat_map")} className={`sidebar-item ${activeTab === "seat_map" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Seat Map</button>
+                                </div>
+                            )}
+                        </div>
 
-                        <p style={{ padding: "20px 20px 8px", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 800, color: t.textMain, opacity: 0.5 }}>Account</p>
-                        <button className="sidebar-item"><Users size={20} /> Profile</button>
+                        {/* Event Bookings — collapsible */}
+                        <div>
+                            <button
+                                onClick={() => { setSidebarOpen(s => ({ ...s, eventBookings: !s.eventBookings })); setActiveTab("event_bookings"); }}
+                                className={`sidebar-item ${activeTab === "event_bookings" ? "active" : ""}`}
+                                style={{ width: "100%", justifyContent: "space-between" }}
+                            >
+                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Monitor size={20} /> Event Bookings
+                                </span>
+                                {(sidebarOpen.eventBookings || activeTab === "event_bookings") ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                            </button>
+                            {(sidebarOpen.eventBookings || activeTab === "event_bookings") && (
+                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
+                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("all"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• All Bookings</button>
+                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("completed"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Completed Bookings</button>
+                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("pending"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Pending Bookings</button>
+                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("rejected"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Rejected Bookings</button>
+                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("report"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Report</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}><Wallet size={20} /> Withdraw</button>
+                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}><ArrowLeftRight size={20} /> Transactions</button>
+                        <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}><Ticket size={20} /> Pwa Scanner</button>
+
+                        {/* Support Tickets — collapsible */}
+                        <div>
+                            <button
+                                onClick={() => { setSidebarOpen(s => ({ ...s, supportTickets: !s.supportTickets })); setActiveTab("support_tickets"); }}
+                                className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}
+                                style={{ width: "100%", justifyContent: "space-between" }}
+                            >
+                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Mail size={20} /> Support Tickets
+                                </span>
+                                {(sidebarOpen.supportTickets || activeTab === "support_tickets") ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                            </button>
+                            {(sidebarOpen.supportTickets || activeTab === "support_tickets") && (
+                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
+                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• All Tickets</button>
+                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Add Ticket</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}><Users size={20} /> Edit Profile</button>
+                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}><Lock size={20} /> Change Password</button>
                         <button className="sidebar-item" style={{ color: "#ef4444" }}><X size={20} /> Logout</button>
                     </nav>
 
@@ -613,8 +1659,11 @@ export default function OrganiserPanel() {
                             </button>
                         </div>
                     </header>
-                    <main style={{ padding: "24px" }}>
-                        {renderTabContent()}
+                    <main style={{ padding: "24px", display: "flex", flexDirection: "column", minHeight: "calc(100vh - 64px)" }}>
+                        <div style={{ flex: 1 }}>{renderTabContent()}</div>
+                        <footer style={{ padding: "16px 0", marginTop: "24px", textAlign: "center", fontSize: "12px", color: t.textSub, borderTop: `1px solid ${t.border}` }}>
+                            Copyright ©2026. All Rights Reserved.
+                        </footer>
                     </main>
                 </div>
             </div>
@@ -686,6 +1735,15 @@ export default function OrganiserPanel() {
         </div>
     );
 
+    // Avoid SSR/hydration issues: only render full UI after client mount
+    if (!mounted) {
+        return (
+            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#94a3b8" }}>
+                Loading…
+            </div>
+        );
+    }
+
     // Main Stage Dispatcher
     switch (currentStage) {
         case "mfa":
@@ -701,4 +1759,12 @@ export default function OrganiserPanel() {
         default:
             return <DashboardView />;
     }
+}
+
+export default function OrganiserPage() {
+    return (
+        <OrganiserErrorBoundary>
+            <OrganiserPanel />
+        </OrganiserErrorBoundary>
+    );
 }

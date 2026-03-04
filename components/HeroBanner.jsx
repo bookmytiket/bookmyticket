@@ -8,29 +8,8 @@ const FEATURES = [
     { num: "04", title: "Quick Setup", sub: "No setup cost, zero fee" },
 ];
 
-/* Each slide can have either `image` (URL string) or `custom` (JSX / render fn) */
-const BANNER_SLIDES = [
-    {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1400&h=300&fit=crop&auto=format",
-        alt: "Ani Vs U1 Singalong Event",
-    },
-    {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1400&h=300&fit=crop&auto=format",
-        alt: "Rapport 26 Unplugged Concert",
-    },
-    {
-        /* ── Promo / sign-up banner slide ── */
-        id: 3,
-        custom: true,
-    },
-    {
-        id: 4,
-        image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1400&h=300&fit=crop&auto=format",
-        alt: "Tech Innovation Panel 2026",
-    },
-];
+/* Each slide: { image (URL) or custom, alt }. Admin slides: { img, title, sub, alt, url } → map to { image, alt } */
+const DEFAULT_BANNER_SLIDES = [];
 
 const AUTO_PLAY_MS = 3500;
 
@@ -113,11 +92,14 @@ function SlideThumbnail({ slide }) {
     return <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
 }
 
-export default function HeroBanner() {
+export default function HeroBanner({ slides: propSlides }) {
+    const slides = Array.isArray(propSlides) && propSlides.length > 0
+        ? propSlides.map(s => ({ image: s.img || s.image, alt: s.alt || s.title || "Slide", custom: s.custom }))
+        : DEFAULT_BANNER_SLIDES;
     const [current, setCurrent] = useState(0);
     const [sliding, setSliding] = useState(false);
     const [dir, setDir] = useState(1);
-    const total = BANNER_SLIDES.length;
+    const total = slides.length;
     const timerRef = useRef(null);
     const [isHovered, setIsHovered] = useState(false);
 
@@ -143,9 +125,11 @@ export default function HeroBanner() {
         return () => clearInterval(timerRef.current);
     }, [next, isHovered]);
 
+    if (total === 0) return null;
+
     const prevIdx = (current - 1 + total) % total;
     const nextIdx = (current + 1) % total;
-    const slide = BANNER_SLIDES[current];
+    const slide = slides[current];
 
     return (
         <div className="bms-banner-wrap">
@@ -156,7 +140,7 @@ export default function HeroBanner() {
             >
                 {/* Left peek slide */}
                 <div className="bms-slide-peek bms-peek-left" onClick={prev}>
-                    <SlideThumbnail slide={BANNER_SLIDES[prevIdx]} />
+                    <SlideThumbnail slide={slides[prevIdx]} />
                     <div className="bms-peek-dim" />
                 </div>
 
@@ -173,7 +157,7 @@ export default function HeroBanner() {
 
                 {/* Right peek slide */}
                 <div className="bms-slide-peek bms-peek-right" onClick={next}>
-                    <SlideThumbnail slide={BANNER_SLIDES[nextIdx]} />
+                    <SlideThumbnail slide={slides[nextIdx]} />
                     <div className="bms-peek-dim" />
                 </div>
 

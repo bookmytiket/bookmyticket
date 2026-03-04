@@ -7,6 +7,7 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedCity, setSelectedCity] = useState("Coimbatore");
     const router = useRouter();
     const pathname = usePathname();
 
@@ -15,8 +16,17 @@ export function AuthProvider({ children }) {
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
+        const storedCity = localStorage.getItem("selectedCity");
+        if (storedCity) {
+            setSelectedCity(storedCity);
+        }
         setLoading(false);
     }, []);
+
+    const updateCity = (city) => {
+        setSelectedCity(city);
+        localStorage.setItem("selectedCity", city);
+    };
 
     const login = (email, password, role) => {
         // Define Demo Credentials
@@ -50,7 +60,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity }}>
             {children}
         </AuthContext.Provider>
     );

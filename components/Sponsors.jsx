@@ -1,20 +1,12 @@
 "use client";
 
-const SPONSORS = [
-    { id: 1, name: "Google", logo: "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" },
-    { id: 2, name: "Microsoft", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/400px-Microsoft_logo.svg.png" },
-    { id: 3, name: "Amazon", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/400px-Amazon_logo.svg.png" },
-    { id: 4, name: "Paytm", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/400px-Paytm_Logo_%28standalone%29.svg.png" },
-    { id: 5, name: "Swiggy", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/1/12/Swiggy_logo.svg/400px-Swiggy_logo.svg.png" },
-    { id: 6, name: "Zomato", logo: "https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png" },
-    { id: 7, name: "PhonePe", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/PhonePe_Logo.svg/400px-PhonePe_Logo.svg.png" },
-    { id: 8, name: "Flipkart", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/74/Flipkart_logo.svg/400px-Flipkart_logo.svg.png" },
-];
+const SPONSORS = [];
 
 // Duplicate for seamless infinite scroll
 const DOUBLED = [...SPONSORS, ...SPONSORS];
 
 export default function Sponsors() {
+    if (SPONSORS.length === 0) return null;
     return (
         <section style={{ width: "100%", background: "#f8fafc", padding: "48px 0", overflow: "hidden" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px 0", textAlign: "center", marginBottom: "32px" }}>
