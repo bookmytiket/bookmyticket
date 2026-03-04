@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
     Calendar,
@@ -18,14 +18,83 @@ import {
     Share2,
     Heart
 } from 'lucide-react';
+import { HOME_EVENTS } from '@/app/data/homeEvents';
 
-const MOCK_EVENTS = {};
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
+const DEFAULT_FEATURES = [
+    { icon: '🛡️', label: 'All safety measures enabled' },
+    { icon: '🪑', label: 'Seating (FCFS)' },
+    { icon: '✓', label: 'Mandatory Check-In' },
+    { icon: '🏛️', label: 'Indoor Event' },
+];
+const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed Events', 'Event Cancellations or Postponements'];
 
 export default function EventDetailPage({ params }) {
     const { id } = React.use(params);
-    const event = MOCK_EVENTS[id];
+    const [organiserEvents, setOrganiserEvents] = useState([]);
+    const [storageLoaded, setStorageLoaded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const raw = localStorage.getItem('organiser_events');
+            setOrganiserEvents(raw ? JSON.parse(raw) : []);
+        } catch (_) { setOrganiserEvents([]); }
+        setStorageLoaded(true);
+    }, []);
+
+    const event = useMemo(() => {
+        const sid = String(id);
+        const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
+        const fromOrg = (Array.isArray(organiserEvents) ? organiserEvents : []).find(e => String(e.id) === sid);
+        const raw = fromHome || fromOrg;
+        if (!raw) return null;
+        const location = raw.location || raw.venue || raw.address || 'Venue';
+        const city = raw.city || (location && location.split(',')[0]?.trim()) || '—';
+        const venue = raw.venue || raw.location || location;
+        return {
+            ...raw,
+            img: raw.img || raw.bannerPreview || DEFAULT_IMG,
+            title: raw.title || 'Event',
+            date: raw.date || 'TBA',
+            time: raw.time || '',
+            location,
+            venue,
+            city: raw.city || city,
+            category: raw.category || 'Event',
+            ageLimit: raw.ageLimit || 'All ages',
+            language: raw.language || 'English',
+            description: raw.description || 'Join us for this event. Book your tickets now.',
+            features: Array.isArray(raw.features) && raw.features.length > 0 ? raw.features : DEFAULT_FEATURES,
+            refundPolicy: Array.isArray(raw.refundPolicy) && raw.refundPolicy.length > 0 ? raw.refundPolicy : DEFAULT_REFUND,
+            parking: raw.parking || 'Paid Parking Available at the Venue.',
+            tags: Array.isArray(raw.tags) && raw.tags.length > 0 ? raw.tags : [raw.category || 'Event'].filter(Boolean),
+        };
+    }, [id, organiserEvents]);
+
+    useEffect(() => {
+        if (!event || typeof window === 'undefined') return;
+        try {
+            const key = 'recently_viewed_events';
+            const raw = localStorage.getItem(key);
+            const list = raw ? JSON.parse(raw) : [];
+            const item = { id: event.id, title: event.title, img: event.img, date: event.date, location: event.location, type: event.type || 'Paid' };
+            const filtered = list.filter((e) => String(e.id) !== String(event.id));
+            const next = [item, ...filtered].slice(0, 12);
+            localStorage.setItem(key, JSON.stringify(next));
+        } catch (_) {}
+    }, [event]);
 
     if (!event) {
+        if (!storageLoaded) {
+            return (
+                <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '150px', textAlign: 'center' }}>
+                    <div className="container">
+                        <p style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading event…</p>
+                    </div>
+                </main>
+            );
+        }
         return (
             <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '150px', textAlign: 'center' }}>
                 <div className="container">
@@ -44,30 +113,37 @@ export default function EventDetailPage({ params }) {
     return (
         <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px' }}>
 
-            {/* ── Banner Section ── */}
-            <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#000' }}>
+            {/* ── Image-based Hero Banner (full-bleed) ── */}
+            <section style={{ position: 'relative', width: '100%', minHeight: '420px', maxHeight: '55vh', backgroundColor: '#0f172a' }}>
                 <img
                     src={event.img}
                     alt={event.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }}
+                    style={{ width: '100%', height: '100%', minHeight: '420px', maxHeight: '55vh', objectFit: 'cover', display: 'block' }}
                 />
                 <div style={{
                     position: 'absolute',
-                    bottom: '0',
-                    left: '0',
-                    width: '100%',
-                    padding: '40px 0',
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)'
+                    inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)',
+                    pointerEvents: 'none',
+                }} />
+                <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: '32px 0 40px',
+                    pointerEvents: 'auto',
                 }}>
                     <div className="container">
-                        <h1 style={{ color: '#fff', fontSize: '2.5rem', fontWeight: 800, margin: '0 0 10px 0' }}>{event.title}</h1>
-                        <div style={{ display: 'flex', gap: '20px', color: '#fff' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Calendar size={18} /> {event.date}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={18} /> {event.location}</span>
+                        <span style={{ display: 'inline-block', background: '#F43F5E', color: '#fff', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: 700, marginBottom: '12px' }}>{event.category}</span>
+                        <h1 style={{ color: '#fff', fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, margin: '0 0 12px 0', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>{event.title}</h1>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px', color: 'rgba(255,255,255,0.95)', fontSize: '15px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={18} /> {event.date}{event.time ? `, ${event.time}` : ''}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={18} /> {event.location}</span>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <div className="container" style={{ padding: '40px 0', display: 'flex', gap: '30px' }}>
 
@@ -192,20 +268,22 @@ export default function EventDetailPage({ params }) {
                 <div style={{ width: '320px' }}>
                     <div style={{ position: 'sticky', top: '130px' }}>
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
-                            <button style={{
-                                width: '100%',
-                                padding: '16px',
-                                background: '#F43F5E',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontSize: '16px',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 6px -1px rgba(244, 63, 94, 0.3)'
-                            }}>
-                                Book Now
-                            </button>
+                            <Link href={`/events/${id}/book`} style={{ display: 'block', textDecoration: 'none' }}>
+                                <button type="button" style={{
+                                    width: '100%',
+                                    padding: '16px',
+                                    background: '#F43F5E',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    fontSize: '16px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px -1px rgba(244, 63, 94, 0.3)'
+                                }}>
+                                    Book Now
+                                </button>
+                            </Link>
                         </div>
 
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>

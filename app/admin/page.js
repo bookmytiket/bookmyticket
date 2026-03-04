@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive } from "lucide-react";
+import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
@@ -23,6 +23,22 @@ export default function AdminHomePage() {
         PayU: { enabled: false, apiKey: "", secretKey: "" },
         PhonePe: { enabled: false, apiKey: "", secretKey: "" },
         Paytm: { enabled: false, apiKey: "", secretKey: "" }
+    });
+    // Convenience Fee & GST — Admin only; organiser wallet gets only base ticket amount
+    const [feeSettings, setFeeSettings] = useState({
+        convenienceFeeType: "percent",
+        convenienceFeeValue: 5,
+        gstPercent: 18
+    });
+    // Ticket generation & sending (company name, logo, important info, workflow toggles)
+    const [ticketSettings, setTicketSettings] = useState({
+        companyName: "book my ticket",
+        logoUrl: "",
+        importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
+        supportUrl: "https://www.bookmyticket.com",
+        sendViaEmail: true,
+        sendViaSms: true,
+        sendPdfWhatsApp: true,
     });
 
     // Bookings (ticket orders) — sync with homepage/organiser events
@@ -68,6 +84,7 @@ export default function AdminHomePage() {
     ]);
     const [categoryModal, setCategoryModal] = useState(null);
     const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
+    const [supportTickets, setSupportTickets] = useState([]);
 
     // Combined events: homepage + organiser (Admin + Home integration); exclude archived
     const allEvents = useMemo(() => {
@@ -97,6 +114,10 @@ export default function AdminHomePage() {
         if (savedArchived) try { setArchivedHomeIds(JSON.parse(savedArchived)); } catch (_) {}
         const savedGateways = localStorage.getItem('admin_payment_gateways');
         if (savedGateways) try { setPaymentGateways(prev => ({ ...prev, ...JSON.parse(savedGateways) })); } catch (_) {}
+        const savedFees = localStorage.getItem('admin_fee_settings');
+        if (savedFees) try { setFeeSettings(prev => ({ ...prev, ...JSON.parse(savedFees) })); } catch (_) {}
+        const savedTicket = localStorage.getItem('admin_ticket_settings');
+        if (savedTicket) try { setTicketSettings(prev => ({ ...prev, ...JSON.parse(savedTicket) })); } catch (_) {}
         const savedMeta = localStorage.getItem('admin_event_meta_overrides');
         if (savedMeta) try { setEventMetaOverrides(JSON.parse(savedMeta)); } catch (_) {}
         const savedSlides = localStorage.getItem('admin_hero_slides');
@@ -106,12 +127,16 @@ export default function AdminHomePage() {
         if (savedSubnav) try { const parsed = JSON.parse(savedSubnav); if (Array.isArray(parsed) && parsed.length > 0) setSubnavItems(parsed); } catch (_) {}
         const savedCategories = localStorage.getItem('admin_categories');
         if (savedCategories) try { const parsed = JSON.parse(savedCategories); if (Array.isArray(parsed) && parsed.length > 0) setCategories(parsed); } catch (_) {}
+        const rawTickets = localStorage.getItem('support_tickets');
+        if (rawTickets) try { setSupportTickets(JSON.parse(rawTickets)); } catch (_) { setSupportTickets([]); }
     }, []);
     useEffect(() => { try { localStorage.setItem('admin_bookings', JSON.stringify(bookings)); } catch (_) {} }, [bookings]);
     useEffect(() => { try { localStorage.setItem('admin_customers', JSON.stringify(customers)); } catch (_) {} }, [customers]);
     useEffect(() => { try { localStorage.setItem('admin_promotions', JSON.stringify(promotions)); } catch (_) {} }, [promotions]);
     useEffect(() => { try { localStorage.setItem('admin_archived_home_ids', JSON.stringify(archivedHomeIds)); } catch (_) {} }, [archivedHomeIds]);
     useEffect(() => { try { localStorage.setItem('admin_payment_gateways', JSON.stringify(paymentGateways)); } catch (_) {} }, [paymentGateways]);
+    useEffect(() => { try { localStorage.setItem('admin_fee_settings', JSON.stringify(feeSettings)); } catch (_) {} }, [feeSettings]);
+    useEffect(() => { try { localStorage.setItem('admin_ticket_settings', JSON.stringify(ticketSettings)); } catch (_) {} }, [ticketSettings]);
     useEffect(() => { try { localStorage.setItem('admin_event_meta_overrides', JSON.stringify(eventMetaOverrides)); } catch (_) {} }, [eventMetaOverrides]);
     useEffect(() => { try { localStorage.setItem('admin_hero_slides', JSON.stringify(slides)); } catch (_) {} }, [slides]);
     useEffect(() => { try { localStorage.setItem('admin_categories', JSON.stringify(categories)); } catch (_) {} }, [categories]);
@@ -519,6 +544,9 @@ export default function AdminHomePage() {
                     <button onClick={() => setActiveTab("financials")} className={`sidebar-item ${activeTab === "financials" ? "active" : ""}`}>
                         <BarChart3 size={20} /> Financials
                     </button>
+                    <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
+                        <MessageCircle size={20} /> Support Tickets
+                    </button>
 
                     {/* System */}
                     <p className="section-header">System</p>
@@ -538,6 +566,7 @@ export default function AdminHomePage() {
                                 {[
                                     { label: "API Keys", id: "api_settings" },
                                     { label: "Payment Gateways", id: "payment_settings" },
+                                    { label: "Ticket & Notifications", id: "ticket_settings" },
                                     { label: "Email Integration", id: "email_settings" },
                                     { label: "SEO & Meta", id: "meta_management" },
                                     { label: "Email Templates", id: "email_templates" },
@@ -602,10 +631,10 @@ export default function AdminHomePage() {
                 <header className="top-header">
                     <div>
                         <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
-                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "categories" ? "Event Categories" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "categories" ? "Event Categories" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                         </h1>
                         <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>
-                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "categories" ? "Manage event categories" : ""}
+                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "support_tickets" ? "View and manage organiser support tickets; status changes notify organiser by email" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "ticket_settings" ? "Ticket format, logo, send workflow (SMS, Email, WhatsApp PDF)" : activeTab === "categories" ? "Manage event categories" : ""}
                         </p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -634,14 +663,15 @@ export default function AdminHomePage() {
                 )}
 
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
-                            {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings"].includes(activeTab) ? [
+                            {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings", "ticket_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
                                 { id: "email_templates", label: "Templates", icon: ImageIcon },
                                 { id: "disclaimer_settings", label: "Disclaimer", icon: Shield },
                                 { id: "sso_settings", label: "SSO / OAuth2", icon: Lock },
                                 { id: "payment_settings", label: "Payments", icon: CreditCard },
+                                { id: "ticket_settings", label: "Ticket & Notifications", icon: Ticket },
                                 { id: "api_settings", label: "API Keys", icon: Code },
                             ] : [
                                 { id: "hero", label: "Hero Banner", icon: ImageIcon },
@@ -964,6 +994,65 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "support_tickets" && (() => {
+                        const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
+                        const statusColor = (s) => ({ Open: "#3b82f6", Pending: "#f59e0b", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#64748b" }[s] || "#64748b");
+                        const saveTickets = (list) => {
+                            try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                            setSupportTickets(list);
+                            try {
+                                const log = JSON.parse(localStorage.getItem("support_ticket_emails") || "[]");
+                                log.push({ at: new Date().toISOString(), message: "Email notification will be sent to organiser for ticket update." });
+                                localStorage.setItem("support_ticket_emails", JSON.stringify(log.slice(-50)));
+                            } catch (_) {}
+                        };
+                        const updateTicket = (ticketId, updates) => {
+                            const list = supportTickets.map(t => t.id === ticketId ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t);
+                            saveTickets(list);
+                        };
+                        return (
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}>Changes here (status, notes) are saved to the same data the Organiser panel uses. Refreshing or reopening Support Tickets in the Organiser panel will show updates. Status changes trigger an email notification to the organiser (hook ready for SMTP).</p>
+                                {supportTickets.length === 0 ? (
+                                    <p style={{ fontSize: "14px", color: t.textSub }}>No support tickets yet. Organisers create tickets from their dashboard.</p>
+                                ) : (
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>ID</th>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Subject</th>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Organiser</th>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Status</th>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Created</th>
+                                                    <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Admin notes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {supportTickets.map((ticket) => (
+                                                    <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                        <td style={{ padding: "10px 8px", color: t.textMain, fontFamily: "monospace" }}>{ticket.id}</td>
+                                                        <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
+                                                        <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.organiserName || "—"}</td>
+                                                        <td style={{ padding: "10px 8px" }}>
+                                                            <select value={ticket.status || "Open"} onChange={(e) => updateTicket(ticket.id, { status: e.target.value })} style={{ padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
+                                                                {TICKET_STATUSES.map(st => <option key={st} value={st}>{st}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : "—"}</td>
+                                                        <td style={{ padding: "10px 8px" }}>
+                                                            <textarea key={`${ticket.id}-${ticket.updatedAt || ""}`} defaultValue={ticket.adminNotes || ""} onBlur={(e) => { const v = e.target.value; if ((ticket.adminNotes || "") !== v) updateTicket(ticket.id, { adminNotes: v }); }} placeholder="Admin notes (saved on blur)" rows={2} style={{ width: "100%", minWidth: "160px", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px", resize: "vertical" }} />
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
                     {activeTab === "hero" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -976,7 +1065,7 @@ export default function AdminHomePage() {
                                 {slides.map((slide) => (
                                     <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: t.bg }}>
                                         <div style={{ position: "relative", height: "150px" }}>
-                                            <img src={slide.img || "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=600&h=300&fit=crop"} alt={slide.alt || "Slide"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            <img src={slide.img || "/banner-hero-events.png"} alt={slide.alt || "Slide"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                             <button onClick={() => removeSlide(slide.id)} style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
                                         </div>
                                         <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -1457,6 +1546,49 @@ export default function AdminHomePage() {
                                 })}
                             </div>
 
+                            {/* Convenience Fee & GST — Admin only; organiser receives only base ticket amount */}
+                            <div style={{ marginTop: "32px", padding: "24px", backgroundColor: theme === 'light' ? '#f8fafc' : t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 8px 0" }}>Convenience Fee & GST</h3>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 20px 0" }}>Only admins can change these. Customer pays: Ticket price + Convenience Fee + GST = Total. Organiser wallet is credited only the base ticket amount.</p>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "flex-end" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Convenience fee</label>
+                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                            <select
+                                                value={feeSettings.convenienceFeeType}
+                                                onChange={(e) => setFeeSettings(f => ({ ...f, convenienceFeeType: e.target.value }))}
+                                                style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
+                                            >
+                                                <option value="percent">Percent (%)</option>
+                                                <option value="fixed">Fixed (₹)</option>
+                                            </select>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step={feeSettings.convenienceFeeType === "percent" ? 0.5 : 1}
+                                                value={feeSettings.convenienceFeeValue}
+                                                onChange={(e) => setFeeSettings(f => ({ ...f, convenienceFeeValue: parseFloat(e.target.value) || 0 }))}
+                                                style={{ width: "80px", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
+                                            />
+                                            <span style={{ fontSize: "13px", color: t.textSub }}>{feeSettings.convenienceFeeType === "percent" ? "%" : "₹"}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>GST (%)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="0.5"
+                                            value={feeSettings.gstPercent}
+                                            onChange={(e) => setFeeSettings(f => ({ ...f, gstPercent: parseFloat(e.target.value) || 0 }))}
+                                            style={{ width: "80px", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
+                                        />
+                                        <span style={{ fontSize: "13px", color: t.textSub, marginLeft: "4px" }}>%</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Payment gateway config modal */}
                             {paymentGatewayConfig && (() => {
                                 const gw = paymentGatewayConfig;
@@ -1536,10 +1668,85 @@ export default function AdminHomePage() {
                                     </div>
                                 );
                             })()}
+                            </div>
+                        )}
+
+                    {activeTab === "ticket_settings" && (
+                        <div style={{ maxWidth: "850px" }}>
+                            <div style={{ marginBottom: "20px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Ticket & Notifications</h2>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Configure ticket image/PDF format, company branding, and how tickets are sent (SMS, Email, WhatsApp PDF) after booking.</p>
+                            </div>
+
+                            <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 16px 0" }}>Company branding (on ticket)</h3>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Company name</label>
+                                        <input
+                                            type="text"
+                                            value={ticketSettings.companyName || ""}
+                                            onChange={(e) => setTicketSettings(s => ({ ...s, companyName: e.target.value }))}
+                                            placeholder="book my ticket"
+                                            style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Logo URL (optional)</label>
+                                        <input
+                                            type="url"
+                                            value={ticketSettings.logoUrl || ""}
+                                            onChange={(e) => setTicketSettings(s => ({ ...s, logoUrl: e.target.value }))}
+                                            placeholder="https://..."
+                                            style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Support / website URL</label>
+                                        <input
+                                            type="url"
+                                            value={ticketSettings.supportUrl || ""}
+                                            onChange={(e) => setTicketSettings(s => ({ ...s, supportUrl: e.target.value }))}
+                                            placeholder="https://www.bookmyticket.com"
+                                            style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 16px 0" }}>Important information (on ticket)</h3>
+                                <textarea
+                                    value={ticketSettings.importantInfo || ""}
+                                    onChange={(e) => setTicketSettings(s => ({ ...s, importantInfo: e.target.value }))}
+                                    placeholder="Terms, entry instructions, contact info..."
+                                    rows={5}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical" }}
+                                />
+                            </div>
+
+                            <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 16px 0" }}>Ticket sending workflow</h3>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0" }}>When a booking is confirmed, customers can use these options. Enable or disable each channel.</p>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={!!ticketSettings.sendViaEmail} onChange={(e) => setTicketSettings(s => ({ ...s, sendViaEmail: e.target.checked }))} />
+                                        <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Send ticket to Email</span>
+                                    </label>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={!!ticketSettings.sendViaSms} onChange={(e) => setTicketSettings(s => ({ ...s, sendViaSms: e.target.checked }))} />
+                                        <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Send SMS (mobile)</span>
+                                    </label>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={!!ticketSettings.sendPdfWhatsApp} onChange={(e) => setTicketSettings(s => ({ ...s, sendPdfWhatsApp: e.target.checked }))} />
+                                        <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Download ticket PDF (share to WhatsApp)</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {activeTab === "email_settings" && (
+                            {activeTab === "email_settings" && (
                         <div style={{ maxWidth: "850px" }}>
                             <div style={{ marginBottom: "20px" }}>
                                 <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Email Settings</h2>
@@ -2144,7 +2351,7 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "hero", "video"].includes(activeTab)) && (
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

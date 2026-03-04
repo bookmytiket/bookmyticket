@@ -26,7 +26,7 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home
 } from "lucide-react";
 
 function LocationPickerModal({
@@ -181,6 +181,19 @@ function OrganiserPanel() {
     const [menuSearch, setMenuSearch] = useState("");
     const [eventBookingsTab, setEventBookingsTab] = useState("all");
     const [supportTab, setSupportTab] = useState("all_tickets");
+    const [pwaScanInput, setPwaScanInput] = useState("");
+    const [pwaScanResult, setPwaScanResult] = useState(null);
+    const [pwaCameraOpen, setPwaCameraOpen] = useState(false);
+    const pwaVideoRef = useRef(null);
+    const pwaStreamRef = useRef(null);
+    const pwaScanLoopRef = useRef(null);
+    const [supportTicketsList, setSupportTicketsList] = useState([]);
+    const [supportTicketForm, setSupportTicketForm] = useState({ email: "", subject: "", description: "", attachmentFileName: "" });
+    const [supportTicketSearchId, setSupportTicketSearchId] = useState("");
+    const [selectedTicketIds, setSelectedTicketIds] = useState([]);
+    const [supportTicketSelectOpen, setSupportTicketSelectOpen] = useState(null);
+    const [supportTicketDetailId, setSupportTicketDetailId] = useState(null);
+    const [supportTicketReplyMessage, setSupportTicketReplyMessage] = useState("");
 
     // Organiser Profile State
     const [profile, setProfile] = useState({
@@ -192,12 +205,56 @@ function OrganiserPanel() {
         kycStatus: "Pending"
     });
 
-    // Mock Wallet State (match reference KPI cards)
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const raw = localStorage.getItem("organiser_profile");
+            if (raw) {
+                const data = JSON.parse(raw);
+                setProfile(prev => ({ ...prev, ...data }));
+            } else {
+                setProfile(prev => ({ ...prev, firstName: "John", lastName: "Doe", email: "organizer@gmail.com", orgType: "Individual", kycStatus: "KYC Approved" }));
+            }
+        } catch (_) {}
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem("organiser_profile", JSON.stringify(profile)); } catch (_) {}
+    }, [profile]);
+
+    // Wallet: loaded from localStorage (organiser_wallet); checkout credits base ticket amount only
     const [wallet, setWallet] = useState({
-        balance: 48373.1,
-        currency: "$",
+        balance: 0,
+        currency: "₹",
         transactions: []
     });
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const raw = localStorage.getItem("organiser_wallet");
+            if (raw) {
+                const data = JSON.parse(raw);
+                setWallet({
+                    balance: Number(data.balance) || 0,
+                    currency: data.currency || "₹",
+                    transactions: Array.isArray(data.transactions) ? data.transactions : []
+                });
+            }
+        } catch (_) {}
+    }, []);
+
+    const loadSupportTickets = useCallback(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const raw = localStorage.getItem("support_tickets");
+            setSupportTicketsList(raw ? JSON.parse(raw) : []);
+        } catch (_) { setSupportTicketsList([]); }
+    }, []);
+    useEffect(() => loadSupportTickets(), [loadSupportTickets]);
+    useEffect(() => {
+        window.addEventListener("focus", loadSupportTickets);
+        return () => window.removeEventListener("focus", loadSupportTickets);
+    }, [loadSupportTickets]);
 
     const [events, setEvents] = useState([]);
     const writeQueueRef = useRef([]);
@@ -278,12 +335,74 @@ function OrganiserPanel() {
     const thumbnailInputRef = useRef(null);
     const galleryInputRef = useRef(null);
 
+    const validateBookingId = useCallback((id) => {
+        const rawId = String(id).trim();
+        if (!rawId) return;
+        try {
+            const raw = localStorage.getItem("admin_bookings");
+            const list = raw ? JSON.parse(raw) : [];
+            const booking = list.find(b => String(b.id) === rawId);
+            if (!booking) { setPwaScanResult({ status: "not_found", id: rawId }); return; }
+            if (booking.scanned) { setPwaScanResult({ status: "already_used", booking }); return; }
+            const idx = list.findIndex(b => String(b.id) === rawId);
+            list[idx] = { ...booking, scanned: true, scannedAt: new Date().toISOString() };
+            localStorage.setItem("admin_bookings", JSON.stringify(list));
+            setPwaScanResult({ status: "valid", booking: list[idx] });
+            setPwaScanInput("");
+        } catch (_) { setPwaScanResult({ status: "not_found", id: rawId }); }
+    }, []);
+
+    useEffect(() => {
+        if (!pwaCameraOpen || typeof window === "undefined") return;
+        let stream = null;
+        const video = pwaVideoRef.current;
+        if (!video) return;
+        const startCamera = async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                pwaStreamRef.current = stream;
+                video.srcObject = stream;
+                await video.play();
+                if (typeof BarcodeDetector !== "undefined") {
+                    const detector = new BarcodeDetector({ formats: ["qr_code"] });
+                    const scan = async () => {
+                        if (!pwaCameraOpen || !video.srcObject || video.readyState < 2) return;
+                        try {
+                            const codes = await detector.detect(video);
+                            if (codes && codes.length > 0 && codes[0].rawValue) {
+                                const id = codes[0].rawValue;
+                                validateBookingId(id);
+                                setPwaCameraOpen(false);
+                                return;
+                            }
+                        } catch (_) {}
+                        pwaScanLoopRef.current = requestAnimationFrame(scan);
+                    };
+                    pwaScanLoopRef.current = requestAnimationFrame(scan);
+                }
+            } catch (err) {
+                console.warn("Camera or BarcodeDetector not available", err);
+            }
+        };
+        startCamera();
+        return () => {
+            if (pwaScanLoopRef.current) cancelAnimationFrame(pwaScanLoopRef.current);
+            if (pwaStreamRef.current) { pwaStreamRef.current.getTracks().forEach(t => t.stop()); pwaStreamRef.current = null; }
+            if (video && video.srcObject) video.srcObject = null;
+        };
+    }, [pwaCameraOpen, validateBookingId]);
+
     // Event categories: from Admin (localStorage admin_categories) so organiser sees same list as home/admin
     const DEFAULT_EVENT_CATEGORY_NAMES = ["Concert", "Sports", "Comedy", "Theatre", "Music", "Workshop", "Festival", "Live Shows", "Conference", "Exhibition", "Marathon", "Others"];
     const [eventCategoryNames, setEventCategoryNames] = useState(DEFAULT_EVENT_CATEGORY_NAMES);
 
     // ── Seat-based Event Posting State ───────────────────────────────────────
-    const [postEvent, setPostEvent] = useState({
+    const DEFAULT_SEAT_CATEGORIES = [
+        { name: "VIP", color: "#f59e0b", rowStart: 1, rowEnd: 2, price: 2500 },
+        { name: "Premium", color: "#6366f1", rowStart: 3, rowEnd: 4, price: 1500 },
+        { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
+    ];
+    const getInitialPostEvent = () => ({
         title: "", category: "Concert", type: "Venue", venue: "", date: "", time: "",
         dateType: "single", countdownStatus: "active",
         description: "", banner: null, bannerPreview: null,
@@ -293,12 +412,9 @@ function OrganiserPanel() {
         normalTicketCapacity: "",
         normalTicketPrice: "",
         rows: 6, cols: 10,
-        categories: [
-            { name: "VIP", color: "#f59e0b", rowStart: 1, rowEnd: 2, price: 2500 },
-            { name: "Premium", color: "#6366f1", rowStart: 3, rowEnd: 4, price: 1500 },
-            { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
-        ]
+        categories: DEFAULT_SEAT_CATEGORIES.map(c => ({ ...c })),
     });
+    const [postEvent, setPostEvent] = useState(getInitialPostEvent());
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -472,10 +588,17 @@ function OrganiserPanel() {
             totalSeats,
             bookedSeats: 0,
             meta: { keywords: "", adsId: "" },
-            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:")) ? postEvent.bannerPreview : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop"
+            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:")) ? postEvent.bannerPreview : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
+            price: isSeating
+                ? (postEvent.categories?.length ? Math.min(...postEvent.categories.map(c => Number(c.price) || 0)) : undefined)
+                : (postEvent.normalTicketPrice !== "" && postEvent.normalTicketPrice != null ? Number(postEvent.normalTicketPrice) : undefined)
         };
         setEvents(prev => [...prev, ev]);
         alert(isSeating ? `✅ "${ev.title}" published with ${totalSeats} seats (Seating Based)!` : `✅ "${ev.title}" published with ${totalSeats} tickets (Normal Ticketing)!`);
+        setPostEvent(getInitialPostEvent());
+        setAddEventStep("select_type");
+        setMultiSlots([{ date: "", time: "" }]);
+        try { localStorage.removeItem("organiser_draft"); } catch (_) {}
         setActiveTab("manage_events");
     };
 
@@ -754,15 +877,15 @@ function OrganiserPanel() {
                                     <div>
                                         <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>My Balance</p>
                                         <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{wallet.currency}{Number(wallet.balance).toLocaleString()}</p>
-                                    </div>
                                 </div>
+                            </div>
                                 <div style={{ backgroundColor: "#22c55e", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
                                     <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={24} /></div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Events</p>
                                         <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{Math.max(events.length, 9)}</p>
-                                    </div>
                                 </div>
+                            </div>
                                 <div style={{ backgroundColor: "#ef4444", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
                                     <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Monitor size={24} /></div>
                                     <div>
@@ -864,9 +987,9 @@ function OrganiserPanel() {
                                                 <td style={{ padding: "16px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {ev.seatingEnabled !== false ? (
-                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                                <Grid size={14} /> Seat Map
-                                                            </button>
+                                                        <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                                            <Grid size={14} /> Seat Map
+                                                        </button>
                                                         ) : (
                                                             <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
                                                         )}
@@ -883,7 +1006,7 @@ function OrganiserPanel() {
                 case "post_event":
                     // Step 1: Choose Online or Venue (image format)
                     if (addEventStep === "select_type") {
-                        return (
+                    return (
                             <div style={{ backgroundColor: t.bg, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "700px", width: "100%" }}>
                                     <button
@@ -1157,14 +1280,14 @@ function OrganiserPanel() {
                                 </div>
                                 {(postEvent.dateType || "single") === "single" && (
                                     <>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
                                             <input type="date" value={postEvent.date} onChange={e => setPostEvent(prev => ({ ...prev, date: e.target.value }))} placeholder="dd/mm/yyyy" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
                                             <input type="time" value={postEvent.time} onChange={e => setPostEvent(prev => ({ ...prev, time: e.target.value }))} placeholder="--:--" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
+                                </div>
                                     </>
                                 )}
                                 {postEvent.seatingEnabled === false && (
@@ -1181,15 +1304,15 @@ function OrganiserPanel() {
                                     </div>
                                 )}
                                 {postEvent.seatingEnabled !== false && (
-                                    <div style={{ gridColumn: "span 2" }}>
-                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
                                                 <input type="number" min={1} value={postEvent.rows} onChange={e => setPostEvent(prev => ({ ...prev, rows: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
                                                 <input type="number" min={1} value={postEvent.cols} onChange={e => setPostEvent(prev => ({ ...prev, cols: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
                                             </div>
                                         </div>
@@ -1224,26 +1347,26 @@ function OrganiserPanel() {
                                                         </div>
                                                     </div>
                                                 ))}
-                                            </div>
-                                        </div>
-                                        <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-                                                {[...Array(Math.max(1, postEvent.rows))].map((_, rIdx) => {
-                                                    const cat = getSeatCategory(rIdx);
-                                                    return (
-                                                        <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                                            <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
-                                                            {[...Array(Math.max(1, postEvent.cols))].map((_, cIdx) => (
-                                                                <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                })}
-                                                <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
-                                                <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
-                                            </div>
                                         </div>
                                     </div>
+                                    <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+                                                {[...Array(Math.max(1, postEvent.rows))].map((_, rIdx) => {
+                                                const cat = getSeatCategory(rIdx);
+                                                return (
+                                                    <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                        <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
+                                                            {[...Array(Math.max(1, postEvent.cols))].map((_, cIdx) => (
+                                                            <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })}
+                                            <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
+                                            <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 )}
                                 <div style={{ gridColumn: "span 2" }}>
                                     <button onClick={publishSeatEvent} style={{ width: "100%", padding: "16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "12px", fontWeight: 800, cursor: "pointer" }}>
@@ -1358,22 +1481,144 @@ function OrganiserPanel() {
                             </div>
                         </div>
                     );
-                case "venue_events":
+                case "venue_events": {
+                    const venueEvents = events.filter(ev => (ev.type || "Venue") === "Venue");
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Venue Events</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>List of venue-based events. Same as All Events filtered by type.</p>
-                            <div style={{ marginTop: "16px" }}>{events.filter(ev => (ev.type || "Venue") === "Venue").length} events</div>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Venue Events</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>List of venue-based events. Same as All Events filtered by type.</p>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}><strong>{venueEvents.length}</strong> events</p>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {venueEvents.length === 0 ? (
+                                            <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "13px" }}>No venue events yet. Add one from &quot;Add Event&quot; (choose Venue).</td></tr>
+                                        ) : venueEvents.map(ev => (
+                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f9731620", display: "flex", alignItems: "center", justifyContent: "center" }}><MapPin size={20} color="#f97316" /></div>
+                                                        <div>
+                                                            <p style={{ fontWeight: 700, margin: 0, fontSize: "14px", color: t.textMain }}>{ev.title}</p>
+                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.venue || "—"}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <p style={{ fontSize: "13px", margin: 0, fontWeight: 600, color: t.textMain }}>{ev.date || "—"}</p>
+                                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time || "—"}</p>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    {ev.totalSeats ? (
+                                                        <div>
+                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
+                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
+                                                                <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "#f84464", borderRadius: 3 }} />
+                                                            </div>
+                                                        </div>
+                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        {ev.seatingEnabled !== false ? (
+                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: "1px solid #6366f130", padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                                            <Grid size={14} /> Seat Map
+                                                        </button>
+                                                        ) : (
+                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
+                                                        )}
+                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     );
-                case "online_events":
+                }
+                case "online_events": {
+                    const onlineEvents = events.filter(ev => ev.type === "Online");
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Online Events</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>List of online events.</p>
-                            <div style={{ marginTop: "16px" }}>{events.filter(ev => ev.type === "Online").length} events</div>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Online Events</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>List of online events.</p>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}><strong>{onlineEvents.length}</strong> events</p>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {onlineEvents.length === 0 ? (
+                                            <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "13px" }}>No online events yet. Add one from &quot;Add Event&quot; (choose Online).</td></tr>
+                                        ) : onlineEvents.map(ev => (
+                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><CloudUpload size={20} color="#22c55e" /></div>
+                                                        <div>
+                                                            <p style={{ fontWeight: 700, margin: 0, fontSize: "14px", color: t.textMain }}>{ev.title}</p>
+                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>Online event</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <p style={{ fontSize: "13px", margin: 0, fontWeight: 600, color: t.textMain }}>{ev.date || "—"}</p>
+                                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time || "—"}</p>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    {ev.totalSeats ? (
+                                                        <div>
+                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
+                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
+                                                                <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "#f84464", borderRadius: 3 }} />
+                                                            </div>
+                                                        </div>
+                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        {ev.seatingEnabled !== false ? (
+                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: "1px solid #6366f130", padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                                                <Grid size={14} /> Seat Map
+                                                            </button>
+                                                        ) : (
+                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
+                                                        )}
+                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     );
+                }
                 case "event_bookings":
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
@@ -1404,29 +1649,291 @@ function OrganiserPanel() {
                     );
                 case "pwa_scanner":
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Pwa Scanner</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Scan tickets at the venue.</p>
+                        <div style={{ maxWidth: "560px" }}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, marginBottom: "20px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>PWA Scanner</h3>
+                                <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>Scan the ticket QR code with your camera or enter the Booking ID manually.</p>
+
+                                <div style={{ marginBottom: "20px" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPwaCameraOpen(true)}
+                                        style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 24px", borderRadius: "12px", border: "2px solid #3b82f6", backgroundColor: "#3b82f620", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "15px" }}
+                                    >
+                                        <Ticket size={22} /> Open camera scanner
+                                    </button>
+                                    {typeof window !== "undefined" && typeof BarcodeDetector === "undefined" && (
+                                        <p style={{ fontSize: "12px", color: t.textSub, margin: "8px 0 0" }}>Camera scan works in Chrome (desktop or Android). Otherwise use manual entry below.</p>
+                                    )}
+                                </div>
+
+                                {pwaCameraOpen && (
+                                    <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "12px", border: "2px solid #3b82f6", backgroundColor: theme === "light" ? "#f0f9ff" : "#0f172a" }}>
+                                        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "12px", color: t.textMain }}>Point camera at ticket QR code</p>
+                                        <div style={{ position: "relative", width: "100%", maxWidth: "320px", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000", aspectRatio: "1" }}>
+                                            <video ref={pwaVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
+                                        </div>
+                                        <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ marginTop: "12px", padding: "10px 20px", borderRadius: "8px", border: "none", backgroundColor: "#64748b", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Stop scanner</button>
+                                    </div>
+                                )}
+
+                                <p style={{ fontSize: "12px", color: t.textSub, marginBottom: "12px" }}>Or enter Booking ID manually:</p>
+                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter Booking ID (e.g. ORD-1234567890)"
+                                        value={pwaScanInput}
+                                        onChange={(e) => { setPwaScanInput(e.target.value); setPwaScanResult(null); }}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); validateBookingId((e.target.value || pwaScanInput).trim()); } }}
+                                        style={{ flex: "1", minWidth: "200px", padding: "12px 16px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => validateBookingId(pwaScanInput)}
+                                        style={{ padding: "12px 24px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}
+                                    >
+                                        Validate ticket
+                                    </button>
+                                </div>
+                                {pwaScanResult && (
+                                    <div style={{ marginTop: "20px", padding: "16px", borderRadius: "12px", border: "1px solid", backgroundColor: pwaScanResult.status === "valid" ? "#dcfce7" : pwaScanResult.status === "already_used" ? "#fef3c7" : "#fee2e2", borderColor: pwaScanResult.status === "valid" ? "#22c55e" : pwaScanResult.status === "already_used" ? "#f59e0b" : "#ef4444" }}>
+                                        {pwaScanResult.status === "valid" && (
+                                            <>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#166534", fontWeight: 700 }}>
+                                                    <CheckCircle size={20} /> Ticket valid — Checked in
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: "13px", color: "#15803d" }}>{pwaScanResult.booking.eventName} · {pwaScanResult.booking.tickets} ticket(s). Entry confirmed.</p>
+                                            </>
+                                        )}
+                                        {pwaScanResult.status === "already_used" && (
+                                            <>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#b45309", fontWeight: 700 }}>
+                                                    <Ticket size={20} /> Already used
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: "13px", color: "#92400e" }}>This ticket was scanned at {pwaScanResult.booking.scannedAt ? new Date(pwaScanResult.booking.scannedAt).toLocaleString() : "earlier"}.</p>
+                                            </>
+                                        )}
+                                        {pwaScanResult.status === "not_found" && (
+                                            <>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#b91c1c", fontWeight: 700 }}>
+                                                    <X size={20} /> Not found
+                                                </div>
+                                                <p style={{ margin: 0, fontSize: "13px", color: "#991b1b" }}>No booking found for this ID. Check the code or ask the attendee to show the ticket.</p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>How it works</h4>
+                                <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: t.textSub, lineHeight: 1.7 }}>
+                                    <li>Attendees show the ticket QR code (on phone or print). The QR contains the Booking ID.</li>
+                                    <li>Use a QR scanner app to read the code, or ask the attendee to read the Booking ID (e.g. ORD-1234567890) and enter it above.</li>
+                                    <li>Tap &quot;Validate ticket&quot; to check in. Valid tickets are marked as used so they cannot be used again.</li>
+                                </ul>
+                            </div>
                         </div>
                     );
-                case "support_tickets":
+                case "support_tickets": {
+                    const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
+                    const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
+                    const saveSupportTickets = (list) => {
+                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                        setSupportTicketsList(list);
+                    };
+                    const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
+                    const toggleTicketSelect = (id) => setSelectedTicketIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                    const toggleSelectAll = () => { if (selectedTicketIds.length >= filteredTickets.length) setSelectedTicketIds([]); else setSelectedTicketIds(filteredTickets.map(t => t.id)); };
+                    const viewedTicket = supportTicketDetailId ? supportTicketsList.find(t => t.id === supportTicketDetailId) : null;
+                    const addReplyToTicket = (ticketId, message) => {
+                        const list = supportTicketsList.map(t => t.id !== ticketId ? t : { ...t, replies: [...(Array.isArray(t.replies) ? t.replies : []), { from: "organiser", message: (message || "").trim(), at: new Date().toISOString() }], updatedAt: new Date().toISOString() });
+                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                        setSupportTicketsList(list);
+                        setSupportTicketReplyMessage("");
+                    };
+                    const Breadcrumb = ({ title, sub }) => (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub, marginBottom: "16px" }}>
+                            <Home size={14} style={{ flexShrink: 0 }} />
+                            <span>Support Ticket</span>
+                            <span style={{ opacity: 0.7 }}>/</span>
+                            <span style={{ color: t.textMain, fontWeight: 600 }}>{title}{sub ? ` > ${sub}` : ""}</span>
+                        </div>
+                    );
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Support Tickets</h3>
-                            <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                            <Breadcrumb title={supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"} sub={supportTab === "add_ticket" ? "" : undefined} />
+                            <h3 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "20px", color: t.textMain }}>{supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"}</h3>
+                            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
                                 <button onClick={() => setSupportTab("all_tickets")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "all_tickets" ? "#3b82f6" : t.bg, color: supportTab === "all_tickets" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>All Tickets</button>
                                 <button onClick={() => setSupportTab("add_ticket")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "add_ticket" ? "#3b82f6" : t.bg, color: supportTab === "add_ticket" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Add Ticket</button>
                             </div>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Manage your support tickets.</p>
+                            {supportTab === "add_ticket" && (
+                                <div style={{ padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, maxWidth: "560px" }}>
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Email <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input type="email" value={supportTicketForm.email || profile?.email || "organizer@gmail.com"} onChange={(e) => setSupportTicketForm(f => ({ ...f, email: e.target.value }))} placeholder="organizer@gmail.com" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }} />
+                                    </div>
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Subject <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input type="text" placeholder="Enter Subject" value={supportTicketForm.subject} onChange={(e) => setSupportTicketForm(f => ({ ...f, subject: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }} />
+                                    </div>
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Description</label>
+                                        <textarea placeholder="Description" value={supportTicketForm.description} onChange={(e) => setSupportTicketForm(f => ({ ...f, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical" }} />
+                                    </div>
+                                    <div style={{ marginBottom: "20px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Attachment</label>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: theme === "dark" ? "#1e293b" : "#1e3a5f", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                                                Choose file
+                                                <input type="file" accept=".zip" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; if (!f.name.toLowerCase().endsWith(".zip")) { alert("Upload only ZIP files."); return; } if (f.size > 20 * 1024 * 1024) { alert("Max file size is 20 MB."); return; } setSupportTicketForm(prev => ({ ...prev, attachmentFileName: f.name })); }} />
+                                            </label>
+                                            <span style={{ fontSize: "12px", color: t.textSub }}>{supportTicketForm.attachmentFileName || "No file chosen"}</span>
+                                        </div>
+                                        <p style={{ fontSize: "12px", color: "#b45309", marginTop: "8px", marginBottom: 0 }}>Upload only ZIP Files, Max File Size is 20 MB</p>
+                                    </div>
+                                    <button type="button" onClick={() => { const emailVal = (supportTicketForm.email || profile?.email || "organizer@gmail.com").trim(); const sub = (supportTicketForm.subject || "").trim(); if (!emailVal || !sub) return; const nextId = Math.max(0, ...supportTicketsList.map(t => t.ticketId || 0)) + 1; const list = [...supportTicketsList, { id: "TKT-" + Date.now(), ticketId: nextId, email: emailVal, subject: sub, description: (supportTicketForm.description || "").trim(), status: "Open", organiserName: "John Doe", organiserId: "org1", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), adminNotes: "", attachmentFileName: supportTicketForm.attachmentFileName || null, replies: [] }]; saveSupportTickets(list); try { const log = JSON.parse(localStorage.getItem("support_ticket_emails") || "[]"); log.push({ at: new Date().toISOString(), message: "New ticket created; email notification hook ready for SMTP." }); localStorage.setItem("support_ticket_emails", JSON.stringify(log.slice(-50))); } catch (_) {} setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" }); setSupportTab("all_tickets"); }} style={{ padding: "12px 28px", borderRadius: "8px", border: "none", backgroundColor: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save</button>
+                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>You will receive email updates when support changes the ticket status.</p>
+                                </div>
+                            )}
+                            {supportTab === "all_tickets" && (
+                                <>
+                                    {viewedTicket ? (
+                                        <div style={{ marginBottom: "20px" }}>
+                                            <button type="button" onClick={() => { setSupportTicketDetailId(null); setSupportTicketReplyMessage(""); }} style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "16px", padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}><ArrowRight size={16} style={{ transform: "rotate(180deg)" }} /> Back to list</button>
+                                            <div style={{ padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, marginBottom: "16px" }}>
+                                                <h4 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Ticket #{viewedTicket.ticketId ?? viewedTicket.id}</h4>
+                                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Email</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.email || "—"}</div></div>
+                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Subject</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.subject}</div></div>
+                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Status</span><div><span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{viewedTicket.status}</span></div></div>
+                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Created</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.createdAt ? new Date(viewedTicket.createdAt).toLocaleString() : "—"}</div></div>
+                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Updated</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.updatedAt ? new Date(viewedTicket.updatedAt).toLocaleString() : "—"}</div></div>
+                                                </div>
+                                                {viewedTicket.description && <div style={{ marginBottom: "12px" }}><span style={{ fontSize: "12px", color: t.textSub }}>Description</span><p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{viewedTicket.description}</p></div>}
+                                                {viewedTicket.adminNotes && <div style={{ marginBottom: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "#f59e0b15", border: "1px solid #f59e0b40" }}><span style={{ fontSize: "12px", color: t.textSub }}>Admin notes</span><p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{viewedTicket.adminNotes}</p></div>}
+                                            </div>
+                                            <div style={{ padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, marginBottom: "16px" }}>
+                                                <h5 style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Conversation</h5>
+                                                {(Array.isArray(viewedTicket.replies) && viewedTicket.replies.length > 0) ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                        {viewedTicket.replies.map((r, i) => (
+                                                            <div key={i} style={{ padding: "12px", borderRadius: "8px", backgroundColor: r.from === "organiser" ? "#3b82f615" : "#f59e0b15", borderLeft: `4px solid ${r.from === "organiser" ? "#3b82f6" : "#f59e0b" }` }}>
+                                                                <span style={{ fontSize: "11px", fontWeight: 600, color: t.textSub, textTransform: "capitalize" }}>{r.from}</span>
+                                                                <p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{r.message}</p>
+                                                                <span style={{ fontSize: "11px", color: t.textSub }}>{r.at ? new Date(r.at).toLocaleString() : ""}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>No replies yet.</p>}
+                                            </div>
+                                            <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg }}>
+                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "8px" }}>Add reply</label>
+                                                <textarea value={supportTicketReplyMessage} onChange={(e) => setSupportTicketReplyMessage(e.target.value)} placeholder="Type your message..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical", marginBottom: "10px" }} />
+                                                <button type="button" onClick={() => { if (!(supportTicketReplyMessage || "").trim()) return; addReplyToTicket(viewedTicket.id, supportTicketReplyMessage); }} style={{ padding: "10px 20px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Send reply</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                    <>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+                                        <h4 style={{ fontSize: "16px", fontWeight: 600, color: t.textMain, margin: 0 }}>All Tickets</h4>
+                                        <input type="text" placeholder="Search by Ticket ID" value={supportTicketSearchId} onChange={(e) => setSupportTicketSearchId(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", minWidth: "180px" }} />
+                                    </div>
+                                    <div style={{ overflowX: "auto" }}>
+                                        {filteredTickets.length === 0 ? (
+                                            <p style={{ fontSize: "13px", color: t.textSub }}>No support tickets yet. Create one with &quot;Add Ticket&quot;.</p>
+                                        ) : (
+                                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                                <thead>
+                                                    <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+                                                        <th style={{ padding: "10px 8px", width: "40px" }}>
+                                                            <input type="checkbox" checked={filteredTickets.length > 0 && selectedTicketIds.length === filteredTickets.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
+                                                        </th>
+                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Ticket ID</th>
+                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Email</th>
+                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Subject</th>
+                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Status</th>
+                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filteredTickets.map((ticket) => (
+                                                        <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                            <td style={{ padding: "10px 8px" }}>
+                                                                <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} style={{ cursor: "pointer" }} />
+                                                            </td>
+                                                            <td style={{ padding: "10px 8px", color: t.textMain, fontWeight: 600 }}>{ticket.ticketId ?? ticket.id}</td>
+                                                            <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.email || "—"}</td>
+                                                            <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
+                                                            <td style={{ padding: "10px 8px" }}>
+                                                                <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status}</span>
+                                                            </td>
+                                                            <td style={{ padding: "10px 8px" }}>
+                                                                <div style={{ position: "relative" }}>
+                                                                    <button type="button" onClick={() => setSupportTicketSelectOpen(supportTicketSelectOpen === ticket.id ? null : ticket.id)} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 14px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Select <ChevronDown size={14} /></button>
+                                                                    {supportTicketSelectOpen === ticket.id && (
+                                                                        <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "4px", backgroundColor: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 10, minWidth: "120px" }}>
+                                                                            <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>View</button>
+                                                                            <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>Reply</button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+                                    </>
+                                    )}
+                                </>
+                            )}
                         </div>
                     );
-                case "edit_profile":
+                }
+                case "edit_profile": {
+                    const orgTypeOptions = ["Individual", "Event Organiser", "Pvt Ltd", "Others"];
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Edit Profile</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Update your organiser profile details.</p>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Edit Profile</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>Update your organiser profile details.</p>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", maxWidth: "560px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>First Name</label>
+                                    <input type="text" value={profile.firstName} onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Last Name</label>
+                                    <input type="text" value={profile.lastName} onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
+                                </div>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Organiser Type</label>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                        {orgTypeOptions.map(opt => (
+                                            <button key={opt} type="button" onClick={() => setProfile(p => ({ ...p, orgType: opt }))} style={{ padding: "10px 16px", borderRadius: "8px", border: `2px solid ${profile.orgType === opt ? "#3b82f6" : t.border}`, backgroundColor: profile.orgType === opt ? "#3b82f615" : "transparent", color: profile.orgType === opt ? "#3b82f6" : t.textSub, fontWeight: 600, cursor: "pointer", fontSize: "13px" }}>{opt}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Email</label>
+                                    <input type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="organizer@example.com" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
+                                </div>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Phone</label>
+                                    <input type="tel" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
+                                </div>
+                                <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: 600, color: t.textSub }}>KYC Status</span>
+                                    <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b" }}>{profile.kycStatus}</span>
+                                </div>
+                                <div style={{ gridColumn: "span 2", marginTop: "8px" }}>
+                                    <button type="button" onClick={() => { try { localStorage.setItem("organiser_profile", JSON.stringify(profile)); } catch (_) {} alert("Profile saved successfully."); }} style={{ padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save changes</button>
+                                </div>
+                            </div>
                         </div>
                     );
+                }
                 case "change_password":
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
@@ -1540,7 +2047,7 @@ function OrganiserPanel() {
                             placeholder="Search Menu Here..."
                             value={menuSearch}
                             onChange={e => setMenuSearch(e.target.value)}
-                            style={{
+                                style={{
                                 width: "100%",
                                 padding: "10px 12px",
                                 borderRadius: "8px",
@@ -1550,7 +2057,7 @@ function OrganiserPanel() {
                                 fontSize: "13px"
                             }}
                         />
-                    </div>
+                        </div>
                     <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "16px" }}>
                         <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
                             <Settings size={20} /> Dashboard
@@ -1577,7 +2084,7 @@ function OrganiserPanel() {
                                     <button onClick={() => setActiveTab("seat_map")} className={`sidebar-item ${activeTab === "seat_map" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Seat Map</button>
                                 </div>
                             )}
-                        </div>
+                    </div>
 
                         {/* Event Bookings — collapsible */}
                         <div>

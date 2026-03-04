@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { HOME_EVENTS } from "@/app/data/homeEvents";
 
-const POPULAR_EVENTS = HOME_EVENTS;
+const DEFAULT_POPULAR = HOME_EVENTS;
 
 function PopularCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -97,7 +97,8 @@ function PopularCard({ event }) {
     );
 }
 
-export default function PopularEvents() {
+export default function PopularEvents({ events }) {
+    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_POPULAR), [events]);
     return (
         <section style={{ width: "100%", backgroundColor: "#fafafa", padding: "36px 0 40px" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
@@ -130,12 +131,12 @@ export default function PopularEvents() {
                 <div
                     aria-labelledby="popular-events-heading"
                     style={{
-                        display: POPULAR_EVENTS.length > 0 ? "grid" : "block",
-                        gridTemplateColumns: POPULAR_EVENTS.length > 0 ? "repeat(4, 1fr)" : "none",
+                        display: list.length > 0 ? "grid" : "block",
+                        gridTemplateColumns: list.length > 0 ? "repeat(4, 1fr)" : "none",
                         gap: "16px",
                     }}
                 >
-                    {POPULAR_EVENTS.length > 0 ? POPULAR_EVENTS.map(event => <PopularCard key={event.id} event={event} />) : (
+                    {list.length > 0 ? list.map(event => <PopularCard key={event.id} event={event} />) : (
                         <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>
                             Popular events will appear here soon.
                         </div>

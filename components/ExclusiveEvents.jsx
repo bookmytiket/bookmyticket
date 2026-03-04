@@ -1,9 +1,9 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { HOME_EVENTS } from "@/app/data/homeEvents";
 
-const EXCLUSIVE_EVENTS = HOME_EVENTS.filter((e) => e.exclusive);
+const DEFAULT_EXCLUSIVE = HOME_EVENTS.filter((e) => e.exclusive);
 
 function ExclusiveCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -97,8 +97,9 @@ function ExclusiveCard({ event }) {
     );
 }
 
-export default function ExclusiveEvents() {
+export default function ExclusiveEvents({ events }) {
     const scrollRef = useRef(null);
+    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_EXCLUSIVE), [events]);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });
 
@@ -122,7 +123,7 @@ export default function ExclusiveEvents() {
                         ref={scrollRef}
                         style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px", paddingRight: "48px" }}
                     >
-                        {EXCLUSIVE_EVENTS.length > 0 ? EXCLUSIVE_EVENTS.map(event => <ExclusiveCard key={event.id} event={event} />) : (
+                        {list.length > 0 ? list.map(event => <ExclusiveCard key={event.id} event={event} />) : (
                             <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
                                 Exclusive event collection coming soon.
                             </div>
