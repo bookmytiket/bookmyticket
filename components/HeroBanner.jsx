@@ -110,8 +110,8 @@ export default function HeroBanner({ slides: propSlides }) {
             setSliding(true);
             setTimeout(() => {
                 setCurrent((idx + total) % total);
-                setSliding(false);
-            }, 420);
+                setTimeout(() => setSliding(false), 50); // slight debounce
+            }, 400); // Wait for exit animation
         },
         [sliding, total]
     );
@@ -149,10 +149,8 @@ export default function HeroBanner({ slides: propSlides }) {
                     {slide.custom ? (
                         <PromoSlide />
                     ) : (
-                        <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} />
                     )}
-
-
                 </div>
 
                 {/* Right peek slide */}

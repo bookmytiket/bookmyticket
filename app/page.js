@@ -36,6 +36,7 @@ export default function Home() {
   const activeCat = searchParams.get("category");
   const [newOrgEvents, setNewOrgEvents] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
+  const [eventPartners, setEventPartners] = useState([]);
 
   const allEventsForFilter = useMemo(() => [...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []), ...(Array.isArray(newOrgEvents) ? newOrgEvents : [])], [newOrgEvents]);
 
@@ -104,6 +105,15 @@ export default function Home() {
         setHeroSlides(Array.isArray(parsed) ? parsed : []);
       } else setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
     } catch (_) { setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []); }
+
+    try {
+      const savedPartners = localStorage.getItem("admin_event_partners");
+      if (savedPartners) {
+        setEventPartners(JSON.parse(savedPartners));
+      } else {
+        setEventPartners(FEATURED_ORGANISERS);
+      }
+    } catch (_) { setEventPartners(FEATURED_ORGANISERS); }
   }, []);
 
   useEffect(() => {
@@ -219,7 +229,7 @@ export default function Home() {
 
             {/* Featured Organisers */}
             <div style={{ width: '100%' }}>
-              <FeaturedOrganisers organisers={FEATURED_ORGANISERS} />
+              <FeaturedOrganisers organisers={eventPartners} />
             </div>
 
             {/* 9) Our Official Sponsors */}

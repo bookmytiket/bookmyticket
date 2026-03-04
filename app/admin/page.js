@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
@@ -56,6 +56,7 @@ export default function AdminHomePage() {
     const [organizers, setOrganizers] = useState([]);
     const [events, setEvents] = useState([]);
     const [slides, setSlides] = useState([]);
+    const [eventPartners, setEventPartners] = useState([]);
     const [subnavItems, setSubnavItems] = useState([
         { id: 1, label: "Concert", icon: "🎫" },
         { id: 2, label: "Sports", icon: "🏆" },
@@ -105,41 +106,44 @@ export default function AdminHomePage() {
         const savedBookings = localStorage.getItem('admin_bookings');
         const savedCustomers = localStorage.getItem('admin_customers');
         const savedPromos = localStorage.getItem('admin_promotions');
-        if (savedOrgs) try { setOrganizers(JSON.parse(savedOrgs)); } catch (_) {}
-        if (savedEvents) try { setEvents(JSON.parse(savedEvents)); } catch (_) {}
-        if (savedBookings) try { setBookings(JSON.parse(savedBookings)); } catch (_) {}
-        if (savedCustomers) try { setCustomers(JSON.parse(savedCustomers)); } catch (_) {}
-        if (savedPromos) try { setPromotions(JSON.parse(savedPromos)); } catch (_) {}
+        if (savedOrgs) try { setOrganizers(JSON.parse(savedOrgs)); } catch (_) { }
+        if (savedEvents) try { setEvents(JSON.parse(savedEvents)); } catch (_) { }
+        if (savedBookings) try { setBookings(JSON.parse(savedBookings)); } catch (_) { }
+        if (savedCustomers) try { setCustomers(JSON.parse(savedCustomers)); } catch (_) { }
+        if (savedPromos) try { setPromotions(JSON.parse(savedPromos)); } catch (_) { }
         const savedArchived = localStorage.getItem('admin_archived_home_ids');
-        if (savedArchived) try { setArchivedHomeIds(JSON.parse(savedArchived)); } catch (_) {}
+        if (savedArchived) try { setArchivedHomeIds(JSON.parse(savedArchived)); } catch (_) { }
         const savedGateways = localStorage.getItem('admin_payment_gateways');
-        if (savedGateways) try { setPaymentGateways(prev => ({ ...prev, ...JSON.parse(savedGateways) })); } catch (_) {}
+        if (savedGateways) try { setPaymentGateways(prev => ({ ...prev, ...JSON.parse(savedGateways) })); } catch (_) { }
         const savedFees = localStorage.getItem('admin_fee_settings');
-        if (savedFees) try { setFeeSettings(prev => ({ ...prev, ...JSON.parse(savedFees) })); } catch (_) {}
+        if (savedFees) try { setFeeSettings(prev => ({ ...prev, ...JSON.parse(savedFees) })); } catch (_) { }
         const savedTicket = localStorage.getItem('admin_ticket_settings');
-        if (savedTicket) try { setTicketSettings(prev => ({ ...prev, ...JSON.parse(savedTicket) })); } catch (_) {}
+        if (savedTicket) try { setTicketSettings(prev => ({ ...prev, ...JSON.parse(savedTicket) })); } catch (_) { }
         const savedMeta = localStorage.getItem('admin_event_meta_overrides');
-        if (savedMeta) try { setEventMetaOverrides(JSON.parse(savedMeta)); } catch (_) {}
+        if (savedMeta) try { setEventMetaOverrides(JSON.parse(savedMeta)); } catch (_) { }
         const savedSlides = localStorage.getItem('admin_hero_slides');
-        if (savedSlides) try { setSlides(JSON.parse(savedSlides)); } catch (_) {}
+        if (savedSlides) try { setSlides(JSON.parse(savedSlides)); } catch (_) { }
         else if (Array.isArray(HERO_BANNER_SLIDES) && HERO_BANNER_SLIDES.length > 0) setSlides(HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })));
+        const savedPartners = localStorage.getItem('admin_event_partners');
+        if (savedPartners) try { setEventPartners(JSON.parse(savedPartners)); } catch (_) { }
         const savedSubnav = localStorage.getItem('admin_subnav_items');
-        if (savedSubnav) try { const parsed = JSON.parse(savedSubnav); if (Array.isArray(parsed) && parsed.length > 0) setSubnavItems(parsed); } catch (_) {}
+        if (savedSubnav) try { const parsed = JSON.parse(savedSubnav); if (Array.isArray(parsed) && parsed.length > 0) setSubnavItems(parsed); } catch (_) { }
         const savedCategories = localStorage.getItem('admin_categories');
-        if (savedCategories) try { const parsed = JSON.parse(savedCategories); if (Array.isArray(parsed) && parsed.length > 0) setCategories(parsed); } catch (_) {}
+        if (savedCategories) try { const parsed = JSON.parse(savedCategories); if (Array.isArray(parsed) && parsed.length > 0) setCategories(parsed); } catch (_) { }
         const rawTickets = localStorage.getItem('support_tickets');
         if (rawTickets) try { setSupportTickets(JSON.parse(rawTickets)); } catch (_) { setSupportTickets([]); }
     }, []);
-    useEffect(() => { try { localStorage.setItem('admin_bookings', JSON.stringify(bookings)); } catch (_) {} }, [bookings]);
-    useEffect(() => { try { localStorage.setItem('admin_customers', JSON.stringify(customers)); } catch (_) {} }, [customers]);
-    useEffect(() => { try { localStorage.setItem('admin_promotions', JSON.stringify(promotions)); } catch (_) {} }, [promotions]);
-    useEffect(() => { try { localStorage.setItem('admin_archived_home_ids', JSON.stringify(archivedHomeIds)); } catch (_) {} }, [archivedHomeIds]);
-    useEffect(() => { try { localStorage.setItem('admin_payment_gateways', JSON.stringify(paymentGateways)); } catch (_) {} }, [paymentGateways]);
-    useEffect(() => { try { localStorage.setItem('admin_fee_settings', JSON.stringify(feeSettings)); } catch (_) {} }, [feeSettings]);
-    useEffect(() => { try { localStorage.setItem('admin_ticket_settings', JSON.stringify(ticketSettings)); } catch (_) {} }, [ticketSettings]);
-    useEffect(() => { try { localStorage.setItem('admin_event_meta_overrides', JSON.stringify(eventMetaOverrides)); } catch (_) {} }, [eventMetaOverrides]);
-    useEffect(() => { try { localStorage.setItem('admin_hero_slides', JSON.stringify(slides)); } catch (_) {} }, [slides]);
-    useEffect(() => { try { localStorage.setItem('admin_categories', JSON.stringify(categories)); } catch (_) {} }, [categories]);
+    useEffect(() => { try { localStorage.setItem('admin_bookings', JSON.stringify(bookings)); } catch (_) { } }, [bookings]);
+    useEffect(() => { try { localStorage.setItem('admin_customers', JSON.stringify(customers)); } catch (_) { } }, [customers]);
+    useEffect(() => { try { localStorage.setItem('admin_promotions', JSON.stringify(promotions)); } catch (_) { } }, [promotions]);
+    useEffect(() => { try { localStorage.setItem('admin_archived_home_ids', JSON.stringify(archivedHomeIds)); } catch (_) { } }, [archivedHomeIds]);
+    useEffect(() => { try { localStorage.setItem('admin_payment_gateways', JSON.stringify(paymentGateways)); } catch (_) { } }, [paymentGateways]);
+    useEffect(() => { try { localStorage.setItem('admin_fee_settings', JSON.stringify(feeSettings)); } catch (_) { } }, [feeSettings]);
+    useEffect(() => { try { localStorage.setItem('admin_ticket_settings', JSON.stringify(ticketSettings)); } catch (_) { } }, [ticketSettings]);
+    useEffect(() => { try { localStorage.setItem('admin_event_meta_overrides', JSON.stringify(eventMetaOverrides)); } catch (_) { } }, [eventMetaOverrides]);
+    useEffect(() => { try { localStorage.setItem('admin_hero_slides', JSON.stringify(slides)); } catch (_) { } }, [slides]);
+    useEffect(() => { try { localStorage.setItem('admin_event_partners', JSON.stringify(eventPartners)); } catch (_) { } }, [eventPartners]);
+    useEffect(() => { try { localStorage.setItem('admin_categories', JSON.stringify(categories)); } catch (_) { } }, [categories]);
 
     useEffect(() => {
         localStorage.setItem('admin_organizers', JSON.stringify(organizers));
@@ -599,6 +603,7 @@ export default function AdminHomePage() {
                                     { label: "Hero Banner", id: "hero" },
                                     { label: "Branding", id: "branding" },
                                     { label: "Featured Events", id: "events_settings" },
+                                    { label: "Event Partners", id: "event_partners" },
                                     { label: "Sections Order", id: "sections" },
                                     { label: "SEO & Meta Ads", id: "meta_management" },
                                 ].map((sub) => (
@@ -663,7 +668,7 @@ export default function AdminHomePage() {
                 )}
 
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
                             {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings", "ticket_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
@@ -677,6 +682,7 @@ export default function AdminHomePage() {
                                 { id: "hero", label: "Hero Banner", icon: ImageIcon },
                                 { id: "branding", label: "Branding", icon: Sparkles },
                                 { id: "events_settings", label: "Featured Events", icon: Ticket },
+                                { id: "event_partners", label: "Event Partners", icon: Users },
                                 { id: "sections", label: "Sections Order", icon: LayoutDashboard },
                                 { id: "meta_management", label: "SEO & Ads", icon: Globe },
                             ]).map(tab => (
@@ -714,30 +720,30 @@ export default function AdminHomePage() {
                         const paidCount = allEvents.filter(e => (e.type || "").toLowerCase() === "paid").length;
                         const paidPct = allEvents.length ? Math.round((paidCount / allEvents.length) * 100) : 0;
                         return (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Bookings by Category</h3>
-                                <div style={{ height: "140px", display: "flex", alignItems: "flex-end", gap: "16px", padding: "0 10px" }}>
-                                    {byCat.map((count, i) => (
-                                        <div key={i} style={{ flex: 1, height: `${(count / maxCat) * 100}%`, backgroundColor: "#3b82f6", borderRadius: "3px 3px 0 0", minHeight: count ? "8px" : "0" }}></div>
-                                    ))}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
+                                    <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Bookings by Category</h3>
+                                    <div style={{ height: "140px", display: "flex", alignItems: "flex-end", gap: "16px", padding: "0 10px" }}>
+                                        {byCat.map((count, i) => (
+                                            <div key={i} style={{ flex: 1, height: `${(count / maxCat) * 100}%`, backgroundColor: "#3b82f6", borderRadius: "3px 3px 0 0", minHeight: count ? "8px" : "0" }}></div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "11px", color: t.textSub }}>
+                                        {categoryLabels.map((l, i) => <span key={i}>{l}</span>)}
+                                    </div>
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "11px", color: t.textSub }}>
-                                    {categoryLabels.map((l, i) => <span key={i}>{l}</span>)}
-                                </div>
-                            </div>
-                            <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Events by Type</h3>
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "140px" }}>
-                                    <div style={{ width: "110px", height: "110px", borderRadius: "50%", background: `conic-gradient(#3b82f6 0deg, #3b82f6 ${paidPct * 3.6}deg, ${t.border} ${paidPct * 3.6}deg)`, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <div style={{ width: "74px", height: "74px", borderRadius: "50%", backgroundColor: t.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "absolute" }}>
-                                            <span style={{ fontSize: "18px", fontWeight: 800 }}>{paidPct}%</span>
-                                            <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>Paid</p>
+                                <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
+                                    <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Events by Type</h3>
+                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "140px" }}>
+                                        <div style={{ width: "110px", height: "110px", borderRadius: "50%", background: `conic-gradient(#3b82f6 0deg, #3b82f6 ${paidPct * 3.6}deg, ${t.border} ${paidPct * 3.6}deg)`, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            <div style={{ width: "74px", height: "74px", borderRadius: "50%", backgroundColor: t.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "absolute" }}>
+                                                <span style={{ fontSize: "18px", fontWeight: 800 }}>{paidPct}%</span>
+                                                <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>Paid</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
                         );
                     })()}
 
@@ -976,16 +982,16 @@ export default function AdminHomePage() {
                                         {categories.map((cat) => {
                                             const count = allEvents.filter(e => eventMatchesCategory(e, cat)).length;
                                             return (
-                                            <tr key={cat.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px 16px", fontSize: "18px" }}>{cat.icon}</td>
-                                                <td style={{ padding: "12px 16px", fontSize: "14px", fontWeight: 500 }}>{cat.name}</td>
-                                                <td style={{ padding: "12px 16px", fontSize: "14px", color: t.textSub }}>{cat.slug}</td>
-                                                <td style={{ padding: "12px 16px", fontSize: "14px" }}><span style={{ backgroundColor: theme === "light" ? "#eff6ff" : "#1e3a5f", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>{count}</span></td>
-                                                <td style={{ padding: "12px 16px" }}>
-                                                    <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", marginRight: "12px" }}>Edit</button>
-                                                    <button onClick={() => setCategories(categories.filter(c => c.id !== cat.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
-                                                </td>
-                                            </tr>
+                                                <tr key={cat.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <td style={{ padding: "12px 16px", fontSize: "18px" }}>{cat.icon}</td>
+                                                    <td style={{ padding: "12px 16px", fontSize: "14px", fontWeight: 500 }}>{cat.name}</td>
+                                                    <td style={{ padding: "12px 16px", fontSize: "14px", color: t.textSub }}>{cat.slug}</td>
+                                                    <td style={{ padding: "12px 16px", fontSize: "14px" }}><span style={{ backgroundColor: theme === "light" ? "#eff6ff" : "#1e3a5f", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>{count}</span></td>
+                                                    <td style={{ padding: "12px 16px" }}>
+                                                        <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", marginRight: "12px" }}>Edit</button>
+                                                        <button onClick={() => setCategories(categories.filter(c => c.id !== cat.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                                                    </td>
+                                                </tr>
                                             );
                                         })}
                                     </tbody>
@@ -998,13 +1004,13 @@ export default function AdminHomePage() {
                         const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                         const statusColor = (s) => ({ Open: "#3b82f6", Pending: "#f59e0b", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#64748b" }[s] || "#64748b");
                         const saveTickets = (list) => {
-                            try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                            try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
                             setSupportTickets(list);
                             try {
                                 const log = JSON.parse(localStorage.getItem("support_ticket_emails") || "[]");
                                 log.push({ at: new Date().toISOString(), message: "Email notification will be sent to organiser for ticket update." });
                                 localStorage.setItem("support_ticket_emails", JSON.stringify(log.slice(-50)));
-                            } catch (_) {}
+                            } catch (_) { }
                         };
                         const updateTicket = (ticketId, updates) => {
                             const list = supportTickets.map(t => t.id === ticketId ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t);
@@ -1118,6 +1124,78 @@ export default function AdminHomePage() {
                                         <p style={{ color: t.textSub }}>No slides added yet. Click 'Add New Slide' to get started.</p>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "event_partners" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                <button
+                                    onClick={() => setActiveTab("dashboard")}
+                                    style={{ padding: "8px 16px", backgroundColor: "#334155", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                >
+                                    Return to Dashboard
+                                </button>
+                            </div>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 4px" }}>Event Partners Logos</h3>
+                                        <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>Manage the "Our Event Partners" section logos on the homepage.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setEventPartners([...eventPartners, { id: Date.now(), name: "New Partner", logo: "", eventCount: 0 }])}
+                                        style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <Plus size={18} /> Add Partner
+                                    </button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    {eventPartners.map(partner => (
+                                        <div key={partner.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "8px", backgroundColor: t.bg }}>
+                                            <div style={{ width: "64px", height: "64px", borderRadius: "8px", backgroundColor: "#f1f5f9", overflow: "hidden", flexShrink: 0, position: "relative" }}>
+                                                {partner.logo ? (
+                                                    <img src={partner.logo} alt={partner.name} style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply", backgroundColor: "transparent" }} />
+                                                ) : (
+                                                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+                                                        <ImageIcon size={24} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", justifyContent: "center" }}>
+                                                <div style={{ display: "flex", gap: "8px" }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Logo URL"
+                                                        value={partner.logo}
+                                                        onChange={(e) => setEventPartners(eventPartners.map(p => p.id === partner.id ? { ...p, logo: e.target.value } : p))}
+                                                        style={{ flex: 1, padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                                    />
+                                                    <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 12px", backgroundColor: t.border, color: t.textMain, borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
+                                                        <Upload size={14} /> Upload Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            style={{ display: "none" }}
+                                                            onChange={(e) => {
+                                                                const file = e.target.files[0];
+                                                                if (file) {
+                                                                    const reader = new FileReader();
+                                                                    reader.onload = (ev) => setEventPartners(eventPartners.map(p => p.id === partner.id ? { ...p, logo: ev.target.result } : p));
+                                                                    reader.readAsDataURL(file);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setEventPartners(eventPartners.filter(p => p.id !== partner.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: "8px" }}><Trash2 size={20} /></button>
+                                        </div>
+                                    ))}
+                                    {eventPartners.length === 0 && (
+                                        <p style={{ textAlign: "center", padding: "24px", color: t.textSub }}>No partners added. Click the button to add one.</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1487,61 +1565,61 @@ export default function AdminHomePage() {
                                     const isConnected = config.enabled && (config.apiKey || "").trim().length > 0;
                                     const status = isConnected ? "Connected" : "Inactive";
                                     return (
-                                    <div key={gw.name} style={{
-                                        backgroundColor: theme === 'light' ? '#ffffff' : t.cardBg,
-                                        padding: "20px",
-                                        borderRadius: "12px",
-                                        border: `1px solid ${t.border}`,
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                                        transition: "0.2s",
-                                        cursor: "default"
-                                    }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                                            <div style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                backgroundColor: `${gw.color}20`,
-                                                borderRadius: "10px",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center"
-                                            }}>
-                                                <CreditCard size={20} color={gw.color} />
+                                        <div key={gw.name} style={{
+                                            backgroundColor: theme === 'light' ? '#ffffff' : t.cardBg,
+                                            padding: "20px",
+                                            borderRadius: "12px",
+                                            border: `1px solid ${t.border}`,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                                            transition: "0.2s",
+                                            cursor: "default"
+                                        }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                                                <div style={{
+                                                    width: "40px",
+                                                    height: "40px",
+                                                    backgroundColor: `${gw.color}20`,
+                                                    borderRadius: "10px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center"
+                                                }}>
+                                                    <CreditCard size={20} color={gw.color} />
+                                                </div>
+                                                <span style={{
+                                                    fontSize: "10px",
+                                                    fontWeight: 700,
+                                                    padding: "3px 8px",
+                                                    borderRadius: "20px",
+                                                    backgroundColor: status === 'Connected' ? '#22c55e20' : '#f1f5f9',
+                                                    color: status === 'Connected' ? '#22c55e' : '#64748b'
+                                                }}>{status.toUpperCase()}</span>
                                             </div>
-                                            <span style={{
-                                                fontSize: "10px",
-                                                fontWeight: 700,
-                                                padding: "3px 8px",
-                                                borderRadius: "20px",
-                                                backgroundColor: status === 'Connected' ? '#22c55e20' : '#f1f5f9',
-                                                color: status === 'Connected' ? '#22c55e' : '#64748b'
-                                            }}>{status.toUpperCase()}</span>
+                                            <h4 style={{ fontSize: "15px", fontWeight: 700, color: t.textMain, margin: "0 0 6px 0" }}>{gw.name}</h4>
+                                            <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0", lineHeight: "1.4" }}>{gw.desc}</p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentGatewayConfig(gw.name)}
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "8px",
+                                                    borderRadius: "8px",
+                                                    border: `1px solid ${t.border}`,
+                                                    backgroundColor: "transparent",
+                                                    color: t.textMain,
+                                                    fontSize: "12px",
+                                                    fontWeight: 600,
+                                                    cursor: "pointer",
+                                                    transition: "0.2s"
+                                                }}
+                                                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = t.bg; }}
+                                                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                                            >
+                                                Configure Settings
+                                            </button>
                                         </div>
-                                        <h4 style={{ fontSize: "15px", fontWeight: 700, color: t.textMain, margin: "0 0 6px 0" }}>{gw.name}</h4>
-                                        <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0", lineHeight: "1.4" }}>{gw.desc}</p>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentGatewayConfig(gw.name)}
-                                            style={{
-                                                width: "100%",
-                                                padding: "8px",
-                                                borderRadius: "8px",
-                                                border: `1px solid ${t.border}`,
-                                                backgroundColor: "transparent",
-                                                color: t.textMain,
-                                                fontSize: "12px",
-                                                fontWeight: 600,
-                                                cursor: "pointer",
-                                                transition: "0.2s"
-                                            }}
-                                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = t.bg; }}
-                                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                                        >
-                                            Configure Settings
-                                        </button>
-                                    </div>
                                     );
                                 })}
                             </div>
@@ -1668,8 +1746,8 @@ export default function AdminHomePage() {
                                     </div>
                                 );
                             })()}
-                            </div>
-                        )}
+                        </div>
+                    )}
 
                     {activeTab === "ticket_settings" && (
                         <div style={{ maxWidth: "850px" }}>
@@ -1746,7 +1824,7 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                            {activeTab === "email_settings" && (
+                    {activeTab === "email_settings" && (
                         <div style={{ maxWidth: "850px" }}>
                             <div style={{ marginBottom: "20px" }}>
                                 <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Email Settings</h2>
@@ -2307,41 +2385,41 @@ export default function AdminHomePage() {
                                                 const keywords = isOrganiser ? (ev.meta?.keywords ?? "") : (eventMetaOverrides[ev.id]?.keywords ?? "");
                                                 const adsId = isOrganiser ? (ev.meta?.adsId ?? "") : (eventMetaOverrides[ev.id]?.adsId ?? "");
                                                 return (
-                                                <tr key={(ev.id ?? "") + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                    <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
-                                                    </td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <input
-                                                            type="text"
-                                                            value={keywords}
-                                                            onChange={(e) => isOrganiser
-                                                                ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), keywords: e.target.value } } : event))
-                                                                : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), keywords: e.target.value } }))}
-                                                            style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
-                                                            placeholder="Keywords for SEO/ads"
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <input
-                                                            type="text"
-                                                            value={adsId}
-                                                            onChange={(e) => isOrganiser
-                                                                ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), adsId: e.target.value } } : event))
-                                                                : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), adsId: e.target.value } }))}
-                                                            style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
-                                                            placeholder="Pixel ID or Ad Set ID"
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <button
-                                                            onClick={() => alert(`Meta Ads updated for ${ev.title}`)}
-                                                            style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
-                                                            Update
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                                    <tr key={(ev.id ?? "") + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                        <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
+                                                        <td style={{ padding: "12px" }}>
+                                                            <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
+                                                        </td>
+                                                        <td style={{ padding: "12px" }}>
+                                                            <input
+                                                                type="text"
+                                                                value={keywords}
+                                                                onChange={(e) => isOrganiser
+                                                                    ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), keywords: e.target.value } } : event))
+                                                                    : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), keywords: e.target.value } }))}
+                                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
+                                                                placeholder="Keywords for SEO/ads"
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: "12px" }}>
+                                                            <input
+                                                                type="text"
+                                                                value={adsId}
+                                                                onChange={(e) => isOrganiser
+                                                                    ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), adsId: e.target.value } } : event))
+                                                                    : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), adsId: e.target.value } }))}
+                                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
+                                                                placeholder="Pixel ID or Ad Set ID"
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: "12px" }}>
+                                                            <button
+                                                                onClick={() => alert(`Meta Ads updated for ${ev.title}`)}
+                                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
+                                                                Update
+                                                            </button>
+                                                        </td>
+                                                    </tr>
                                                 );
                                             })}
                                         </tbody>
@@ -2351,7 +2429,7 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
