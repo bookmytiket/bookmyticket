@@ -19,6 +19,8 @@ import {
     Heart
 } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const DEFAULT_FEATURES = [
@@ -31,29 +33,27 @@ const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed
 
 export default function EventDetailPage({ params }) {
     const { id } = React.use(params);
-    const [organiserEvents, setOrganiserEvents] = useState([]);
+    const convexEvents = useQuery(api.events.getActiveEvents) || [];
     const [storageLoaded, setStorageLoaded] = useState(false);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        try {
-            const raw = localStorage.getItem('organiser_events');
-            setOrganiserEvents(raw ? JSON.parse(raw) : []);
-        } catch (_) { setOrganiserEvents([]); }
         setStorageLoaded(true);
     }, []);
 
     const event = useMemo(() => {
         const sid = String(id);
+        // Search in static HOME_EVENTS
         const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-        const fromOrg = (Array.isArray(organiserEvents) ? organiserEvents : []).find(e => String(e.id) === sid);
-        const raw = fromHome || fromOrg;
+        // Search in Convex events by _id or id
+        const fromConvex = convexEvents.find(e => String(e._id) === sid || String(e.id) === sid);
+        const raw = fromHome || fromConvex;
         if (!raw) return null;
         const location = raw.location || raw.venue || raw.address || 'Venue';
         const city = raw.city || (location && location.split(',')[0]?.trim()) || '—';
         const venue = raw.venue || raw.location || location;
         return {
             ...raw,
+            id: raw._id || raw.id,
             img: raw.img || raw.bannerPreview || DEFAULT_IMG,
             title: raw.title || 'Event',
             date: raw.date || 'TBA',
@@ -70,7 +70,7 @@ export default function EventDetailPage({ params }) {
             parking: raw.parking || 'Paid Parking Available at the Venue.',
             tags: Array.isArray(raw.tags) && raw.tags.length > 0 ? raw.tags : [raw.category || 'Event'].filter(Boolean),
         };
-    }, [id, organiserEvents]);
+    }, [id, convexEvents]);
 
     useEffect(() => {
         if (!event || typeof window === 'undefined') return;
@@ -82,7 +82,7 @@ export default function EventDetailPage({ params }) {
             const filtered = list.filter((e) => String(e.id) !== String(event.id));
             const next = [item, ...filtered].slice(0, 12);
             localStorage.setItem(key, JSON.stringify(next));
-        } catch (_) {}
+        } catch (_) { }
     }, [event]);
 
     if (!event) {

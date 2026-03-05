@@ -1,12 +1,56 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
+function useConvexConfig(key, defaultValue, allConfig) {
+    const [state, setState] = useState(defaultValue);
+    const [initialized, setInitialized] = useState(false);
+    const setConfigMutation = useMutation(api.systemConfig.setConfig);
+
+    useEffect(() => {
+        if (allConfig !== undefined && !initialized) {
+            if (allConfig[key] !== undefined) {
+                try {
+                    const parsed = typeof allConfig[key] === "string" ? JSON.parse(allConfig[key]) : allConfig[key];
+                    if (Array.isArray(defaultValue)) {
+                        setState(Array.isArray(parsed) ? parsed : defaultValue);
+                    } else if (typeof defaultValue === "object" && defaultValue !== null) {
+                        setState(parsed && typeof parsed === "object" ? { ...defaultValue, ...parsed } : defaultValue);
+                    } else {
+                        setState(parsed !== undefined && parsed !== null ? parsed : defaultValue);
+                    }
+                } catch (e) {
+                    setState(defaultValue);
+                }
+            }
+            setInitialized(true);
+        }
+    }, [allConfig, key, initialized, defaultValue]);
+
+    useEffect(() => {
+        if (initialized) {
+            try {
+                // Saving directly to Convex. It accepts v.any(), so we pass the object/array directly.
+                setConfigMutation({ key, value: state });
+            } catch (_) { }
+        }
+    }, [state, initialized, key, setConfigMutation]);
+
+    return [state, setState];
+}
+
 export default function AdminHomePage() {
     const searchParams = useSearchParams();
+    const router = useRouter();
+    const handleLogout = () => {
+        try { localStorage.removeItem("user"); } catch (_) { }
+        router.push("/signin");
+    };
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [theme, setTheme] = useState("dark");
@@ -17,21 +61,25 @@ export default function AdminHomePage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     // Payment gateways: which config modal is open + saved configs per gateway
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
-    const [paymentGateways, setPaymentGateways] = useState({
+    const allConfig = useQuery(api.systemConfig.getAllConfig);
+
+    const [paymentGateways, setPaymentGateways] = useConvexConfig("admin_payment_gateways", {
         Stripe: { enabled: false, apiKey: "", secretKey: "", webhookSecret: "" },
         Razorpay: { enabled: false, apiKey: "", secretKey: "" },
         PayU: { enabled: false, apiKey: "", secretKey: "" },
         PhonePe: { enabled: false, apiKey: "", secretKey: "" },
         Paytm: { enabled: false, apiKey: "", secretKey: "" }
-    });
-    // Convenience Fee & GST — Admin only; organiser wallet gets only base ticket amount
-    const [feeSettings, setFeeSettings] = useState({
+    }, allConfig);
+
+    // Convenience Fee & GST
+    const [feeSettings, setFeeSettings] = useConvexConfig("admin_fee_settings", {
         convenienceFeeType: "percent",
         convenienceFeeValue: 5,
         gstPercent: 18
-    });
-    // Ticket generation & sending (company name, logo, important info, workflow toggles)
-    const [ticketSettings, setTicketSettings] = useState({
+    }, allConfig);
+
+    // Ticket generation & sending
+    const [ticketSettings, setTicketSettings] = useConvexConfig("admin_ticket_settings", {
         companyName: "book my ticket",
         logoUrl: "",
         importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
@@ -39,25 +87,42 @@ export default function AdminHomePage() {
         sendViaEmail: true,
         sendViaSms: true,
         sendPdfWhatsApp: true,
-    });
+    }, allConfig);
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
     // Customers CRM
-    const [customers, setCustomers] = useState([]);
+    const [customers, setCustomers] = useConvexConfig("admin_customers", [], allConfig);
     // Promotions: coupon codes & BOGO
-    const [promotions, setPromotions] = useState([]);
+    const [promotions, setPromotions] = useConvexConfig("admin_promotions", [], allConfig);
     const [newPromo, setNewPromo] = useState({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
-    // Archive: hide events from main list (home IDs + organiser events with archived flag)
-    const [archivedHomeIds, setArchivedHomeIds] = useState([]);
-    // Event-specific meta (keywords, adsId) for home events — organiser events use events[].meta
-    const [eventMetaOverrides, setEventMetaOverrides] = useState({});
+    // Archive: hide events from main list
+    const [archivedHomeIds, setArchivedHomeIds] = useConvexConfig("admin_archived_home_ids", [], allConfig);
+    // Event-specific meta
+    const [eventMetaOverrides, setEventMetaOverrides] = useConvexConfig("admin_event_meta_overrides", {}, allConfig);
 
     const [organizers, setOrganizers] = useState([]);
+    const convexOrganizers = useQuery(api.organisers.list) || [];
+    const createOrganizerMutation = useMutation(api.organisers.create);
+    const patchOrganizerMutation = useMutation(api.organisers.patch);
+    const removeOrganizerMutation = useMutation(api.organisers.remove);
+
+    useEffect(() => {
+        if (convexOrganizers.length >= 0) {
+            setOrganizers(convexOrganizers.map(o => ({
+                id: o._id,
+                username: o.name,
+                email: o.userId,
+                status: o.kycStatus || "Active",
+                balance: `₹${o.walletBalance || 0}`
+            })));
+        }
+    }, [convexOrganizers]);
+
     const [events, setEvents] = useState([]);
-    const [slides, setSlides] = useState([]);
-    const [eventPartners, setEventPartners] = useState([]);
-    const [subnavItems, setSubnavItems] = useState([
+    const [slides, setSlides] = useConvexConfig("admin_hero_slides", HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })), allConfig);
+    const [eventPartners, setEventPartners] = useConvexConfig("admin_event_partners", [], allConfig);
+    const [subnavItems, setSubnavItems] = useConvexConfig("admin_subnav_items", [
         { id: 1, label: "Concert", icon: "🎫" },
         { id: 2, label: "Sports", icon: "🏆" },
         { id: 3, label: "Comedy", icon: "🎭" },
@@ -66,8 +131,8 @@ export default function AdminHomePage() {
         { id: 6, label: "Workshop", icon: "🎪" },
         { id: 7, label: "Festival", icon: "🎡" },
         { id: 8, label: "Live Shows", icon: "🎬" }
-    ]);
-    const [categories, setCategories] = useState([
+    ], allConfig);
+    const [categories, setCategories] = useConvexConfig("admin_categories", [
         { id: 1, name: "Concert", slug: "concert", count: 0, icon: "🎫" },
         { id: 2, name: "Sports", slug: "sports", count: 0, icon: "🏆" },
         { id: 3, name: "Comedy", slug: "comedy", count: 0, icon: "🎭" },
@@ -82,10 +147,28 @@ export default function AdminHomePage() {
         { id: 12, name: "Others", slug: "others", count: 0, icon: "📁" },
         { id: 13, name: "Competition", slug: "competition", count: 0, icon: "🏆" },
         { id: 14, name: "Classical Dance", slug: "classical-dance", count: 0, icon: "💃" }
-    ]);
+    ], allConfig);
     const [categoryModal, setCategoryModal] = useState(null);
     const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
     const [supportTickets, setSupportTickets] = useState([]);
+    const convexSupportTickets = useQuery(api.supportTickets.list) || [];
+    const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
+    const removeTicketMutation = useMutation(api.supportTickets.remove);
+
+    useEffect(() => {
+        if (convexSupportTickets.length >= 0) {
+            setSupportTickets(convexSupportTickets.map(t => ({
+                id: t._id,
+                subject: t.issue.split('\n')[0],
+                status: t.status,
+                createdAt: t._creationTime,
+                adminNotes: t.adminNotes || "",
+                updatedAt: t.updatedAt,
+                organiserName: t.userId, // Defaulting to userId since we don't have separate name here yet
+            })));
+        }
+    }, [convexSupportTickets]);
+
 
     // Combined events: homepage + organiser (Admin + Home integration); exclude archived
     const allEvents = useMemo(() => {
@@ -94,65 +177,33 @@ export default function AdminHomePage() {
         return [...homeList.map(e => ({ ...e, source: "home" })), ...organiserList.map(e => ({ ...e, id: e.id || Date.now() + Math.random(), title: e.title || "Event", category: e.category || "Others", type: e.type || "Paid", source: "organiser" }))];
     }, [events, archivedHomeIds]);
 
+    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const convexBookings = useQuery(api.bookings.getBookings) || [];
+
+    const deleteEventMutation = useMutation(api.events.deleteEvent);
+    const updateEventMutation = useMutation(api.events.updateEvent);
+    const setConfigMutation = useMutation(api.systemConfig.setConfig);
+
     useEffect(() => {
         const tab = searchParams.get("tab");
         if (tab === "categories") setActiveTab("categories");
     }, [searchParams]);
 
-    // Persistence — integrate with homepage & organiser panel
+    // Sync events from Convex
     useEffect(() => {
-        const savedOrgs = localStorage.getItem('admin_organizers');
-        const savedEvents = localStorage.getItem('organiser_events');
-        const savedBookings = localStorage.getItem('admin_bookings');
-        const savedCustomers = localStorage.getItem('admin_customers');
-        const savedPromos = localStorage.getItem('admin_promotions');
-        if (savedOrgs) try { setOrganizers(JSON.parse(savedOrgs)); } catch (_) { }
-        if (savedEvents) try { setEvents(JSON.parse(savedEvents)); } catch (_) { }
-        if (savedBookings) try { setBookings(JSON.parse(savedBookings)); } catch (_) { }
-        if (savedCustomers) try { setCustomers(JSON.parse(savedCustomers)); } catch (_) { }
-        if (savedPromos) try { setPromotions(JSON.parse(savedPromos)); } catch (_) { }
-        const savedArchived = localStorage.getItem('admin_archived_home_ids');
-        if (savedArchived) try { setArchivedHomeIds(JSON.parse(savedArchived)); } catch (_) { }
-        const savedGateways = localStorage.getItem('admin_payment_gateways');
-        if (savedGateways) try { setPaymentGateways(prev => ({ ...prev, ...JSON.parse(savedGateways) })); } catch (_) { }
-        const savedFees = localStorage.getItem('admin_fee_settings');
-        if (savedFees) try { setFeeSettings(prev => ({ ...prev, ...JSON.parse(savedFees) })); } catch (_) { }
-        const savedTicket = localStorage.getItem('admin_ticket_settings');
-        if (savedTicket) try { setTicketSettings(prev => ({ ...prev, ...JSON.parse(savedTicket) })); } catch (_) { }
-        const savedMeta = localStorage.getItem('admin_event_meta_overrides');
-        if (savedMeta) try { setEventMetaOverrides(JSON.parse(savedMeta)); } catch (_) { }
-        const savedSlides = localStorage.getItem('admin_hero_slides');
-        if (savedSlides) try { setSlides(JSON.parse(savedSlides)); } catch (_) { }
-        else if (Array.isArray(HERO_BANNER_SLIDES) && HERO_BANNER_SLIDES.length > 0) setSlides(HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })));
-        const savedPartners = localStorage.getItem('admin_event_partners');
-        if (savedPartners) try { setEventPartners(JSON.parse(savedPartners)); } catch (_) { }
-        const savedSubnav = localStorage.getItem('admin_subnav_items');
-        if (savedSubnav) try { const parsed = JSON.parse(savedSubnav); if (Array.isArray(parsed) && parsed.length > 0) setSubnavItems(parsed); } catch (_) { }
-        const savedCategories = localStorage.getItem('admin_categories');
-        if (savedCategories) try { const parsed = JSON.parse(savedCategories); if (Array.isArray(parsed) && parsed.length > 0) setCategories(parsed); } catch (_) { }
-        const rawTickets = localStorage.getItem('support_tickets');
-        if (rawTickets) try { setSupportTickets(JSON.parse(rawTickets)); } catch (_) { setSupportTickets([]); }
-    }, []);
-    useEffect(() => { try { localStorage.setItem('admin_bookings', JSON.stringify(bookings)); } catch (_) { } }, [bookings]);
-    useEffect(() => { try { localStorage.setItem('admin_customers', JSON.stringify(customers)); } catch (_) { } }, [customers]);
-    useEffect(() => { try { localStorage.setItem('admin_promotions', JSON.stringify(promotions)); } catch (_) { } }, [promotions]);
-    useEffect(() => { try { localStorage.setItem('admin_archived_home_ids', JSON.stringify(archivedHomeIds)); } catch (_) { } }, [archivedHomeIds]);
-    useEffect(() => { try { localStorage.setItem('admin_payment_gateways', JSON.stringify(paymentGateways)); } catch (_) { } }, [paymentGateways]);
-    useEffect(() => { try { localStorage.setItem('admin_fee_settings', JSON.stringify(feeSettings)); } catch (_) { } }, [feeSettings]);
-    useEffect(() => { try { localStorage.setItem('admin_ticket_settings', JSON.stringify(ticketSettings)); } catch (_) { } }, [ticketSettings]);
-    useEffect(() => { try { localStorage.setItem('admin_event_meta_overrides', JSON.stringify(eventMetaOverrides)); } catch (_) { } }, [eventMetaOverrides]);
-    useEffect(() => { try { localStorage.setItem('admin_hero_slides', JSON.stringify(slides)); } catch (_) { } }, [slides]);
-    useEffect(() => { try { localStorage.setItem('admin_event_partners', JSON.stringify(eventPartners)); } catch (_) { } }, [eventPartners]);
-    useEffect(() => { try { localStorage.setItem('admin_categories', JSON.stringify(categories)); } catch (_) { } }, [categories]);
+        if (convexEvents.length > 0) {
+            setEvents(convexEvents.map(e => ({ ...e, id: e._id, source: "organiser" })));
+        }
+    }, [convexEvents]);
 
+    // Sync bookings from Convex
     useEffect(() => {
-        localStorage.setItem('admin_organizers', JSON.stringify(organizers));
-    }, [organizers]);
+        if (convexBookings.length > 0) {
+            setBookings(convexBookings.map(b => ({ ...b, id: b._id })));
+        }
+    }, [convexBookings]);
 
-    useEffect(() => {
-        // Sync events specifically when they change in admin (e.g. status updates)
-        localStorage.setItem('organiser_events', JSON.stringify(events));
-    }, [events]);
+
 
     const [newOrg, setNewOrg] = useState({ username: "", password: "", email: "" });
     const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
@@ -170,21 +221,10 @@ export default function AdminHomePage() {
         event_disclaimer: "Organizers are solely responsible for event content, performance, and management. BookMyTicket is only a ticketing platform.",
         cancellation_policy: "Refunds are subject to individual event organizer policies. If an event is cancelled, refunds will be processed within 7-10 business days."
     });
-    const [ssoConfigs, setSsoConfigs] = useState({
+    const [ssoConfigs, setSsoConfigs] = useConvexConfig('sso_configs', {
         facebook: false,
         google: false
-    });
-
-    useEffect(() => {
-        const savedSso = localStorage.getItem('sso_configs');
-        if (savedSso) {
-            setSsoConfigs(JSON.parse(savedSso));
-        }
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem('sso_configs', JSON.stringify(ssoConfigs));
-    }, [ssoConfigs]);
+    }, allConfig);
 
     const [siteBranding, setSiteBranding] = useState({
         name: "book my ticket",
@@ -626,7 +666,7 @@ export default function AdminHomePage() {
 
                     <div style={{ marginTop: "24px", borderTop: `1px solid ${t.sidebarBorder}`, paddingTop: "12px" }}>
                         <button className="sidebar-item"><UserCircle size={20} /> Profile</button>
-                        <button className="sidebar-item" style={{ color: "#ef4444" }}><X size={20} /> Logout</button>
+                        <button className="sidebar-item" style={{ color: "#ef4444" }} onClick={handleLogout}><X size={20} /> Logout</button>
                     </div>
                 </nav>
             </aside>
@@ -1002,19 +1042,8 @@ export default function AdminHomePage() {
 
                     {activeTab === "support_tickets" && (() => {
                         const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
-                        const statusColor = (s) => ({ Open: "#3b82f6", Pending: "#f59e0b", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#64748b" }[s] || "#64748b");
-                        const saveTickets = (list) => {
-                            try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
-                            setSupportTickets(list);
-                            try {
-                                const log = JSON.parse(localStorage.getItem("support_ticket_emails") || "[]");
-                                log.push({ at: new Date().toISOString(), message: "Email notification will be sent to organiser for ticket update." });
-                                localStorage.setItem("support_ticket_emails", JSON.stringify(log.slice(-50)));
-                            } catch (_) { }
-                        };
                         const updateTicket = (ticketId, updates) => {
-                            const list = supportTickets.map(t => t.id === ticketId ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t);
-                            saveTickets(list);
+                            updateTicketMutation({ id: ticketId, ...updates });
                         };
                         return (
                             <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
@@ -1205,7 +1234,7 @@ export default function AdminHomePage() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Manage Sub Navigation Menu</h3>
                                 <button
-                                    onClick={() => { try { localStorage.setItem('admin_subnav_items', JSON.stringify(subnavItems)); alert('Sub navigation menu saved.'); } catch (_) { alert('Could not save.'); } }}
+                                    onClick={() => alert('Sub navigation menu is auto-saved to backend.')}
                                     style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
                                 >
                                     <Save size={18} /> Save
@@ -1437,19 +1466,19 @@ export default function AdminHomePage() {
                                                                 }} style={{ padding: "6px", borderRadius: "6px", border: `2px solid #3b82f6`, background: "#3b82f615", color: "#3b82f6", cursor: "pointer" }}><FileText size={14} /></button>
 
                                                                 <button title="Approve KYC" onClick={() => {
-                                                                    setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Active' } : o));
+                                                                    patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
                                                                     alert(`Organiser ${org.username} KYC has been approved! They now have full portal access.`);
                                                                 }} style={{ padding: "6px", borderRadius: "6px", border: `2px solid #22c55e`, background: "#22c55e15", color: "#22c55e", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#22c55e25"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#22c55e15"}><CheckCircle size={14} /></button>
                                                             </>
                                                         )}
                                                         {org.status === 'Active' && (
-                                                            <button title="Ban" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Banned' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#f97316", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9731610"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Bell size={14} /></button>
+                                                            <button title="Ban" onClick={() => patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' })} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#f97316", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9731610"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Bell size={14} /></button>
                                                         )}
                                                         {org.status === 'Banned' && (
-                                                            <button title="Activate" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Active' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#22c55e", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#22c55e10"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><CheckCircle size={14} /></button>
+                                                            <button title="Activate" onClick={() => patchOrganizerMutation({ id: org.id, kycStatus: 'Active' })} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#22c55e", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#22c55e10"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><CheckCircle size={14} /></button>
                                                         )}
-                                                        <button title="Reject" onClick={() => setOrganizers(organizers.map(o => o.id === org.id ? { ...o, status: 'Rejected' } : o))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><X size={14} /></button>
-                                                        <button title="Delete" onClick={() => setOrganizers(organizers.filter(o => o.id !== org.id))} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Trash2 size={14} /></button>
+                                                        <button title="Reject" onClick={() => patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' })} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><X size={14} /></button>
+                                                        <button title="Delete" onClick={() => removeOrganizerMutation({ id: org.id })} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#ef444410"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -2473,11 +2502,19 @@ export default function AdminHomePage() {
                                     <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
                                         <button
                                             onClick={() => {
-                                                const finalOrg = { ...newOrg, id: Date.now(), status: "Active", balance: "₹0" };
-                                                setOrganizers([...organizers, finalOrg]);
-                                                setShowCreateModal(false);
-                                                alert(`Organiser account created! Login credentials have been sent to ${newOrg.email}`);
-                                                setNewOrg({ username: "", password: "", email: "" });
+                                                createOrganizerMutation({
+                                                    name: newOrg.username,
+                                                    userId: newOrg.email,
+                                                    password: newOrg.password,
+                                                    kycStatus: "Active",
+                                                    walletBalance: 0
+                                                }).then(() => {
+                                                    setShowCreateModal(false);
+                                                    alert(`Organiser account created! Login credentials have been sent to ${newOrg.email}`);
+                                                    setNewOrg({ username: "", password: "", email: "" });
+                                                }).catch(err => {
+                                                    alert("Error creating organiser: " + err.message);
+                                                });
                                             }}
                                             style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
                                             Create Organiser

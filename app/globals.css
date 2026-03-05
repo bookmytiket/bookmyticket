@@ -56,10 +56,12 @@ body {
   line-height: 1.6;
 }
 
-/* ════════════ HERO BANNER (BookMyShow style) ════════════ */
+/* ════════════ HERO BANNER (Curved Card Style — 844×322) ════════════ */
 .bms-banner-wrap {
   width: 100%;
-  padding: 16px 0 20px;
+  padding: 24px 0 32px;
+  background: #eee9e2;
+  overflow: hidden;
 }
 
 .bms-banner-stage {
@@ -68,37 +70,35 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 285px;
-  overflow: hidden;
+  gap: 16px;
+  height: 322px;
+  overflow: visible;
   user-select: none;
 }
 
 /* Peeking side slides */
 .bms-slide-peek {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 72px;
+  position: relative;
+  width: 844px;
+  /* Same width as main slide */
+  flex-shrink: 0;
+  height: 100%;
   cursor: pointer;
   z-index: 2;
+  border-radius: 20px;
   overflow: hidden;
-  border-radius: 8px;
-  flex-shrink: 0;
+  transition: opacity 0.3s ease;
+  opacity: 0.6;
 }
 
-.bms-peek-left {
-  left: 0;
-}
-
-.bms-peek-right {
-  right: 0;
+.bms-slide-peek:hover {
+  opacity: 0.9;
 }
 
 .bms-slide-peek img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
   display: block;
   pointer-events: none;
 }
@@ -106,20 +106,20 @@ body {
 .bms-peek-dim {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 /* Main center slide */
 .bms-slide-main {
   position: relative;
-  width: calc(100% - 160px);
-  height: 100%;
-  border-radius: 10px;
-  overflow: hidden;
+  width: 844px;
   flex-shrink: 0;
+  height: 322px;
+  border-radius: 20px;
+  overflow: hidden;
   z-index: 3;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 .bms-slide-main img {
@@ -127,6 +127,7 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 20px;
 }
 
 /* Slide transitions */

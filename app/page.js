@@ -30,6 +30,9 @@ function TicketCard({ event }) {
   );
 }
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,7 +45,7 @@ export default function Home() {
 
   const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev) => ({
     ...ev,
-    id: ev.id ?? ev.title?.slice(0, 8) + Date.now(),
+    id: ev._id || ev.id || ev.title?.slice(0, 8) + Date.now(),
     title: ev.title || "Event",
     img: ev.img || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
     date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
@@ -84,43 +87,39 @@ export default function Home() {
     return allEventsForFilter.filter(ev => eventMatchesCategory(ev, cat));
   }, [activeCat, allEventsForFilter]);
 
-  const loadOrganiserEvents = useCallback(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = localStorage.getItem("organiser_events");
-      setNewOrgEvents(saved ? JSON.parse(saved) : []);
-    } catch (_) { setNewOrgEvents([]); }
-  }, []);
+  const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
   useEffect(() => {
-    loadOrganiserEvents();
-  }, [loadOrganiserEvents]);
+    if (convexEvents.length > 0) {
+      setNewOrgEvents(convexEvents);
+    }
+  }, [convexEvents]);
+
+  // Fallback or old local storage cleanup (Optional: keep using convexEvents instead, logic below handles parsing well)
+
+
+  const heroSlidesConfig = useQuery(api.systemConfig.getConfig, { key: "admin_hero_slides" });
+  const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = localStorage.getItem("admin_hero_slides");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setHeroSlides(Array.isArray(parsed) ? parsed : []);
-      } else setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
-    } catch (_) { setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []); }
-
-    try {
-      const savedPartners = localStorage.getItem("admin_event_partners");
-      if (savedPartners) {
-        setEventPartners(JSON.parse(savedPartners));
-      } else {
-        setEventPartners(FEATURED_ORGANISERS);
-      }
-    } catch (_) { setEventPartners(FEATURED_ORGANISERS); }
-  }, []);
+    if (heroSlidesConfig) {
+      setHeroSlides(Array.isArray(heroSlidesConfig) ? heroSlidesConfig : HERO_BANNER_SLIDES);
+    } else {
+      setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
+    }
+  }, [heroSlidesConfig]);
 
   useEffect(() => {
-    const onFocus = () => loadOrganiserEvents();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [loadOrganiserEvents]);
+    if (eventPartnersConfig) {
+      setEventPartners(Array.isArray(eventPartnersConfig) ? eventPartnersConfig : FEATURED_ORGANISERS);
+    } else {
+      setEventPartners(FEATURED_ORGANISERS);
+    }
+  }, [eventPartnersConfig]);
+
+  // Removed focus event listener since Convex useQuery is reactive
+
+
 
   return (
     <>

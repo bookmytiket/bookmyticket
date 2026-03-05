@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -166,6 +169,7 @@ function LocationPickerModal({
 }
 
 function OrganiserPanel() {
+    const router = useRouter();
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
@@ -205,58 +209,69 @@ function OrganiserPanel() {
         kycStatus: "Pending"
     });
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        try {
-            const raw = localStorage.getItem("organiser_profile");
-            if (raw) {
-                const data = JSON.parse(raw);
-                setProfile(prev => ({ ...prev, ...data }));
-            } else {
-                setProfile(prev => ({ ...prev, firstName: "John", lastName: "Doe", email: "organizer@gmail.com", orgType: "Individual", kycStatus: "KYC Approved" }));
-            }
-        } catch (_) {}
-    }, []);
-    useEffect(() => {
-        try { localStorage.setItem("organiser_profile", JSON.stringify(profile)); } catch (_) {}
-    }, [profile]);
 
-    // Wallet: loaded from localStorage (organiser_wallet); checkout credits base ticket amount only
+    // Wallet: loaded from Convex (organisers table)
     const [wallet, setWallet] = useState({
         balance: 0,
         currency: "₹",
         transactions: []
     });
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        try {
-            const raw = localStorage.getItem("organiser_wallet");
-            if (raw) {
-                const data = JSON.parse(raw);
-                setWallet({
-                    balance: Number(data.balance) || 0,
-                    currency: data.currency || "₹",
-                    transactions: Array.isArray(data.transactions) ? data.transactions : []
-                });
-            }
-        } catch (_) {}
-    }, []);
+    const organiserData = useQuery(api.organisers.get, { userId: profile.email || "test@gmail.com" });
 
-    const loadSupportTickets = useCallback(() => {
-        if (typeof window === "undefined") return;
-        try {
-            const raw = localStorage.getItem("support_tickets");
-            setSupportTicketsList(raw ? JSON.parse(raw) : []);
-        } catch (_) { setSupportTicketsList([]); }
-    }, []);
-    useEffect(() => loadSupportTickets(), [loadSupportTickets]);
     useEffect(() => {
-        window.addEventListener("focus", loadSupportTickets);
-        return () => window.removeEventListener("focus", loadSupportTickets);
-    }, [loadSupportTickets]);
+        if (organiserData) {
+            setWallet(prev => ({
+                ...prev,
+                balance: organiserData.walletBalance || 0,
+            }));
+            setProfile(prev => ({
+                ...prev,
+                kycStatus: organiserData.kycStatus === "Active" ? "KYC Approved" : organiserData.kycStatus,
+                email: organiserData.userId,
+                firstName: organiserData.name.split(' ')[0] || "John",
+                lastName: organiserData.name.split(' ')[1] || "Doe",
+            }));
+        }
+    }, [organiserData]);
+
+    const convexSupportTickets = useQuery(api.supportTickets.list) || [];
+    const createTicketMutation = useMutation(api.supportTickets.create);
+    const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
+
+    useEffect(() => {
+        if (convexSupportTickets.length >= 0 && profile.email) {
+            const filtered = convexSupportTickets.filter(t => t.userId === (profile.email || "test@gmail.com"));
+            setSupportTicketsList(filtered.map(t => ({
+                id: t._id,
+                ticketId: t._id.slice(-6),
+                email: t.userId,
+                subject: t.issue.split('\n')[0],
+                description: t.issue,
+                status: t.status,
+                createdAt: t._creationTime,
+                updatedAt: t.updatedAt || t._creationTime,
+                adminNotes: t.adminNotes || "",
+                replies: [] // Future: add replies table mapping
+            })));
+        }
+    }, [convexSupportTickets, profile.email]);
+
+    const convexEvents = useQuery(api.events.getOrganiserEvents, { organiserId: profile.email || "test@gmail.com" });
+    const deleteEventMutation = useMutation(api.events.deleteEvent);
+    const updateEventMutation = useMutation(api.events.updateEvent);
+    const createEventMutation = useMutation(api.events.createEvent);
+
+    const convexBookings = useQuery(api.bookings.getBookings) || [];
+    const updateBookingMutation = useMutation(api.bookings.updateBooking);
 
     const [events, setEvents] = useState([]);
+    useEffect(() => {
+        if (convexEvents) {
+            setEvents(convexEvents.map(e => ({ ...e, id: e._id })));
+        }
+    }, [convexEvents]);
+
     const writeQueueRef = useRef([]);
     const isWritingRef = useRef(false);
     const eventsDebounceRef = useRef(null);
@@ -335,22 +350,27 @@ function OrganiserPanel() {
     const thumbnailInputRef = useRef(null);
     const galleryInputRef = useRef(null);
 
-    const validateBookingId = useCallback((id) => {
+    const validateBookingId = useCallback(async (id) => {
         const rawId = String(id).trim();
         if (!rawId) return;
+        // Search in Convex bookings
+        const booking = convexBookings.find(b => String(b._id) === rawId || String(b.id) === rawId);
+        if (!booking) {
+            setPwaScanResult({ status: "not_found", id: rawId });
+            return;
+        }
+        if (booking.scanned) {
+            setPwaScanResult({ status: "already_used", booking });
+            return;
+        }
         try {
-            const raw = localStorage.getItem("admin_bookings");
-            const list = raw ? JSON.parse(raw) : [];
-            const booking = list.find(b => String(b.id) === rawId);
-            if (!booking) { setPwaScanResult({ status: "not_found", id: rawId }); return; }
-            if (booking.scanned) { setPwaScanResult({ status: "already_used", booking }); return; }
-            const idx = list.findIndex(b => String(b.id) === rawId);
-            list[idx] = { ...booking, scanned: true, scannedAt: new Date().toISOString() };
-            localStorage.setItem("admin_bookings", JSON.stringify(list));
-            setPwaScanResult({ status: "valid", booking: list[idx] });
+            await updateBookingMutation({ id: booking._id, scanned: true });
+            setPwaScanResult({ status: "valid", booking: { ...booking, scanned: true, scannedAt: new Date().toISOString() } });
             setPwaScanInput("");
-        } catch (_) { setPwaScanResult({ status: "not_found", id: rawId }); }
-    }, []);
+        } catch (_) {
+            setPwaScanResult({ status: "not_found", id: rawId });
+        }
+    }, [convexBookings, updateBookingMutation]);
 
     useEffect(() => {
         if (!pwaCameraOpen || typeof window === "undefined") return;
@@ -375,7 +395,7 @@ function OrganiserPanel() {
                                 setPwaCameraOpen(false);
                                 return;
                             }
-                        } catch (_) {}
+                        } catch (_) { }
                         pwaScanLoopRef.current = requestAnimationFrame(scan);
                     };
                     pwaScanLoopRef.current = requestAnimationFrame(scan);
@@ -409,6 +429,7 @@ function OrganiserPanel() {
         galleryImages: [], galleryPreviews: [],
         address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
         seatingEnabled: true,
+        environment: "Indoor",
         normalTicketCapacity: "",
         normalTicketPrice: "",
         rows: 6, cols: 10,
@@ -437,8 +458,9 @@ function OrganiserPanel() {
     useEffect(() => {
         if (typeof window === "undefined") return;
         try {
+            // Optional local storage fallback 
             const saved = localStorage.getItem("organiser_events");
-            if (saved) setEvents(JSON.parse(saved));
+            if (saved && events.length === 0) setEvents(JSON.parse(saved));
         } catch (_) { /* ignore */ }
         const loadDraft = () => {
             try {
@@ -457,7 +479,7 @@ function OrganiserPanel() {
                     description: "", banner: null, bannerPreview: null,
                     galleryImages: [], galleryPreviews: [],
                     address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
-                    seatingEnabled: true, normalTicketCapacity: "", normalTicketPrice: "",
+                    seatingEnabled: true, environment: "Indoor", normalTicketCapacity: "", normalTicketPrice: "",
                     rows: 6, cols: 10,
                     categories: defaultCategories,
                     ...parsed,
@@ -579,27 +601,45 @@ function OrganiserPanel() {
         }
         const ev = {
             ...postEvent,
-            id: Date.now(),
+            organiserId: profile.email || "organizer@gmail.com",
             date: firstSlot.date,
             time: firstSlot.time || "TBA",
-            slots: effectiveSlots,
             status: "Active",
             seatingEnabled: isSeating,
             totalSeats,
-            bookedSeats: 0,
-            meta: { keywords: "", adsId: "" },
             img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:")) ? postEvent.bannerPreview : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
             price: isSeating
                 ? (postEvent.categories?.length ? Math.min(...postEvent.categories.map(c => Number(c.price) || 0)) : undefined)
                 : (postEvent.normalTicketPrice !== "" && postEvent.normalTicketPrice != null ? Number(postEvent.normalTicketPrice) : undefined)
         };
-        setEvents(prev => [...prev, ev]);
-        alert(isSeating ? `✅ "${ev.title}" published with ${totalSeats} seats (Seating Based)!` : `✅ "${ev.title}" published with ${totalSeats} tickets (Normal Ticketing)!`);
-        setPostEvent(getInitialPostEvent());
-        setAddEventStep("select_type");
-        setMultiSlots([{ date: "", time: "" }]);
-        try { localStorage.removeItem("organiser_draft"); } catch (_) {}
-        setActiveTab("manage_events");
+        // Save to Convex
+        createEventMutation({
+            organiserId: ev.organiserId,
+            title: ev.title,
+            category: ev.category,
+            type: ev.type,
+            date: ev.date,
+            time: ev.time,
+            img: ev.img,
+            bannerPreview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
+            seatingEnabled: ev.seatingEnabled,
+            totalSeats: ev.totalSeats,
+            price: ev.price,
+            location: ev.location,
+            venue: ev.venue,
+            address: ev.address,
+            environment: ev.environment,
+        })
+            .then(() => {
+                alert(isSeating ? `✅ "${ev.title}" published with ${totalSeats} seats (Seating Based)!` : `✅ "${ev.title}" published with ${totalSeats} tickets (Normal Ticketing)!`);
+                setPostEvent(getInitialPostEvent());
+                setAddEventStep("select_type");
+                setMultiSlots([{ date: "", time: "" }]);
+                try { localStorage.removeItem("organiser_draft"); } catch (_) { }
+                setActiveTab("manage_events");
+            })
+            .catch(err => alert("Error publishing event: " + err.message));
+
     };
 
     const addDateSlot = () => {
@@ -877,27 +917,37 @@ function OrganiserPanel() {
                                     <div>
                                         <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>My Balance</p>
                                         <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{wallet.currency}{Number(wallet.balance).toLocaleString()}</p>
+                                    </div>
                                 </div>
-                            </div>
                                 <div style={{ backgroundColor: "#22c55e", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
                                     <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={24} /></div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Events</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{Math.max(events.length, 9)}</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{events.length}</p>
+                                    </div>
                                 </div>
-                            </div>
                                 <div style={{ backgroundColor: "#ef4444", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
                                     <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Monitor size={24} /></div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Event Bookings</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>6</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>
+                                            {(() => {
+                                                const myEventIds = new Set(events.map(e => String(e.id)));
+                                                return convexBookings.filter(b => myEventIds.has(String(b.eventId))).length;
+                                            })()}
+                                        </p>
                                     </div>
                                 </div>
                                 <div style={{ backgroundColor: "#8b5cf6", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
                                     <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><ArrowLeftRight size={24} /></div>
                                     <div>
-                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Transaction</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>294</p>
+                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Transactions</p>
+                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>
+                                            {(() => {
+                                                const myEventIds = new Set(events.map(e => String(e.id)));
+                                                return convexBookings.filter(b => myEventIds.has(String(b.eventId))).length;
+                                            })()}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -987,13 +1037,13 @@ function OrganiserPanel() {
                                                 <td style={{ padding: "16px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {ev.seatingEnabled !== false ? (
-                                                        <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                            <Grid size={14} /> Seat Map
-                                                        </button>
+                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                                                <Grid size={14} /> Seat Map
+                                                            </button>
                                                         ) : (
                                                             <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
                                                         )}
-                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1006,7 +1056,7 @@ function OrganiserPanel() {
                 case "post_event":
                     // Step 1: Choose Online or Venue (image format)
                     if (addEventStep === "select_type") {
-                    return (
+                        return (
                             <div style={{ backgroundColor: t.bg, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "700px", width: "100%" }}>
                                     <button
@@ -1118,8 +1168,15 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
                             </div>
-                            {/* Date Type & Countdown Status */}
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Event Environment*</label>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        {["Indoor", "Outdoor"].map(env => (
+                                            <button key={env} type="button" onClick={() => setPostEvent(pe => ({ ...pe, environment: env }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.environment || "Indoor") === env ? "#3b82f6" : t.bg, color: (postEvent.environment || "Indoor") === env ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{env}</button>
+                                        ))}
+                                    </div>
+                                </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date Type*</label>
                                     <div style={{ display: "flex", gap: "8px" }}>
@@ -1128,6 +1185,8 @@ function OrganiserPanel() {
                                         ))}
                                     </div>
                                 </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
                                 <div>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Countdown Status*</label>
                                     <div style={{ display: "flex", gap: "8px" }}>
@@ -1280,14 +1339,14 @@ function OrganiserPanel() {
                                 </div>
                                 {(postEvent.dateType || "single") === "single" && (
                                     <>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
                                             <input type="date" value={postEvent.date} onChange={e => setPostEvent(prev => ({ ...prev, date: e.target.value }))} placeholder="dd/mm/yyyy" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
                                             <input type="time" value={postEvent.time} onChange={e => setPostEvent(prev => ({ ...prev, time: e.target.value }))} placeholder="--:--" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                </div>
+                                        </div>
                                     </>
                                 )}
                                 {postEvent.seatingEnabled === false && (
@@ -1304,15 +1363,15 @@ function OrganiserPanel() {
                                     </div>
                                 )}
                                 {postEvent.seatingEnabled !== false && (
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
                                                 <input type="number" min={1} value={postEvent.rows} onChange={e => setPostEvent(prev => ({ ...prev, rows: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
                                                 <input type="number" min={1} value={postEvent.cols} onChange={e => setPostEvent(prev => ({ ...prev, cols: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
                                             </div>
                                         </div>
@@ -1347,26 +1406,26 @@ function OrganiserPanel() {
                                                         </div>
                                                     </div>
                                                 ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+                                        <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
                                                 {[...Array(Math.max(1, postEvent.rows))].map((_, rIdx) => {
-                                                const cat = getSeatCategory(rIdx);
-                                                return (
-                                                    <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                                        <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
+                                                    const cat = getSeatCategory(rIdx);
+                                                    return (
+                                                        <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                            <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
                                                             {[...Array(Math.max(1, postEvent.cols))].map((_, cIdx) => (
-                                                            <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
-                                                        ))}
-                                                    </div>
-                                                );
-                                            })}
-                                            <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
-                                            <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
+                                                                <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                                <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
+                                                <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
                                 )}
                                 <div style={{ gridColumn: "span 2" }}>
                                     <button onClick={publishSeatEvent} style={{ width: "100%", padding: "16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "12px", fontWeight: 800, cursor: "pointer" }}>
@@ -1534,12 +1593,12 @@ function OrganiserPanel() {
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {ev.seatingEnabled !== false ? (
                                                             <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: "1px solid #6366f130", padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                            <Grid size={14} /> Seat Map
-                                                        </button>
+                                                                <Grid size={14} /> Seat Map
+                                                            </button>
                                                         ) : (
                                                             <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
                                                         )}
-                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1608,7 +1667,7 @@ function OrganiserPanel() {
                                                         ) : (
                                                             <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
                                                         )}
-                                                        <button title="Delete" onClick={() => setEvents(events.filter(e => e.id !== ev.id))} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1619,34 +1678,135 @@ function OrganiserPanel() {
                         </div>
                     );
                 }
-                case "event_bookings":
+                case "event_bookings": {
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const filtered = eventBookingsTab === "all" ? myBookings :
+                        eventBookingsTab === "completed" ? myBookings.filter(b => b.status === "Confirmed") :
+                            eventBookingsTab === "pending" ? myBookings.filter(b => b.status === "Pending") :
+                                eventBookingsTab === "rejected" ? myBookings.filter(b => b.status === "Cancelled") :
+                                    myBookings;
+
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Event Booking</h3>
-                            <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Event Bookings</h3>
+                            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
                                 {["all", "completed", "pending", "rejected", "report"].map(id => (
                                     <button key={id} onClick={() => setEventBookingsTab(id)} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: eventBookingsTab === id ? "#3b82f6" : t.bg, color: eventBookingsTab === id ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
                                         {id === "all" ? "All Bookings" : id === "report" ? "Report" : id.charAt(0).toUpperCase() + id.slice(1) + " Bookings"}
                                     </button>
                                 ))}
                             </div>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Booking list and filters will appear here.</p>
+                            {eventBookingsTab === "report" ? (
+                                <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>
+                                    <BarChart3 size={48} style={{ marginBottom: "16px", opacity: 0.5 }} />
+                                    <p>Detailed reports coming soon. View summary in Dashboard.</p>
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Order ID</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Customer</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Tickets</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Amount</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filtered.length === 0 ? (
+                                                <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: t.textSub }}>No bookings found.</td></tr>
+                                            ) : filtered.map(b => (
+                                                <tr key={b._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <td style={{ padding: "12px", fontWeight: 600, fontSize: "13px" }}>#{b._id.slice(-8).toUpperCase()}</td>
+                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName || "—"}</td>
+                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.userId}</td>
+                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.ticketCount}</td>
+                                                    <td style={{ padding: "12px", fontWeight: 700, fontSize: "13px" }}>₹{b.totalPrice}</td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: 700, backgroundColor: b.status === "Confirmed" ? "#dcfce7" : "#fee2e2", color: b.status === "Confirmed" ? "#16a34a" : "#dc2626" }}>
+                                                            {b.status.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     );
+                }
                 case "withdraw":
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Withdraw</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Request withdrawals to your linked bank account.</p>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Withdrawal</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>Request withdrawals to your linked bank account. Minimum balance Required: ₹500.</p>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "800px" }}>
+                                <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "#3b82f6", color: "#fff" }}>
+                                    <p style={{ margin: 0, fontSize: "14px", opacity: 0.9 }}>Available for Withdrawal</p>
+                                    <p style={{ margin: "8px 0 0", fontSize: "32px", fontWeight: 800 }}>₹{wallet.balance.toLocaleString()}</p>
+                                    <button style={{ marginTop: "24px", width: "100%", padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#fff", color: "#3b82f6", fontWeight: 700, cursor: "pointer" }}>Request Payout</button>
+                                </div>
+                                <div style={{ padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, backgroundColor: t.bg }}>
+                                    <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px" }}>Linked Bank Account</h4>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Building size={24} style={{ color: t.textSub }} />
+                                        <div>
+                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>HDFC Bank ···· 4242</p>
+                                            <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Verified · Primary</p>
+                                        </div>
+                                    </div>
+                                    <button style={{ marginTop: "24px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, padding: "8px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Manage Accounts</button>
+                                </div>
+                            </div>
                         </div>
                     );
-                case "transactions":
+                case "transactions": {
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+
                     return (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                             <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Transactions</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>View your transaction history.</p>
+                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>View your earnings and payout history.</p>
+
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Reference</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Type</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Description</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Amount</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {myBookings.length === 0 ? (
+                                            <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: t.textSub }}>No transactions yet.</td></tr>
+                                        ) : myBookings.sort((a, b) => b._creationTime - a._creationTime).map(b => (
+                                            <tr key={b._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>#{b._id.slice(-6).toUpperCase()}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{new Date(b._creationTime).toLocaleDateString()}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>Ticket Sale</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName || "Event Ticket"} (x{b.ticketCount})</td>
+                                                <td style={{ padding: "12px", fontSize: "13px", fontWeight: 700, color: "#22c55e" }}>+₹{b.totalPrice}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#22c55e" }}>COMPLETED</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     );
+                }
                 case "pwa_scanner":
                     return (
                         <div style={{ maxWidth: "560px" }}>
@@ -1738,7 +1898,7 @@ function OrganiserPanel() {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
                     const saveSupportTickets = (list) => {
-                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
                         setSupportTicketsList(list);
                     };
                     const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
@@ -1747,7 +1907,7 @@ function OrganiserPanel() {
                     const viewedTicket = supportTicketDetailId ? supportTicketsList.find(t => t.id === supportTicketDetailId) : null;
                     const addReplyToTicket = (ticketId, message) => {
                         const list = supportTicketsList.map(t => t.id !== ticketId ? t : { ...t, replies: [...(Array.isArray(t.replies) ? t.replies : []), { from: "organiser", message: (message || "").trim(), at: new Date().toISOString() }], updatedAt: new Date().toISOString() });
-                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) {}
+                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
                         setSupportTicketsList(list);
                         setSupportTicketReplyMessage("");
                     };
@@ -1792,7 +1952,29 @@ function OrganiserPanel() {
                                         </div>
                                         <p style={{ fontSize: "12px", color: "#b45309", marginTop: "8px", marginBottom: 0 }}>Upload only ZIP Files, Max File Size is 20 MB</p>
                                     </div>
-                                    <button type="button" onClick={() => { const emailVal = (supportTicketForm.email || profile?.email || "organizer@gmail.com").trim(); const sub = (supportTicketForm.subject || "").trim(); if (!emailVal || !sub) return; const nextId = Math.max(0, ...supportTicketsList.map(t => t.ticketId || 0)) + 1; const list = [...supportTicketsList, { id: "TKT-" + Date.now(), ticketId: nextId, email: emailVal, subject: sub, description: (supportTicketForm.description || "").trim(), status: "Open", organiserName: "John Doe", organiserId: "org1", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), adminNotes: "", attachmentFileName: supportTicketForm.attachmentFileName || null, replies: [] }]; saveSupportTickets(list); try { const log = JSON.parse(localStorage.getItem("support_ticket_emails") || "[]"); log.push({ at: new Date().toISOString(), message: "New ticket created; email notification hook ready for SMTP." }); localStorage.setItem("support_ticket_emails", JSON.stringify(log.slice(-50))); } catch (_) {} setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" }); setSupportTab("all_tickets"); }} style={{ padding: "12px 28px", borderRadius: "8px", border: "none", backgroundColor: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save</button>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const emailVal = (supportTicketForm.email || profile?.email || "test@gmail.com").trim();
+                                            const sub = (supportTicketForm.subject || "").trim();
+                                            const desc = (supportTicketForm.description || "").trim();
+                                            if (!emailVal || !sub) {
+                                                alert("Please fill in email and subject.");
+                                                return;
+                                            }
+                                            await createTicketMutation({
+                                                userId: emailVal,
+                                                issue: sub + (desc ? "\n" + desc : ""),
+                                                status: "Open"
+                                            });
+                                            alert("Support ticket submitted successfully!");
+                                            setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" });
+                                            setSupportTab("all_tickets");
+                                        }}
+                                        style={{ padding: "12px 28px", borderRadius: "8px", border: "none", backgroundColor: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}
+                                    >
+                                        Save
+                                    </button>
                                     <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>You will receive email updates when support changes the ticket status.</p>
                                 </div>
                             )}
@@ -1818,7 +2000,7 @@ function OrganiserPanel() {
                                                 {(Array.isArray(viewedTicket.replies) && viewedTicket.replies.length > 0) ? (
                                                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                                         {viewedTicket.replies.map((r, i) => (
-                                                            <div key={i} style={{ padding: "12px", borderRadius: "8px", backgroundColor: r.from === "organiser" ? "#3b82f615" : "#f59e0b15", borderLeft: `4px solid ${r.from === "organiser" ? "#3b82f6" : "#f59e0b" }` }}>
+                                                            <div key={i} style={{ padding: "12px", borderRadius: "8px", backgroundColor: r.from === "organiser" ? "#3b82f615" : "#f59e0b15", borderLeft: `4px solid ${r.from === "organiser" ? "#3b82f6" : "#f59e0b"}` }}>
                                                                 <span style={{ fontSize: "11px", fontWeight: 600, color: t.textSub, textTransform: "capitalize" }}>{r.from}</span>
                                                                 <p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{r.message}</p>
                                                                 <span style={{ fontSize: "11px", color: t.textSub }}>{r.at ? new Date(r.at).toLocaleString() : ""}</span>
@@ -1834,58 +2016,58 @@ function OrganiserPanel() {
                                             </div>
                                         </div>
                                     ) : (
-                                    <>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-                                        <h4 style={{ fontSize: "16px", fontWeight: 600, color: t.textMain, margin: 0 }}>All Tickets</h4>
-                                        <input type="text" placeholder="Search by Ticket ID" value={supportTicketSearchId} onChange={(e) => setSupportTicketSearchId(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", minWidth: "180px" }} />
-                                    </div>
-                                    <div style={{ overflowX: "auto" }}>
-                                        {filteredTickets.length === 0 ? (
-                                            <p style={{ fontSize: "13px", color: t.textSub }}>No support tickets yet. Create one with &quot;Add Ticket&quot;.</p>
-                                        ) : (
-                                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                                                <thead>
-                                                    <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                                                        <th style={{ padding: "10px 8px", width: "40px" }}>
-                                                            <input type="checkbox" checked={filteredTickets.length > 0 && selectedTicketIds.length === filteredTickets.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
-                                                        </th>
-                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Ticket ID</th>
-                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Email</th>
-                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Subject</th>
-                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Status</th>
-                                                        <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filteredTickets.map((ticket) => (
-                                                        <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                            <td style={{ padding: "10px 8px" }}>
-                                                                <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} style={{ cursor: "pointer" }} />
-                                                            </td>
-                                                            <td style={{ padding: "10px 8px", color: t.textMain, fontWeight: 600 }}>{ticket.ticketId ?? ticket.id}</td>
-                                                            <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.email || "—"}</td>
-                                                            <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
-                                                            <td style={{ padding: "10px 8px" }}>
-                                                                <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status}</span>
-                                                            </td>
-                                                            <td style={{ padding: "10px 8px" }}>
-                                                                <div style={{ position: "relative" }}>
-                                                                    <button type="button" onClick={() => setSupportTicketSelectOpen(supportTicketSelectOpen === ticket.id ? null : ticket.id)} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 14px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Select <ChevronDown size={14} /></button>
-                                                                    {supportTicketSelectOpen === ticket.id && (
-                                                                        <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "4px", backgroundColor: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 10, minWidth: "120px" }}>
-                                                                            <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>View</button>
-                                                                            <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>Reply</button>
+                                        <>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+                                                <h4 style={{ fontSize: "16px", fontWeight: 600, color: t.textMain, margin: 0 }}>All Tickets</h4>
+                                                <input type="text" placeholder="Search by Ticket ID" value={supportTicketSearchId} onChange={(e) => setSupportTicketSearchId(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", minWidth: "180px" }} />
+                                            </div>
+                                            <div style={{ overflowX: "auto" }}>
+                                                {filteredTickets.length === 0 ? (
+                                                    <p style={{ fontSize: "13px", color: t.textSub }}>No support tickets yet. Create one with &quot;Add Ticket&quot;.</p>
+                                                ) : (
+                                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                                        <thead>
+                                                            <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+                                                                <th style={{ padding: "10px 8px", width: "40px" }}>
+                                                                    <input type="checkbox" checked={filteredTickets.length > 0 && selectedTicketIds.length === filteredTickets.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
+                                                                </th>
+                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Ticket ID</th>
+                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Email</th>
+                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Subject</th>
+                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Status</th>
+                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {filteredTickets.map((ticket) => (
+                                                                <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                                    <td style={{ padding: "10px 8px" }}>
+                                                                        <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} style={{ cursor: "pointer" }} />
+                                                                    </td>
+                                                                    <td style={{ padding: "10px 8px", color: t.textMain, fontWeight: 600 }}>{ticket.ticketId ?? ticket.id}</td>
+                                                                    <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.email || "—"}</td>
+                                                                    <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
+                                                                    <td style={{ padding: "10px 8px" }}>
+                                                                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status}</span>
+                                                                    </td>
+                                                                    <td style={{ padding: "10px 8px" }}>
+                                                                        <div style={{ position: "relative" }}>
+                                                                            <button type="button" onClick={() => setSupportTicketSelectOpen(supportTicketSelectOpen === ticket.id ? null : ticket.id)} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 14px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Select <ChevronDown size={14} /></button>
+                                                                            {supportTicketSelectOpen === ticket.id && (
+                                                                                <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "4px", backgroundColor: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 10, minWidth: "120px" }}>
+                                                                                    <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>View</button>
+                                                                                    <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>Reply</button>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
-                                    </div>
-                                    </>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                        </>
                                     )}
                                 </>
                             )}
@@ -1928,7 +2110,7 @@ function OrganiserPanel() {
                                     <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b" }}>{profile.kycStatus}</span>
                                 </div>
                                 <div style={{ gridColumn: "span 2", marginTop: "8px" }}>
-                                    <button type="button" onClick={() => { try { localStorage.setItem("organiser_profile", JSON.stringify(profile)); } catch (_) {} alert("Profile saved successfully."); }} style={{ padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save changes</button>
+                                    <button type="button" onClick={() => { alert("Profile updates are currently disabled. Please contact support to change profile details."); }} style={{ padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save changes</button>
                                 </div>
                             </div>
                         </div>
@@ -1939,6 +2121,39 @@ function OrganiserPanel() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                             <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Change Password</h3>
                             <p style={{ fontSize: "13px", color: t.textSub }}>Update your account password.</p>
+                        </div>
+                    );
+                case "ticket_bookings":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Ticket Booking Details</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>View all ticket bookings for your events here.</p>
+                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
+                                <Monitor size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                                <p>No bookings found yet.</p>
+                            </div>
+                        </div>
+                    );
+                case "refund_status":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Refund Status</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Track refund requests and their current status.</p>
+                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
+                                <ArrowLeftRight size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                                <p>No pending refunds.</p>
+                            </div>
+                        </div>
+                    );
+                case "ticket_details":
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Ticket Details</h3>
+                            <p style={{ fontSize: "13px", color: t.textSub }}>Manage and view detailed information about generated tickets.</p>
+                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
+                                <Ticket size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                                <p>Select an event to view its tickets.</p>
+                            </div>
                         </div>
                     );
                 default:
@@ -2041,13 +2256,39 @@ function OrganiserPanel() {
 
                 {/* Sidebar — image format: Search + dropdown sections + sub-sidebar */}
                 <aside className="sidebar">
+                    <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Link href="/" style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "10px",
+                            background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                            padding: '12px 10px',
+                            borderRadius: '12px',
+                            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
+                            textDecoration: "none",
+                            transition: 'all 0.3s ease'
+                        }}>
+                            <img
+                                src="/logo.png"
+                                alt="Logo"
+                                style={{
+                                    height: "44px",
+                                    objectFit: "contain",
+                                    maxWidth: "100%",
+                                    filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',
+                                    transition: 'filter 0.3s ease'
+                                }}
+                            />
+                        </Link>
+                    </div>
                     <div style={{ padding: "16px" }}>
                         <input
                             type="text"
                             placeholder="Search Menu Here..."
                             value={menuSearch}
                             onChange={e => setMenuSearch(e.target.value)}
-                                style={{
+                            style={{
                                 width: "100%",
                                 padding: "10px 12px",
                                 borderRadius: "8px",
@@ -2057,93 +2298,37 @@ function OrganiserPanel() {
                                 fontSize: "13px"
                             }}
                         />
-                        </div>
+                    </div>
                     <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "16px" }}>
                         <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
                             <Settings size={20} /> Dashboard
                         </button>
 
-                        {/* Event Management — collapsible */}
-                        <div>
-                            <button
-                                onClick={() => setSidebarOpen(s => ({ ...s, eventManagement: !s.eventManagement }))}
-                                className={`sidebar-item ${["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab) ? "active" : ""}`}
-                                style={{ width: "100%", justifyContent: "space-between" }}
-                            >
-                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Calendar size={20} /> Event Management
-                                </span>
-                                {(sidebarOpen.eventManagement || ["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab)) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                            </button>
-                            {(sidebarOpen.eventManagement || ["post_event", "manage_events", "venue_events", "online_events", "seat_map"].includes(activeTab)) && (
-                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
-                                    <button onClick={() => setActiveTab("post_event")} className={`sidebar-item ${activeTab === "post_event" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Add Event</button>
-                                    <button onClick={() => setActiveTab("manage_events")} className={`sidebar-item ${activeTab === "manage_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• All Events</button>
-                                    <button onClick={() => setActiveTab("venue_events")} className={`sidebar-item ${activeTab === "venue_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Venue Events</button>
-                                    <button onClick={() => setActiveTab("online_events")} className={`sidebar-item ${activeTab === "online_events" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Online Events</button>
-                                    <button onClick={() => setActiveTab("seat_map")} className={`sidebar-item ${activeTab === "seat_map" ? "active" : ""}`} style={{ padding: "8px 16px", fontSize: "12px" }}>• Seat Map</button>
-                                </div>
-                            )}
-                    </div>
+                        {/* Custom Organiser Tabs based on user request */}
+                        <button onClick={() => setActiveTab("ticket_bookings")} className={`sidebar-item ${activeTab === "ticket_bookings" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
+                            <Monitor size={20} /> Ticket Booking Details
+                        </button>
+                        <button onClick={() => setActiveTab("refund_status")} className={`sidebar-item ${activeTab === "refund_status" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
+                            <ArrowLeftRight size={20} /> Refund status
+                        </button>
+                        <button onClick={() => setActiveTab("ticket_details")} className={`sidebar-item ${activeTab === "ticket_details" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
+                            <Ticket size={20} /> Ticket Details
+                        </button>
 
-                        {/* Event Bookings — collapsible */}
-                        <div>
-                            <button
-                                onClick={() => { setSidebarOpen(s => ({ ...s, eventBookings: !s.eventBookings })); setActiveTab("event_bookings"); }}
-                                className={`sidebar-item ${activeTab === "event_bookings" ? "active" : ""}`}
-                                style={{ width: "100%", justifyContent: "space-between" }}
-                            >
-                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Monitor size={20} /> Event Bookings
-                                </span>
-                                {(sidebarOpen.eventBookings || activeTab === "event_bookings") ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                            </button>
-                            {(sidebarOpen.eventBookings || activeTab === "event_bookings") && (
-                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
-                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("all"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• All Bookings</button>
-                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("completed"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Completed Bookings</button>
-                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("pending"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Pending Bookings</button>
-                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("rejected"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Rejected Bookings</button>
-                                    <button onClick={() => { setActiveTab("event_bookings"); setEventBookingsTab("report"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Report</button>
-                                </div>
-                            )}
-                        </div>
-
-                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}><Wallet size={20} /> Withdraw</button>
-                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}><ArrowLeftRight size={20} /> Transactions</button>
-                        <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}><Ticket size={20} /> Pwa Scanner</button>
-
-                        {/* Support Tickets — collapsible */}
-                        <div>
-                            <button
-                                onClick={() => { setSidebarOpen(s => ({ ...s, supportTickets: !s.supportTickets })); setActiveTab("support_tickets"); }}
-                                className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}
-                                style={{ width: "100%", justifyContent: "space-between" }}
-                            >
-                                <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Mail size={20} /> Support Tickets
-                                </span>
-                                {(sidebarOpen.supportTickets || activeTab === "support_tickets") ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                            </button>
-                            {(sidebarOpen.supportTickets || activeTab === "support_tickets") && (
-                                <div style={{ paddingLeft: "12px", marginLeft: "28px", borderLeft: `2px solid ${t.border}` }}>
-                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• All Tickets</button>
-                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className="sidebar-item" style={{ padding: "8px 16px", fontSize: "12px" }}>• Add Ticket</button>
-                                </div>
-                            )}
-                        </div>
 
                         <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}><Users size={20} /> Edit Profile</button>
                         <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}><Lock size={20} /> Change Password</button>
-                        <button className="sidebar-item" style={{ color: "#ef4444" }}><X size={20} /> Logout</button>
+                        <button onClick={() => { try { localStorage.removeItem("user"); } catch (_) { } router.push("/signin"); }} className="sidebar-item" style={{ color: "#ef4444", textDecoration: "none", background: "none", border: "none", cursor: "pointer", width: "100%", display: "flex", alignItems: "center", gap: "8px" }}><X size={20} /> Logout</button>
                     </nav>
 
                     <div style={{ padding: "16px", borderTop: `1px solid ${t.sidebarBorder}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", backgroundColor: theme === 'light' ? "#f8fafc" : "#0f172a", borderRadius: "10px" }}>
-                            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(45deg, #3b82f6, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", color: "#fff", fontSize: "13px" }}>JD</div>
+                            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(45deg, #3b82f6, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", color: "#fff", fontSize: "13px" }}>
+                                {profile.firstName ? (profile.firstName.charAt(0) + (profile.lastName?.charAt(0) || "")).toUpperCase() : "O"}
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>John Doe</p>
-                                <p style={{ margin: 0, fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>● KYC Approved</p>
+                                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{profile.firstName} {profile.lastName}</p>
+                                <p style={{ margin: 0, fontSize: "11px", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b", fontWeight: 600 }}>● {profile.kycStatus || "Pending Verification"}</p>
                             </div>
                         </div>
                     </div>
@@ -2154,7 +2339,7 @@ function OrganiserPanel() {
                     <header className="top-header">
                         <div>
                             <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>{activeTab.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
-                            <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>Welcome back, John! Here's what's happening today.</p>
+                            <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>Welcome back, {profile.firstName || "Organiser"}! Here's what's happening today.</p>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                             <button onClick={toggleTheme} style={{ background: t.activeLink, color: t.activeText, border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer" }}>

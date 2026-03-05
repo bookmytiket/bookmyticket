@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 const AUTO_PLAY_MS = 5000;
 
 // Shared with Spotlight: same banner height and rounded card style
-export const BANNER_HEIGHT = 320;
-export const BANNER_BORDER_RADIUS = 16;
+export const BANNER_HEIGHT = 322;
+export const BANNER_BORDER_RADIUS = 20;
 
 export default function ImageHeroCarousel({ slides = [] }) {
   const [index, setIndex] = useState(0);

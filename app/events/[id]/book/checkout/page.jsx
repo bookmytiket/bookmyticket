@@ -7,17 +7,20 @@ import { Calendar, MapPin } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 import TicketTemplate from '@/components/TicketTemplate';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
-function getEventById(id, organiserEvents) {
+function getEventById(id, convexEvents) {
     const sid = String(id);
     const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-    const fromOrg = (Array.isArray(organiserEvents) ? organiserEvents : []).find(e => String(e.id) === sid);
-    const raw = fromHome || fromOrg;
+    const fromConvex = (Array.isArray(convexEvents) ? convexEvents : []).find(e => String(e._id) === sid || String(e.id) === sid);
+    const raw = fromHome || fromConvex;
     if (!raw) return null;
     return {
         ...raw,
+        id: raw._id || raw.id,
         img: raw.img || raw.bannerPreview || DEFAULT_IMG,
         title: raw.title || 'Event',
         date: raw.date || 'TBA',
@@ -29,27 +32,34 @@ function getEventById(id, organiserEvents) {
 export default function EventCheckoutPage({ params }) {
     const { id } = React.use(params);
     const searchParams = useSearchParams();
-    const [organiserEvents, setOrganiserEvents] = useState([]);
+    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: "admin_fee_settings" });
+    const rawTicketSettings = useQuery(api.systemConfig.getConfig, { key: "admin_ticket_settings" });
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
     const [bookingDone, setBookingDone] = useState(false);
     const [lastBooking, setLastBooking] = useState(null);
     const [ticketSettings, setTicketSettings] = useState({});
+    const createBookingMutation = useMutation(api.bookings.createBooking);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        try {
-            const raw = localStorage.getItem('organiser_events');
-            setOrganiserEvents(raw ? JSON.parse(raw) : []);
-            const fees = localStorage.getItem('admin_fee_settings');
-            if (fees) setFeeSettings(prev => ({ ...prev, ...JSON.parse(fees) }));
-            const ticket = localStorage.getItem('admin_ticket_settings');
-            if (ticket) setTicketSettings(JSON.parse(ticket));
-        } catch (_) { setOrganiserEvents([]); }
-        setStorageLoaded(true);
-    }, []);
+        if (rawFeeSettings !== undefined && rawTicketSettings !== undefined) {
+            try {
+                const parsedFees = typeof rawFeeSettings === "string" ? JSON.parse(rawFeeSettings) : rawFeeSettings;
+                if (parsedFees) setFeeSettings(prev => ({ ...prev, ...parsedFees }));
+            } catch (_) { }
+            try {
+                const parsedTicket = typeof rawTicketSettings === "string" ? JSON.parse(rawTicketSettings) : rawTicketSettings;
+                if (parsedTicket) setTicketSettings(parsedTicket);
+            } catch (_) { }
+            setStorageLoaded(true);
+        } else if (rawFeeSettings === null && rawTicketSettings === null) {
+            // Null means config key doesn't exist yet, just use defaults
+            setStorageLoaded(true);
+        }
+    }, [rawFeeSettings, rawTicketSettings]);
 
-    const event = useMemo(() => getEventById(id, organiserEvents), [id, organiserEvents]);
+    const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
 
     const ticketPrice = event?.price ?? 499;
     const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
@@ -57,61 +67,40 @@ export default function EventCheckoutPage({ params }) {
     const feeBreakdown = useMemo(() => getFeeBreakdown(baseAmount, feeSettings), [baseAmount, feeSettings]);
     const { convenienceFee, gst, total } = feeBreakdown;
 
-    const handleConfirmPay = useCallback(() => {
+    const handleConfirmPay = useCallback(async () => {
         if (!event) return;
-        const orderId = 'ORD-' + Date.now();
-        const booking = {
-            id: orderId,
-            eventId: id,
-            eventName: event.title,
-            amount: total,
-            baseAmount,
-            convenienceFee,
-            gst,
-            tickets: qty,
-            status: 'Confirmed',
-            date: new Date().toISOString().split('T')[0],
-        };
-        try {
-            const saved = localStorage.getItem('admin_bookings');
-            const list = saved ? JSON.parse(saved) : [];
-            list.push(booking);
-            localStorage.setItem('admin_bookings', JSON.stringify(list));
-        } catch (_) {}
 
         try {
-            const walletRaw = localStorage.getItem('organiser_wallet');
-            const wallet = walletRaw ? JSON.parse(walletRaw) : { balance: 0, currency: '₹', transactions: [] };
-            wallet.balance = (Number(wallet.balance) || 0) + baseAmount;
-            wallet.transactions = wallet.transactions || [];
-            wallet.transactions.unshift({
-                id: 'tx-' + Date.now(),
-                type: 'Ticket sale',
-                amount: baseAmount,
-                date: new Date().toISOString().split('T')[0],
-                status: 'Completed',
-                eventName: event.title,
+            const bookingId = await createBookingMutation({
+                eventId: event._id || event.id,
+                userId: "customer@gmail.com", // Mock user for now
+                ticketCount: qty,
+                totalPrice: baseAmount,
+                status: 'Confirmed',
+                scanned: false
             });
-            localStorage.setItem('organiser_wallet', JSON.stringify(wallet));
-        } catch (_) {}
 
-        setLastBooking({
-            id: orderId,
-            eventId: id,
-            eventName: event.title,
-            amount: total,
-            baseAmount,
-            convenienceFee,
-            gst,
-            tickets: qty,
-            status: 'Confirmed',
-            date: new Date().toISOString().split('T')[0],
-            ticketType: 'General Admission',
-            paymentMethod: 'Online',
-            location: event.location,
-        });
-        setBookingDone(true);
-    }, [id, event, total, baseAmount, convenienceFee, gst, qty]);
+            setLastBooking({
+                id: bookingId,
+                eventId: id,
+                eventName: event.title,
+                amount: total,
+                baseAmount,
+                convenienceFee,
+                gst,
+                tickets: qty,
+                status: 'Confirmed',
+                date: new Date().toISOString().split('T')[0],
+                ticketType: 'General Admission',
+                paymentMethod: 'Online',
+                location: event.location,
+            });
+            setBookingDone(true);
+        } catch (error) {
+            console.error("Booking failed:", error);
+            alert("Payment failed. Please try again.");
+        }
+    }, [id, event, total, baseAmount, convenienceFee, gst, qty, createBookingMutation]);
 
     const onConfirmClick = (e) => {
         e.preventDefault();

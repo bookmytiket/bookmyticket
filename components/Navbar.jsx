@@ -106,6 +106,7 @@ export default function Navbar() {
   const { user, logout, selectedCity, updateCity } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [navCategories, setNavCategories] = useState(DEFAULT_CATEGORIES);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -121,7 +122,7 @@ export default function Navbar() {
           if (names.length > 0) setNavCategories(names);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export default function Navbar() {
             const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
             if (names.length > 0) setNavCategories(names);
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     };
     window.addEventListener("storage", onStorage);
@@ -285,13 +286,52 @@ export default function Navbar() {
 
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Link href={user.role === "admin" ? "/admin" : "/organiser"} className="nav-action-signin">Dashboard</Link>
-                <div
-                  onClick={logout}
-                  title="Logout"
-                  style={{ width: "35px", height: "35px", borderRadius: "50%", background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", cursor: "pointer", fontSize: "14px" }}
-                >
-                  {user.name[0]}
+                <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin">Dashboard</Link>
+                <div style={{ position: "relative" }}>
+                  <div
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    title={user.name}
+                    style={{ width: "35px", height: "35px", borderRadius: "50%", background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", cursor: "pointer", fontSize: "14px", userSelect: "none" }}
+                  >
+                    {user.name && user.name.length > 0 ? user.name[0].toUpperCase() : "U"}
+                  </div>
+
+                  {/* Public User Profile Dropdown */}
+                  {profileOpen && (
+                    <div style={{
+                      position: "absolute",
+                      top: "45px",
+                      right: "0",
+                      background: "#fff",
+                      borderRadius: "12px",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                      border: "1px solid #e2e8f0",
+                      width: "180px",
+                      overflow: "hidden",
+                      zIndex: 100,
+                      display: "flex",
+                      flexDirection: "column",
+                      transformOrigin: "top right",
+                      animation: "dropdownFadeIn 0.2s ease"
+                    }}>
+                      <Link href="/profile?tab=my_booking" style={{ padding: "12px 16px", textDecoration: "none", color: "#1e293b", fontSize: "14px", fontWeight: "500", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }} onClick={() => setProfileOpen(false)}>
+                        🎟️ My Booking
+                      </Link>
+                      <Link href="/profile?tab=change_password" style={{ padding: "12px 16px", textDecoration: "none", color: "#1e293b", fontSize: "14px", fontWeight: "500", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }} onClick={() => setProfileOpen(false)}>
+                        🔒 Change Password
+                      </Link>
+                      <button onClick={() => { setProfileOpen(false); logout(); }} style={{ padding: "12px 16px", textDecoration: "none", color: "#ef4444", fontSize: "14px", fontWeight: "600", background: "none", border: "none", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                        🚪 Logout
+                      </button>
+                    </div>
+                  )}
+                  {/* Close dropdown when clicking outside (simple implementation by detecting any scroll or using a full screen overlay) */}
+                  {profileOpen && (
+                    <div
+                      style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
+                      onClick={() => setProfileOpen(false)}
+                    />
+                  )}
                 </div>
               </div>
             ) : (

@@ -149,7 +149,7 @@ export default function HeroBanner({ slides: propSlides }) {
                     {slide.custom ? (
                         <PromoSlide />
                     ) : (
-                        <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} />
+                        <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "20px" }} />
                     )}
                 </div>
 

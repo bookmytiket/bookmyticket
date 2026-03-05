@@ -5,17 +5,20 @@ import Link from 'next/link';
 import { Calendar, MapPin } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
-function getEventById(id, organiserEvents) {
+function getEventById(id, convexEvents) {
     const sid = String(id);
     const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-    const fromOrg = (Array.isArray(organiserEvents) ? organiserEvents : []).find(e => String(e.id) === sid);
-    const raw = fromHome || fromOrg;
+    const fromConvex = (Array.isArray(convexEvents) ? convexEvents : []).find(e => String(e._id) === sid || String(e.id) === sid);
+    const raw = fromHome || fromConvex;
     if (!raw) return null;
     return {
         ...raw,
+        id: raw._id || raw.id,
         img: raw.img || raw.bannerPreview || DEFAULT_IMG,
         title: raw.title || 'Event',
         date: raw.date || 'TBA',
@@ -26,23 +29,26 @@ function getEventById(id, organiserEvents) {
 
 export default function EventBookPage({ params }) {
     const { id } = React.use(params);
-    const [organiserEvents, setOrganiserEvents] = useState([]);
+    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: "admin_fee_settings" });
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        try {
-            const raw = localStorage.getItem('organiser_events');
-            setOrganiserEvents(raw ? JSON.parse(raw) : []);
-            const fees = localStorage.getItem('admin_fee_settings');
-            if (fees) setFeeSettings(prev => ({ ...prev, ...JSON.parse(fees) }));
-        } catch (_) { setOrganiserEvents([]); }
-        setStorageLoaded(true);
-    }, []);
+        if (rawFeeSettings !== undefined) {
+            try {
+                const parsed = typeof rawFeeSettings === "string" ? JSON.parse(rawFeeSettings) : rawFeeSettings;
+                if (parsed) setFeeSettings(prev => ({ ...prev, ...parsed }));
+            } catch (_) { }
+            setStorageLoaded(true);
+        } else if (rawFeeSettings === null) {
+            // Null means config key doesn't exist yet, just use defaults
+            setStorageLoaded(true);
+        }
+    }, [rawFeeSettings]);
 
-    const event = useMemo(() => getEventById(id, organiserEvents), [id, organiserEvents]);
+    const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
 
     if (!event) {
         if (!storageLoaded) {

@@ -1,263 +1,233 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
+import LeftBanner from "@/components/LeftBanner";
 import { useAuth } from "@/components/AuthContext";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
-/* ─── Left Banner Slides ─────────────────────── */
 const BANNER_SLIDES = [
-    {
-        id: 1,
-        type: "image",
-        image: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=900&fit=crop&auto=format",
-        title: "Live Concerts",
-        sub: "Experience music like never before",
-    },
-    {
-        id: 2,
-        type: "image",
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=900&fit=crop&auto=format",
-        title: "Unforgettable Nights",
-        sub: "Book your tickets instantly",
-    },
-    {
-        id: 3,
-        type: "promo",
-    },
-    {
-        id: 4,
-        type: "image",
-        image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&fit=crop&auto=format",
-        title: "Epic Festivals",
-        sub: "Don't miss what's coming",
-    },
+    { img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", sub: "Book tickets for concerts, sports & more" },
+    { img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1080&h=1080&fit=crop", title: "Sports & Marathons", sub: "Events & activities near you" },
+    { img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1080&h=1080&fit=crop", title: "Comedy & Live Shows", sub: "Laugh out loud experiences" }
 ];
 
-const AUTO_PLAY_MS = 4000;
-
-const FEATURES = [
-    { num: "01", title: "Book Event Tickets", sub: "Instant confirmation" },
-    { num: "02", title: "Easy Sign-Up", sub: "Super quick activation" },
-    { num: "03", title: "Simple Registration", sub: "No hassle, no paperwork" },
-    { num: "04", title: "Quick Setup", sub: "No setup cost, zero fee" },
-];
-
-/* ─── Left Panel Auto-Scrolling Banner ───────── */
-function LeftBanner() {
-    const [current, setCurrent] = useState(0);
-    const [fading, setFading] = useState(false);
-    const timerRef = useRef(null);
-    const total = BANNER_SLIDES.length;
-
-    const goTo = useCallback((idx) => {
-        setFading(true);
-        setTimeout(() => { setCurrent((idx + total) % total); setFading(false); }, 400);
-    }, [total]);
-
-    const next = useCallback(() => goTo(current + 1), [current, goTo]);
-    const prev = useCallback(() => goTo(current - 1 + total), [current, goTo, total]);
-
-    useEffect(() => {
-        timerRef.current = setInterval(next, AUTO_PLAY_MS);
-        return () => clearInterval(timerRef.current);
-    }, [next]);
-
-    const slide = BANNER_SLIDES[current];
-
-    return (
-        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#0b0727" }}>
-            <div style={{ position: "absolute", inset: 0, opacity: fading ? 0 : 1, transition: "opacity 0.4s ease" }}>
-                {slide.type === "image" ? (
-                    <>
-                        <img src={slide.image} alt={slide.title} crossOrigin="anonymous"
-                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(11,7,39,0.3) 0%,rgba(11,7,39,0.72) 100%)" }} />
-                        <div style={{ position: "absolute", bottom: "80px", left: "36px", right: "36px", color: "#fff" }}>
-                            <h2 style={{ margin: 0, fontSize: "clamp(26px,4vw,42px)", fontWeight: 900, lineHeight: 1.1, letterSpacing: "-1px", textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>{slide.title}</h2>
-                            <p style={{ margin: "8px 0 0", fontSize: "15px", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>{slide.sub}</p>
-                        </div>
-                    </>
-                ) : (
-                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(160deg,#0b0727 0%,#1a0640 40%,#2d0a6b 70%,#0b0727 100%)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 36px", position: "relative", overflow: "hidden" }}>
-                        <div style={{ position: "absolute", width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle,#ff2d7840 0%,transparent 70%)", top: "-60px", left: "-60px", pointerEvents: "none" }} />
-                        <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "radial-gradient(circle,#7c3aed30 0%,transparent 70%)", bottom: "-80px", right: "-60px", pointerEvents: "none" }} />
-                        <p style={{ margin: "0 0 6px", fontSize: "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
-                        <h2 style={{ margin: 0, lineHeight: 0.9, fontWeight: 900, textTransform: "uppercase", fontSize: "clamp(44px,7vw,68px)", letterSpacing: "-2px", background: "linear-gradient(90deg,#fff 50%,#f84464 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ROCK<br />Events</h2>
-                        <p style={{ margin: "8px 0 28px", fontStyle: "italic", fontSize: "18px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
-                        <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                            {FEATURES.map(f => (
-                                <li key={f.num} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <span style={{ fontWeight: 900, fontSize: "11px", color: "#f84464", minWidth: "22px" }}>{f.num}</span>
-                                    <div>
-                                        <p style={{ margin: 0, fontWeight: 700, fontSize: "11px", color: "#e2d9f3", letterSpacing: "1px", textTransform: "uppercase", lineHeight: 1 }}>{f.title}</p>
-                                        <p style={{ margin: 0, fontSize: "10px", color: "#9d8ec2" }}>{f.sub}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "linear-gradient(90deg,#f84464,#c026d3)", padding: "10px 22px", borderRadius: "50px", fontSize: "11px", fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#fff", alignSelf: "flex-start", boxShadow: "0 4px 20px rgba(248,68,100,0.4)" }}>
-                            🎟 All Events Start Here
-                        </div>
-                    </div>
-                )}
-            </div>
-
-
-        </div>
-    );
-}
-
-/* ─── Main Sign-In Page ──────────────────────── */
 export default function SignInPage() {
     const { login } = useAuth();
+    const [mode, setMode] = useState("signin"); // "signin" | "signup"
 
-    const [email, setEmail] = useState("");
+    // Sign In
+    const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
-    const [role, setRole] = useState("organiser");
-    const [error, setError] = useState("");
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
+    const [loginError, setLoginError] = useState("");
 
-    // Sync SSO settings from localStorage
+    // Sign Up
+    const [signupName, setSignupName] = useState("");
+    const [signupEmail, setSignupEmail] = useState("");
+    const [signupPass, setSignupPass] = useState("");
+    const [showSignupPass, setShowSignupPass] = useState(false);
+    const [signupConfirm, setSignupConfirm] = useState("");
+    const [signupError, setSignupError] = useState("");
+    const [signupSuccess, setSignupSuccess] = useState(false);
+
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
+    const convexSsoConfig = useQuery(api.systemConfig.getConfig, { key: "sso_configs" });
     useEffect(() => {
-        const loadSso = () => {
-            const saved = localStorage.getItem('sso_configs');
-            if (saved) setSsoConfigs(JSON.parse(saved));
-        };
-        loadSso();
-        window.addEventListener('storage', loadSso); // Sync across tabs
-        return () => window.removeEventListener('storage', loadSso);
-    }, []);
+        if (convexSsoConfig && typeof convexSsoConfig === "object") setSsoConfigs(convexSsoConfig);
+    }, [convexSsoConfig]);
+
+    // Auto-detect role: "admin" → admin portal, anything else → organiser
+    const detectRole = (id) => id.trim().toLowerCase() === "admin" ? "admin" : "organiser";
 
     const handleLogin = (e) => {
         e.preventDefault();
-        setError("");
-        const ok = login(email, password, role);
-        if (!ok) setError("Invalid email or password. Please try again.");
+        setLoginError("");
+        const ok = login(identifier, password, detectRole(identifier));
+        if (!ok) setLoginError("Invalid email or password. Please try again.");
     };
 
-    return (
-        <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter','Roboto',sans-serif" }}>
+    const handleSignup = (e) => {
+        e.preventDefault();
+        setSignupError("");
+        if (signupPass !== signupConfirm) { setSignupError("Passwords do not match."); return; }
+        if (signupPass.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
+        const users = JSON.parse(localStorage.getItem("public_users") || "[]");
+        if (users.find(u => u.email === signupEmail)) { setSignupError("An account with this email already exists."); return; }
+        users.push({ name: signupName, email: signupEmail, password: signupPass, role: "user", createdAt: new Date().toISOString() });
+        localStorage.setItem("public_users", JSON.stringify(users));
+        setSignupSuccess(true);
+    };
 
-            {/* ══ LEFT — auto-scrolling banner ══ */}
-            <div style={{ flex: "0 0 42%", position: "relative", overflow: "hidden" }}>
-                <LeftBanner />
+    const inp = { width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #d1d5db", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "18px", transition: "border-color .2s" };
+    const lbl = { display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "6px" };
+    const fr = e => { e.target.style.borderColor = "#FCE15D"; };
+    const bg = e => { e.target.style.borderColor = "#d1d5db"; };
+    const submitBtn = { width: "100%", padding: "14px", borderRadius: "50px", border: "none", background: "#FCE15D", color: "#000", fontWeight: 800, fontSize: "15px", cursor: "pointer", boxShadow: "0 6px 20px rgba(252,225,93,0.3)", marginBottom: "20px", marginTop: "4px" };
+    const linkBtn = { background: "none", border: "none", color: "#0f172a", fontWeight: 700, cursor: "pointer", fontSize: "14px", textDecoration: "underline", padding: 0 };
+
+    return (
+        <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter','Roboto',sans-serif", background: "#f8fafc" }}>
+
+            {/* ══ LEFT PANEL — Hero Banner ══ */}
+            <div style={{ flex: 1.1, position: "relative", overflow: "hidden" }} className="hide-on-mobile">
+                <LeftBanner slides={BANNER_SLIDES} />
             </div>
 
-            {/* ══ RIGHT — auth form ══ */}
-            <div style={{ flex: 1, background: "#f8fafc", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 40px 40px", position: "relative" }}>
-
-                {/* Centered logo at top — no background */}
-                <div style={{ position: "absolute", top: "20px", left: "50%", transform: "translateX(-50%)" }}>
-                    <Link href="/">
-                        <img src="/logo.png" alt="BookMyTicket" style={{ height: "64px", width: "auto", display: "block" }} />
-                    </Link>
-                </div>
+            {/* ══ RIGHT PANEL — Auth Form ══ */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px 40px", position: "relative" }}>
 
                 <div style={{ width: "100%", maxWidth: "420px" }}>
-                    {/* Welcome Text */}
-                    <div style={{ textAlign: "center", marginBottom: "32px" }}>
-                        <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>Welcome to BookMyTicket</h2>
-                        <p style={{ fontSize: "15px", color: "#64748b" }}>Please select your portal to continue</p>
-                    </div>
 
-                    {/* Role Selector */}
-                    <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "12px", marginBottom: "28px", border: "1px solid #e2e8f0" }}>
-                        <button
-                            onClick={() => setRole("admin")}
-                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: role === 'admin' ? "#fff" : "transparent", color: role === 'admin' ? "#0f172a" : "#64748b", fontWeight: 700, cursor: "pointer", fontSize: "14px", boxShadow: role === 'admin' ? "0 2px 8px rgba(0,0,0,0.05)" : "none" }}>
-                            Admin Portal
-                        </button>
-                        <button
-                            onClick={() => setRole("organiser")}
-                            style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: role === 'organiser' ? "#fff" : "transparent", color: role === 'organiser' ? "#0f172a" : "#64748b", fontWeight: 700, cursor: "pointer", fontSize: "14px", boxShadow: role === 'organiser' ? "0 2px 8px rgba(0,0,0,0.05)" : "none" }}>
-                            Organiser Hub
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleLogin}>
-                        {/* Email */}
-                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Email address</label>
-                        <input
-                            type="email" required
-                            placeholder="example@example.com"
-                            value={email} onChange={e => setEmail(e.target.value)}
-                            style={{ width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #d1d5db", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "18px", transition: "border-color .2s" }}
-                            onFocus={e => e.target.style.borderColor = "#f84464"}
-                            onBlur={e => e.target.style.borderColor = "#d1d5db"}
-                        />
-
-                        {/* Password row */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                            <label style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>Password</label>
-                            <a href="#" style={{ fontSize: "13px", color: "#64748b", textDecoration: "underline" }}>Forgot password?</a>
-                        </div>
-                        <div style={{ position: "relative", marginBottom: "20px" }}>
-                            <input
-                                type={showPass ? "text" : "password"} required
-                                placeholder="password"
-                                value={password} onChange={e => setPassword(e.target.value)}
-                                style={{ width: "100%", padding: "13px 48px 13px 16px", borderRadius: "10px", border: "1.5px solid #d1d5db", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", transition: "border-color .2s" }}
-                                onFocus={e => e.target.style.borderColor = "#f84464"}
-                                onBlur={e => e.target.style.borderColor = "#d1d5db"}
-                            />
-                            <button type="button" onClick={() => setShowPass(p => !p)}
-                                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0, lineHeight: 1 }}>
-                                {showPass
-                                    ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                    : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                }
-                            </button>
-                        </div>
-
-
-                        {/* Log in button */}
-                        <button type="submit" style={{
-                            width: "100%", padding: "14px", borderRadius: "50px", border: "none",
-                            background: "linear-gradient(90deg,#f84464,#e11d48)",
-                            color: "#fff", fontWeight: 700, fontSize: "16px", cursor: "pointer",
-                            boxShadow: "0 6px 20px rgba(248,68,100,0.35)", letterSpacing: ".3px",
-                            transition: "opacity .2s", marginBottom: "20px"
-                        }}
-                            onMouseOver={e => e.currentTarget.style.opacity = ".9"}
-                            onMouseOut={e => e.currentTarget.style.opacity = "1"}
-                        >
-                            Log in
-                        </button>
-                    </form>
-
-                    {/* SSO Logic - Only show if any enabled */}
-                    {(ssoConfigs.google || ssoConfigs.facebook) && (
+                    {/* ══ SIGN IN ══ */}
+                    {mode === "signin" && (
                         <>
-                            {/* OR divider */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "24px 0 16px", color: "#94a3b8", fontSize: "12px" }}>
-                                <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
-                                OR
-                                <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+                            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>Welcome to</span>
+                                    <Link href="/"><img src="/logo.png" alt="BookMyTicket" style={{ height: "80px", width: "auto", display: "block" }} /></Link>
+                                </div>
+                                <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
+                                    Don&apos;t have an account?{" "}
+                                    <button style={linkBtn} onClick={() => { setMode("signup"); setLoginError(""); }}>
+                                        Create one now
+                                    </button>
+                                </p>
                             </div>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                {ssoConfigs.google && (
-                                    <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer", transition: "0.2s" }} onMouseOver={e => e.currentTarget.style.borderColor = "#94a3b8"} onMouseOut={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
-                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "18px" }} />
-                                        Continue with Google
+                            <form onSubmit={handleLogin}>
+                                <label style={lbl}>Email address</label>
+                                <input
+                                    type="text" required
+                                    placeholder="example@example.com"
+                                    value={identifier}
+                                    onChange={e => setIdentifier(e.target.value)}
+                                    style={inp} onFocus={fr} onBlur={bg}
+                                />
+
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                    <label style={{ ...lbl, marginBottom: 0 }}>Password</label>
+                                    <a href="#" style={{ fontSize: "13px", color: "#64748b", textDecoration: "underline" }}>Forgot password?</a>
+                                </div>
+                                <div style={{ position: "relative" }}>
+                                    <input
+                                        type={showPass ? "text" : "password"} required
+                                        placeholder="password"
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg}
+                                    />
+                                    <button type="button" onClick={() => setShowPass(p => !p)}
+                                        style={{ position: "absolute", right: "14px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                        {showPass ? <Eye size={18} /> : <EyeOff size={18} />}
                                     </button>
+                                </div>
+
+                                {loginError && (
+                                    <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {loginError}</p>
                                 )}
 
-                                {ssoConfigs.facebook && (
-                                    <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer", transition: "0.2s" }} onMouseOver={e => e.currentTarget.style.borderColor = "#94a3b8"} onMouseOut={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
-                                        <div style={{ width: "18px", height: "18px", background: "#1877F2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "#fff", fontSize: "12px", fontWeight: 900 }}>f</div>
-                                        Continue with Facebook
-                                    </button>
-                                )}
-                            </div>
+                                <button type="submit" style={submitBtn}
+                                    onMouseOver={e => e.currentTarget.style.opacity = ".88"}
+                                    onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+                                    Log in
+                                </button>
+                            </form>
+
+                            {(ssoConfigs.google || ssoConfigs.facebook) && (
+                                <>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "0 0 16px", color: "#94a3b8", fontSize: "12px" }}>
+                                        <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        {ssoConfigs.google && (
+                                            <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer" }}>
+                                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "18px" }} /> Continue with Google
+                                            </button>
+                                        )}
+                                        {ssoConfigs.facebook && (
+                                            <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "14px", fontWeight: 600, color: "#1e293b", cursor: "pointer" }}>
+                                                <div style={{ width: "18px", height: "18px", background: "#1877F2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "#fff", fontSize: "11px", fontWeight: 900 }}>f</div> Continue with Facebook
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            <p style={{ marginTop: "24px", fontSize: "11px", color: "#94a3b8", textAlign: "center" }}>
+                                By continuing you agree to our{" "}
+                                <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
+                                <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
+                            </p>
                         </>
                     )}
 
-                    <p style={{ marginTop: "20px", fontSize: "11px", color: "#94a3b8", textAlign: "center", lineHeight: "1.6" }}>
-                        By continuing you agree to our{" "}
-                        <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
-                        <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
-                    </p>
+                    {/* ══ SIGN UP ══ */}
+                    {mode === "signup" && (
+                        <>
+                            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                                <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", marginBottom: "10px" }}>Create an account</h2>
+                                <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
+                                    Already have an account?{" "}
+                                    <button style={linkBtn} onClick={() => { setMode("signin"); setSignupError(""); setSignupSuccess(false); }}>
+                                        Sign in
+                                    </button>
+                                </p>
+                            </div>
+
+                            {signupSuccess ? (
+                                <div style={{ textAlign: "center", padding: "32px 16px", background: "#f0fdf4", borderRadius: "16px", border: "1.5px solid #bbf7d0" }}>
+                                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>🎉</div>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#16a34a", marginBottom: "8px" }}>Account Created!</h3>
+                                    <p style={{ fontSize: "14px", color: "#15803d", marginBottom: "20px" }}>
+                                        Welcome, <strong>{signupName}</strong>! You can now explore and book events.
+                                    </p>
+                                    <button onClick={() => { setMode("signin"); setSignupSuccess(false); }}
+                                        style={{ padding: "12px 28px", borderRadius: "50px", border: "none", background: "#FCE15D", color: "#000", fontWeight: 800, fontSize: "14px", cursor: "pointer", boxShadow: "0 4px 15px rgba(252,225,93,0.3)" }}>
+                                        Go to Sign In
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSignup}>
+                                    <label style={lbl}>Full Name</label>
+                                    <input type="text" required placeholder="John Doe" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                    <label style={lbl}>Email Address</label>
+                                    <input type="email" required placeholder="you@example.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                    <label style={lbl}>Password</label>
+                                    <div style={{ position: "relative" }}>
+                                        <input type={showSignupPass ? "text" : "password"} required placeholder="Min. 6 characters" value={signupPass} onChange={e => setSignupPass(e.target.value)} style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg} />
+                                        <button type="button" onClick={() => setShowSignupPass(p => !p)}
+                                            style={{ position: "absolute", right: "14px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                            {showSignupPass ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        </button>
+                                    </div>
+
+                                    <label style={lbl}>Confirm Password</label>
+                                    <input type="password" required placeholder="Re-enter password" value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                    {signupError && (
+                                        <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>
+                                    )}
+
+                                    <button type="submit" style={submitBtn}
+                                        onMouseOver={e => e.currentTarget.style.opacity = ".88"}
+                                        onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+                                        Create Account
+                                    </button>
+                                </form>
+                            )}
+
+                            <p style={{ marginTop: "8px", fontSize: "11px", color: "#94a3b8", textAlign: "center" }}>
+                                By signing up you agree to our{" "}
+                                <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
+                                <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
+                            </p>
+                        </>
+                    )}
+
                 </div>
             </div>
         </div>

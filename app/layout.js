@@ -21,17 +21,20 @@ export const metadata = {
 };
 
 import { AuthProvider } from '@/components/AuthContext';
+import ConvexClientProvider from '@/components/ConvexClientProvider';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} ${figtree.variable}`}>
-        <AuthProvider>
-          <Suspense fallback={null}>
-            <ConditionalNavbar />
-            {children}
-          </Suspense>
-        </AuthProvider>
+        <ConvexClientProvider>
+          <AuthProvider>
+            <Suspense fallback={null}>
+              <ConditionalNavbar />
+              {children}
+            </Suspense>
+          </AuthProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );
