@@ -170,7 +170,7 @@ function LocationPickerModal({
 }
 
 function OrganiserPanel() {
-    const { user, loading } = useAuth();
+    const { user, loading, logout } = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -2872,7 +2872,7 @@ function OrganiserPanel() {
                         </button>
 
                         <button
-                            onClick={() => { if (confirm("Are you sure you want to logout?")) { try { localStorage.removeItem("user"); } catch (_) { } router.push("/signin"); } }}
+                            onClick={() => { if (confirm("Are you sure you want to logout?")) { logout(); } }}
                             className="sidebar-item"
                             style={{ color: "#ef4444" }}
                         >
@@ -2950,6 +2950,17 @@ function OrganiserPanel() {
                     <div className="sidebar-item"><Wallet size={20} /> Wallet (Locked)</div>
                     <div className="sidebar-item"><Users size={20} /> Profile (Locked)</div>
                 </nav>
+
+                <button
+                    onClick={() => { if (confirm("Are you sure you want to logout?")) { logout(); } }}
+                    className="sidebar-item"
+                    style={{ color: "#ef4444", borderTop: `1px solid ${t.border}`, marginTop: "8px" }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <LogOut size={20} />
+                        <span>Logout</span>
+                    </div>
+                </button>
 
                 <div style={{ marginTop: "auto", padding: "16px", opacity: 0.8 }}>
                     <div style={{ padding: "16px", backgroundColor: theme === 'light' ? "#f1f5f9" : "#0f172a", borderRadius: "16px", border: `1px solid ${t.border}` }}>

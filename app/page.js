@@ -41,7 +41,26 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState([]);
   const [eventPartners, setEventPartners] = useState([]);
 
-  const allEventsForFilter = useMemo(() => Array.isArray(newOrgEvents) ? newOrgEvents : [], [newOrgEvents]);
+  const allConfig = useQuery(api.systemConfig.getAllConfig);
+  const homeSectionsOrder = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_home_sections_order")?.value : null) || [
+    "Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"
+  ];
+  const siteBranding = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_site_branding")?.value : null) || {
+    name: "book my ticket",
+    logoColor: "#111111",
+    logoUrl: "/logo.png"
+  };
+  const metaSettings = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_meta_settings")?.value : null) || {
+    global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
+  };
+
+  useEffect(() => {
+    if (metaSettings?.global?.title) {
+      document.title = metaSettings.global.title;
+    }
+  }, [metaSettings]);
+
+  const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
   const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev) => ({
     ...ev,
@@ -69,10 +88,9 @@ export default function Home() {
   const filteredEvents = useMemo(() => {
     if (!activeCat) return [];
     const cat = { name: activeCat, slug: activeCat.toLowerCase().trim().replace(/\s+/g, '-') };
-    return allEventsForFilter.filter(ev => eventMatchesCategory(ev, cat));
-  }, [activeCat, allEventsForFilter]);
+    return normalizedOrgEvents.filter(ev => eventMatchesCategory(ev, cat));
+  }, [activeCat, normalizedOrgEvents]);
 
-  const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
   useEffect(() => {
     setNewOrgEvents(convexEvents);
@@ -159,63 +177,41 @@ export default function Home() {
           </section>
         ) : (
           <>
+            {homeSectionsOrder.map((section, idx) => {
+              switch (section) {
+                case "Hero Banner":
+                  return <div key={idx} style={{ width: '100%' }}><VideoHeroBanner /></div>;
+                case "Sub Navigation":
+                  return <div key={idx} style={{ width: '100%' }}><RecentlyViewedEvents /></div>;
+                case "Featured Events":
+                  return <div key={idx} style={{ width: '100%' }}><FeaturedEvents events={featuredEventsList} /></div>;
+                case "Spotlight":
+                  return <div key={idx} style={{ width: '100%' }}><Spotlight events={spotlightEventsList} /></div>;
+                case "Coming Soon":
+                  return <div key={idx} style={{ width: '100%' }}><ComingSoonEvents events={normalizedOrgEvents} /></div>;
+                case "Top Hand-picked":
+                  return <div key={idx} style={{ width: '100%' }}><PopularEvents events={popularEventsList} /></div>;
+                default:
+                  return null;
+              }
+            })}
 
-            {/* 1) Video Hero Banner */}
-            <div style={{ width: '100%' }}>
-              <VideoHeroBanner />
-            </div>
-
-            {/* Recently Viewed Events — image-based; populated when user clicks any event */}
-            <div style={{ width: '100%' }}>
-              <RecentlyViewedEvents />
-            </div>
-
-            {/* 2) Featured Events — includes Organiser panel events */}
-            <div style={{ width: '100%' }}>
-              <FeaturedEvents events={featuredEventsList} />
-            </div>
-
-            {/* Spotlight — 3D sliding, below Featured Events; includes Organiser events with spotlight */}
-            <div style={{ width: '100%' }}>
-              <Spotlight events={spotlightEventsList} />
-            </div>
-
-            {/* 3) Coming Soon Events */}
-            <div style={{ width: '100%' }}>
-              <ComingSoonEvents events={normalizedOrgEvents} />
-            </div>
-
-            {/* 4) Trending Events — includes Organiser panel events */}
+            {/* Other sections that might not be in the reorderable list yet */}
             <div style={{ width: '100%' }}>
               <TrendingEvents events={trendingEventsList} />
             </div>
-
-            {/* 5) Explore Popular Events — includes Organiser events */}
-            <div style={{ width: '100%' }}>
-              <PopularEvents events={popularEventsList} />
-            </div>
-
-            {/* 6) Exclusive Events — includes Organiser events with exclusive flag */}
             <div style={{ width: '100%' }}>
               <ExclusiveEvents events={exclusiveEventsList} />
             </div>
-
-            {/* 7) Virtual Events */}
             <div style={{ width: '100%' }}>
               <VirtualEvents events={normalizedOrgEvents} />
             </div>
-
-            {/* 8) Recent Memories */}
             <div style={{ width: '100%' }}>
               <RecentMemories memories={MEMORIES} />
             </div>
-
-            {/* Featured Organisers */}
             <div style={{ width: '100%' }}>
               <FeaturedOrganisers organisers={eventPartners} />
             </div>
-
-            {/* 9) Our Official Sponsors */}
             <div style={{ width: '100%' }}>
               <Sponsors />
             </div>

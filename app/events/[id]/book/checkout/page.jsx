@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, MapPin } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
@@ -41,6 +41,10 @@ export default function EventCheckoutPage({ params }) {
     const [lastBooking, setLastBooking] = useState(null);
     const [ticketSettings, setTicketSettings] = useState({});
     const createBookingMutation = useMutation(api.bookings.createBooking);
+    const router = useRouter();
+    const bookingIdFromUrl = searchParams.get('bookingId');
+    const isSuccess = searchParams.get('success') === 'true';
+    const existingBooking = useQuery(api.bookings.getBookingById, bookingIdFromUrl ? { id: bookingIdFromUrl } : "skip");
 
     useEffect(() => {
         if (rawFeeSettings !== undefined && rawTicketSettings !== undefined) {
@@ -61,6 +65,27 @@ export default function EventCheckoutPage({ params }) {
 
     const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
 
+    useEffect(() => {
+        if (isSuccess && existingBooking && existingBooking.status === "Confirmed") {
+            setLastBooking({
+                id: existingBooking._id,
+                eventId: existingBooking.eventId,
+                eventName: existingBooking.eventName,
+                amount: existingBooking.totalPrice,
+                baseAmount: existingBooking.totalPrice,
+                convenienceFee: 0,
+                gst: 0,
+                tickets: existingBooking.ticketCount,
+                status: 'Confirmed',
+                date: new Date(existingBooking._creationTime).toISOString().split('T')[0],
+                ticketType: 'General Admission',
+                paymentMethod: 'Online',
+                location: existingBooking.location || event?.location,
+            });
+            setBookingDone(true);
+        }
+    }, [isSuccess, existingBooking, event]);
+
     const ticketPrice = event?.price ?? 499;
     const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
     const baseAmount = ticketPrice * qty;
@@ -75,32 +100,17 @@ export default function EventCheckoutPage({ params }) {
                 eventId: event._id || event.id,
                 userId: "customer@gmail.com", // Mock user for now
                 ticketCount: qty,
-                totalPrice: baseAmount,
-                status: 'Confirmed',
+                totalPrice: total,
+                status: 'Pending',
                 scanned: false
             });
 
-            setLastBooking({
-                id: bookingId,
-                eventId: id,
-                eventName: event.title,
-                amount: total,
-                baseAmount,
-                convenienceFee,
-                gst,
-                tickets: qty,
-                status: 'Confirmed',
-                date: new Date().toISOString().split('T')[0],
-                ticketType: 'General Admission',
-                paymentMethod: 'Online',
-                location: event.location,
-            });
-            setBookingDone(true);
+            router.push(`/events/${id}/book/payment?bookingId=${bookingId}`);
         } catch (error) {
             console.error("Booking failed:", error);
-            alert("Payment failed. Please try again.");
+            alert("Unexpected error. Please try again.");
         }
-    }, [id, event, total, baseAmount, convenienceFee, gst, qty, createBookingMutation]);
+    }, [id, event, total, qty, createBookingMutation, router]);
 
     const onConfirmClick = (e) => {
         e.preventDefault();

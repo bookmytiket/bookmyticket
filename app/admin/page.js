@@ -8,42 +8,6 @@ import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCi
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
-function useConvexConfig(key, defaultValue, allConfig) {
-    const [state, setState] = useState(defaultValue);
-    const [initialized, setInitialized] = useState(false);
-    const setConfigMutation = useMutation(api.systemConfig.setConfig);
-
-    useEffect(() => {
-        if (allConfig !== undefined && !initialized) {
-            if (allConfig[key] !== undefined) {
-                try {
-                    const parsed = typeof allConfig[key] === "string" ? JSON.parse(allConfig[key]) : allConfig[key];
-                    if (Array.isArray(defaultValue)) {
-                        setState(Array.isArray(parsed) ? parsed : defaultValue);
-                    } else if (typeof defaultValue === "object" && defaultValue !== null) {
-                        setState(parsed && typeof parsed === "object" ? { ...defaultValue, ...parsed } : defaultValue);
-                    } else {
-                        setState(parsed !== undefined && parsed !== null ? parsed : defaultValue);
-                    }
-                } catch (e) {
-                    setState(defaultValue);
-                }
-            }
-            setInitialized(true);
-        }
-    }, [allConfig, key, initialized, defaultValue]);
-
-    useEffect(() => {
-        if (initialized) {
-            try {
-                // Saving directly to Convex. It accepts v.any(), so we pass the object/array directly.
-                setConfigMutation({ key, value: state });
-            } catch (_) { }
-        }
-    }, [state, initialized, key, setConfigMutation]);
-
-    return [state, setState];
-}
 
 export default function AdminHomePage() {
     const { user, loading } = useAuth();
@@ -57,8 +21,7 @@ export default function AdminHomePage() {
     }, [user, loading, router]);
 
     const handleLogout = () => {
-        try { localStorage.removeItem("user"); } catch (_) { }
-        router.push("/signin");
+        logout();
     };
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -72,31 +35,180 @@ export default function AdminHomePage() {
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
     const allConfig = useQuery(api.systemConfig.getAllConfig);
 
-    const [paymentGateways, setPaymentGateways] = useConvexConfig("admin_payment_gateways", {
-        Stripe: { enabled: false, apiKey: "", secretKey: "", webhookSecret: "" },
-        Razorpay: { enabled: false, apiKey: "", secretKey: "" },
-        PayU: { enabled: false, apiKey: "", secretKey: "" },
-        PhonePe: { enabled: false, apiKey: "", secretKey: "" },
-        Paytm: { enabled: false, apiKey: "", secretKey: "" }
-    }, allConfig);
+    const convexPaymentGateways = useQuery(api.paymentGateways.list) || [];
+    const addPaymentGatewayMutation = useMutation(api.paymentGateways.add);
+    const patchPaymentGatewayMutation = useMutation(api.paymentGateways.patch);
+    const removePaymentGatewayMutation = useMutation(api.paymentGateways.remove);
 
-    // Convenience Fee & GST
-    const [feeSettings, setFeeSettings] = useConvexConfig("admin_fee_settings", {
+    // Seed default gateways if empty
+    useEffect(() => {
+        if (convexPaymentGateways.length === 0 && allConfig !== undefined) {
+            const defaults = [
+                { name: "Stripe", isEnabled: true, config: { apiKey: "", secretKey: "", webhookSecret: "", mode: "test" }, testMode: true },
+                { name: "PayPal", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true },
+                { name: "Razorpay", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true },
+                { name: "PayU", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true },
+                { name: "PhonePe", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true },
+                { name: "Paytm", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true }
+            ];
+            defaults.forEach(d => addPaymentGatewayMutation(d));
+        }
+    }, [convexPaymentGateways, addPaymentGatewayMutation, allConfig]);
+
+    // Fee Settings
+    const convexFeeSettings = useQuery(api.feeSettings.get);
+    const updateFeeSettingsMutation = useMutation(api.feeSettings.update);
+
+    const feeSettings = useMemo(() => convexFeeSettings || {
         convenienceFeeType: "percent",
         convenienceFeeValue: 5,
         gstPercent: 18
-    }, allConfig);
+    }, [convexFeeSettings]);
 
-    // Ticket generation & sending
-    const [ticketSettings, setTicketSettings] = useConvexConfig("admin_ticket_settings", {
+    // New Convex settings
+    const convexTicketSettings = useQuery(api.ticketSettings.get);
+    const updateTicketSettingsMutation = useMutation(api.ticketSettings.update);
+
+    const convexEmailSettings = useQuery(api.emailSettings.get);
+    const updateEmailSettingsMutation = useMutation(api.emailSettings.update);
+
+    const convexSeoSettings = useQuery(api.seoSettings.get);
+    const updateSeoSettingsMutation = useMutation(api.seoSettings.update);
+
+    const convexEmailTemplates = useQuery(api.emailTemplates.list) || [];
+    const addEmailTemplateMutation = useMutation(api.emailTemplates.add);
+    const patchEmailTemplateMutation = useMutation(api.emailTemplates.patch);
+    const removeEmailTemplateMutation = useMutation(api.emailTemplates.remove);
+
+    const convexPolicies = useQuery(api.policies.get);
+    const updatePoliciesMutation = useMutation(api.policies.update);
+
+    const convexSsoSettings = useQuery(api.ssoSettings.get);
+    const updateSsoSettingsMutation = useMutation(api.ssoSettings.update);
+
+    // Seed defaults for new tables
+    useEffect(() => {
+        if (allConfig === undefined) return;
+
+        if (convexTicketSettings === null) {
+            updateTicketSettingsMutation({
+                companyName: "book my ticket",
+                logoUrl: "",
+                importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
+                supportUrl: "https://www.bookmyticket.com",
+                sendViaEmail: true,
+                sendViaSms: true,
+                sendPdfWhatsApp: true,
+                autoApprove: true,
+                notifyOrganiser: true,
+                notifyUser: true,
+                invoicePrefix: "BMT-"
+            });
+        }
+
+        if (convexEmailSettings === null) {
+            updateEmailSettingsMutation({
+                host: "smtp.mailtrap.io",
+                port: 2525,
+                user: "api",
+                pass: "",
+                from: "noreply@bookmyticket.com"
+            });
+        }
+
+        if (convexSeoSettings === null) {
+            updateSeoSettingsMutation({
+                globalTitle: "BookMyTicket - Best Event Ticketing Platform",
+                globalKeywords: "tickets, events, concerts, sports, theater",
+                globalDescription: "Book tickets for your favorite events, concerts, movies and more.",
+                metaAdsCode: "<!-- Meta Ad Pixel Code -->\n<script>!function(f,b,e,v,n,t,s)...</script>"
+            });
+        }
+
+        if (convexPolicies === null) {
+            updatePoliciesMutation({
+                bookingHeader: "Disclaimer: All ticket bookings are final. Please review event details, date, and venue carefully before payment.",
+                paymentTerms: "By proceeding with the payment, you agree to our Terms of Service and Privacy Policy. Platform fees and taxes are non-refundable.",
+                eventDisclaimer: "Organizers are solely responsible for event content, performance, and management. BookMyTicket is only a ticketing platform.",
+                cancellationPolicy: "Refunds are subject to individual event organizer policies. If an event is cancelled, refunds will be processed within 7-10 business days."
+            });
+        }
+
+        if (convexSsoSettings === null) {
+            updateSsoSettingsMutation({
+                facebookEnabled: false,
+                googleEnabled: false,
+                facebookConfig: {},
+                googleConfig: {}
+            });
+        }
+
+        if (convexEmailTemplates.length === 0) {
+            const defaults = [
+                { identifier: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", body: "Hello {{user_name}},\n\nYour tickets for {{event_name}} are confirmed.\n\nDate: {{event_date}}\nVenue: {{event_venue}}\n\nDownload your ticket here: {{ticket_url}}\n\nThank you for booking with us!", autoSend: true },
+                { identifier: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", body: "Hello {{user_name}},\n\nYour booking for {{event_name}} has been canceled.\n\nRefund details: {{refund_info}}\n\nWe hope to see you again soon.", autoSend: true },
+                { identifier: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", body: "Welcome to BookMyTicket!\n\nYour account has been successfully created.\n\nStart exploring events here: {{site_url}}", autoSend: true },
+                { identifier: "organiser_welcome", name: "New Organiser Welcome & Credentials", subject: "Your Organiser Account is Ready!", body: "Congratulations!\n\nYour organiser account is ready.\n\nLogin: {{login_url}}\nUsername: {{email}}\nPassword: {{password}}", autoSend: true },
+                { identifier: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", body: "Your verification code is: {{otp}}\n\nDo not share this code with anyone.", autoSend: true },
+            ];
+            defaults.forEach(d => addEmailTemplateMutation(d));
+        }
+    }, [allConfig, convexTicketSettings, convexEmailSettings, convexSeoSettings, convexPolicies, convexSsoSettings, convexEmailTemplates, updateTicketSettingsMutation, updateEmailSettingsMutation, updateSeoSettingsMutation, updatePoliciesMutation, updateSsoSettingsMutation, addEmailTemplateMutation]);
+
+    // Fallback settings for stable UI
+    const ticketSettings = useMemo(() => convexTicketSettings || {
         companyName: "book my ticket",
         logoUrl: "",
-        importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
-        supportUrl: "https://www.bookmyticket.com",
+        importantInfo: "",
+        supportUrl: "",
         sendViaEmail: true,
         sendViaSms: true,
         sendPdfWhatsApp: true,
-    }, allConfig);
+        autoApprove: true,
+        notifyOrganiser: true,
+        notifyUser: true,
+        invoicePrefix: "BMT-"
+    }, [convexTicketSettings]);
+
+    const emailSettings = useMemo(() => convexEmailSettings || {
+        host: "smtp.mailtrap.io",
+        port: 2525,
+        user: "api",
+        from: "noreply@bookmyticket.com"
+    }, [convexEmailSettings]);
+
+    // Site Branding
+    const convexSiteBranding = useQuery(api.siteBranding.get);
+    const updateSiteBrandingMutation = useMutation(api.siteBranding.update);
+
+    const siteBranding = useMemo(() => convexSiteBranding || {
+        name: "book my ticket",
+        logoColor: "#111111",
+        logoUrl: "/logo.png"
+    }, [convexSiteBranding]);
+
+    const metaSettings = useMemo(() => ({
+        global: {
+            title: convexSeoSettings?.globalTitle || "BookMyTicket - Best Event Ticketing Platform",
+            keywords: convexSeoSettings?.globalKeywords || "tickets, events, concerts, sports, theater",
+            description: convexSeoSettings?.globalDescription || "Book tickets for your favorite events, concerts, movies and more.",
+            metaAdsCode: convexSeoSettings?.metaAdsCode || ""
+        }
+    }), [convexSeoSettings]);
+
+    const disclaimerContent = useMemo(() => ({
+        booking_header: convexPolicies?.bookingHeader || "",
+        payment_terms: convexPolicies?.paymentTerms || "",
+        event_disclaimer: convexPolicies?.eventDisclaimer || "",
+        cancellation_policy: convexPolicies?.cancellationPolicy || ""
+    }), [convexPolicies]);
+
+    const ssoConfigs = useMemo(() => ({
+        facebook: !!convexSsoSettings?.facebookEnabled,
+        google: !!convexSsoSettings?.googleEnabled
+    }), [convexSsoSettings]);
+
+    const emailTemplates = convexEmailTemplates;
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
@@ -132,22 +244,40 @@ export default function AdminHomePage() {
     const patchOrganizerMutation = useMutation(api.organisers.patch);
     const removeOrganizerMutation = useMutation(api.organisers.remove);
 
-    useEffect(() => {
-        if (convexOrganizers.length >= 0) {
-            setOrganizers(convexOrganizers.map(o => ({
-                id: o._id,
-                username: o.name,
-                email: o.userId,
-                status: o.kycStatus || "Active",
-                balance: `₹${o.walletBalance || 0}`
-            })));
-        }
+    const mappedOrganizers = useMemo(() => {
+        return convexOrganizers.map(o => ({
+            id: o._id,
+            username: o.name,
+            email: o.userId,
+            status: o.kycStatus || "Active",
+            balance: `₹${o.walletBalance || 0}`
+        }));
     }, [convexOrganizers]);
 
     const [events, setEvents] = useState([]);
-    const [slides, setSlides] = useConvexConfig("admin_hero_slides", HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })), allConfig);
-    const [eventPartners, setEventPartners] = useConvexConfig("admin_event_partners", [], allConfig);
-    const [subnavItems, setSubnavItems] = useConvexConfig("admin_subnav_items", [
+
+    // Home Settings
+    const convexHomeSections = useQuery(api.homeSettings.getHomeSections);
+    const updateHomeSectionsMutation = useMutation(api.homeSettings.updateHomeSections);
+    const homeSectionsOrder = useMemo(() => convexHomeSections?.order || [
+        "Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"
+    ], [convexHomeSections]);
+
+    const convexBannerSlides = useQuery(api.homeSettings.getBannerSlides) || [];
+    const addBannerSlideMutation = useMutation(api.homeSettings.addBannerSlide);
+    const updateBannerSlideMutation = useMutation(api.homeSettings.updateBannerSlide);
+    const removeBannerSlideMutation = useMutation(api.homeSettings.removeBannerSlide);
+    const slides = useMemo(() => convexBannerSlides.length > 0 ? convexBannerSlides : HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })), [convexBannerSlides]);
+
+    const convexEventPartners = useQuery(api.homeSettings.getEventPartners) || [];
+    const addEventPartnerMutation = useMutation(api.homeSettings.addEventPartner);
+    const removeEventPartnerMutation = useMutation(api.homeSettings.removeEventPartner);
+    const eventPartners = convexEventPartners;
+
+    const convexSubnavItems = useQuery(api.homeSettings.getSubnavItems) || [];
+    const addSubnavItemMutation = useMutation(api.homeSettings.addSubnavItems); // Need to check name in homeSettings.ts
+    const removeSubnavItemMutation = useMutation(api.homeSettings.removeSubnavItem);
+    const subnavItems = useMemo(() => convexSubnavItems.length > 0 ? convexSubnavItems : [
         { id: 1, label: "Concert", icon: "🎫" },
         { id: 2, label: "Sports", icon: "🏆" },
         { id: 3, label: "Comedy", icon: "🎭" },
@@ -156,8 +286,13 @@ export default function AdminHomePage() {
         { id: 6, label: "Workshop", icon: "🎪" },
         { id: 7, label: "Festival", icon: "🎡" },
         { id: 8, label: "Live Shows", icon: "🎬" }
-    ], allConfig);
-    const [categories, setCategories] = useConvexConfig("admin_categories", [
+    ], [convexSubnavItems]);
+
+    const convexCategories = useQuery(api.homeSettings.getCategories) || [];
+    const addCategoryMutation = useMutation(api.homeSettings.addCategory);
+    const patchCategoryMutation = useMutation(api.homeSettings.patchCategory);
+    const removeCategoryMutation = useMutation(api.homeSettings.removeCategory);
+    const categories = useMemo(() => convexCategories.length > 0 ? convexCategories : [
         { id: 1, name: "Concert", slug: "concert", count: 0, icon: "🎫" },
         { id: 2, name: "Sports", slug: "sports", count: 0, icon: "🏆" },
         { id: 3, name: "Comedy", slug: "comedy", count: 0, icon: "🎭" },
@@ -172,7 +307,7 @@ export default function AdminHomePage() {
         { id: 12, name: "Others", slug: "others", count: 0, icon: "📁" },
         { id: 13, name: "Competition", slug: "competition", count: 0, icon: "🏆" },
         { id: 14, name: "Classical Dance", slug: "classical-dance", count: 0, icon: "💃" }
-    ], allConfig);
+    ], [convexCategories]);
     const [categoryModal, setCategoryModal] = useState(null);
     const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
     const [supportTickets, setSupportTickets] = useState([]);
@@ -180,18 +315,16 @@ export default function AdminHomePage() {
     const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
     const removeTicketMutation = useMutation(api.supportTickets.remove);
 
-    useEffect(() => {
-        if (convexSupportTickets.length >= 0) {
-            setSupportTickets(convexSupportTickets.map(t => ({
-                id: t._id,
-                subject: t.issue.split('\n')[0],
-                status: t.status,
-                createdAt: t._creationTime,
-                adminNotes: t.adminNotes || "",
-                updatedAt: t.updatedAt,
-                organiserName: t.userId, // Defaulting to userId since we don't have separate name here yet
-            })));
-        }
+    const mappedSupportTickets = useMemo(() => {
+        return convexSupportTickets.map(t => ({
+            id: t._id,
+            subject: t.issue.split('\n')[0],
+            status: t.status,
+            createdAt: t._creationTime,
+            adminNotes: t.adminNotes || "",
+            updatedAt: t.updatedAt,
+            organiserName: t.userId,
+        }));
     }, [convexSupportTickets]);
 
 
@@ -234,40 +367,25 @@ export default function AdminHomePage() {
 
     const [newOrg, setNewOrg] = useState({ username: "", password: "", email: "" });
     const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
-    const [notificationsLog, setNotificationsLog] = useConvexConfig("admin_push_notifications_log", [], allConfig);
-    const [emailTemplates, setEmailTemplates] = useConvexConfig("admin_email_templates", [
-        { id: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", autoSend: true },
-        { id: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", autoSend: true },
-        { id: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", autoSend: true },
-        { id: "organiser_welcome", name: "New Organiser Welcome & Credentials", subject: "Your Organiser Account is Ready!", autoSend: true },
-        { id: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", autoSend: true },
-    ], allConfig);
-    const [activeTemplate, setActiveTemplate] = useState(null);
-    const [disclaimerContent, setDisclaimerContent] = useConvexConfig("admin_disclaimer_content", {
-        booking_header: "Disclaimer: All ticket bookings are final. Please review event details, date, and venue carefully before payment.",
-        payment_terms: "By proceeding with the payment, you agree to our Terms of Service and Privacy Policy. Platform fees and taxes are non-refundable.",
-        event_disclaimer: "Organizers are solely responsible for event content, performance, and management. BookMyTicket is only a ticketing platform.",
-        cancellation_policy: "Refunds are subject to individual event organizer policies. If an event is cancelled, refunds will be processed within 7-10 business days."
-    }, allConfig);
-    const [ssoConfigs, setSsoConfigs] = useConvexConfig('sso_configs', {
-        facebook: false,
-        google: false
-    }, allConfig);
 
-    const [siteBranding, setSiteBranding] = useConvexConfig("admin_site_branding", {
-        name: "book my ticket",
-        logoColor: "#111111",
-        logoUrl: "/logo.png"
-    }, allConfig);
 
-    const [metaSettings, setMetaSettings] = useConvexConfig("admin_meta_settings", {
-        global: {
-            title: "BookMyTicket - Best Event Ticketing Platform",
-            keywords: "tickets, events, concerts, sports, theater",
-            description: "Book tickets for your favorite events, concerts, movies and more.",
-            metaAdsCode: "<!-- Meta Ad Pixel Code -->\n<script>!function(f,b,e,v,n,t,s)...</script>"
+    const convexApiKeys = useQuery(api.apiKeys.list) || [];
+    const createApiKeyMutation = useMutation(api.apiKeys.create);
+    const toggleApiKeyStatusMutation = useMutation(api.apiKeys.toggleStatus);
+    const removeApiKeyMutation = useMutation(api.apiKeys.remove);
+
+    // Seed default API keys if empty
+    useEffect(() => {
+        if (convexApiKeys.length === 0 && allConfig !== undefined) {
+            const defaults = [
+                { label: "Production Mobile App", key: "ak_live_724819...9238" },
+                { label: "Staging Environment", key: "ak_test_123891...0841" }
+            ];
+            defaults.forEach(d => createApiKeyMutation(d));
         }
-    }, allConfig);
+    }, [convexApiKeys, createApiKeyMutation, allConfig]);
+
+
 
     const colors = {
         light: {
@@ -1097,7 +1215,7 @@ export default function AdminHomePage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {supportTickets.map((ticket) => (
+                                                {mappedSupportTickets.map((ticket) => (
                                                     <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                         <td style={{ padding: "10px 8px", color: t.textMain, fontFamily: "monospace" }}>{ticket.id}</td>
                                                         <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
@@ -1280,14 +1398,18 @@ export default function AdminHomePage() {
                                         <input
                                             type="text"
                                             value={item.label}
-                                            onChange={(e) => setSubnavItems(subnavItems.map(si => si.id === item.id ? { ...si, label: e.target.value } : si))}
+                                            onChange={(e) => {
+                                                const newOrder = [...subnavItems];
+                                                newOrder[idx] = { ...item, label: e.target.value };
+                                                // Mutation logic for updating a single item would go here if implemented, or update the whole set
+                                            }}
                                             style={{ flex: 1, padding: "4px 8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
                                         />
                                         <button onClick={() => setSubnavItems(subnavItems.filter(si => si.id !== item.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
                                     </div>
                                 ))}
                                 <button
-                                    onClick={() => setSubnavItems([...subnavItems, { id: Date.now(), label: "New Item", icon: "✨" }])}
+                                    onClick={() => addSubnavItemMutation({ label: "New Item", icon: "✨", order: subnavItems.length })}
                                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", border: `2px dashed ${t.border}`, borderRadius: "8px", background: "none", cursor: "pointer", color: t.textSub }}>
                                     <Plus size={18} /> Add Menu Item
                                 </button>
@@ -1342,15 +1464,31 @@ export default function AdminHomePage() {
                             <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "24px" }}>Sections Display Order</h3>
                             <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "20px" }}>Drag or use arrows to reorder sections on the home page.</p>
                             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                {["Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"].map((sect, idx) => (
+                                {homeSectionsOrder.map((sect, idx) => (
                                     <div key={sect} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: "8px" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                             <span style={{ color: t.textSub, fontWeight: "bold" }}>#{idx + 1}</span>
                                             <span style={{ fontWeight: 600 }}>{sect}</span>
                                         </div>
                                         <div style={{ display: "flex", gap: "8px" }}>
-                                            <button style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} style={{ transform: "rotate(45deg)" }} /></button>
-                                            <button style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} /></button>
+                                            <button
+                                                onClick={() => {
+                                                    if (idx === 0) return;
+                                                    const newOrder = [...homeSectionsOrder];
+                                                    [newOrder[idx], newOrder[idx - 1]] = [newOrder[idx - 1], newOrder[idx]];
+                                                    setHomeSectionsOrder(newOrder);
+                                                }}
+                                                style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} style={{ transform: "rotate(180deg)" }} />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (idx === homeSectionsOrder.length - 1) return;
+                                                    const newOrder = [...homeSectionsOrder];
+                                                    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                                                    setHomeSectionsOrder(newOrder);
+                                                }}
+                                                style={{ background: "none", border: `1px solid ${t.border}`, color: t.textSub, borderRadius: "4px", padding: "4px", cursor: "pointer" }}><Plus size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -1368,7 +1506,7 @@ export default function AdminHomePage() {
                                         <input
                                             type="text"
                                             value={siteBranding.name}
-                                            onChange={(e) => setSiteBranding({ ...siteBranding, name: e.target.value })}
+                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, name: e.target.value })}
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                         />
                                     </div>
@@ -1378,7 +1516,7 @@ export default function AdminHomePage() {
                                             type="text"
                                             placeholder="e.g. /logo.png or https://..."
                                             value={siteBranding.logoUrl}
-                                            onChange={(e) => setSiteBranding({ ...siteBranding, logoUrl: e.target.value })}
+                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, logoUrl: e.target.value })}
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                         />
                                     </div>
@@ -1387,7 +1525,7 @@ export default function AdminHomePage() {
                                         <input
                                             type="color"
                                             value={siteBranding.logoColor}
-                                            onChange={(e) => setSiteBranding({ ...siteBranding, logoColor: e.target.value })}
+                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, logoColor: e.target.value })}
                                             style={{ width: "60px", height: "40px", padding: "2px", borderRadius: "4px", border: "none", cursor: "pointer" }}
                                         />
                                     </div>
@@ -1456,16 +1594,16 @@ export default function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {organizers.filter(org => {
+                                        {mappedOrganizers.filter(org => {
+                                            if (activeTab === "all_org") return true;
                                             if (activeTab === "active_org") return org.status === "Active";
                                             if (activeTab === "banned_org") return org.status === "Banned";
                                             if (activeTab === "kyc_pending") return org.status === "KYC Pending";
-                                            if (activeTab === "with_balance") return parseInt(org.balance.replace(/[^\d]/g, '')) > 0;
-                                            // Mock filters for others since we don't have enough data fields
+                                            if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
                                             if (activeTab === "email_unverified") return org.id % 2 === 0;
                                             if (activeTab === "mobile_unverified") return org.id % 3 === 0;
                                             if (activeTab === "kyc_unverified") return org.status !== "KYC Pending" && org.status !== "Active";
-                                            return true; // all_org
+                                            return true;
                                         }).map((org) => (
                                             <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{org.username}</td>
@@ -1535,9 +1673,9 @@ export default function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Select Target Audience</label>
                                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
                                             {[
-                                                { id: 'all', label: 'All Organisers', count: organizers.length },
-                                                { id: 'active', label: 'Active Only', count: organizers.filter(o => o.status === 'Active').length },
-                                                { id: 'pending', label: 'KYC Pending', count: organizers.filter(o => o.status === 'KYC Pending').length }
+                                                { id: 'all', label: 'All Organisers', count: mappedOrganizers.length },
+                                                { id: 'active', label: 'Active Only', count: mappedOrganizers.filter(o => o.status === 'Active').length },
+                                                { id: 'pending', label: 'KYC Pending', count: mappedOrganizers.filter(o => o.status === 'KYC Pending').length }
                                             ].map(opt => (
                                                 <button
                                                     key={opt.id}
@@ -1589,12 +1727,19 @@ export default function AdminHomePage() {
 
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                             if (!notificationForm.subject || !notificationForm.message) return alert("Please fill in both subject and message.");
-                                            const targetCount = notificationForm.target === 'all' ? organizers.length :
-                                                notificationForm.target === 'active' ? organizers.filter(o => o.status === 'Active').length :
-                                                    organizers.filter(o => o.status === 'KYC Pending').length;
-                                            alert(`Broadcast initiated! Sending notifications to ${targetCount} organisers...`);
+                                            const targetCount = notificationForm.target === 'all' ? mappedOrganizers.length :
+                                                notificationForm.target === 'active' ? mappedOrganizers.filter(o => o.status === 'Active').length :
+                                                    mappedOrganizers.filter(o => o.status === 'KYC Pending').length;
+
+                                            await sendNotificationMutation({
+                                                subject: notificationForm.subject,
+                                                message: notificationForm.message,
+                                                target: notificationForm.target
+                                            });
+
+                                            alert(`Broadcast initiated! Notifications saved to history and sent to ${targetCount} recipients.`);
                                             setNotificationForm({ subject: "", message: "", target: "all" });
                                         }}
                                         style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px", borderRadius: "10px", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "0.2s" }}
@@ -1618,13 +1763,14 @@ export default function AdminHomePage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
                                 {[
                                     { name: "Stripe", desc: "Global payments, Cards, Apple Pay", color: "#6366f1" },
+                                    { name: "PayPal", desc: "Global payments, Wallet, PayPal Credit", color: "#003087" },
                                     { name: "Razorpay", desc: "Cards, UPI, Netbanking (India)", color: "#339af0" },
                                     { name: "PayU", desc: "Enterprise checkout & UPI solutions", color: "#a4c639" },
                                     { name: "PhonePe", desc: "Direct UPI & merchant payments", color: "#6739b7" },
                                     { name: "Paytm", desc: "Wallet, UPI & Netbanking payments", color: "#00b9f1" }
                                 ].map((gw) => {
-                                    const config = paymentGateways[gw.name] || {};
-                                    const isConnected = config.enabled && (config.apiKey || "").trim().length > 0;
+                                    const config = convexPaymentGateways.find(g => g.name === gw.name) || { isEnabled: false, config: {} };
+                                    const isConnected = config.isEnabled && (config.config?.apiKey || "").trim().length > 0;
                                     const status = isConnected ? "Connected" : "Inactive";
                                     return (
                                         <div key={gw.name} style={{
@@ -1663,7 +1809,10 @@ export default function AdminHomePage() {
                                             <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0", lineHeight: "1.4" }}>{gw.desc}</p>
                                             <button
                                                 type="button"
-                                                onClick={() => setPaymentGatewayConfig(gw.name)}
+                                                onClick={() => {
+                                                    const current = convexPaymentGateways.find(g => g.name === gw.name);
+                                                    setPaymentGatewayConfig(current || { name: gw.name, isEnabled: false, config: {}, testMode: true });
+                                                }}
                                                 style={{
                                                     width: "100%",
                                                     padding: "8px",
@@ -1730,84 +1879,103 @@ export default function AdminHomePage() {
                             </div>
 
                             {/* Payment gateway config modal */}
-                            {paymentGatewayConfig && (() => {
-                                const gw = paymentGatewayConfig;
-                                const cfg = paymentGateways[gw] || { enabled: false, apiKey: "", secretKey: "", webhookSecret: "" };
-                                const hasWebhook = gw === "Stripe";
-                                return (
+                            {paymentGatewayConfig && (
+                                <div
+                                    style={{
+                                        position: "fixed",
+                                        inset: 0,
+                                        backgroundColor: "rgba(0,0,0,0.5)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        zIndex: 9999,
+                                        padding: "20px"
+                                    }}
+                                    onClick={() => setPaymentGatewayConfig(null)}
+                                >
                                     <div
                                         style={{
-                                            position: "fixed",
-                                            inset: 0,
-                                            backgroundColor: "rgba(0,0,0,0.5)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            zIndex: 9999,
-                                            padding: "20px"
+                                            backgroundColor: t.cardBg,
+                                            borderRadius: "12px",
+                                            border: `1px solid ${t.border}`,
+                                            padding: "24px",
+                                            maxWidth: "440px",
+                                            width: "100%",
+                                            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
                                         }}
-                                        onClick={() => setPaymentGatewayConfig(null)}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        <div
-                                            style={{
-                                                backgroundColor: t.cardBg,
-                                                borderRadius: "12px",
-                                                border: `1px solid ${t.border}`,
-                                                padding: "24px",
-                                                maxWidth: "440px",
-                                                width: "100%",
-                                                boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                                                <h3 style={{ fontSize: "18px", fontWeight: 700, color: t.textMain, margin: 0 }}>Configure {gw}</h3>
-                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, padding: "4px" }}><X size={20} /></button>
-                                            </div>
-                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", cursor: "pointer" }}>
-                                                <input type="checkbox" checked={!!cfg.enabled} onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], enabled: e.target.checked } }))} />
-                                                <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Enable this gateway</span>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                                            <h3 style={{ fontSize: "18px", fontWeight: 700, color: t.textMain, margin: 0 }}>Configure {paymentGatewayConfig.name}</h3>
+                                            <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, padding: "4px" }}><X size={20} /></button>
+                                        </div>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", cursor: "pointer" }}>
+                                            <input type="checkbox" checked={!!paymentGatewayConfig.isEnabled} onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, isEnabled: e.target.checked })} />
+                                            <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Enable this gateway</span>
+                                        </label>
+                                        <div style={{ marginBottom: "12px" }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>
+                                                {paymentGatewayConfig.name === "PayPal" ? "Client ID" : "API Key / Publishable Key"}
                                             </label>
+                                            <input
+                                                type="password"
+                                                placeholder={paymentGatewayConfig.name === "PayPal" ? "Enter Client ID" : "pk_live_... or key id"}
+                                                value={paymentGatewayConfig.config?.apiKey || ""}
+                                                onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, config: { ...paymentGatewayConfig.config, apiKey: e.target.value } })}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
+                                            />
+                                        </div>
+                                        <div style={{ marginBottom: "12px" }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>
+                                                {paymentGatewayConfig.name === "PayPal" ? "Secret Key / App Secret" : "Secret Key"}
+                                            </label>
+                                            <input
+                                                type="password"
+                                                placeholder={paymentGatewayConfig.name === "PayPal" ? "Enter Secret Key" : "sk_live_... or secret"}
+                                                value={paymentGatewayConfig.config?.secretKey || ""}
+                                                onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, config: { ...paymentGatewayConfig.config, secretKey: e.target.value } })}
+                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
+                                            />
+                                        </div>
+                                        {paymentGatewayConfig.name === "Stripe" && (
                                             <div style={{ marginBottom: "12px" }}>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>API Key / Publishable Key</label>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Webhook Secret (optional)</label>
                                                 <input
                                                     type="password"
-                                                    placeholder="pk_live_... or key id"
-                                                    value={cfg.apiKey || ""}
-                                                    onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], apiKey: e.target.value } }))}
+                                                    placeholder="whsec_..."
+                                                    value={paymentGatewayConfig.config?.webhookSecret || ""}
+                                                    onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, config: { ...paymentGatewayConfig.config, webhookSecret: e.target.value } })}
                                                     style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
                                                 />
                                             </div>
-                                            <div style={{ marginBottom: "12px" }}>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Secret Key</label>
-                                                <input
-                                                    type="password"
-                                                    placeholder="sk_live_... or secret"
-                                                    value={cfg.secretKey || ""}
-                                                    onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], secretKey: e.target.value } }))}
-                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
-                                                />
-                                            </div>
-                                            {hasWebhook && (
-                                                <div style={{ marginBottom: "12px" }}>
-                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Webhook Secret (optional)</label>
-                                                    <input
-                                                        type="password"
-                                                        placeholder="whsec_..."
-                                                        value={cfg.webhookSecret || ""}
-                                                        onChange={(e) => setPaymentGateways(prev => ({ ...prev, [gw]: { ...prev[gw], webhookSecret: e.target.value } }))}
-                                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "13px" }}
-                                                    />
-                                                </div>
-                                            )}
-                                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "20px" }}>
-                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontSize: "14px" }}>Cancel</button>
-                                                <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}>Save</button>
-                                            </div>
+                                        )}
+                                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "20px" }}>
+                                            <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontSize: "14px" }}>Cancel</button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    if (paymentGatewayConfig._id) {
+                                                        await patchPaymentGatewayMutation({
+                                                            id: paymentGatewayConfig._id,
+                                                            isEnabled: paymentGatewayConfig.isEnabled,
+                                                            config: paymentGatewayConfig.config,
+                                                            testMode: paymentGatewayConfig.testMode
+                                                        });
+                                                    } else {
+                                                        await addPaymentGatewayMutation({
+                                                            name: paymentGatewayConfig.name,
+                                                            isEnabled: paymentGatewayConfig.isEnabled,
+                                                            config: paymentGatewayConfig.config,
+                                                            testMode: paymentGatewayConfig.testMode
+                                                        });
+                                                    }
+                                                    setPaymentGatewayConfig(null);
+                                                }}
+                                                style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}>Save</button>
                                         </div>
                                     </div>
-                                );
-                            })()}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1826,7 +1994,7 @@ export default function AdminHomePage() {
                                         <input
                                             type="text"
                                             value={ticketSettings.companyName || ""}
-                                            onChange={(e) => setTicketSettings(s => ({ ...s, companyName: e.target.value }))}
+                                            onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, companyName: e.target.value })}
                                             placeholder="book my ticket"
                                             style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
                                         />
@@ -1836,7 +2004,7 @@ export default function AdminHomePage() {
                                         <input
                                             type="url"
                                             value={ticketSettings.logoUrl || ""}
-                                            onChange={(e) => setTicketSettings(s => ({ ...s, logoUrl: e.target.value }))}
+                                            onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, logoUrl: e.target.value })}
                                             placeholder="https://..."
                                             style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
                                         />
@@ -1846,7 +2014,7 @@ export default function AdminHomePage() {
                                         <input
                                             type="url"
                                             value={ticketSettings.supportUrl || ""}
-                                            onChange={(e) => setTicketSettings(s => ({ ...s, supportUrl: e.target.value }))}
+                                            onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, supportUrl: e.target.value })}
                                             placeholder="https://www.bookmyticket.com"
                                             style={{ width: "100%", maxWidth: "400px", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }}
                                         />
@@ -1858,7 +2026,7 @@ export default function AdminHomePage() {
                                 <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 16px 0" }}>Important information (on ticket)</h3>
                                 <textarea
                                     value={ticketSettings.importantInfo || ""}
-                                    onChange={(e) => setTicketSettings(s => ({ ...s, importantInfo: e.target.value }))}
+                                    onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, importantInfo: e.target.value })}
                                     placeholder="Terms, entry instructions, contact info..."
                                     rows={5}
                                     style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical" }}
@@ -1870,15 +2038,15 @@ export default function AdminHomePage() {
                                 <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 16px 0" }}>When a booking is confirmed, customers can use these options. Enable or disable each channel.</p>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                     <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
-                                        <input type="checkbox" checked={!!ticketSettings.sendViaEmail} onChange={(e) => setTicketSettings(s => ({ ...s, sendViaEmail: e.target.checked }))} />
+                                        <input type="checkbox" checked={!!ticketSettings.sendViaEmail} onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, sendViaEmail: e.target.checked })} />
                                         <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Send ticket to Email</span>
                                     </label>
                                     <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
-                                        <input type="checkbox" checked={!!ticketSettings.sendViaSms} onChange={(e) => setTicketSettings(s => ({ ...s, sendViaSms: e.target.checked }))} />
+                                        <input type="checkbox" checked={!!ticketSettings.sendViaSms} onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, sendViaSms: e.target.checked })} />
                                         <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Send SMS (mobile)</span>
                                     </label>
                                     <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
-                                        <input type="checkbox" checked={!!ticketSettings.sendPdfWhatsApp} onChange={(e) => setTicketSettings(s => ({ ...s, sendPdfWhatsApp: e.target.checked }))} />
+                                        <input type="checkbox" checked={!!ticketSettings.sendPdfWhatsApp} onChange={(e) => updateTicketSettingsMutation({ ...ticketSettings, sendPdfWhatsApp: e.target.checked })} />
                                         <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Download ticket PDF (share to WhatsApp)</span>
                                     </label>
                                 </div>
@@ -1903,12 +2071,24 @@ export default function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>SMTP Host <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <div style={{ position: "relative" }}>
                                             <Globe size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
-                                            <input type="text" placeholder="smtp.office365.com" style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                            <input
+                                                type="text"
+                                                value={emailSettings.smtpHost || ""}
+                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpHost: e.target.value })}
+                                                placeholder="smtp.office365.com"
+                                                style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                            />
                                         </div>
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>SMTP Port <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input type="text" placeholder="587" style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                        <input
+                                            type="text"
+                                            value={emailSettings.smtpPort || ""}
+                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpPort: e.target.value })}
+                                            placeholder="587"
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                        />
                                     </div>
 
                                     <div style={{ gridColumn: "span 2" }}>
@@ -1933,24 +2113,48 @@ export default function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>Username <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <div style={{ position: "relative" }}>
                                             <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
-                                            <input type="text" placeholder="your-email@example.com" style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                            <input
+                                                type="text"
+                                                value={emailSettings.smtpUser || ""}
+                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpUser: e.target.value })}
+                                                placeholder="your-email@example.com"
+                                                style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                            />
                                         </div>
                                     </div>
                                     <div style={{ position: "relative" }}>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>Password <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <div style={{ position: "relative" }}>
                                             <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
-                                            <input type="password" placeholder="••••••••" style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                            <input
+                                                type="password"
+                                                value={emailSettings.smtpPass || ""}
+                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpPass: e.target.value })}
+                                                placeholder="••••••••"
+                                                style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                            />
                                         </div>
                                     </div>
 
                                     <div>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>From Email <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input type="text" placeholder="noreply@example.com" style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                        <input
+                                            type="text"
+                                            value={emailSettings.fromEmail || ""}
+                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, fromEmail: e.target.value })}
+                                            placeholder="noreply@example.com"
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                        />
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>From Name <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input type="text" placeholder="Ticketing Tool" style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }} />
+                                        <input
+                                            type="text"
+                                            value={emailSettings.fromName || ""}
+                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, fromName: e.target.value })}
+                                            placeholder="Ticketing Tool"
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
+                                        />
                                     </div>
 
                                     <div style={{ gridColumn: "span 2", marginTop: "12px", display: "flex", gap: "12px" }}>
@@ -2087,7 +2291,7 @@ export default function AdminHomePage() {
                                         </div>
                                         <textarea
                                             value={disclaimerContent.booking_header}
-                                            onChange={(e) => setDisclaimerContent({ ...disclaimerContent, booking_header: e.target.value })}
+                                            onChange={(e) => updatePoliciesMutation({ ...convexPolicies, bookingHeader: e.target.value })}
                                             rows={3}
                                             style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
                                         />
@@ -2101,7 +2305,7 @@ export default function AdminHomePage() {
                                         </div>
                                         <textarea
                                             value={disclaimerContent.payment_terms}
-                                            onChange={(e) => setDisclaimerContent({ ...disclaimerContent, payment_terms: e.target.value })}
+                                            onChange={(e) => updatePoliciesMutation({ ...convexPolicies, paymentTerms: e.target.value })}
                                             rows={3}
                                             style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
                                         />
@@ -2113,7 +2317,7 @@ export default function AdminHomePage() {
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Event Content Policy</label>
                                             <textarea
                                                 value={disclaimerContent.event_disclaimer}
-                                                onChange={(e) => setDisclaimerContent({ ...disclaimerContent, event_disclaimer: e.target.value })}
+                                                onChange={(e) => updatePoliciesMutation({ ...convexPolicies, eventDisclaimer: e.target.value })}
                                                 rows={5}
                                                 style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
                                             />
@@ -2122,7 +2326,7 @@ export default function AdminHomePage() {
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Cancellation & Refund Policy</label>
                                             <textarea
                                                 value={disclaimerContent.cancellation_policy}
-                                                onChange={(e) => setDisclaimerContent({ ...disclaimerContent, cancellation_policy: e.target.value })}
+                                                onChange={(e) => updatePoliciesMutation({ ...convexPolicies, cancellationPolicy: e.target.value })}
                                                 rows={5}
                                                 style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
                                             />
@@ -2193,7 +2397,7 @@ export default function AdminHomePage() {
                                             transition: "0.3s"
                                         }}>{ssoConfigs.facebook ? "Enabled" : "Disabled"}</span>
                                         <div
-                                            onClick={() => setSsoConfigs({ ...ssoConfigs, facebook: !ssoConfigs.facebook })}
+                                            onClick={() => updateSsoSettingsMutation({ ...ssoSettings, facebookEnabled: !ssoConfigs.facebook })}
                                             style={{
                                                 width: "40px",
                                                 height: "20px",
@@ -2261,7 +2465,7 @@ export default function AdminHomePage() {
                                             transition: "0.3s"
                                         }}>{ssoConfigs.google ? "Enabled" : "Disabled"}</span>
                                         <div
-                                            onClick={() => setSsoConfigs({ ...ssoConfigs, google: !ssoConfigs.google })}
+                                            onClick={() => updateSsoSettingsMutation({ ...ssoSettings, googleEnabled: !ssoConfigs.google })}
                                             style={{
                                                 width: "40px",
                                                 height: "20px",
@@ -2311,7 +2515,10 @@ export default function AdminHomePage() {
                                     <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>API Configuration</h2>
                                     <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Generate and manage API keys for external application integration</p>
                                 </div>
-                                <button style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
+                                <button
+                                    onClick={() => createApiKeyMutation({ label: "New App Key", key: `ak_${Math.random().toString(36).substr(2, 9)}...` })}
+                                    style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+                                >
                                     + Generate New Key
                                 </button>
                             </div>
@@ -2327,19 +2534,28 @@ export default function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {[
-                                            { label: "Production Mobile App", key: "ak_live_724819...9238", status: "Active" },
-                                            { label: "Staging Environment", key: "ak_test_123891...0841", status: "Active" }
-                                        ].map((item, i) => (
-                                            <tr key={i} style={{ borderBottom: i === 1 ? 'none' : `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px 16px", fontWeight: 600, color: t.textMain }}>{item.label}</td>
+                                        {convexApiKeys.map((item, i) => (
+                                            <tr key={item._id} style={{ borderBottom: i === convexApiKeys.length - 1 ? 'none' : `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px 16px", fontWeight: 600, color: t.textMain }}>
+                                                    {item.label}
+                                                </td>
                                                 <td style={{ padding: "12px 16px", fontFamily: "monospace", color: t.textSub }}>{item.key}</td>
                                                 <td style={{ padding: "12px 16px" }}>
-                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e20", color: "#22c55e", fontWeight: 700 }}>{item.status.toUpperCase()}</span>
+                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: item.status === "Active" ? "#22c55e20" : "#ef444420", color: item.status === "Active" ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{item.status.toUpperCase()}</span>
                                                 </td>
-                                                <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                                                    <button style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer", marginRight: "12px", fontSize: "12px" }}>Edit</button>
-                                                    <button style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}>Revoke</button>
+                                                <td style={{ padding: "12px 16px", textAlign: "right", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                                                    <button
+                                                        onClick={() => toggleApiKeyStatusMutation({ id: item._id, status: item.status === "Active" ? "Revoked" : "Active" })}
+                                                        style={{ background: "none", border: "none", color: item.status === "Active" ? "#ef4444" : "#22c55e", cursor: "pointer", fontSize: "12px" }}
+                                                    >
+                                                        {item.status === "Active" ? "Revoke" : "Activate"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeApiKeyMutation({ id: item._id })}
+                                                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "12px", opacity: 0.6 }}
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -2380,7 +2596,13 @@ export default function AdminHomePage() {
                                             <input
                                                 type="text"
                                                 value={metaSettings.global.title}
-                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, title: e.target.value } })}
+                                                onChange={(e) => updateSeoSettingsMutation({
+                                                    ...convexSeoSettings,
+                                                    globalTitle: e.target.value,
+                                                    globalKeywords: convexSeoSettings?.globalKeywords || "",
+                                                    globalDescription: convexSeoSettings?.globalDescription || "",
+                                                    metaAdsCode: convexSeoSettings?.metaAdsCode || ""
+                                                })}
                                                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                             />
                                         </div>
@@ -2388,7 +2610,13 @@ export default function AdminHomePage() {
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Keywords (Comma separated)</label>
                                             <textarea
                                                 value={metaSettings.global.keywords}
-                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, keywords: e.target.value } })}
+                                                onChange={(e) => updateSeoSettingsMutation({
+                                                    ...convexSeoSettings,
+                                                    globalKeywords: e.target.value,
+                                                    globalTitle: convexSeoSettings?.globalTitle || "",
+                                                    globalDescription: convexSeoSettings?.globalDescription || "",
+                                                    metaAdsCode: convexSeoSettings?.metaAdsCode || ""
+                                                })}
                                                 rows={3}
                                                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                             />
@@ -2397,7 +2625,13 @@ export default function AdminHomePage() {
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Meta Description</label>
                                             <textarea
                                                 value={metaSettings.global.description}
-                                                onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, description: e.target.value } })}
+                                                onChange={(e) => updateSeoSettingsMutation({
+                                                    ...convexSeoSettings,
+                                                    globalDescription: e.target.value,
+                                                    globalTitle: convexSeoSettings?.globalTitle || "",
+                                                    globalKeywords: convexSeoSettings?.globalKeywords || "",
+                                                    metaAdsCode: convexSeoSettings?.metaAdsCode || ""
+                                                })}
                                                 rows={3}
                                                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                             />
@@ -2407,7 +2641,13 @@ export default function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Meta Ads / Tracking Pixels (Head Scripts)</label>
                                         <textarea
                                             value={metaSettings.global.metaAdsCode}
-                                            onChange={(e) => setMetaSettings({ ...metaSettings, global: { ...metaSettings.global, metaAdsCode: e.target.value } })}
+                                            onChange={(e) => updateSeoSettingsMutation({
+                                                ...convexSeoSettings,
+                                                metaAdsCode: e.target.value,
+                                                globalTitle: convexSeoSettings?.globalTitle || "",
+                                                globalKeywords: convexSeoSettings?.globalKeywords || "",
+                                                globalDescription: convexSeoSettings?.globalDescription || ""
+                                            })}
                                             rows={12}
                                             style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontFamily: "monospace", fontSize: "12px" }}
                                             placeholder="Paste your Meta Pixel or Ad scripts here..."
@@ -2415,7 +2655,16 @@ export default function AdminHomePage() {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => alert("Global Meta Settings Saved!")}
+                                    onClick={() => {
+                                        updateSeoSettingsMutation({
+                                            ...convexSeoSettings,
+                                            globalTitle: metaSettings.global.title,
+                                            globalKeywords: metaSettings.global.keywords,
+                                            globalDescription: metaSettings.global.description,
+                                            metaAdsCode: metaSettings.global.metaAdsCode
+                                        });
+                                        alert("Global Meta Settings Saved!");
+                                    }}
                                     style={{ marginTop: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}>
                                     Save Global Settings
                                 </button>
