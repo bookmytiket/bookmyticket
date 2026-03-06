@@ -68,5 +68,14 @@ export default defineSchema({
         token: v.string(),
         expires: v.number(), // timestamp
     }).index("by_token", ["token"]),
-});
 
+    promotions: defineTable({
+        code: v.string(),
+        type: v.string(),       // "percent" | "fixed"
+        value: v.string(),      // discount amount or percent
+        bogo: v.optional(v.boolean()),
+        validUntil: v.optional(v.string()),
+        usage: v.optional(v.number()),
+        active: v.optional(v.boolean()),
+    }),
+});

@@ -3,13 +3,15 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
 const SUBNAV_LINKS = [
   { href: "/", label: "Events" },
   { href: "/#rsvp", label: "RSVP" },
 ];
 
 import PromotionBanner from "./PromotionBanner";
-
 
 const COUNTRIES = [
   { flag: "🇮🇳", label: "India" },
@@ -117,35 +119,14 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
 
-  useEffect(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem("admin_categories") : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
-          if (names.length > 0) setNavCategories(names);
-        }
-      }
-    } catch (_) { }
-  }, []);
+  const convexCategories = useQuery(api.systemConfig.getConfig, { key: "admin_categories" });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onStorage = (e) => {
-      if (e.key === "admin_categories" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const names = parsed.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
-            if (names.length > 0) setNavCategories(names);
-          }
-        } catch (_) { }
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    if (convexCategories && Array.isArray(convexCategories)) {
+      const names = convexCategories.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
+      if (names.length > 0) setNavCategories(names);
+    }
+  }, [convexCategories]);
 
   const setActiveCat = (cat) => {
     const params = new URLSearchParams(searchParams.toString());

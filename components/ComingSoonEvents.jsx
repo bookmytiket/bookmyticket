@@ -2,8 +2,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const COMING_SOON_EVENTS = [];
-
 function useCountdown(targetDate) {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
@@ -47,16 +45,16 @@ function TimerBox({ value, label }) {
     );
 }
 
-export default function ComingSoonEvents() {
+export default function ComingSoonEvents({ events = [] }) {
     const [idx, setIdx] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
 
-    if (COMING_SOON_EVENTS.length === 0) {
-        return null;
-    }
+    // Filter events that have a targetDate or are marked as featured/special
+    // For now, let's just use the first few events if they have dates
+    const COMING_SOON_EVENTS = events.filter(e => e.featured || e.trending).slice(0, 5);
 
-    const event = COMING_SOON_EVENTS[idx];
-    const timeLeft = useCountdown(event.targetDate);
+    const event = COMING_SOON_EVENTS[0] || {};
+    const timeLeft = useCountdown(event.date);
 
     const prev = () => setIdx((i) => (i - 1 + COMING_SOON_EVENTS.length) % COMING_SOON_EVENTS.length);
     const next = () => setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);
@@ -67,7 +65,11 @@ export default function ComingSoonEvents() {
             setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, [isHovered]);
+    }, [isHovered, COMING_SOON_EVENTS.length]);
+
+    if (COMING_SOON_EVENTS.length === 0) {
+        return null;
+    }
 
     return (
         <section
@@ -105,7 +107,7 @@ export default function ComingSoonEvents() {
                     <div style={{ flex: "0 0 60%", position: "relative", overflow: "hidden" }}>
                         <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         <div style={{ position: "absolute", top: "16px", right: "16px", background: "#fff", color: "#111", fontSize: "10px", fontWeight: 800, padding: "5px 12px", borderRadius: "6px" }}>
-                            {event.tag}
+                            {event.category || "Featured"}
                         </div>
                     </div>
 
@@ -120,8 +122,7 @@ export default function ComingSoonEvents() {
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
                                 <span style={{ fontSize: "12px", color: "#374151" }}>{event.date}</span>
-                                <span style={{ fontSize: "12px", color: "#374151" }}>{event.time}</span>
-                                <span style={{ fontSize: "12px", color: "#374151" }}>{event.venue}</span>
+                                <span style={{ fontSize: "12px", color: "#374151" }}>{event.location}</span>
                             </div>
                             <Link href={`/events/${event.id}`}>
                                 <button style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: "10px", padding: "12px 28px", fontWeight: 700, cursor: "pointer" }}>

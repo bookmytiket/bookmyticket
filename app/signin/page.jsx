@@ -55,8 +55,8 @@ export default function SignInPage() {
         const id = identifier.trim().toLowerCase();
 
         // 1. Admin login (no hashing for hardcoded admin)
-        if (id === "admin") {
-            const ok = login(identifier, password, "admin");
+        if (id === "bookmyticket-admin") {
+            const ok = login(identifier.trim(), password, "admin");
             if (!ok) setLoginError("Invalid admin credentials.");
             return;
         }

@@ -8,11 +8,13 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as bookings from "../bookings.js";
 import type * as events from "../events.js";
 import type * as migrations from "../migrations.js";
 import type * as organisers from "../organisers.js";
+import type * as promotions from "../promotions.js";
 import type * as supportTickets from "../supportTickets.js";
 import type * as systemConfig from "../systemConfig.js";
 import type * as users from "../users.js";
@@ -24,11 +26,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
   auth: typeof auth;
   bookings: typeof bookings;
   events: typeof events;
   migrations: typeof migrations;
   organisers: typeof organisers;
+  promotions: typeof promotions;
   supportTickets: typeof supportTickets;
   systemConfig: typeof systemConfig;
   users: typeof users;

@@ -100,23 +100,24 @@ export default function AdminHomePage() {
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
-    // Customers CRM
-    const [customers, setCustomers] = useConvexConfig("admin_customers", [], allConfig);
-    // Promotions: coupon codes & BOGO
-    const [promotions, setPromotions] = useConvexConfig("admin_promotions", [], allConfig);
+    // Customers — loaded directly from Convex users table (see convexUsers below)
+    // Promotions: coupon codes & BOGO — backed by Convex promotions table
+    const convexPromotions = useQuery(api.promotions.list) || [];
+    const createPromotionMutation = useMutation(api.promotions.create);
+    const removePromotionMutation = useMutation(api.promotions.remove);
     const [newPromo, setNewPromo] = useState({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
 
-    const handleCreatePromotion = () => {
-        const promo = {
-            id: Date.now(),
-            code: newPromo.code || "SAVE10",
+    const handleCreatePromotion = async () => {
+        if (!newPromo.code) return;
+        await createPromotionMutation({
+            code: newPromo.code,
             type: newPromo.type,
             value: newPromo.value || "10",
             bogo: newPromo.bogo,
             validUntil: newPromo.validUntil || "2026-12-31",
-            usage: 0
-        };
-        setPromotions([...promotions, promo]);
+            usage: 0,
+            active: true,
+        });
         setNewPromo({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
     };
 
@@ -203,6 +204,8 @@ export default function AdminHomePage() {
 
     const convexEvents = useQuery(api.events.getActiveEvents) || [];
     const convexBookings = useQuery(api.bookings.getBookings) || [];
+    const convexUsers = useQuery(api.users.list) || [];
+    const dashboardStats = useQuery(api.analytics.getDashboardStats);
 
     const deleteEventMutation = useMutation(api.events.deleteEvent);
     const updateEventMutation = useMutation(api.events.updateEvent);
@@ -231,40 +234,40 @@ export default function AdminHomePage() {
 
     const [newOrg, setNewOrg] = useState({ username: "", password: "", email: "" });
     const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
-    const [emailTemplates, setEmailTemplates] = useState([
+    const [notificationsLog, setNotificationsLog] = useConvexConfig("admin_push_notifications_log", [], allConfig);
+    const [emailTemplates, setEmailTemplates] = useConvexConfig("admin_email_templates", [
         { id: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", autoSend: true },
         { id: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", autoSend: true },
         { id: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", autoSend: true },
         { id: "organiser_welcome", name: "New Organiser Welcome & Credentials", subject: "Your Organiser Account is Ready!", autoSend: true },
         { id: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", autoSend: true },
-    ]);
+    ], allConfig);
     const [activeTemplate, setActiveTemplate] = useState(null);
-    const [disclaimerContent, setDisclaimerContent] = useState({
+    const [disclaimerContent, setDisclaimerContent] = useConvexConfig("admin_disclaimer_content", {
         booking_header: "Disclaimer: All ticket bookings are final. Please review event details, date, and venue carefully before payment.",
         payment_terms: "By proceeding with the payment, you agree to our Terms of Service and Privacy Policy. Platform fees and taxes are non-refundable.",
         event_disclaimer: "Organizers are solely responsible for event content, performance, and management. BookMyTicket is only a ticketing platform.",
         cancellation_policy: "Refunds are subject to individual event organizer policies. If an event is cancelled, refunds will be processed within 7-10 business days."
-    });
+    }, allConfig);
     const [ssoConfigs, setSsoConfigs] = useConvexConfig('sso_configs', {
         facebook: false,
         google: false
     }, allConfig);
 
-    const [siteBranding, setSiteBranding] = useState({
+    const [siteBranding, setSiteBranding] = useConvexConfig("admin_site_branding", {
         name: "book my ticket",
         logoColor: "#111111",
         logoUrl: "/logo.png"
-    });
+    }, allConfig);
 
-
-    const [metaSettings, setMetaSettings] = useState({
+    const [metaSettings, setMetaSettings] = useConvexConfig("admin_meta_settings", {
         global: {
             title: "BookMyTicket - Best Event Ticketing Platform",
             keywords: "tickets, events, concerts, sports, theater",
             description: "Book tickets for your favorite events, concerts, movies and more.",
             metaAdsCode: "<!-- Meta Ad Pixel Code -->\n<script>!function(f,b,e,v,n,t,s)...</script>"
         }
-    });
+    }, allConfig);
 
     const colors = {
         light: {
@@ -760,10 +763,12 @@ export default function AdminHomePage() {
                     {activeTab === "dashboard" && (
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
                             {[
-                                { label: "TOTAL EVENTS", value: allEvents.length.toString(), color: "#0ea5e9", icon: Ticket },
-                                { label: "TOTAL REVENUE", value: "₹0", color: "#22c55e", icon: LayoutDashboard },
-                                { label: "TOTAL ORGANIZERS", value: organizers.length.toString(), color: "#10b981", icon: Users },
-                                { label: "PAYOUTS PENDING", value: "0", color: "#64748b", icon: LayoutDashboard },
+                                { label: "TOTAL EVENTS", value: dashboardStats ? dashboardStats.totalEvents.toString() : "…", color: "#0ea5e9", icon: Ticket },
+                                { label: "TOTAL REVENUE", value: dashboardStats ? `₹${dashboardStats.totalRevenue.toLocaleString()}` : "…", color: "#22c55e", icon: LayoutDashboard },
+                                { label: "TOTAL CUSTOMERS", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", color: "#f59e0b", icon: Users },
+                                { label: "TOTAL ORGANIZERS", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", color: "#10b981", icon: Users },
+                                { label: "TOTAL TICKETS SOLD", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", color: "#8b5cf6", icon: Ticket },
+                                { label: "TOTAL BOOKINGS", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", color: "#ec4899", icon: ShoppingCart },
                             ].map((stat, i) => (
                                 <div key={i} className="stat-card" style={{ backgroundColor: theme === 'light' ? `${stat.color}05` : `${stat.color}15`, borderLeft: `4px solid ${stat.color}` }}>
                                     <div className="stat-icon-wrapper" style={{ backgroundColor: stat.color, width: "36px", height: "36px", right: "12px", top: "12px" }}>
@@ -925,28 +930,29 @@ export default function AdminHomePage() {
                                         <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Bookings</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Last activity</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Role</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Joined</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {customers.length > 0 ? customers.map((c) => (
-                                            <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        {convexUsers.length > 0 ? convexUsers.map((c) => (
+                                            <tr key={c._id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px", fontWeight: 600 }}>{c.name}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{c.email}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{c.phone || "—"}</td>
-                                                <td style={{ padding: "12px" }}>{c.bookingsCount || 0}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.lastActivity || "—"}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ padding: "2px 8px", borderRadius: "6px", backgroundColor: "#22c55e22", color: "#22c55e", fontSize: "11px", fontWeight: 700 }}>{c.role || "user"}</span>
+                                                </td>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}</td>
                                                 <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View history</button></td>
                                             </tr>
                                         )) : (
-                                            <tr><td colSpan="6" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. User history and contact info will appear here.</td></tr>
+                                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. Registered users will appear here.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+
                         </div>
                     )}
 
@@ -987,15 +993,18 @@ export default function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {promotions.length > 0 ? promotions.map((p) => (
-                                            <tr key={p.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        {convexPromotions.length > 0 ? convexPromotions.map((p) => (
+                                            <tr key={p._id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px", fontWeight: 700 }}>{p.code}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{p.type === "percent" ? "Percent" : "Fixed"}</td>
                                                 <td style={{ padding: "12px" }}>{p.type === "percent" ? p.value + "%" : "₹" + p.value}</td>
                                                 <td style={{ padding: "12px" }}>{p.bogo ? "Yes" : "No"}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{p.validUntil}</td>
                                                 <td style={{ padding: "12px" }}>{p.usage || 0}</td>
-                                                <td style={{ padding: "12px" }}><button onClick={() => setPromotions(promotions.filter(x => x.id !== p.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Delete</button></td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ marginRight: "8px", padding: "2px 8px", borderRadius: "6px", backgroundColor: p.active ? "#22c55e22" : "#ef444422", color: p.active ? "#22c55e" : "#ef4444", fontSize: "11px", fontWeight: 700 }}>{p.active ? "Active" : "Inactive"}</span>
+                                                    <button onClick={() => removePromotionMutation({ id: p._id })} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Delete</button>
+                                                </td>
                                             </tr>
                                         )) : (
                                             <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No promotions yet. Create coupon codes or Buy 1 Get 1 offers above.</td></tr>

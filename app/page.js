@@ -15,7 +15,7 @@ import VirtualEvents from '@/components/VirtualEvents';
 import RecentMemories from '@/components/RecentMemories';
 import Sponsors from '@/components/Sponsors';
 import Footer from '@/components/Footer';
-import { HOME_EVENTS, MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES } from '@/app/data/homeEvents';
+import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 
 function TicketCard({ event }) {
@@ -41,7 +41,7 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState([]);
   const [eventPartners, setEventPartners] = useState([]);
 
-  const allEventsForFilter = useMemo(() => [...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []), ...(Array.isArray(newOrgEvents) ? newOrgEvents : [])], [newOrgEvents]);
+  const allEventsForFilter = useMemo(() => Array.isArray(newOrgEvents) ? newOrgEvents : [], [newOrgEvents]);
 
   const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev) => ({
     ...ev,
@@ -56,30 +56,15 @@ export default function Home() {
     exclusive: ev.exclusive === true,
   })), [newOrgEvents]);
 
-  const featuredEventsList = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.filter((e) => e.featured) : []),
-    ...normalizedOrgEvents.filter((e) => e.featured),
-  ], [normalizedOrgEvents]);
+  const featuredEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.featured), [normalizedOrgEvents]);
 
-  const trendingEventsList = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.filter((e) => e.trending) : []),
-    ...normalizedOrgEvents.filter((e) => e.trending),
-  ], [normalizedOrgEvents]);
+  const trendingEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.trending), [normalizedOrgEvents]);
 
-  const spotlightEventsList = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.filter((e) => e.spotlight) : []),
-    ...normalizedOrgEvents.filter((e) => e.spotlight),
-  ], [normalizedOrgEvents]);
+  const spotlightEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.spotlight), [normalizedOrgEvents]);
 
-  const exclusiveEventsList = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.filter((e) => e.exclusive) : []),
-    ...normalizedOrgEvents.filter((e) => e.exclusive),
-  ], [normalizedOrgEvents]);
+  const exclusiveEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.exclusive), [normalizedOrgEvents]);
 
-  const popularEventsList = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []),
-    ...normalizedOrgEvents,
-  ], [normalizedOrgEvents]);
+  const popularEventsList = useMemo(() => normalizedOrgEvents, [normalizedOrgEvents]);
 
   const filteredEvents = useMemo(() => {
     if (!activeCat) return [];
@@ -90,9 +75,7 @@ export default function Home() {
   const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
   useEffect(() => {
-    if (convexEvents.length > 0) {
-      setNewOrgEvents(convexEvents);
-    }
+    setNewOrgEvents(convexEvents);
   }, [convexEvents]);
 
   // Fallback or old local storage cleanup (Optional: keep using convexEvents instead, logic below handles parsing well)
@@ -199,7 +182,7 @@ export default function Home() {
 
             {/* 3) Coming Soon Events */}
             <div style={{ width: '100%' }}>
-              <ComingSoonEvents />
+              <ComingSoonEvents events={normalizedOrgEvents} />
             </div>
 
             {/* 4) Trending Events — includes Organiser panel events */}
@@ -219,7 +202,7 @@ export default function Home() {
 
             {/* 7) Virtual Events */}
             <div style={{ width: '100%' }}>
-              <VirtualEvents />
+              <VirtualEvents events={normalizedOrgEvents} />
             </div>
 
             {/* 8) Recent Memories */}

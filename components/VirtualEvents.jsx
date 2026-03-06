@@ -1,9 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { HOME_EVENTS } from "@/app/data/homeEvents";
-
-const VIRTUAL_EVENTS = HOME_EVENTS.filter((e) => e.virtual);
 
 function VirtualCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -114,7 +111,8 @@ function VirtualCard({ event }) {
     );
 }
 
-export default function VirtualEvents() {
+export default function VirtualEvents({ events = [] }) {
+    const VIRTUAL_EVENTS = events.filter((e) => e.virtual);
     const scrollRef = useRef(null);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });

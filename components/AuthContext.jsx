@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
     const login = (identifier, password, role, userData = null) => {
         // Master Admin remains hardcoded
         if (role === "admin") {
-            if (identifier === "admin" && password === "admin123") {
+            if (identifier === "bookmyticket-admin" && password === "D0n+$h@rE2k26") {
                 const mockUser = { identifier, role, name: "Master Admin" };
                 setUser(mockUser);
                 localStorage.setItem("user", JSON.stringify(mockUser));
