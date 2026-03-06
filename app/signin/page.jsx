@@ -6,6 +6,7 @@ import LeftBanner from "@/components/LeftBanner";
 import { useAuth } from "@/components/AuthContext";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { hashPassword } from "@/app/utils/hashPassword";
 
 const BANNER_SLIDES = [
     { img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", sub: "Book tickets for concerts, sports & more" },
@@ -53,25 +54,26 @@ export default function SignInPage() {
 
         const id = identifier.trim().toLowerCase();
 
-        // 1. Admin login
+        // 1. Admin login (no hashing for hardcoded admin)
         if (id === "admin") {
             const ok = login(identifier, password, "admin");
             if (!ok) setLoginError("Invalid admin credentials.");
             return;
         }
 
-        // 2. Try Public User in Convex
+        // 2. Try Public User in Convex (hash password for comparison)
         try {
+            const hashed = await hashPassword(password);
             const user = await convex.query(api.users.getByEmail, { email: id });
-            if (user && user.password === password) {
+            if (user && user.password === hashed) {
                 login(identifier, password, "user", user);
                 return;
-            } else if (user && user.password !== password) {
+            } else if (user && user.password !== hashed) {
                 setLoginError("Invalid email or password. Please try again.");
                 return;
             }
         } catch (err) {
-            // Ignore error here and fall through to organiser
+            // Ignore and fall through to organiser check
         }
 
         // 3. Fallback to Organiser
@@ -88,10 +90,11 @@ export default function SignInPage() {
         if (signupPass.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
 
         try {
+            const hashed = await hashPassword(signupPass);
             await createUser({
                 name: signupName,
                 email: signupEmail,
-                password: signupPass,
+                password: hashed,
                 role: "user",
                 createdAt: new Date().toISOString()
             });
