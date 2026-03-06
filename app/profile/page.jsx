@@ -26,10 +26,16 @@ export default function ProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "my_booking");
+    const [bookingFilter, setBookingFilter] = useState("all"); // "all" | "booked" | "cancelled"
 
     // Bookings fetched from Convex DB (filtered by user ID)
-    const bookings = useQuery(api.bookings?.list || (() => []));
+    const bookings = useQuery(api.bookings?.getBookings || (() => []));
     const userBookings = bookings?.filter(b => b.userId === user?.identifier) || [];
+
+    // Derived lists
+    const bookedTickets = userBookings.filter(b => b.status === "Confirmed" || b.status === "Booked");
+    const cancelledTickets = userBookings.filter(b => b.status === "Cancelled");
+    const paidTickets = userBookings.filter(b => b.status === "Confirmed" || b.status === "Paid");
 
     // Fallback UI rendering for when user is not loaded
     if (!user) {
@@ -40,47 +46,98 @@ export default function ProfilePage() {
         );
     }
 
-    // Protection: Only allow "user" role to view this specific profile dashboard
-    if (user.role !== "user") {
-        router.push(user.role === "admin" ? "/admin" : "/organiser");
-        return null;
-    }
-
     const t = THEME;
 
     const renderTabContent = () => {
         switch (activeTab) {
             case "my_booking":
+                const displayBookings = bookingFilter === "all" ? userBookings :
+                    bookingFilter === "booked" ? bookedTickets :
+                        bookingFilter === "cancelled" ? cancelledTickets : paidTickets;
+
                 return (
                     <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                        <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>My Bookings</h3>
-                        <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>View all your purchased tickets and upcoming events.</p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                            <div>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px", color: t.textMain }}>My Event Experience</h3>
+                                <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>Track your ticket bookings, cancellations and payments.</p>
+                            </div>
+                            <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "8px", gap: "4px" }}>
+                                {["all", "booked", "cancelled", "payments"].map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setBookingFilter(f)}
+                                        style={{
+                                            padding: "6px 12px",
+                                            fontSize: "12px",
+                                            fontWeight: "600",
+                                            borderRadius: "6px",
+                                            border: "none",
+                                            background: bookingFilter === f ? "#fff" : "transparent",
+                                            color: bookingFilter === f ? "#000" : t.textSub,
+                                            boxShadow: bookingFilter === f ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
+                                            cursor: "pointer",
+                                            textTransform: "capitalize"
+                                        }}
+                                    >
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-                        {userBookings.length > 0 ? (
+                        {displayBookings.length > 0 ? (
                             <div style={{ display: "grid", gap: "16px" }}>
-                                {userBookings.map((booking, i) => (
+                                {displayBookings.map((booking, i) => (
                                     <div key={i} style={{ border: `1px solid ${t.border}`, borderRadius: "12px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div>
-                                            <h4 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: t.textMain }}>Event Ticket #{booking._id?.substring(0, 6) || "XXX"}</h4>
-                                            <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>{booking.ticketCount} Tickets • ₹{booking.totalPrice}</p>
+                                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                                            <div style={{ width: "48px", height: "48px", background: booking.status === 'Cancelled' ? '#fee2e2' : '#fef9c3', borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+                                                {booking.status === 'Cancelled' ? '❌' : '🎟️'}
+                                            </div>
+                                            <div>
+                                                <h4 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: t.textMain }}>{booking.eventName || "Event Ticket"}</h4>
+                                                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                                    <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>ID: #{booking._id?.substring(0, 6).toUpperCase()}</p>
+                                                    <span style={{ fontSize: "12px", color: t.border }}>|</span>
+                                                    <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>{booking.ticketCount} Seats • ₹{booking.totalPrice}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-                                            <span style={{ fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "20px", background: booking.status === 'Confirmed' ? '#dcfce7' : '#fef3c7', color: booking.status === 'Confirmed' ? '#166534' : '#92400e' }}>
+                                            <span style={{
+                                                fontSize: "11px",
+                                                fontWeight: "700",
+                                                padding: "4px 10px",
+                                                borderRadius: "20px",
+                                                textTransform: "uppercase",
+                                                background: booking.status === 'Confirmed' || booking.status === 'Paid' ? '#dcfce7' : booking.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
+                                                color: booking.status === 'Confirmed' || booking.status === 'Paid' ? '#166534' : booking.status === 'Cancelled' ? '#991b1b' : '#92400e'
+                                            }}>
                                                 {booking.status}
                                             </span>
-                                            <button style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
+                                            {booking.status !== 'Cancelled' && (
+                                                <button style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>Download Ticket</button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div style={{ padding: "40px 24px", textAlign: "center", color: t.textSub, border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
-                                <Ticket size={40} style={{ marginBottom: "16px", opacity: 0.3 }} />
-                                <p style={{ fontSize: "15px", fontWeight: "500", color: t.textMain, margin: "0 0 8px" }}>No Bookings Yet</p>
-                                <p style={{ fontSize: "13px", margin: "0 0 20px" }}>You haven't purchased any tickets for upcoming events.</p>
-                                <Link href="/" style={{ padding: "10px 20px", background: t.accent, color: "#000", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "14px", display: "inline-block" }}>
-                                    Browse Events
-                                </Link>
+                            <div style={{ padding: "60px 24px", textAlign: "center", color: t.textSub, border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
+                                <div style={{ fontSize: "40px", marginBottom: "16px", opacity: 0.3 }}>
+                                    {bookingFilter === "cancelled" ? "📂" : (bookingFilter === "payments" ? "💳" : "🎟️")}
+                                </div>
+                                <p style={{ fontSize: "16px", fontWeight: "600", color: t.textMain, margin: "0 0 8px" }}>
+                                    No {bookingFilter !== "all" ? bookingFilter : ""} records found
+                                </p>
+                                <p style={{ fontSize: "13px", margin: "0 0 20px" }}>
+                                    {bookingFilter === "cancelled" ? "You don't have any cancelled ticket requests." : "Browse our events to start your next adventure!"}
+                                </p>
+                                {bookingFilter === "all" && (
+                                    <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#000", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: "0 4px 12px rgba(252,225,93,0.3)" }}>
+                                        Explore Events
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </div>
