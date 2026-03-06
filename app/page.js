@@ -123,7 +123,7 @@ export default function Home() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '142px' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 'var(--header-h)' }}>
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap');
@@ -141,6 +141,7 @@ export default function Home() {
         <div style={{ width: '100%' }}>
           <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
         </div>
+
 
         {activeCat ? (
           <section style={{ width: '100%', maxWidth: '1240px', padding: '40px 20px', minHeight: '600px' }}>

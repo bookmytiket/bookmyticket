@@ -16,39 +16,25 @@ const AUTO_PLAY_MS = 3500;
 /* ── Small helper: renders the promo banner content ── */
 function PromoSlide() {
     return (
-        <div style={{
-            width: "100%", height: "100%",
-            background: "linear-gradient(120deg,#0b0727 0%,#1a0640 40%,#2d0a6b 70%,#0b0727 100%)",
-            display: "flex", alignItems: "center",
-            padding: "0 5%",
-            gap: "48px",
-            position: "relative",
-            overflow: "hidden",
-            boxSizing: "border-box",
-        }}>
+        <div className="promo-slide">
             {/* glow blobs */}
-            <div style={{ position: "absolute", width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle,#ff2d7840 0%,transparent 70%)", top: "-60px", left: "-60px", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "radial-gradient(circle,#7c3aed30 0%,transparent 70%)", bottom: "-80px", right: "10%", pointerEvents: "none" }} />
+            <div className="promo-glow-1" />
+            <div className="promo-glow-2" />
 
             {/* Left: heading */}
-            <div style={{ flex: "0 0 auto", minWidth: "200px" }}>
+            <div className="promo-heading-wrap">
                 <p style={{ margin: "0 0 4px", fontSize: "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
-                <h2 style={{
-                    margin: 0, lineHeight: 0.9, fontWeight: 900, textTransform: "uppercase",
-                    fontSize: "clamp(36px,5vw,60px)", letterSpacing: "-2px",
-                    background: "linear-gradient(90deg,#fff 50%,#f84464 100%)",
-                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                }}>
+                <h2 className="promo-title">
                     ROCK<br />Events
                 </h2>
                 <p style={{ margin: "6px 0 0", fontStyle: "italic", fontSize: "16px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
             </div>
 
             {/* Divider */}
-            <div style={{ width: "1px", alignSelf: "stretch", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
+            <div className="promo-divider hide-mobile" style={{ width: "1px", alignSelf: "stretch", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
 
             {/* Middle: feature list */}
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+            <ul className="promo-features-list">
                 {FEATURES.map(f => (
                     <li key={f.num} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <span style={{ fontWeight: 900, fontSize: "11px", color: "#f84464", minWidth: "22px" }}>{f.num}</span>
@@ -61,8 +47,8 @@ function PromoSlide() {
             </ul>
 
             {/* Right: CTA */}
-            <div style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
-                <div style={{
+            <div className="promo-cta-wrap">
+                <div className="promo-cta-btn" style={{
                     display: "inline-flex", alignItems: "center", gap: "8px",
                     background: "linear-gradient(90deg,#f84464,#c026d3)",
                     padding: "10px 22px", borderRadius: "50px",

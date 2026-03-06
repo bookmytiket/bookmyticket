@@ -173,7 +173,14 @@ function OrganiserPanel() {
     const { user } = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
+
+    useEffect(() => {
+        setMounted(true);
+        if (mounted && !user) {
+            router.push("/signin");
+        }
+    }, [mounted, user, router]);
+
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");
     const [activeTab, setActiveTab] = useState("dashboard");

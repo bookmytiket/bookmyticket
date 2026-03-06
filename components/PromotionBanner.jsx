@@ -15,9 +15,9 @@ export default function PromotionBanner() {
     return (
         <div style={{
             width: "100%",
-            backgroundColor: "#eee9e2",
-            padding: "12px 0",
-            borderBottom: "1px dotted rgba(0,0,0,0.1)",
+            backgroundColor: "transparent",
+            padding: "min(12px, 2vh) 0",
+            borderBottom: "none",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -26,31 +26,32 @@ export default function PromotionBanner() {
         }}>
             <div style={{
                 display: "flex",
-                gap: "24px",
+                gap: "min(24px, 4vw)",
                 alignItems: "center",
                 whiteSpace: "nowrap",
-                animation: "blink 3s step-end infinite"
+                animation: "blink 3s step-end infinite",
+                padding: "0 10px"
             }}>
                 {activePromos.map((promo, idx) => (
                     <div key={idx} style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "10px",
-                        fontSize: "18px",
+                        gap: "min(10px, 2vw)",
+                        fontSize: "clamp(12px, 2.5vw, 18px)",
                         fontWeight: 900,
-                        padding: "0 20px",
+                        padding: "0 min(20px, 4vw)",
                         background: "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)",
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
                         backgroundSize: "200% auto",
                         animation: "rainbow 3s linear infinite"
                     }}>
-                        <span style={{ fontSize: "20px", filter: "none", WebkitTextFillColor: "initial" }}>{promo.bogo ? "⚡" : "🏷️"}</span>
-                        <span>
+                        <span style={{ fontSize: "clamp(14px, 3vw, 20px)", filter: "none", WebkitTextFillColor: "initial" }}>{promo.bogo ? "⚡" : "🏷️"}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                             {promo.bogo ? (
-                                <>BUY 1 GET 1 FREE! Use Code: <span style={{ textDecoration: "underline" }}>{promo.code}</span></>
+                                <>BUY 1 GET 1 FREE! Code: <span style={{ textDecoration: "underline" }}>{promo.code}</span></>
                             ) : (
-                                <>GET {promo.type === "percent" ? `${promo.value}%` : `₹${promo.value}`} OFF! Use Code: <span style={{ textDecoration: "underline" }}>{promo.code}</span></>
+                                <>GET {promo.type === "percent" ? `${promo.value}%` : `₹${promo.value}`} OFF! Code: <span style={{ textDecoration: "underline" }}>{promo.code}</span></>
                             )}
                         </span>
                         {idx < activePromos.length - 1 && activePromos.length > 1 && (
@@ -59,6 +60,7 @@ export default function PromotionBanner() {
                     </div>
                 ))}
             </div>
+
 
             <style>{`
                 @keyframes rainbow {

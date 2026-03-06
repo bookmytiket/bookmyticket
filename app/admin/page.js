@@ -44,9 +44,21 @@ function useConvexConfig(key, defaultValue, allConfig) {
     return [state, setState];
 }
 
+import { useAuth } from "@/components/AuthContext";
+
 export default function AdminHomePage() {
+    const { user } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+        if (mounted && (!user || user.role !== "admin")) {
+            router.push("/signin");
+        }
+    }, [mounted, user, router]);
+
     const handleLogout = () => {
         try { localStorage.removeItem("user"); } catch (_) { }
         router.push("/signin");
