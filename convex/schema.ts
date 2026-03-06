@@ -54,4 +54,19 @@ export default defineSchema({
         adminNotes: v.optional(v.string()),
         updatedAt: v.optional(v.number()),
     }),
+
+    users: defineTable({
+        name: v.string(),
+        email: v.string(),
+        password: v.string(),
+        role: v.string(), // 'user'
+        createdAt: v.string(),
+    }).index("by_email", ["email"]),
+
+    passwordResetTokens: defineTable({
+        email: v.string(),
+        token: v.string(),
+        expires: v.number(), // timestamp
+    }).index("by_token", ["token"]),
 });
+

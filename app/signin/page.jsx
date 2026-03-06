@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import LeftBanner from "@/components/LeftBanner";
 import { useAuth } from "@/components/AuthContext";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 const BANNER_SLIDES = [
@@ -15,7 +15,8 @@ const BANNER_SLIDES = [
 
 export default function SignInPage() {
     const { login } = useAuth();
-    const [mode, setMode] = useState("signin"); // "signin" | "signup"
+    const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
+    const convex = useConvex();
 
     // Sign In
     const [identifier, setIdentifier] = useState("");
@@ -32,6 +33,14 @@ export default function SignInPage() {
     const [signupError, setSignupError] = useState("");
     const [signupSuccess, setSignupSuccess] = useState(false);
 
+    // Forgot Password
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [forgotSuccess, setForgotSuccess] = useState(false);
+    const [forgotError, setForgotError] = useState("");
+
+    const createUser = useMutation(api.users.create);
+    const forgotPassMutation = useMutation(api.auth.forgotPassword);
+
     const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
     const convexSsoConfig = useQuery(api.systemConfig.getConfig, { key: "sso_configs" });
     useEffect(() => {
@@ -41,23 +50,64 @@ export default function SignInPage() {
     // Auto-detect role: "admin" → admin portal, anything else → organiser
     const detectRole = (id) => id.trim().toLowerCase() === "admin" ? "admin" : "organiser";
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setLoginError("");
-        const ok = login(identifier, password, detectRole(identifier));
-        if (!ok) setLoginError("Invalid email or password. Please try again.");
+
+        const role = detectRole(identifier);
+
+        if (role === "admin" || role === "organiser") {
+            const ok = login(identifier, password, role);
+            if (!ok) setLoginError("Invalid email or password. Please try again.");
+            return;
+        }
+
+        // Check Public User in Convex
+        try {
+            const user = await convex.query(api.users.getByEmail, { email: identifier });
+            if (user && user.password === password) {
+                login(identifier, password, "user", user);
+            } else {
+                setLoginError("Invalid email or password. Please try again.");
+            }
+        } catch (err) {
+            setLoginError("An error occurred during login.");
+        }
     };
 
-    const handleSignup = (e) => {
+    const handleSignup = async (e) => {
         e.preventDefault();
         setSignupError("");
         if (signupPass !== signupConfirm) { setSignupError("Passwords do not match."); return; }
         if (signupPass.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
-        const users = JSON.parse(localStorage.getItem("public_users") || "[]");
-        if (users.find(u => u.email === signupEmail)) { setSignupError("An account with this email already exists."); return; }
-        users.push({ name: signupName, email: signupEmail, password: signupPass, role: "user", createdAt: new Date().toISOString() });
-        localStorage.setItem("public_users", JSON.stringify(users));
-        setSignupSuccess(true);
+
+        try {
+            await createUser({
+                name: signupName,
+                email: signupEmail,
+                password: signupPass,
+                role: "user",
+                createdAt: new Date().toISOString()
+            });
+            setSignupSuccess(true);
+        } catch (err) {
+            setSignupError(err.message || "An account with this email already exists.");
+        }
+    };
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault();
+        setForgotError("");
+        try {
+            const ok = await forgotPassMutation({ email: forgotEmail });
+            if (ok) {
+                setForgotSuccess(true);
+            } else {
+                setForgotError("Email not found. Please check and try again.");
+            }
+        } catch (err) {
+            setForgotError("An error occurred. Please try again later.");
+        }
     };
 
     const inp = { width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #d1d5db", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "18px", transition: "border-color .2s" };
@@ -108,7 +158,7 @@ export default function SignInPage() {
 
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                                     <label style={{ ...lbl, marginBottom: 0 }}>Password</label>
-                                    <a href="#" style={{ fontSize: "13px", color: "#64748b", textDecoration: "underline" }}>Forgot password?</a>
+                                    <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "13px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
                                 </div>
                                 <div style={{ position: "relative" }}>
                                     <input
@@ -225,6 +275,50 @@ export default function SignInPage() {
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
                             </p>
+                        </>
+                    )}
+
+                    {/* ══ FORGOT PASSWORD ══ */}
+                    {mode === "forgot" && (
+                        <>
+                            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                                <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", marginBottom: "10px" }}>Reset Password</h2>
+                                <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
+                                    Remember your password?{" "}
+                                    <button style={linkBtn} onClick={() => { setMode("signin"); setForgotError(""); setForgotSuccess(false); }}>
+                                        Sign in
+                                    </button>
+                                </p>
+                            </div>
+
+                            {forgotSuccess ? (
+                                <div style={{ textAlign: "center", padding: "32px 16px", background: "#f0fdf4", borderRadius: "16px", border: "1.5px solid #bbf7d0" }}>
+                                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>✉</div>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#16a34a", marginBottom: "8px" }}>Check your email</h3>
+                                    <p style={{ fontSize: "14px", color: "#15803d", marginBottom: "20px" }}>
+                                        We&apos;ve sent a password reset link to <strong>{forgotEmail}</strong>.
+                                    </p>
+                                    <button onClick={() => { setMode("signin"); setForgotSuccess(false); }}
+                                        style={{ padding: "12px 28px", borderRadius: "50px", border: "none", background: "#FCE15D", color: "#000", fontWeight: 800, fontSize: "14px", cursor: "pointer", boxShadow: "0 4px 15px rgba(252,225,93,0.3)" }}>
+                                        Back to Log In
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleForgotPassword}>
+                                    <label style={lbl}>Email Address</label>
+                                    <input type="email" required placeholder="you@example.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                    {forgotError && (
+                                        <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {forgotError}</p>
+                                    )}
+
+                                    <button type="submit" style={submitBtn}
+                                        onMouseOver={e => e.currentTarget.style.opacity = ".88"}
+                                        onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+                                        Send Reset Link
+                                    </button>
+                                </form>
+                            )}
                         </>
                     )}
 

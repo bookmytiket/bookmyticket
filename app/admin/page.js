@@ -96,6 +96,21 @@ export default function AdminHomePage() {
     // Promotions: coupon codes & BOGO
     const [promotions, setPromotions] = useConvexConfig("admin_promotions", [], allConfig);
     const [newPromo, setNewPromo] = useState({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
+
+    const handleCreatePromotion = () => {
+        const promo = {
+            id: Date.now(),
+            code: newPromo.code || "SAVE10",
+            type: newPromo.type,
+            value: newPromo.value || "10",
+            bogo: newPromo.bogo,
+            validUntil: newPromo.validUntil || "2026-12-31",
+            usage: 0
+        };
+        setPromotions([...promotions, promo]);
+        setNewPromo({ code: "", type: "percent", value: "", validUntil: "", bogo: false });
+    };
+
     // Archive: hide events from main list
     const [archivedHomeIds, setArchivedHomeIds] = useConvexConfig("admin_archived_home_ids", [], allConfig);
     // Event-specific meta
@@ -930,7 +945,7 @@ export default function AdminHomePage() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Coupon codes & BOGO</h3>
-                                <button onClick={() => setPromotions([...promotions, { id: Date.now(), code: newPromo.code || "SAVE10", type: newPromo.type, value: newPromo.value || "10", bogo: newPromo.bogo, validUntil: newPromo.validUntil || "2026-12-31", usage: 0 }])} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Plus size={18} /> Create promotion</button>
+                                <button onClick={handleCreatePromotion} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Plus size={18} /> Create promotion</button>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                                 <div style={{ padding: "16px", border: `1px solid ${t.border}`, borderRadius: "10px" }}>

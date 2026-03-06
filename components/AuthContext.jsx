@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -10,7 +11,6 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [selectedCity, setSelectedCity] = useState("Coimbatore");
     const router = useRouter();
-    const pathname = usePathname();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
 
     const convexOrganisers = useQuery(api.organisers.list) || [];
 
-    const login = (identifier, password, role) => {
+    const login = (identifier, password, role, userData = null) => {
         // Master Admin remains hardcoded
         if (role === "admin") {
             if (identifier === "admin" && password === "admin123") {
@@ -44,15 +44,12 @@ export function AuthProvider({ children }) {
             return false;
         }
 
-        // First check if it's a Public User (since detectRole in signin defaults to organiser currently, we check users array first)
-        const publicUsers = JSON.parse(localStorage.getItem("public_users") || "[]");
-        const userMatch = publicUsers.find(u => u.email === identifier && u.password === password);
-
-        if (userMatch) {
-            const authUser = { identifier, role: "user", name: userMatch.name };
+        // Public User (passed from signin page after convex check)
+        if (role === "user" && userData) {
+            const authUser = { identifier, role: "user", name: userData.name, id: userData._id };
             setUser(authUser);
             localStorage.setItem("user", JSON.stringify(authUser));
-            router.push("/"); // Redirect public users to homepage
+            router.push("/");
             return true;
         }
 

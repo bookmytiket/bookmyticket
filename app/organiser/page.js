@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/components/AuthContext";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -29,7 +30,7 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck
 } from "lucide-react";
 
 function LocationPickerModal({
@@ -169,6 +170,7 @@ function LocationPickerModal({
 }
 
 function OrganiserPanel() {
+    const { user } = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
@@ -217,7 +219,10 @@ function OrganiserPanel() {
         transactions: []
     });
 
-    const organiserData = useQuery(api.organisers.get, { userId: profile.email || "test@gmail.com" });
+    const effectiveEmail = user?.identifier || "organiser@bookmyticket.com";
+    const equaliser = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+
+    const organiserData = useQuery(api.organisers.get, { userId: effectiveEmail });
 
     useEffect(() => {
         if (organiserData) {
@@ -240,8 +245,8 @@ function OrganiserPanel() {
     const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
 
     useEffect(() => {
-        if (convexSupportTickets.length >= 0 && profile.email) {
-            const filtered = convexSupportTickets.filter(t => t.userId === (profile.email || "test@gmail.com"));
+        if (convexSupportTickets.length >= 0) {
+            const filtered = convexSupportTickets.filter(t => equaliser(t.userId, effectiveEmail));
             setSupportTicketsList(filtered.map(t => ({
                 id: t._id,
                 ticketId: t._id.slice(-6),
@@ -252,12 +257,12 @@ function OrganiserPanel() {
                 createdAt: t._creationTime,
                 updatedAt: t.updatedAt || t._creationTime,
                 adminNotes: t.adminNotes || "",
-                replies: [] // Future: add replies table mapping
+                replies: []
             })));
         }
-    }, [convexSupportTickets, profile.email]);
+    }, [convexSupportTickets, effectiveEmail]);
 
-    const convexEvents = useQuery(api.events.getOrganiserEvents, { organiserId: profile.email || "test@gmail.com" });
+    const convexEvents = useQuery(api.events.getOrganiserEvents, { organiserId: effectiveEmail });
     const deleteEventMutation = useMutation(api.events.deleteEvent);
     const updateEventMutation = useMutation(api.events.updateEvent);
     const createEventMutation = useMutation(api.events.createEvent);
@@ -589,10 +594,9 @@ function OrganiserPanel() {
             alert(isMultiple ? "Please add at least one date in Schedule (Multi-Date & Time)." : "Please fill in Date.");
             return;
         }
-        if (postEvent.type === "Venue" && (!postEvent.latitude || !postEvent.longitude)) {
-            alert("Please set venue location using the map (click Show Map and choose a location).");
-            return;
-        }
+        // Latitude/Longitude is optional for convenience in dashboard testing
+        const lat = postEvent.latitude || "0";
+        const lng = postEvent.longitude || "0";
         const isSeating = postEvent.seatingEnabled !== false;
         const totalSeats = isSeating ? postEvent.rows * postEvent.cols : (parseInt(postEvent.normalTicketCapacity, 10) || 0);
         if (totalSeats <= 0) {
@@ -601,7 +605,7 @@ function OrganiserPanel() {
         }
         const ev = {
             ...postEvent,
-            organiserId: profile.email || "organizer@gmail.com",
+            organiserId: effectiveEmail,
             date: firstSlot.date,
             time: firstSlot.time || "TBA",
             status: "Active",
@@ -631,7 +635,6 @@ function OrganiserPanel() {
             environment: ev.environment,
         })
             .then(() => {
-                alert(isSeating ? `✅ "${ev.title}" published with ${totalSeats} seats (Seating Based)!` : `✅ "${ev.title}" published with ${totalSeats} tickets (Normal Ticketing)!`);
                 setPostEvent(getInitialPostEvent());
                 setAddEventStep("select_type");
                 setMultiSlots([{ date: "", time: "" }]);
@@ -707,15 +710,76 @@ function OrganiserPanel() {
                 border-right: 1px solid ${t.sidebarBorder};
                 transition: transform 0.3s ease, background-color 0.3s ease;
             }
+            .sidebar-logo {
+                padding: 24px 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border-bottom: 1px solid ${t.sidebarBorder};
+            }
+            .sidebar-profile {
+                padding: 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                background-color: ${theme === 'light' ? '#f8fafc' : '#1f2937'};
+                margin: 16px;
+                border-radius: 12px;
+                border: 1px solid ${t.border};
+            }
+            .sidebar-profile-img {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 2px solid #3b82f6;
+            }
+            .sidebar-profile-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .sidebar-profile-name {
+                margin: 0;
+                font-size: 14px;
+                font-weight: 700;
+                color: ${t.textMain};
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .sidebar-profile-role {
+                margin: 0;
+                font-size: 12px;
+                color: ${t.textSub};
+                font-weight: 500;
+            }
+            .sidebar-search {
+                padding: 0 16px 16px;
+            }
+            .sidebar-search-input {
+                width: 100%;
+                padding: 10px 12px 10px 36px;
+                border-radius: 8px;
+                border: 1px solid ${t.border};
+                background-color: ${t.bg};
+                color: ${t.textMain};
+                font-size: 13px;
+                outline: none;
+                transition: border-color 0.2s;
+            }
+            .sidebar-search-input:focus {
+                border-color: #3b82f6;
+            }
             .main-content {
                 margin-left: 250px;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 min-width: 0;
+                position: relative;
             }
             .top-header {
-                height: 64px;
+                height: 70px;
                 background-color: ${t.header};
                 border-bottom: 1px solid ${t.border};
                 display: flex;
@@ -729,34 +793,90 @@ function OrganiserPanel() {
             .sidebar-item {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 10px 16px;
+                justify-content: space-between;
+                padding: 12px 16px;
                 cursor: pointer;
-                font-size: 13px;
-                font-weight: 600;
-                border-radius: 0 50px 50px 0;
-                margin-right: 16px;
+                font-size: 14px;
+                font-weight: 500;
+                color: ${t.textSub};
                 transition: all 0.2s;
                 border: none;
                 background: none;
-                width: calc(100% - 16px);
-                color: ${t.textSub};
+                width: 100%;
                 text-align: left;
             }
+            .sidebar-item:hover {
+                background-color: ${theme === 'light' ? '#f1f5f9' : '#1e293b'};
+                color: ${t.textMain};
+            }
             .sidebar-item.active {
-                background-color: ${t.activeLink};
-                color: ${t.activeText};
+                background-color: #3b82f6!important;
+                color: #fff!important;
                 font-weight: 600;
+            }
+            .sidebar-dropdown-item {
+                display: flex;
+                align-items: center;
+                padding: 10px 16px 10px 48px;
+                font-size: 13px;
+                color: ${t.textSub};
+                transition: all 0.2s;
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                cursor: pointer;
+                position: relative;
+            }
+            .sidebar-dropdown-item:before {
+                content: '';
+                position: absolute;
+                left: 32px;
+                top: 50%;
+                width: 4px;
+                height: 4px;
+                background-color: ${t.border};
+                border-radius: 50%;
+                transform: translateY(-50%);
+            }
+            .sidebar-dropdown-item:hover {
+                color: #3b82f6;
+            }
+            .sidebar-dropdown-item.active {
+                color: #3b82f6;
+                font-weight: 600;
+                background-color: ${theme === 'light' ? '#f0f7ff' : '#1e293b'};
             }
             .stat-card {
                 background-color: ${t.cardBg};
-                padding: 20px;
+                padding: 24px;
                 border-radius: 12px;
                 border: 1px solid ${t.border};
                 display: flex;
                 flex-direction: column;
                 position: relative;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            }
+            .breadcrumb {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                color: ${t.textSub};
+                margin-bottom: 24px;
+            }
+            .breadcrumb-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .breadcrumb-item:after {
+                content: '>';
+                margin-left: 8px;
+                opacity: 0.5;
+            }
+            .breadcrumb-item:last-child:after {
+                content: none;
             }
             @media (max-width: 1024px) {
                 .sidebar { transform: translateX(-100%); }
@@ -985,74 +1105,96 @@ function OrganiserPanel() {
                             </div>
                         </div>
                     );
-                case "manage_events":
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Active Events</h3>
-                                <button onClick={() => setActiveTab("post_event")} style={{ padding: "10px 20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                                    <Plus size={18} /> Post New Event
-                                </button>
+                case "manage_events": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Events</span>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {events.map(ev => (
-                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#3b82f620", display: "flex", alignItems: "center", justifyContent: "center" }}><Ticket size={20} color="#3b82f6" /></div>
-                                                        <div>
-                                                            <p style={{ fontWeight: 700, margin: 0, fontSize: "14px" }}>{ev.title}</p>
-                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.venue}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <p style={{ fontSize: "13px", margin: 0, fontWeight: 600 }}>{ev.date}</p>
-                                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time}</p>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    {ev.totalSeats ? (
-                                                        <div>
-                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
-                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
-                                                                <div style={{ height: "100%", width: `${((ev.bookedSeats || 0) / ev.totalSeats) * 100}%`, background: "#f84464", borderRadius: 3 }} />
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="All Events" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Active Events</h3>
+                                    <button onClick={() => setActiveTab("post_event")} style={{ padding: "12px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", transition: "0.2s" }}>
+                                        <Plus size={18} /> Post New Event
+                                    </button>
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                        <thead>
+                                            <tr style={{ textAlign: "left" }}>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event Details</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date & Time</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Tickets Analytics</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {events.length === 0 ? (
+                                                <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No events found. Start by posting your first event.</td></tr>
+                                            ) : events.map(ev => (
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : "#f97316") + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                                {ev.type === "Online" ? <CloudUpload size={24} color="#22c55e" /> : <MapPin size={24} color="#f97316" />}
+                                                            </div>
+                                                            <div>
+                                                                <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
+                                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>{ev.venue || "Online"}</p>
                                                             </div>
                                                         </div>
-                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
-                                                        {ev.seatingEnabled !== false ? (
-                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: `1px solid #6366f130`, padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                                <Grid size={14} /> Seat Map
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time}</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        {ev.totalSeats ? (
+                                                            <div style={{ minWidth: "140px" }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>Available</span></span>
+                                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#3b82f6" }}>{Math.round(((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%</span>
+                                                                </div>
+                                                                <div style={{ height: 6, borderRadius: 10, background: t.border, overflow: "hidden" }}>
+                                                                    <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)", borderRadius: 10 }} />
+                                                                </div>
+                                                            </div>
+                                                        ) : <span style={{ color: t.textSub, fontSize: 13 }}>Standard Admission</span>}
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>ACTIVE</span>
+                                                    </td>
+                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            {ev.seatingEnabled !== false && (
+                                                                <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                    <Grid size={14} /> Map
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                <Trash2 size={16} />
                                                             </button>
-                                                        ) : (
-                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
-                                                        )}
-                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     );
+                }
                 case "post_event":
                     // Step 1: Choose Online or Venue (image format)
                     if (addEventStep === "select_type") {
@@ -1542,620 +1684,891 @@ function OrganiserPanel() {
                     );
                 case "venue_events": {
                     const venueEvents = events.filter(ev => (ev.type || "Venue") === "Venue");
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Venue Events</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>List of venue-based events. Same as All Events filtered by type.</p>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}><strong>{venueEvents.length}</strong> events</p>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {venueEvents.length === 0 ? (
-                                            <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "13px" }}>No venue events yet. Add one from &quot;Add Event&quot; (choose Venue).</td></tr>
-                                        ) : venueEvents.map(ev => (
-                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f9731620", display: "flex", alignItems: "center", justifyContent: "center" }}><MapPin size={20} color="#f97316" /></div>
-                                                        <div>
-                                                            <p style={{ fontWeight: 700, margin: 0, fontSize: "14px", color: t.textMain }}>{ev.title}</p>
-                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.venue || "—"}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <p style={{ fontSize: "13px", margin: 0, fontWeight: 600, color: t.textMain }}>{ev.date || "—"}</p>
-                                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time || "—"}</p>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    {ev.totalSeats ? (
-                                                        <div>
-                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
-                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
-                                                                <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "#f84464", borderRadius: 3 }} />
-                                                            </div>
-                                                        </div>
-                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
-                                                        {ev.seatingEnabled !== false ? (
-                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: "1px solid #6366f130", padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                                <Grid size={14} /> Seat Map
-                                                            </button>
-                                                        ) : (
-                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
-                                                        )}
-                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Events</span>
                             </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
                         </div>
                     );
-                }
-                case "online_events": {
-                    const onlineEvents = events.filter(ev => ev.type === "Online");
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Online Events</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>List of online events.</p>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}><strong>{onlineEvents.length}</strong> events</p>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event Details</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date & Time</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Seats</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {onlineEvents.length === 0 ? (
-                                            <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "13px" }}>No online events yet. Add one from &quot;Add Event&quot; (choose Online).</td></tr>
-                                        ) : onlineEvents.map(ev => (
-                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><CloudUpload size={20} color="#22c55e" /></div>
-                                                        <div>
-                                                            <p style={{ fontWeight: 700, margin: 0, fontSize: "14px", color: t.textMain }}>{ev.title}</p>
-                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>Online event</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <p style={{ fontSize: "13px", margin: 0, fontWeight: 600, color: t.textMain }}>{ev.date || "—"}</p>
-                                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{ev.time || "—"}</p>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    {ev.totalSeats ? (
-                                                        <div>
-                                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>/ {ev.totalSeats} avail.</span></p>
-                                                            <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: t.border, overflow: "hidden" }}>
-                                                                <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "#f84464", borderRadius: 3 }} />
-                                                            </div>
-                                                        </div>
-                                                    ) : <span style={{ color: t.textSub, fontSize: 12 }}>—</span>}
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <span style={{ padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
-                                                </td>
-                                                <td style={{ padding: "16px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
-                                                        {ev.seatingEnabled !== false ? (
-                                                            <button title="View Seat Map" onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ background: "#6366f110", border: "1px solid #6366f130", padding: "8px 12px", borderRadius: "8px", color: "#6366f1", cursor: "pointer", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                                                                <Grid size={14} /> Seat Map
-                                                            </button>
-                                                        ) : (
-                                                            <span style={{ padding: "6px 10px", borderRadius: "8px", backgroundColor: t.bg, color: t.textSub, fontSize: 11, fontWeight: 600 }}>Normal Ticketing</span>
-                                                        )}
-                                                        <button title="Delete" onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev.id }).catch(e => console.error(e)); }} style={{ background: "none", border: `1px solid ${t.border}`, padding: "8px", borderRadius: "8px", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    );
-                }
-                case "event_bookings": {
-                    const myEventIds = new Set(events.map(e => String(e.id)));
-                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
-                    const filtered = eventBookingsTab === "all" ? myBookings :
-                        eventBookingsTab === "completed" ? myBookings.filter(b => b.status === "Confirmed") :
-                            eventBookingsTab === "pending" ? myBookings.filter(b => b.status === "Pending") :
-                                eventBookingsTab === "rejected" ? myBookings.filter(b => b.status === "Cancelled") :
-                                    myBookings;
 
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Event Bookings</h3>
-                            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" }}>
-                                {["all", "completed", "pending", "rejected", "report"].map(id => (
-                                    <button key={id} onClick={() => setEventBookingsTab(id)} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: eventBookingsTab === id ? "#3b82f6" : t.bg, color: eventBookingsTab === id ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-                                        {id === "all" ? "All Bookings" : id === "report" ? "Report" : id.charAt(0).toUpperCase() + id.slice(1) + " Bookings"}
-                                    </button>
-                                ))}
-                            </div>
-                            {eventBookingsTab === "report" ? (
-                                <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>
-                                    <BarChart3 size={48} style={{ marginBottom: "16px", opacity: 0.5 }} />
-                                    <p>Detailed reports coming soon. View summary in Dashboard.</p>
+                        <div>
+                            <Breadcrumb title="Venue Events" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Venue Base Events</h3>
+                                    <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: "#f9731615", border: "1px solid #f9731630", fontSize: "14px", fontWeight: 700, color: "#f97316" }}>
+                                        Total: {venueEvents.length}
+                                    </div>
                                 </div>
-                            ) : (
                                 <div style={{ overflowX: "auto" }}>
-                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
                                         <thead>
-                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Order ID</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Event</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Customer</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Tickets</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Amount</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
+                                            <tr style={{ textAlign: "left" }}>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Venue Details</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Schedule</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Capacity</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filtered.length === 0 ? (
-                                                <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: t.textSub }}>No bookings found.</td></tr>
-                                            ) : filtered.map(b => (
-                                                <tr key={b._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                    <td style={{ padding: "12px", fontWeight: 600, fontSize: "13px" }}>#{b._id.slice(-8).toUpperCase()}</td>
-                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName || "—"}</td>
-                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.userId}</td>
-                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{b.ticketCount}</td>
-                                                    <td style={{ padding: "12px", fontWeight: 700, fontSize: "13px" }}>₹{b.totalPrice}</td>
-                                                    <td style={{ padding: "12px" }}>
-                                                        <span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: 700, backgroundColor: b.status === "Confirmed" ? "#dcfce7" : "#fee2e2", color: b.status === "Confirmed" ? "#16a34a" : "#dc2626" }}>
-                                                            {b.status.toUpperCase()}
-                                                        </span>
+                                            {venueEvents.length === 0 ? (
+                                                <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No venue events found. Choose &quot;Venue Event&quot; when posting.</td></tr>
+                                            ) : venueEvents.map(ev => (
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "#f9731620", display: "flex", alignItems: "center", justifyContent: "center" }}><MapPin size={24} color="#f97316" /></div>
+                                                            <div>
+                                                                <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
+                                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>{ev.venue || "—"}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || "—"}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.time || "—"}</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats || "N/A"}</div>
+                                                        <div style={{ fontSize: "11px", color: t.textSub }}>Total Capacity</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>ACTIVE</span>
+                                                    </td>
+                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            {ev.seatingEnabled !== false && (
+                                                                <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Seat Map</button>
+                                                            )}
+                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     );
                 }
-                case "withdraw":
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Withdrawal</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>Request withdrawals to your linked bank account. Minimum balance Required: ₹500.</p>
+                case "online_events": {
+                    const onlineEvents = events.filter(ev => ev.type === "Online");
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Events</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "800px" }}>
-                                <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: "#3b82f6", color: "#fff" }}>
-                                    <p style={{ margin: 0, fontSize: "14px", opacity: 0.9 }}>Available for Withdrawal</p>
-                                    <p style={{ margin: "8px 0 0", fontSize: "32px", fontWeight: 800 }}>₹{wallet.balance.toLocaleString()}</p>
-                                    <button style={{ marginTop: "24px", width: "100%", padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#fff", color: "#3b82f6", fontWeight: 700, cursor: "pointer" }}>Request Payout</button>
-                                </div>
-                                <div style={{ padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, backgroundColor: t.bg }}>
-                                    <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px" }}>Linked Bank Account</h4>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <Building size={24} style={{ color: t.textSub }} />
-                                        <div>
-                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>HDFC Bank ···· 4242</p>
-                                            <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Verified · Primary</p>
-                                        </div>
+                    return (
+                        <div>
+                            <Breadcrumb title="Online Events" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Online & Virtual Events</h3>
+                                    <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: "#22c55e15", border: "1px solid #22c55e30", fontSize: "14px", fontWeight: 700, color: "#22c55e" }}>
+                                        Total: {onlineEvents.length}
                                     </div>
-                                    <button style={{ marginTop: "24px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, padding: "8px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Manage Accounts</button>
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                        <thead>
+                                            <tr style={{ textAlign: "left" }}>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Stream Details</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Broadcasting</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Attendees</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {onlineEvents.length === 0 ? (
+                                                <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No online events found. Select &quot;Online Event&quot; when posting.</td></tr>
+                                            ) : onlineEvents.map(ev => (
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><CloudUpload size={24} color="#22c55e" /></div>
+                                                            <div>
+                                                                <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
+                                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>Virtual Platform</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || "—"}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.time || "—"}</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.bookedSeats || 0}</div>
+                                                        <div style={{ fontSize: "11px", color: t.textSub }}>Registered Users</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#3b82f620", color: "#3b82f6" }}>STREAMING SOON</span>
+                                                    </td>
+                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            <button style={{ border: "none", background: "#3b82f620", color: "#3b82f6", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Manage Link</button>
+                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     );
-                case "transactions": {
+                }
+                case "all_bookings":
+                case "completed_bookings":
+                case "pending_bookings":
+                case "rejected_bookings":
+                case "booking_report":
+                case "event_bookings": {
+                    const statusFilter =
+                        activeTab === "completed_bookings" ? "Confirmed" :
+                            activeTab === "pending_bookings" ? "Pending" :
+                                activeTab === "rejected_bookings" ? "Cancelled" :
+                                    "all";
+
                     const myEventIds = new Set(events.map(e => String(e.id)));
                     const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const filtered = (statusFilter === "all" || activeTab === "all_bookings" || activeTab === "event_bookings") ? myBookings : myBookings.filter(b => b.status === statusFilter);
 
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Transactions</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>View your earnings and payout history.</p>
+                    const viewTitle =
+                        activeTab === "completed_bookings" ? "Completed Bookings" :
+                            activeTab === "pending_bookings" ? "Pending Bookings" :
+                                activeTab === "rejected_bookings" ? "Rejected Bookings" :
+                                    activeTab === "booking_report" ? "Booking Report" :
+                                        "All Bookings";
 
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Reference</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Date</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Type</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Description</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Amount</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {myBookings.length === 0 ? (
-                                            <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: t.textSub }}>No transactions yet.</td></tr>
-                                        ) : myBookings.sort((a, b) => b._creationTime - a._creationTime).map(b => (
-                                            <tr key={b._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>#{b._id.slice(-6).toUpperCase()}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{new Date(b._creationTime).toLocaleDateString()}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>Ticket Sale</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName || "Event Ticket"} (x{b.ticketCount})</td>
-                                                <td style={{ padding: "12px", fontSize: "13px", fontWeight: 700, color: "#22c55e" }}>+₹{b.totalPrice}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#22c55e" }}>COMPLETED</span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Bookings</span>
                             </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
                         </div>
                     );
-                }
-                case "pwa_scanner":
-                    return (
-                        <div style={{ maxWidth: "560px" }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, marginBottom: "20px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>PWA Scanner</h3>
-                                <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "20px" }}>Scan the ticket QR code with your camera or enter the Booking ID manually.</p>
 
-                                <div style={{ marginBottom: "20px" }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPwaCameraOpen(true)}
-                                        style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "14px 24px", borderRadius: "12px", border: "2px solid #3b82f6", backgroundColor: "#3b82f620", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "15px" }}
-                                    >
-                                        <Ticket size={22} /> Open camera scanner
-                                    </button>
-                                    {typeof window !== "undefined" && typeof BarcodeDetector === "undefined" && (
-                                        <p style={{ fontSize: "12px", color: t.textSub, margin: "8px 0 0" }}>Camera scan works in Chrome (desktop or Android). Otherwise use manual entry below.</p>
+                    return (
+                        <div>
+                            <Breadcrumb title={viewTitle} />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>{viewTitle}</h3>
+                                    {activeTab !== "booking_report" && (
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: t.bg, border: `1px solid ${t.border}`, fontSize: "14px", color: t.textSub }}>
+                                                Total Bookings: <span style={{ fontWeight: 800, color: t.textMain }}>{filtered.length}</span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
-                                {pwaCameraOpen && (
-                                    <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "12px", border: "2px solid #3b82f6", backgroundColor: theme === "light" ? "#f0f9ff" : "#0f172a" }}>
-                                        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "12px", color: t.textMain }}>Point camera at ticket QR code</p>
-                                        <div style={{ position: "relative", width: "100%", maxWidth: "320px", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000", aspectRatio: "1" }}>
-                                            <video ref={pwaVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
-                                        </div>
-                                        <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ marginTop: "12px", padding: "10px 20px", borderRadius: "8px", border: "none", backgroundColor: "#64748b", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Stop scanner</button>
+                                {activeTab === "booking_report" ? (
+                                    <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "12px", border: `1px dashed ${t.border}` }}>
+                                        <BarChart3 size={64} style={{ marginBottom: "24px", color: "#3b82f6", opacity: 0.8 }} />
+                                        <h4 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "12px" }}>Detailed Booking Analytics</h4>
+                                        <p style={{ color: t.textSub, maxWidth: "400px", margin: "0 auto", lineHeight: 1.6 }}>Track your ticket sales performance, peak booking hours, and customer demographics with our advanced reporting tools.</p>
+                                        <button style={{ marginTop: "32px", padding: "12px 24px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Generate Full Report</button>
+                                    </div>
+                                ) : (
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                            <thead>
+                                                <tr style={{ textAlign: "left" }}>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Order ID</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event Name</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Customer Details</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Tickets</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Amount</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filtered.length === 0 ? (
+                                                    <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No {statusFilter.toLowerCase()} bookings found.</td></tr>
+                                                ) : filtered.map(b => (
+                                                    <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                        <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800 }}>#{b._id.slice(-8).toUpperCase()}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600 }}>{b.eventName || "—"}</td>
+                                                        <td style={{ padding: "20px 16px" }}>
+                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.userName || "Guest User"}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.userId}</div>
+                                                        </td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticketCount}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>₹{b.totalPrice.toLocaleString()}</td>
+                                                        <td style={{ padding: "20px 16px", borderRadius: "0 12px 12px 0" }}>
+                                                            <span style={{
+                                                                padding: "6px 14px",
+                                                                borderRadius: "100px",
+                                                                fontSize: "11px",
+                                                                fontWeight: 800,
+                                                                backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
+                                                                color: b.status === "Confirmed" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
+                                                            }}>
+                                                                {b.status.toUpperCase()}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
-
-                                <p style={{ fontSize: "12px", color: t.textSub, marginBottom: "12px" }}>Or enter Booking ID manually:</p>
-                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter Booking ID (e.g. ORD-1234567890)"
-                                        value={pwaScanInput}
-                                        onChange={(e) => { setPwaScanInput(e.target.value); setPwaScanResult(null); }}
-                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); validateBookingId((e.target.value || pwaScanInput).trim()); } }}
-                                        style={{ flex: "1", minWidth: "200px", padding: "12px 16px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => validateBookingId(pwaScanInput)}
-                                        style={{ padding: "12px 24px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}
-                                    >
-                                        Validate ticket
-                                    </button>
-                                </div>
-                                {pwaScanResult && (
-                                    <div style={{ marginTop: "20px", padding: "16px", borderRadius: "12px", border: "1px solid", backgroundColor: pwaScanResult.status === "valid" ? "#dcfce7" : pwaScanResult.status === "already_used" ? "#fef3c7" : "#fee2e2", borderColor: pwaScanResult.status === "valid" ? "#22c55e" : pwaScanResult.status === "already_used" ? "#f59e0b" : "#ef4444" }}>
-                                        {pwaScanResult.status === "valid" && (
-                                            <>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#166534", fontWeight: 700 }}>
-                                                    <CheckCircle size={20} /> Ticket valid — Checked in
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: "13px", color: "#15803d" }}>{pwaScanResult.booking.eventName} · {pwaScanResult.booking.tickets} ticket(s). Entry confirmed.</p>
-                                            </>
-                                        )}
-                                        {pwaScanResult.status === "already_used" && (
-                                            <>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#b45309", fontWeight: 700 }}>
-                                                    <Ticket size={20} /> Already used
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: "13px", color: "#92400e" }}>This ticket was scanned at {pwaScanResult.booking.scannedAt ? new Date(pwaScanResult.booking.scannedAt).toLocaleString() : "earlier"}.</p>
-                                            </>
-                                        )}
-                                        {pwaScanResult.status === "not_found" && (
-                                            <>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#b91c1c", fontWeight: 700 }}>
-                                                    <X size={20} /> Not found
-                                                </div>
-                                                <p style={{ margin: 0, fontSize: "13px", color: "#991b1b" }}>No booking found for this ID. Check the code or ask the attendee to show the ticket.</p>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>How it works</h4>
-                                <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: t.textSub, lineHeight: 1.7 }}>
-                                    <li>Attendees show the ticket QR code (on phone or print). The QR contains the Booking ID.</li>
-                                    <li>Use a QR scanner app to read the code, or ask the attendee to read the Booking ID (e.g. ORD-1234567890) and enter it above.</li>
-                                    <li>Tap &quot;Validate ticket&quot; to check in. Valid tickets are marked as used so they cannot be used again.</li>
-                                </ul>
                             </div>
                         </div>
                     );
+                }
+                case "withdraw": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Wallet</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="Withdrawal" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Funds Withdrawal</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Request withdrawals to your linked bank account. Minimum balance Required: ₹500.</p>
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
+                                    <div style={{ padding: "32px", borderRadius: "20px", background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)", color: "#fff", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                            <p style={{ margin: 0, fontSize: "15px", fontWeight: 600, opacity: 0.9 }}>Available for Withdrawal</p>
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Wallet size={24} /></div>
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: "42px", fontWeight: 900 }}>₹{wallet.balance.toLocaleString()}</p>
+                                        <button onClick={() => setShowPayoutModal(true)} style={{ marginTop: "32px", width: "100%", padding: "16px", borderRadius: "12px", border: "none", backgroundColor: "#fff", color: "#3b82f6", fontWeight: 800, cursor: "pointer", fontSize: "15px", transition: "0.2s" }}>Request Payout</button>
+                                    </div>
+                                    <div style={{ padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}`, backgroundColor: t.bg }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                            <h4 style={{ fontSize: "16px", fontWeight: 800, color: t.textMain, margin: 0 }}>Linked Bank Account</h4>
+                                            <div style={{ padding: "6px 12px", borderRadius: "100px", backgroundColor: "#22c55e20", color: "#22c55e", fontSize: "11px", fontWeight: 800 }}>PRIMARY</div>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "20px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                            <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: theme === "light" ? "#f1f5f9" : "#1e293b", display: "flex", alignItems: "center", justifyContent: "center" }}><Building size={24} style={{ color: t.textSub }} /></div>
+                                            <div>
+                                                <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: t.textMain }}>HDFC Bank ···· 4242</p>
+                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Account Verified by Admin</p>
+                                            </div>
+                                        </div>
+                                        <button style={{ marginTop: "24px", width: "100%", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Change Settlement Account</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+                case "transactions": {
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Wallet</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="Transaction History" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Transactions</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>View your earnings and payout history.</p>
+                                    </div>
+                                    <div style={{ padding: "8px 16px", borderRadius: "8px", backgroundColor: "#3b82f615", border: "1px solid #3b82f630", fontSize: "14px", fontWeight: 700, color: "#3b82f6" }}>
+                                        Total: {myBookings.length}
+                                    </div>
+                                </div>
+
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                        <thead>
+                                            <tr style={{ textAlign: "left" }}>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Reference</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Type</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Description</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Amount</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {myBookings.length === 0 ? (
+                                                <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No transactions yet.</td></tr>
+                                            ) : myBookings.sort((a, b) => b._creationTime - a._creationTime).map(b => (
+                                                <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b._id.slice(-8).toUpperCase()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px" }}>{new Date(b._creationTime).toLocaleDateString()}</td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                            <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><Ticket size={14} color="#22c55e" /></div>
+                                                            <span style={{ fontSize: "14px", fontWeight: 600 }}>Ticket Sale</span>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: "16px", fontSize: "14px", color: t.textMain, fontWeight: 600 }}>{b.eventName || "Event Ticket"} <span style={{ color: t.textSub, fontWeight: 400 }}>(x{b.ticketCount})</span></td>
+                                                    <td style={{ padding: "16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>+₹{b.totalPrice.toLocaleString()}</td>
+                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>COMPLETED</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+                case "pwa_scanner": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Tools</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="PWA Ticket Scanner" />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "32px", alignItems: "start" }}>
+                                <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                    <div style={{ marginBottom: "32px" }}>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Validation</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Scan QR code or enter Booking ID manually to check-in attendees.</p>
+                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                        <div style={{ padding: "24px", borderRadius: "12px", backgroundColor: "#3b82f610", border: "1px dashed #3b82f640", textAlign: "center" }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPwaCameraOpen(true)}
+                                                style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "16px 28px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}
+                                            >
+                                                <Camera size={22} /> Launch Camera Scanner
+                                            </button>
+                                            {typeof window !== "undefined" && typeof BarcodeDetector === "undefined" && (
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "12px 0 0" }}>Native scanner requires Chrome (Android/Desktop). Use manual entry if unavailable.</p>
+                                            )}
+                                        </div>
+
+                                        {pwaCameraOpen && (
+                                            <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a", border: `2px solid #3b82f6` }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>Scanner Active</p>
+                                                    <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ background: "none", border: "none", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>Close Camera</button>
+                                                </div>
+                                                <div style={{ position: "relative", width: "100%", maxWidth: "400px", margin: "0 auto", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000", aspectRatio: "1", boxShadow: "0 0 0 4px rgba(59, 130, 246, 0.2)" }}>
+                                                    <video ref={pwaVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
+                                                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "70%", height: "70%", border: "2px solid #3b82f6", borderRadius: "20px", boxShadow: "0 0 0 4000px rgba(0,0,0,0.5)" }}></div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Manual Validation</label>
+                                            <div style={{ display: "flex", gap: "12px" }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter Booking ID (e.g. ORD-123456...)"
+                                                    value={pwaScanInput}
+                                                    onChange={(e) => { setPwaScanInput(e.target.value); setPwaScanResult(null); }}
+                                                    style={{ flex: 1, padding: "14px 16px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", outline: "none", fontWeight: 600 }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => validateBookingId(pwaScanInput)}
+                                                    style={{ padding: "14px 24px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "14px" }}
+                                                >
+                                                    Validate
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {pwaScanResult && (
+                                            <div style={{ padding: "24px", borderRadius: "16px", border: "1px solid", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e10" : pwaScanResult.status === "already_used" ? "#f59e0b10" : "#ef444410", borderColor: pwaScanResult.status === "valid" ? "#22c55e40" : pwaScanResult.status === "already_used" ? "#f59e0b40" : "#ef444440" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                                                    <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e20" : pwaScanResult.status === "already_used" ? "#f59e0b20" : "#ef444420", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                        {pwaScanResult.status === "valid" ? <CheckCircle size={24} color="#22c55e" /> : pwaScanResult.status === "already_used" ? <AlertCircle size={24} color="#f59e0b" /> : <XCircle size={24} color="#ef4444" />}
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: pwaScanResult.status === "valid" ? "#22c55e" : pwaScanResult.status === "already_used" ? "#f59e0b" : "#ef4444" }}>
+                                                            {pwaScanResult.status === "valid" ? "Verified Successfully" : pwaScanResult.status === "already_used" ? "Already Checked In" : "Invalid Ticket ID"}
+                                                        </p>
+                                                        <p style={{ margin: "2px 0 0", fontSize: "13px", color: t.textSub }}>{pwaScanResult.status === "valid" ? "Attendee can proceed" : "Access Denied"}</p>
+                                                    </div>
+                                                </div>
+                                                {pwaScanResult.booking && (
+                                                    <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.eventName}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.userId}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.tickets} Ticket(s)</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                    <h4 style={{ fontSize: "16px", fontWeight: 800, marginBottom: "20px", color: t.textMain }}>Check-in Guide</h4>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                        {[
+                                            { icon: <QrCode size={18} />, title: "Digital Tickets", desc: "Attendees should show the QR code from their mobile app." },
+                                            { icon: <Search size={18} />, title: "Manual Search", desc: "If camera fails, enter the Booking ID found below the QR code." },
+                                            { icon: <UserCheck size={18} />, title: "Single Entry", desc: "Tickets are invalidated immediately after successful scan." }
+                                        ].map((item, i) => (
+                                            <div key={i} style={{ display: "flex", gap: "16px" }}>
+                                                <div style={{ color: "#3b82f6" }}>{item.icon}</div>
+                                                <div>
+                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{item.title}</p>
+                                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.textSub, lineHeight: 1.5 }}>{item.desc}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
                 case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
-                    const saveSupportTickets = (list) => {
-                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
-                        setSupportTicketsList(list);
-                    };
                     const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
                     const toggleTicketSelect = (id) => setSelectedTicketIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
                     const toggleSelectAll = () => { if (selectedTicketIds.length >= filteredTickets.length) setSelectedTicketIds([]); else setSelectedTicketIds(filteredTickets.map(t => t.id)); };
                     const viewedTicket = supportTicketDetailId ? supportTicketsList.find(t => t.id === supportTicketDetailId) : null;
                     const addReplyToTicket = (ticketId, message) => {
                         const list = supportTicketsList.map(t => t.id !== ticketId ? t : { ...t, replies: [...(Array.isArray(t.replies) ? t.replies : []), { from: "organiser", message: (message || "").trim(), at: new Date().toISOString() }], updatedAt: new Date().toISOString() });
-                        try { localStorage.setItem("support_tickets", JSON.stringify(list)); } catch (_) { }
                         setSupportTicketsList(list);
                         setSupportTicketReplyMessage("");
                     };
-                    const Breadcrumb = ({ title, sub }) => (
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub, marginBottom: "16px" }}>
-                            <Home size={14} style={{ flexShrink: 0 }} />
-                            <span>Support Ticket</span>
-                            <span style={{ opacity: 0.7 }}>/</span>
-                            <span style={{ color: t.textMain, fontWeight: 600 }}>{title}{sub ? ` > ${sub}` : ""}</span>
+
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb">
+                            <div className="breadcrumb-item">
+                                <Home size={14} />
+                                <span>Support Tickets</span>
+                            </div>
+                            <div className="breadcrumb-item" style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
                         </div>
                     );
+
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <Breadcrumb title={supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"} sub={supportTab === "add_ticket" ? "" : undefined} />
-                            <h3 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "20px", color: t.textMain }}>{supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"}</h3>
-                            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-                                <button onClick={() => setSupportTab("all_tickets")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "all_tickets" ? "#3b82f6" : t.bg, color: supportTab === "all_tickets" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>All Tickets</button>
-                                <button onClick={() => setSupportTab("add_ticket")} style={{ padding: "8px 14px", borderRadius: "8px", border: "none", backgroundColor: supportTab === "add_ticket" ? "#3b82f6" : t.bg, color: supportTab === "add_ticket" ? "#fff" : t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Add Ticket</button>
-                            </div>
-                            {supportTab === "add_ticket" && (
-                                <div style={{ padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, maxWidth: "560px" }}>
-                                    <div style={{ marginBottom: "16px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Email <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input type="email" value={supportTicketForm.email || profile?.email || "organizer@gmail.com"} onChange={(e) => setSupportTicketForm(f => ({ ...f, email: e.target.value }))} placeholder="organizer@gmail.com" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }} />
-                                    </div>
-                                    <div style={{ marginBottom: "16px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Subject <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input type="text" placeholder="Enter Subject" value={supportTicketForm.subject} onChange={(e) => setSupportTicketForm(f => ({ ...f, subject: e.target.value }))} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px" }} />
-                                    </div>
-                                    <div style={{ marginBottom: "16px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Description</label>
-                                        <textarea placeholder="Description" value={supportTicketForm.description} onChange={(e) => setSupportTicketForm(f => ({ ...f, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical" }} />
-                                    </div>
-                                    <div style={{ marginBottom: "20px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "6px" }}>Attachment</label>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: theme === "dark" ? "#1e293b" : "#1e3a5f", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-                                                Choose file
-                                                <input type="file" accept=".zip" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; if (!f.name.toLowerCase().endsWith(".zip")) { alert("Upload only ZIP files."); return; } if (f.size > 20 * 1024 * 1024) { alert("Max file size is 20 MB."); return; } setSupportTicketForm(prev => ({ ...prev, attachmentFileName: f.name })); }} />
-                                            </label>
-                                            <span style={{ fontSize: "12px", color: t.textSub }}>{supportTicketForm.attachmentFileName || "No file chosen"}</span>
-                                        </div>
-                                        <p style={{ fontSize: "12px", color: "#b45309", marginTop: "8px", marginBottom: 0 }}>Upload only ZIP Files, Max File Size is 20 MB</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            const emailVal = (supportTicketForm.email || profile?.email || "test@gmail.com").trim();
-                                            const sub = (supportTicketForm.subject || "").trim();
-                                            const desc = (supportTicketForm.description || "").trim();
-                                            if (!emailVal || !sub) {
-                                                alert("Please fill in email and subject.");
-                                                return;
-                                            }
-                                            await createTicketMutation({
-                                                userId: emailVal,
-                                                issue: sub + (desc ? "\n" + desc : ""),
-                                                status: "Open"
-                                            });
-                                            alert("Support ticket submitted successfully!");
-                                            setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" });
-                                            setSupportTab("all_tickets");
-                                        }}
-                                        style={{ padding: "12px 28px", borderRadius: "8px", border: "none", backgroundColor: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}
-                                    >
-                                        Save
-                                    </button>
-                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>You will receive email updates when support changes the ticket status.</p>
+                        <div>
+                            <Breadcrumb title={supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"} />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>{supportTab === "all_tickets" ? "All Tickets" : "Add Ticket"}</h3>
                                 </div>
-                            )}
-                            {supportTab === "all_tickets" && (
-                                <>
-                                    {viewedTicket ? (
-                                        <div style={{ marginBottom: "20px" }}>
-                                            <button type="button" onClick={() => { setSupportTicketDetailId(null); setSupportTicketReplyMessage(""); }} style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginBottom: "16px", padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}><ArrowRight size={16} style={{ transform: "rotate(180deg)" }} /> Back to list</button>
-                                            <div style={{ padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, marginBottom: "16px" }}>
-                                                <h4 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Ticket #{viewedTicket.ticketId ?? viewedTicket.id}</h4>
-                                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Email</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.email || "—"}</div></div>
-                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Subject</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.subject}</div></div>
-                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Status</span><div><span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{viewedTicket.status}</span></div></div>
-                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Created</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.createdAt ? new Date(viewedTicket.createdAt).toLocaleString() : "—"}</div></div>
-                                                    <div><span style={{ fontSize: "12px", color: t.textSub }}>Updated</span><div style={{ fontSize: "14px", color: t.textMain }}>{viewedTicket.updatedAt ? new Date(viewedTicket.updatedAt).toLocaleString() : "—"}</div></div>
+
+                                {supportTab === "add_ticket" && (
+                                    <div style={{ maxWidth: "800px" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "8px" }}>Email <span style={{ color: "#ef4444" }}>*</span></label>
+                                                <input type="email" value={supportTicketForm.email || profile?.email || ""} onChange={(e) => setSupportTicketForm(f => ({ ...f, email: e.target.value }))} placeholder="Enter Email" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", outline: "none" }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "8px" }}>Subject <span style={{ color: "#ef4444" }}>*</span></label>
+                                                <input type="text" placeholder="Enter Subject" value={supportTicketForm.subject} onChange={(e) => setSupportTicketForm(f => ({ ...f, subject: e.target.value }))} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", outline: "none" }} />
+                                            </div>
+                                            <div style={{ gridColumn: "span 2" }}>
+                                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "8px" }}>Description</label>
+                                                <textarea placeholder="Enter Description" value={supportTicketForm.description} onChange={(e) => setSupportTicketForm(f => ({ ...f, description: e.target.value }))} rows={6} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", resize: "vertical", outline: "none" }} />
+                                            </div>
+                                            <div style={{ gridColumn: "span 2" }}>
+                                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Attachment</label>
+                                                <div style={{ padding: "32px", border: `2px dashed ${t.border}`, borderRadius: "12px", textAlign: "center", cursor: "pointer", position: "relative" }}>
+                                                    <Upload size={32} style={{ color: t.textSub, marginBottom: "12px" }} />
+                                                    <p style={{ margin: 0, fontSize: "14px", color: t.textMain, fontWeight: 600 }}>Click to upload or drag & drop</p>
+                                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.textSub }}>Upload only ZIP Files, Max File Size is 20 MB</p>
+                                                    <input type="file" accept=".zip" style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; setSupportTicketForm(prev => ({ ...prev, attachmentFileName: f.name })); }} />
+                                                    {supportTicketForm.attachmentFileName && <p style={{ marginTop: "12px", fontSize: "13px", color: "#3b82f6", fontWeight: 700 }}>{supportTicketForm.attachmentFileName}</p>}
                                                 </div>
-                                                {viewedTicket.description && <div style={{ marginBottom: "12px" }}><span style={{ fontSize: "12px", color: t.textSub }}>Description</span><p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{viewedTicket.description}</p></div>}
-                                                {viewedTicket.adminNotes && <div style={{ marginBottom: "12px", padding: "12px", borderRadius: "8px", backgroundColor: "#f59e0b15", border: "1px solid #f59e0b40" }}><span style={{ fontSize: "12px", color: t.textSub }}>Admin notes</span><p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{viewedTicket.adminNotes}</p></div>}
-                                            </div>
-                                            <div style={{ padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, marginBottom: "16px" }}>
-                                                <h5 style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Conversation</h5>
-                                                {(Array.isArray(viewedTicket.replies) && viewedTicket.replies.length > 0) ? (
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                                        {viewedTicket.replies.map((r, i) => (
-                                                            <div key={i} style={{ padding: "12px", borderRadius: "8px", backgroundColor: r.from === "organiser" ? "#3b82f615" : "#f59e0b15", borderLeft: `4px solid ${r.from === "organiser" ? "#3b82f6" : "#f59e0b"}` }}>
-                                                                <span style={{ fontSize: "11px", fontWeight: 600, color: t.textSub, textTransform: "capitalize" }}>{r.from}</span>
-                                                                <p style={{ margin: "4px 0 0", fontSize: "14px", color: t.textMain, whiteSpace: "pre-wrap" }}>{r.message}</p>
-                                                                <span style={{ fontSize: "11px", color: t.textSub }}>{r.at ? new Date(r.at).toLocaleString() : ""}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>No replies yet.</p>}
-                                            </div>
-                                            <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg }}>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textMain, marginBottom: "8px" }}>Add reply</label>
-                                                <textarea value={supportTicketReplyMessage} onChange={(e) => setSupportTicketReplyMessage(e.target.value)} placeholder="Type your message..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", resize: "vertical", marginBottom: "10px" }} />
-                                                <button type="button" onClick={() => { if (!(supportTicketReplyMessage || "").trim()) return; addReplyToTicket(viewedTicket.id, supportTicketReplyMessage); }} style={{ padding: "10px 20px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Send reply</button>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-                                                <h4 style={{ fontSize: "16px", fontWeight: 600, color: t.textMain, margin: 0 }}>All Tickets</h4>
-                                                <input type="text" placeholder="Search by Ticket ID" value={supportTicketSearchId} onChange={(e) => setSupportTicketSearchId(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px", minWidth: "180px" }} />
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const sub = (supportTicketForm.subject || "").trim();
+                                                    const desc = (supportTicketForm.description || "").trim();
+                                                    if (!sub) {
+                                                        alert("Please fill in subject.");
+                                                        return;
+                                                    }
+                                                    await createTicketMutation({
+                                                        userId: effectiveEmail,
+                                                        issue: sub + (desc ? "\n" + desc : ""),
+                                                        status: "Open"
+                                                    });
+                                                    setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" });
+                                                    setSupportTab("all_tickets");
+                                                }}
+                                                style={{ padding: "14px 32px", borderRadius: "10px", border: "none", backgroundColor: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "15px" }}
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() => setSupportTab("all_tickets")}
+                                                style={{ padding: "14px 32px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 700, cursor: "pointer", fontSize: "15px" }}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {supportTab === "all_tickets" && (
+                                    <>
+                                        {viewedTicket ? (
+                                            <div>
+                                                <button type="button" onClick={() => { setSupportTicketDetailId(null); setSupportTicketReplyMessage(""); }} style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "24px", padding: "10px 18px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", fontWeight: 700, cursor: "pointer" }}><ArrowRight size={18} style={{ transform: "rotate(180deg)" }} /> Back to list</button>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                                    <div style={{ backgroundColor: t.bg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                                        <h4 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "20px" }}>Ticket Info</h4>
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>TICKET ID</span><div style={{ fontSize: "15px", fontWeight: 700 }}>#{viewedTicket.ticketId || viewedTicket.id.slice(-6).toUpperCase()}</div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>SUBJECT</span><div style={{ fontSize: "15px", fontWeight: 700 }}>{viewedTicket.subject}</div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>STATUS</span><div><span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{viewedTicket.status.toUpperCase()}</span></div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>CREATED AT</span><div style={{ fontSize: "14px", fontWeight: 600 }}>{new Date(viewedTicket.createdAt).toLocaleString()}</div></div>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ backgroundColor: t.bg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                                        <h4 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "20px" }}>Ticket Body</h4>
+                                                        <p style={{ margin: 0, fontSize: "14px", color: t.textMain, lineHeight: 1.6 }}>{viewedTicket.description || "No description provided."}</p>
+                                                    </div>
+                                                </div>
+                                                <div style={{ backgroundColor: t.bg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                                    <h4 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "20px" }}>Reply History</h4>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
+                                                        {viewedTicket.replies?.length > 0 ? viewedTicket.replies.map((r, i) => (
+                                                            <div key={i} style={{ display: "flex", gap: "16px", padding: "20px", borderRadius: "12px", backgroundColor: r.from === 'organiser' ? "#3b82f610" : "#f1f5f9", borderLeft: `4px solid ${r.from === 'organiser' ? "#3b82f6" : "#64748b"}` }}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                                                                        <span style={{ fontWeight: 800, fontSize: "14px", textTransform: "capitalize" }}>{r.from}</span>
+                                                                        <span style={{ fontSize: "12px", color: t.textSub }}>{new Date(r.at).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p style={{ margin: 0, fontSize: "14px", color: t.textMain }}>{r.message}</p>
+                                                                </div>
+                                                            </div>
+                                                        )) : <div style={{ textAlign: "center", padding: "32px", color: t.textSub }}>No replies yet.</div>}
+                                                    </div>
+                                                    <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: "24px" }}>
+                                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Add New Reply</label>
+                                                        <textarea value={supportTicketReplyMessage} onChange={(e) => setSupportTicketReplyMessage(e.target.value)} placeholder="Type your message here..." rows={4} style={{ width: "100%", padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", outline: "none", marginBottom: "16px" }} />
+                                                        <button onClick={() => { if (!supportTicketReplyMessage.trim()) return; addReplyToTicket(viewedTicket.id, supportTicketReplyMessage); }} style={{ padding: "12px 28px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Send Reply</button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style={{ overflowX: "auto" }}>
-                                                {filteredTickets.length === 0 ? (
-                                                    <p style={{ fontSize: "13px", color: t.textSub }}>No support tickets yet. Create one with &quot;Add Ticket&quot;.</p>
-                                                ) : (
-                                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                        ) : (
+                                            <>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", gap: "16px", flexWrap: "wrap" }}>
+                                                    <div style={{ position: "relative", flex: 1, minWidth: "250px" }}>
+                                                        <input type="text" placeholder="Search by Ticket ID" value={supportTicketSearchId} onChange={(e) => setSupportTicketSearchId(e.target.value)} style={{ width: "100%", padding: "12px 16px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", outline: "none" }} />
+                                                    </div>
+                                                    <button onClick={() => setSupportTab("add_ticket")} style={{ padding: "12px 24px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Plus size={18} /> Add Ticket</button>
+                                                </div>
+                                                <div style={{ overflowX: "auto" }}>
+                                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
                                                         <thead>
-                                                            <tr style={{ borderBottom: `2px solid ${t.border}` }}>
-                                                                <th style={{ padding: "10px 8px", width: "40px" }}>
-                                                                    <input type="checkbox" checked={filteredTickets.length > 0 && selectedTicketIds.length === filteredTickets.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
-                                                                </th>
-                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Ticket ID</th>
-                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Email</th>
-                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Subject</th>
-                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Status</th>
-                                                                <th style={{ textAlign: "left", padding: "10px 8px", color: t.textSub, fontWeight: 600 }}>Action</th>
+                                                            <tr style={{ textAlign: "left" }}>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}><input type="checkbox" checked={filteredTickets.length > 0 && selectedTicketIds.length === filteredTickets.length} onChange={toggleSelectAll} /></th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Ticket ID</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Email</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Subject</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Action</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {filteredTickets.map((ticket) => (
-                                                                <tr key={ticket.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                                    <td style={{ padding: "10px 8px" }}>
-                                                                        <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} style={{ cursor: "pointer" }} />
+                                                                <tr key={ticket.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                                        <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} />
                                                                     </td>
-                                                                    <td style={{ padding: "10px 8px", color: t.textMain, fontWeight: 600 }}>{ticket.ticketId ?? ticket.id}</td>
-                                                                    <td style={{ padding: "10px 8px", color: t.textSub }}>{ticket.email || "—"}</td>
-                                                                    <td style={{ padding: "10px 8px", color: t.textMain }}>{ticket.subject}</td>
-                                                                    <td style={{ padding: "10px 8px" }}>
-                                                                        <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status}</span>
+                                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 700 }}>#{ticket.ticketId || ticket.id.slice(-6).toUpperCase()}</td>
+                                                                    <td style={{ padding: "16px", fontSize: "14px", color: t.textSub }}>{ticket.email || "—"}</td>
+                                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{ticket.subject}</td>
+                                                                    <td style={{ padding: "16px" }}>
+                                                                        <span style={{ padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status.toUpperCase()}</span>
                                                                     </td>
-                                                                    <td style={{ padding: "10px 8px" }}>
-                                                                        <div style={{ position: "relative" }}>
-                                                                            <button type="button" onClick={() => setSupportTicketSelectOpen(supportTicketSelectOpen === ticket.id ? null : ticket.id)} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 14px", borderRadius: "8px", border: "none", backgroundColor: "#8b5cf6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Select <ChevronDown size={14} /></button>
-                                                                            {supportTicketSelectOpen === ticket.id && (
-                                                                                <div style={{ position: "absolute", top: "100%", left: 0, marginTop: "4px", backgroundColor: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 10, minWidth: "120px" }}>
-                                                                                    <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>View</button>
-                                                                                    <button type="button" onClick={() => { setSupportTicketDetailId(ticket.id); setSupportTicketSelectOpen(null); }} style={{ display: "block", width: "100%", padding: "8px 12px", textAlign: "left", border: "none", background: "none", color: t.textMain, fontSize: "13px", cursor: "pointer" }}>Reply</button>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
+                                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                                        <select
+                                                                            onChange={(e) => {
+                                                                                if (e.target.value === "view") setSupportTicketDetailId(ticket.id);
+                                                                                if (e.target.value === "reply") { setSupportTicketDetailId(ticket.id); setSupportTicketReplyMessage(""); }
+                                                                                e.target.value = "select";
+                                                                            }}
+                                                                            style={{ padding: "6px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "12px", outline: "none", cursor: "pointer" }}
+                                                                        >
+                                                                            <option value="select">Select</option>
+                                                                            <option value="view">View</option>
+                                                                            <option value="reply">Reply</option>
+                                                                        </select>
                                                                     </td>
                                                                 </tr>
                                                             ))}
+                                                            {filteredTickets.length === 0 && (
+                                                                <tr><td colSpan={6} style={{ textAlign: "center", padding: "48px", color: t.textSub }}>No support tickets found.</td></tr>
+                                                            )}
                                                         </tbody>
                                                     </table>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
-                                </>
-                            )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     );
                 }
+
                 case "edit_profile": {
                     const orgTypeOptions = ["Individual", "Event Organiser", "Pvt Ltd", "Others"];
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Edit Profile</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "24px" }}>Update your organiser profile details.</p>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", maxWidth: "560px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>First Name</label>
-                                    <input type="text" value={profile.firstName} onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
+                        <div>
+                            <Breadcrumb title="Edit Profile" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", maxWidth: "800px" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Profile Details</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Update your organiser profile information and public details.</p>
                                 </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Last Name</label>
-                                    <input type="text" value={profile.lastName} onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
-                                </div>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Organiser Type</label>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                                        {orgTypeOptions.map(opt => (
-                                            <button key={opt} type="button" onClick={() => setProfile(p => ({ ...p, orgType: opt }))} style={{ padding: "10px 16px", borderRadius: "8px", border: `2px solid ${profile.orgType === opt ? "#3b82f6" : t.border}`, backgroundColor: profile.orgType === opt ? "#3b82f615" : "transparent", color: profile.orgType === opt ? "#3b82f6" : t.textSub, fontWeight: 600, cursor: "pointer", fontSize: "13px" }}>{opt}</button>
-                                        ))}
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>First Name</label>
+                                        <input type="text" value={profile.firstName} onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Last Name</label>
+                                        <input type="text" value={profile.lastName} onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Organiser Type</label>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                            {orgTypeOptions.map(opt => (
+                                                <button key={opt} type="button" onClick={() => setProfile(p => ({ ...p, orgType: opt }))} style={{ padding: "10px 20px", borderRadius: "10px", border: `2px solid ${profile.orgType === opt ? "#3b82f6" : t.border}`, backgroundColor: profile.orgType === opt ? "#3b82f615" : "transparent", color: profile.orgType === opt ? "#3b82f6" : t.textSub, fontWeight: 700, cursor: "pointer", fontSize: "14px", transition: "0.2s" }}>{opt}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Email address</label>
+                                        <input type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="organizer@example.com" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Phone Number</label>
+                                        <input type="tel" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                {profile.kycStatus === "KYC Approved" ? <CheckCircle size={24} color="#22c55e" /> : <AlertCircle size={24} color="#f59e0b" />}
+                                            </div>
+                                            <div>
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>KYC Verification Status</p>
+                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>{profile.kycStatus}</p>
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b" }}>{profile.kycStatus.toUpperCase()}</div>
                                     </div>
                                 </div>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Email</label>
-                                    <input type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="organizer@example.com" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
-                                </div>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: t.textSub }}>Phone</label>
-                                    <input type="tel" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px" }} />
-                                </div>
-                                <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <span style={{ fontSize: "12px", fontWeight: 600, color: t.textSub }}>KYC Status</span>
-                                    <span style={{ padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 600, backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b" }}>{profile.kycStatus}</span>
-                                </div>
-                                <div style={{ gridColumn: "span 2", marginTop: "8px" }}>
-                                    <button type="button" onClick={() => { alert("Profile updates are currently disabled. Please contact support to change profile details."); }} style={{ padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>Save changes</button>
+
+                                <div style={{ marginTop: "32px", display: "flex", justifyContent: "flex-end" }}>
+                                    <button type="button" onClick={() => { alert("Profile updates are currently disabled. Please contact support to change profile details."); }} style={{ padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>Save Profile Changes</button>
                                 </div>
                             </div>
                         </div>
                     );
                 }
-                case "change_password":
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Change Password</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Update your account password.</p>
+
+                case "change_password": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
                         </div>
                     );
-                case "ticket_bookings":
+
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Ticket Booking Details</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>View all ticket bookings for your events here.</p>
-                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
-                                <Monitor size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                                <p>No bookings found yet.</p>
+                        <div>
+                            <Breadcrumb title="Change Password" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", maxWidth: "560px" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Security Settings</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Update your account password to keep it secure.</p>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Current Password</label>
+                                        <input type="password" placeholder="••••••••" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>New Password</label>
+                                        <input type="password" placeholder="••••••••" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Confirm New Password</label>
+                                        <input type="password" placeholder="••••••••" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 600 }} />
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: "32px" }}>
+                                    <button disabled style={{ width: "100%", padding: "16px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "not-allowed", opacity: 0.7, fontSize: "15px" }}>Update Security Password</button>
+                                </div>
                             </div>
                         </div>
                     );
-                case "refund_status":
+                }
+                case "ticket_bookings": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Refund Status</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Track refund requests and their current status.</p>
-                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
-                                <ArrowLeftRight size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                                <p>No pending refunds.</p>
+                        <div>
+                            <Breadcrumb title="Ticket Bookings" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Booking Archive</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Access historical ticket booking records for all your published events.</p>
+                                </div>
+                                <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "20px", border: `2px dashed ${t.border}` }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#3b82f610", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                        <Monitor size={32} color="#3b82f6" />
+                                    </div>
+                                    <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>No Booking History</h4>
+                                    <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>When customers book tickets for your events, the details will appear here automatically.</p>
+                                </div>
                             </div>
                         </div>
                     );
-                case "ticket_details":
+                }
+
+                case "refund_status": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>Ticket Details</h3>
-                            <p style={{ fontSize: "13px", color: t.textSub }}>Manage and view detailed information about generated tickets.</p>
-                            <div style={{ padding: "24px", textAlign: "center", color: t.textSub, marginTop: "20px", border: `1px dashed ${t.border}`, borderRadius: "12px" }}>
-                                <Ticket size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                                <p>Select an event to view its tickets.</p>
+                        <div>
+                            <Breadcrumb title="Refund Status" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Refund Management</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Track and manage ticket refund requests initiated by attendees.</p>
+                                </div>
+                                <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "20px", border: `2px dashed ${t.border}` }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#3b82f610", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                        <ArrowLeftRight size={32} color="#3b82f6" />
+                                    </div>
+                                    <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>All Clear</h4>
+                                    <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>There are no pending or active refund requests at the moment.</p>
+                                </div>
                             </div>
                         </div>
                     );
+                }
+
+                case "ticket_details": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="Ticket Inventory" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ marginBottom: "32px" }}>
+                                    <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Details</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Detailed inventory and management of all individual tickets for your events.</p>
+                                </div>
+                                <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "20px", border: `2px dashed ${t.border}` }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#3b82f610", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                        <Ticket size={32} color="#3b82f6" />
+                                    </div>
+                                    <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>Select an Event</h4>
+                                    <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>Go to Event Management and select an event to view its detailed ticket inventory here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
                 default:
                     return <div>Coming Soon</div>;
             }
@@ -2175,17 +2588,34 @@ function OrganiserPanel() {
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
                                 <div style={{ gridColumn: "span 2" }}>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Event Title</label>
-                                    <input type="text" placeholder="e.g. Annual Music Festival" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Annual Music Festival"
+                                        value={newEvent.title}
+                                        onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
                                 </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Event Type</label>
-                                    <select style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}>
-                                        <option>Venue Event</option><option>Virtual Event</option>
+                                    <select
+                                        value={newEvent.type}
+                                        onChange={(e) => setNewEvent(prev => ({ ...prev, type: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    >
+                                        <option value="Venue">Venue Event</option>
+                                        <option value="Virtual">Virtual Event</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Venue / Meeting Link</label>
-                                    <input type="text" placeholder="Enter address or URL" style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Enter address or URL"
+                                        value={newEvent.venue}
+                                        onChange={(e) => setNewEvent(prev => ({ ...prev, venue: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
                                 </div>
                                 <div style={{ gridColumn: "span 2" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
@@ -2195,19 +2625,52 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                         {newEvent.slots.map((slot, idx) => (
                                             <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                                <input type="date" style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                                <input type="time" style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
+                                                <input
+                                                    type="date"
+                                                    value={slot.date}
+                                                    onChange={(e) => {
+                                                        const newSlots = [...newEvent.slots];
+                                                        newSlots[idx].date = e.target.value;
+                                                        setNewEvent(prev => ({ ...prev, slots: newSlots }));
+                                                    }}
+                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                />
+                                                <input
+                                                    type="time"
+                                                    value={slot.time}
+                                                    onChange={(e) => {
+                                                        const newSlots = [...newEvent.slots];
+                                                        newSlots[idx].time = e.target.value;
+                                                        setNewEvent(prev => ({ ...prev, slots: newSlots }));
+                                                    }}
+                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                />
                                                 {newEvent.slots.length > 1 && <button onClick={() => removeDateSlot(idx)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={18} /></button>}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                                 <div style={{ gridColumn: "span 2", marginTop: "12px" }}>
-                                    <button onClick={() => {
-                                        const eventToSave = { ...newEvent, id: Date.now(), date: newEvent.slots[0]?.date || "TBA", time: newEvent.slots[0]?.time || "TBA", status: "Active", img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop" };
-                                        setEvents(prev => [...prev, eventToSave]);
-                                        alert("Event created successfully! It will now appear on the home page.");
-                                        setShowCreateEvent(false);
+                                    <button onClick={async () => {
+                                        try {
+                                            if (!newEvent.title.trim()) { alert("Please enter event title."); return; }
+                                            const firstSlot = newEvent.slots[0];
+                                            await createEventMutation({
+                                                organiserId: effectiveEmail,
+                                                title: newEvent.title,
+                                                type: newEvent.type,
+                                                venue: newEvent.venue,
+                                                date: firstSlot?.date || "TBA",
+                                                time: firstSlot?.time || "TBA",
+                                                img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
+                                                status: "Active"
+                                            });
+                                            setShowCreateEvent(false);
+                                            setNewEvent({ title: "", type: "Venue", venue: "", slots: [{ date: "", time: "" }] });
+                                        } catch (err) {
+                                            console.error("Failed to create event:", err);
+                                            alert("Failed to create event. Check console for details.");
+                                        }
                                     }} style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>
                                         Publish Event
                                     </button>
@@ -2256,82 +2719,159 @@ function OrganiserPanel() {
 
                 {/* Sidebar — image format: Search + dropdown sections + sub-sidebar */}
                 <aside className="sidebar">
-                    <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <Link href="/" style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "10px",
-                            background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                            padding: '12px 10px',
-                            borderRadius: '12px',
-                            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
-                            textDecoration: "none",
-                            transition: 'all 0.3s ease'
-                        }}>
-                            <img
-                                src="/logo.png"
-                                alt="Logo"
-                                style={{
-                                    height: "44px",
-                                    objectFit: "contain",
-                                    maxWidth: "100%",
-                                    filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',
-                                    transition: 'filter 0.3s ease'
-                                }}
-                            />
+                    <div className="sidebar-logo">
+                        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px" }}>
+                            <img src="/logo.png" alt="Logo" style={{ height: "36px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }} />
                         </Link>
                     </div>
-                    <div style={{ padding: "16px" }}>
-                        <input
-                            type="text"
-                            placeholder="Search Menu Here..."
-                            value={menuSearch}
-                            onChange={e => setMenuSearch(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px 12px",
-                                borderRadius: "8px",
-                                border: `1px solid ${t.border}`,
-                                backgroundColor: t.bg,
-                                color: t.textMain,
-                                fontSize: "13px"
-                            }}
+
+                    <div className="sidebar-profile">
+                        <img
+                            src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
+                            alt="Profile"
+                            className="sidebar-profile-img"
                         />
-                    </div>
-                    <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "16px" }}>
-                        <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
-                            <Settings size={20} /> Dashboard
-                        </button>
-
-                        {/* Custom Organiser Tabs based on user request */}
-                        <button onClick={() => setActiveTab("ticket_bookings")} className={`sidebar-item ${activeTab === "ticket_bookings" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
-                            <Monitor size={20} /> Ticket Booking Details
-                        </button>
-                        <button onClick={() => setActiveTab("refund_status")} className={`sidebar-item ${activeTab === "refund_status" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
-                            <ArrowLeftRight size={20} /> Refund status
-                        </button>
-                        <button onClick={() => setActiveTab("ticket_details")} className={`sidebar-item ${activeTab === "ticket_details" ? "active" : ""}`} style={{ justifyContent: "flex-start" }}>
-                            <Ticket size={20} /> Ticket Details
-                        </button>
-
-
-                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}><Users size={20} /> Edit Profile</button>
-                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}><Lock size={20} /> Change Password</button>
-                        <button onClick={() => { try { localStorage.removeItem("user"); } catch (_) { } router.push("/signin"); }} className="sidebar-item" style={{ color: "#ef4444", textDecoration: "none", background: "none", border: "none", cursor: "pointer", width: "100%", display: "flex", alignItems: "center", gap: "8px" }}><X size={20} /> Logout</button>
-                    </nav>
-
-                    <div style={{ padding: "16px", borderTop: `1px solid ${t.sidebarBorder}` }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", backgroundColor: theme === 'light' ? "#f8fafc" : "#0f172a", borderRadius: "10px" }}>
-                            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(45deg, #3b82f6, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", color: "#fff", fontSize: "13px" }}>
-                                {profile.firstName ? (profile.firstName.charAt(0) + (profile.lastName?.charAt(0) || "")).toUpperCase() : "O"}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textMain }}>{profile.firstName} {profile.lastName}</p>
-                                <p style={{ margin: 0, fontSize: "11px", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b", fontWeight: 600 }}>● {profile.kycStatus || "Pending Verification"}</p>
-                            </div>
+                        <div className="sidebar-profile-info">
+                            <p className="sidebar-profile-name">{profile.firstName || 'Organizer'} {profile.lastName}</p>
+                            <p className="sidebar-profile-role">Organizer</p>
                         </div>
                     </div>
+
+                    <div className="sidebar-search">
+                        <div style={{ position: "relative" }}>
+                            <Menu size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
+                            <input
+                                type="text"
+                                placeholder="Search Menu Here..."
+                                className="sidebar-search-input"
+                                value={menuSearch}
+                                onChange={e => setMenuSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
+                        <button
+                            onClick={() => setActiveTab("dashboard")}
+                            className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <LayoutDashboard size={20} />
+                                <span>Dashboard</span>
+                            </div>
+                        </button>
+
+                        <div>
+                            <button
+                                onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
+                                className="sidebar-item"
+                                style={{ color: (activeTab === "post_event" || activeTab === "manage_events" || activeTab === "venue_events" || activeTab === "online_events") ? t.textMain : t.textSub }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Grid size={20} />
+                                    <span>Event Management</span>
+                                </div>
+                                {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+                            {sidebarOpen.eventManagement && (
+                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                    <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
+                                    <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
+                                    <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
+                                    <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <button
+                                onClick={() => setSidebarOpen(prev => ({ ...prev, eventBookings: !prev.eventBookings }))}
+                                className="sidebar-item"
+                                style={{ color: (activeTab === "all_bookings" || activeTab === "completed_bookings" || activeTab === "pending_bookings" || activeTab === "rejected_bookings" || activeTab === "booking_report") ? t.textMain : t.textSub }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Users size={20} />
+                                    <span>Event Bookings</span>
+                                </div>
+                                {sidebarOpen.eventBookings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+                            {sidebarOpen.eventBookings && (
+                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                    <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
+                                    <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed Bookings</button>
+                                    <button onClick={() => setActiveTab("pending_bookings")} className={`sidebar-dropdown-item ${activeTab === "pending_bookings" ? "active" : ""}`}>Pending Bookings</button>
+                                    <button onClick={() => setActiveTab("rejected_bookings")} className={`sidebar-dropdown-item ${activeTab === "rejected_bookings" ? "active" : ""}`}>Rejected Bookings</button>
+                                    <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Wallet size={20} />
+                                <span>Withdraw</span>
+                            </div>
+                        </button>
+
+                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <ArrowLeftRight size={20} />
+                                <span>Transactions</span>
+                            </div>
+                        </button>
+
+                        <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Monitor size={20} />
+                                <span>Pwa Scanner</span>
+                            </div>
+                        </button>
+
+                        <div>
+                            <button
+                                onClick={() => setSidebarOpen(prev => ({ ...prev, supportTickets: !prev.supportTickets }))}
+                                className="sidebar-item"
+                                style={{ color: activeTab === "support_tickets" ? t.textMain : t.textSub }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <FileText size={20} />
+                                    <span>Support Tickets</span>
+                                </div>
+                                {sidebarOpen.supportTickets ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+                            {sidebarOpen.supportTickets && (
+                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "all_tickets" ? "active" : ""}`}>All Tickets</button>
+                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "add_ticket" ? "active" : ""}`}>Add Ticket</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Users size={20} />
+                                <span>Edit Profile</span>
+                            </div>
+                        </button>
+
+                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Lock size={20} />
+                                <span>Change Password</span>
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => { if (confirm("Are you sure you want to logout?")) { try { localStorage.removeItem("user"); } catch (_) { } router.push("/signin"); } }}
+                            className="sidebar-item"
+                            style={{ color: "#ef4444" }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <LogOut size={20} />
+                                <span>Logout</span>
+                            </div>
+                        </button>
+                    </nav>
                 </aside>
 
                 {/* Main Content */}

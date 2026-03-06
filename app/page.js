@@ -123,7 +123,7 @@ export default function Home() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '102px' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '142px' }}>
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap');

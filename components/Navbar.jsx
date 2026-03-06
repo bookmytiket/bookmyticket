@@ -8,6 +8,9 @@ const SUBNAV_LINKS = [
   { href: "/#rsvp", label: "RSVP" },
 ];
 
+import PromotionBanner from "./PromotionBanner";
+
+
 const COUNTRIES = [
   { flag: "🇮🇳", label: "India" },
   { flag: "🇦🇪", label: "UAE" },
@@ -340,8 +343,8 @@ export default function Navbar() {
           </div>
         </div>
 
-
         {(isHome || pathname === "/") && (
+
           <div className="header-subnav">
             <div className="header-subnav-inner">
               <div className="header-subnav-left">
@@ -362,6 +365,8 @@ export default function Navbar() {
             </div>
           </div>
         )}
+
+        {isHome && !scrolled && <PromotionBanner />}
       </header>
 
       {locOpen && (
