@@ -170,16 +170,19 @@ function LocationPickerModal({
 }
 
 function OrganiserPanel() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
-        if (mounted && !user) {
+    }, []);
+
+    useEffect(() => {
+        if (!loading && !user) {
             router.push("/signin");
         }
-    }, [mounted, user, router]);
+    }, [user, loading, router]);
 
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");
@@ -2974,11 +2977,20 @@ function OrganiserPanel() {
         </div>
     );
 
-    // Avoid SSR/hydration issues: only render full UI after client mount
-    if (!mounted) {
+    // Show loading screen until mounted AND auth state is resolved
+    if (!mounted || loading) {
         return (
             <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#94a3b8" }}>
                 Loading…
+            </div>
+        );
+    }
+
+    // If not logged in, redirect (useEffect handles this, show nothing in the meantime)
+    if (!user) {
+        return (
+            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#94a3b8" }}>
+                Redirecting to sign in…
             </div>
         );
     }

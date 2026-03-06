@@ -47,32 +47,38 @@ export default function SignInPage() {
         if (convexSsoConfig && typeof convexSsoConfig === "object") setSsoConfigs(convexSsoConfig);
     }, [convexSsoConfig]);
 
-    // Auto-detect role: "admin" → admin portal, anything else → organiser
-    const detectRole = (id) => id.trim().toLowerCase() === "admin" ? "admin" : "organiser";
-
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoginError("");
 
-        const role = detectRole(identifier);
+        const id = identifier.trim().toLowerCase();
 
-        if (role === "admin" || role === "organiser") {
-            const ok = login(identifier, password, role);
-            if (!ok) setLoginError("Invalid email or password. Please try again.");
+        // 1. Admin login
+        if (id === "admin") {
+            const ok = login(identifier, password, "admin");
+            if (!ok) setLoginError("Invalid admin credentials.");
             return;
         }
 
-        // Check Public User in Convex
+        // 2. Try Public User in Convex
         try {
-            const user = await convex.query(api.users.getByEmail, { email: identifier });
+            const user = await convex.query(api.users.getByEmail, { email: id });
             if (user && user.password === password) {
                 login(identifier, password, "user", user);
-            } else {
+                return;
+            } else if (user && user.password !== password) {
                 setLoginError("Invalid email or password. Please try again.");
+                return;
             }
         } catch (err) {
-            setLoginError("An error occurred during login.");
+            // Ignore error here and fall through to organiser
         }
+
+        // 3. Fallback to Organiser
+        const ok = login(identifier, password, "organiser");
+        if (ok) return;
+
+        setLoginError("Invalid email or password. Please try again.");
     };
 
     const handleSignup = async (e) => {

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/components/AuthContext";
 import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -44,20 +45,16 @@ function useConvexConfig(key, defaultValue, allConfig) {
     return [state, setState];
 }
 
-import { useAuth } from "@/components/AuthContext";
-
 export default function AdminHomePage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const [mounted, setMounted] = useState(false);
     useEffect(() => {
-        setMounted(true);
-        if (mounted && (!user || user.role !== "admin")) {
+        if (!loading && (!user || user.role !== "admin")) {
             router.push("/signin");
         }
-    }, [mounted, user, router]);
+    }, [user, loading, router]);
 
     const handleLogout = () => {
         try { localStorage.removeItem("user"); } catch (_) { }
