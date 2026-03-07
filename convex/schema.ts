@@ -28,11 +28,39 @@ export default defineSchema({
     bookings: defineTable({
         eventId: v.id("events"),
         userId: v.string(),
+        tickets: v.optional(v.number()),
         ticketCount: v.number(),
         totalPrice: v.number(),
+        customerDetails: v.optional(v.object({
+            name: v.string(),
+            email: v.string(),
+            phone: v.string(),
+        })),
         status: v.string(),
+        paymentIntentId: v.optional(v.string()),
         scanned: v.optional(v.boolean()),
-    }),
+        scannedAt: v.optional(v.number()),
+    }).index("by_eventId", ["eventId"]).index("by_userId", ["userId"]),
+
+    pwaScans: defineTable({
+        bookingId: v.id("bookings"),
+        eventId: v.id("events"),
+        organiserId: v.string(),
+        scannedAt: v.number(),
+        status: v.string(), // "valid", "already_used", "invalid"
+    }).index("by_organiserId", ["organiserId"]).index("by_bookingId", ["bookingId"]),
+
+    eventBookings: defineTable({
+        bookingId: v.id("bookings"),
+        eventId: v.id("events"),
+        organiserId: v.string(),
+        customerName: v.string(),
+        customerEmail: v.string(),
+        ticketCount: v.number(),
+        totalAmount: v.number(),
+        status: v.string(),
+        createdAt: v.number(),
+    }).index("by_organiserId", ["organiserId"]).index("by_eventId", ["eventId"]),
 
     organisers: defineTable({
         userId: v.string(), // acts as email/username

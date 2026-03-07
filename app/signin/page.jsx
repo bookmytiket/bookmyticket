@@ -42,11 +42,18 @@ export default function SignInPage() {
     const createUser = useMutation(api.users.create);
     const forgotPassMutation = useMutation(api.auth.forgotPassword);
 
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
-    const convexSsoConfig = useQuery(api.systemConfig.getConfig, { key: "sso_configs" });
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false, facebookConfig: {}, googleConfig: {} });
+    const convexSsoSettings = useQuery(api.ssoSettings.get);
     useEffect(() => {
-        if (convexSsoConfig && typeof convexSsoConfig === "object") setSsoConfigs(convexSsoConfig);
-    }, [convexSsoConfig]);
+        if (convexSsoSettings) {
+            setSsoConfigs({
+                facebook: convexSsoSettings.facebookEnabled || false,
+                google: convexSsoSettings.googleEnabled || false,
+                facebookConfig: convexSsoSettings.facebookConfig || {},
+                googleConfig: convexSsoSettings.googleConfig || {},
+            });
+        }
+    }, [convexSsoSettings]);
 
     const handleLogin = async (e) => {
         e.preventDefault();

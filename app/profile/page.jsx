@@ -27,6 +27,7 @@ export default function ProfilePage() {
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "my_booking");
     const [bookingFilter, setBookingFilter] = useState("all"); // "all" | "booked" | "cancelled"
+    const [viewTicketModal, setViewTicketModal] = useState(null);
 
     // Bookings fetched from Convex DB (filtered by user ID)
     const bookings = useQuery(api.bookings?.getBookings || (() => []));
@@ -116,7 +117,7 @@ export default function ProfilePage() {
                                                 {booking.status}
                                             </span>
                                             {booking.status !== 'Cancelled' && (
-                                                <button style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>Download Ticket</button>
+                                                <button onClick={() => setViewTicketModal(booking)} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
                                             )}
                                         </div>
                                     </div>
@@ -234,6 +235,33 @@ export default function ProfilePage() {
                     {renderTabContent()}
                 </main>
             </div>
+
+            {/* View Ticket Modal */}
+            {viewTicketModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={() => setViewTicketModal(null)}>
+                    <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "400px", border: `1px solid ${t.border}`, textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                            <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Digital Ticket</h2>
+                            <button onClick={() => setViewTicketModal(null)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer", fontSize: "20px" }}>✕</button>
+                        </div>
+                        <div style={{ padding: "24px", background: "#f8fafc", borderRadius: "16px", border: `1px dashed ${t.border}`, marginBottom: "24px" }}>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${viewTicketModal._id}`} alt="QR Code" style={{ width: "200px", height: "200px", borderRadius: "8px", margin: "0 auto", display: "block" }} />
+                        </div>
+                        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 8px", color: t.textMain }}>{viewTicketModal.eventName || "Event Ticket"}</h3>
+                        <p style={{ margin: "0 0 16px", fontSize: "14px", color: t.textSub }}>Booking ID: <span style={{ fontWeight: 700, color: t.textMain }}>{viewTicketModal._id}</span></p>
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "16px", backgroundColor: "#f1f5f9", borderRadius: "12px", textAlign: "left" }}>
+                            <div>
+                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Quantity</p>
+                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.ticketCount} Ticket(s)</p>
+                            </div>
+                            <div>
+                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Status</p>
+                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.status}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -368,8 +368,12 @@ function OrganiserPanel() {
     const validateBookingId = useCallback(async (id) => {
         const rawId = String(id).trim();
         if (!rawId) return;
-        // Search in Convex bookings
-        const booking = convexBookings.find(b => String(b._id) === rawId || String(b.id) === rawId);
+        // Search in Convex bookings (exact or short ID match)
+        const booking = convexBookings.find(b =>
+            String(b._id) === rawId ||
+            String(b.id) === rawId ||
+            (rawId.length >= 6 && String(b._id).toUpperCase().includes(rawId.toUpperCase()))
+        );
         if (!booking) {
             setPwaScanResult({ status: "not_found", id: rawId });
             return;
@@ -2074,10 +2078,14 @@ function OrganiserPanel() {
                         </div>
                     );
 
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const recentScans = myBookings.filter(b => b.scanned).sort((a, b) => new Date(b.scannedAt || b._creationTime).getTime() - new Date(a.scannedAt || a._creationTime).getTime()).reverse();
+
                     return (
                         <div>
                             <Breadcrumb title="PWA Ticket Scanner" />
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "32px", alignItems: "start" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "32px", alignItems: "start", marginBottom: "32px" }}>
                                 <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                     <div style={{ marginBottom: "32px" }}>
                                         <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Validation</h3>
@@ -2148,7 +2156,7 @@ function OrganiserPanel() {
                                                     <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                                         <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.eventName}</div>
                                                         <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.userId}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.tickets} Ticket(s)</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.ticketCount} Ticket(s)</div>
                                                     </div>
                                                 )}
                                             </div>
@@ -2173,6 +2181,47 @@ function OrganiserPanel() {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Recent Scans</h3>
+                                    <div style={{ padding: "6px 16px", borderRadius: "100px", backgroundColor: "#22c55e20", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
+                                        {recentScans.length} Checked-In
+                                    </div>
+                                </div>
+
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                        <thead>
+                                            <tr style={{ textAlign: "left" }}>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Ticket ID</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Attendee</th>
+                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {recentScans.length === 0 ? (
+                                                <tr><td colSpan={4} style={{ textAlign: "center", padding: "48px", color: t.textSub }}>No tickets scanned yet.</td></tr>
+                                            ) : recentScans.map(b => (
+                                                <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b._id.slice(-8).toUpperCase()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.eventName || "—"}</td>
+                                                    <td style={{ padding: "16px" }}>
+                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.userName || "Guest User"}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customerEmail || b.userId}</div>
+                                                    </td>
+                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
+                                                            <CheckCircle size={16} /> Authenticated
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>

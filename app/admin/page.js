@@ -34,7 +34,52 @@ const useConvexConfig = (key, initialValue, allConfig) => {
 };
 
 
-export default function AdminHomePage() {
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null, errorInfo: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        // You can also log the error to an error reporting service
+        console.error("Uncaught error:", error, errorInfo);
+        this.setState({ errorInfo });
+    }
+
+    render() {
+        if (this.state.hasError) {
+            // You can render any custom fallback UI
+            return (
+                <div style={{ padding: "50px", backgroundColor: "#fff0f0", color: "#d8000c" }}>
+                    <h1>Something went wrong in the Admin Panel.</h1>
+                    <details style={{ whiteSpace: 'pre-wrap' }}>
+                        <summary>Click for error details</summary>
+                        <br />
+                        {this.state.error && this.state.error.toString()}
+                        <br />
+                        {this.state.errorInfo && this.state.errorInfo.componentStack}
+                    </details>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+export default function AdminHomePageWrapper() {
+    return (
+        <ErrorBoundary>
+            <AdminHomePage />
+        </ErrorBoundary>
+    );
+}
+
+function AdminHomePage() {
     const { user, loading, logout } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -307,13 +352,13 @@ export default function AdminHomePage() {
         title2: "Unforgettable Experience",
         subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
         categories: ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"]
-    });
+    }, allConfig);
 
     const [footerCopyrightConfig, setFooterCopyrightConfig] = useConvexConfig("admin_footer_copyright", {
         copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
         privacyUrl: "#",
         termsUrl: "#"
-    });
+    }, allConfig);
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
@@ -377,42 +422,6 @@ export default function AdminHomePage() {
     const convexEventPartners = useQuery(api.homeSettings.getEventPartners) || [];
     const addEventPartnerMutation = useMutation(api.homeSettings.addEventPartner);
     const removeEventPartnerMutation = useMutation(api.homeSettings.removeEventPartner);
-    const eventPartners = convexEventPartners;
-
-    const convexSubnavItems = useQuery(api.homeSettings.getSubnavItems) || [];
-    const addSubnavItemMutation = useMutation(api.homeSettings.addSubnavItems); // Need to check name in homeSettings.ts
-    const removeSubnavItemMutation = useMutation(api.homeSettings.removeSubnavItem);
-    const subnavItems = useMemo(() => convexSubnavItems.length > 0 ? convexSubnavItems : [
-        { id: 1, label: "Concert", icon: "🎫" },
-        { id: 2, label: "Sports", icon: "🏆" },
-        { id: 3, label: "Comedy", icon: "🎭" },
-        { id: 4, label: "Theatre", icon: "🎭" },
-        { id: 5, label: "Music", icon: "🎵" },
-        { id: 6, label: "Workshop", icon: "🎪" },
-        { id: 7, label: "Festival", icon: "🎡" },
-        { id: 8, label: "Live Shows", icon: "🎬" }
-    ], [convexSubnavItems]);
-
-    const convexCategories = useQuery(api.homeSettings.getCategories) || [];
-    const addCategoryMutation = useMutation(api.homeSettings.addCategory);
-    const patchCategoryMutation = useMutation(api.homeSettings.patchCategory);
-    const removeCategoryMutation = useMutation(api.homeSettings.removeCategory);
-    const categories = useMemo(() => convexCategories.length > 0 ? convexCategories : [
-        { id: 1, name: "Concert", slug: "concert", count: 0, icon: "🎫" },
-        { id: 2, name: "Sports", slug: "sports", count: 0, icon: "🏆" },
-        { id: 3, name: "Comedy", slug: "comedy", count: 0, icon: "🎭" },
-        { id: 4, name: "Theatre", slug: "theatre", count: 0, icon: "🎭" },
-        { id: 5, name: "Music", slug: "music", count: 0, icon: "🎵" },
-        { id: 6, name: "Workshop", slug: "workshop", count: 0, icon: "🎪" },
-        { id: 7, name: "Festival", slug: "festival", count: 0, icon: "🎡" },
-        { id: 8, name: "Live Shows", slug: "live-shows", count: 0, icon: "🎬" },
-        { id: 9, name: "Conference", slug: "conference", count: 0, icon: "📋" },
-        { id: 10, name: "Exhibition", slug: "exhibition", count: 0, icon: "🖼️" },
-        { id: 11, name: "Marathon", slug: "marathon", count: 0, icon: "🏃" },
-        { id: 12, name: "Others", slug: "others", count: 0, icon: "📁" },
-        { id: 13, name: "Competition", slug: "competition", count: 0, icon: "🏆" },
-        { id: 14, name: "Classical Dance", slug: "classical-dance", count: 0, icon: "💃" }
-    ], [convexCategories]);
     const [categoryModal, setCategoryModal] = useState(null);
     const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
     const [supportTickets, setSupportTickets] = useState([]);
@@ -437,7 +446,17 @@ export default function AdminHomePage() {
     const allEvents = useMemo(() => {
         const organiserList = (Array.isArray(events) ? events : []).filter(e => !e.archived);
         const homeList = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).filter(e => !archivedHomeIds.includes(e.id));
-        return [...homeList.map(e => ({ ...e, source: "home" })), ...organiserList.map(e => ({ ...e, id: e.id || Date.now() + Math.random(), title: e.title || "Event", category: e.category || "Others", type: e.type || "Paid", source: "organiser" }))];
+        return [
+            ...homeList.map(e => ({ ...e, source: "home" })),
+            ...organiserList.map((e, index) => ({
+                ...e,
+                id: e.id || e._id || `temp-${index}`,
+                title: e.title || "Event",
+                category: e.category || "Others",
+                type: e.type || "Paid",
+                source: "organiser"
+            }))
+        ];
     }, [events, archivedHomeIds]);
 
     const convexEvents = useQuery(api.events.getActiveEvents) || [];
@@ -1129,11 +1148,11 @@ export default function AdminHomePage() {
                                     <tbody>
                                         {bookings.length > 0 ? bookings.map((b) => (
                                             <tr key={b.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>#{b.id}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>#{String(b.id).slice(-8).toUpperCase()}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{b.customerEmail}</td>
-                                                <td style={{ padding: "12px" }}>{b.tickets}</td>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{b.amount}</td>
+                                                <td style={{ padding: "12px" }}>{b.ticketCount}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>₹{b.totalPrice?.toLocaleString()}</td>
                                                 <td style={{ padding: "12px" }}><span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>{b.status || "Confirmed"}</span></td>
                                                 <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View</button></td>
                                             </tr>
@@ -2602,13 +2621,19 @@ export default function AdminHomePage() {
                                             transition: "0.3s"
                                         }}>{ssoConfigs.facebook ? "Enabled" : "Disabled"}</span>
                                         <div
-                                            onClick={() => updateSsoSettingsMutation({ ...ssoSettings, facebookEnabled: !ssoConfigs.facebook })}
+                                            onClick={() => updateSsoSettingsMutation({
+                                                id: convexSsoSettings?._id,
+                                                facebookEnabled: !ssoConfigs.facebook,
+                                                googleEnabled: ssoConfigs.google,
+                                                facebookConfig: ssoConfigs.facebookConfig || {},
+                                                googleConfig: ssoConfigs.googleConfig || {}
+                                            })}
                                             style={{
-                                                width: "40px",
+                                                position: "relative",
+                                                width: "44px",
                                                 height: "20px",
                                                 backgroundColor: ssoConfigs.facebook ? "#22c55e" : "#e2e8f0",
                                                 borderRadius: "20px",
-                                                position: "relative",
                                                 cursor: "pointer",
                                                 transition: "0.3s"
                                             }}
@@ -2670,13 +2695,19 @@ export default function AdminHomePage() {
                                             transition: "0.3s"
                                         }}>{ssoConfigs.google ? "Enabled" : "Disabled"}</span>
                                         <div
-                                            onClick={() => updateSsoSettingsMutation({ ...ssoSettings, googleEnabled: !ssoConfigs.google })}
+                                            onClick={() => updateSsoSettingsMutation({
+                                                id: convexSsoSettings?._id,
+                                                facebookEnabled: ssoConfigs.facebook,
+                                                googleEnabled: !ssoConfigs.google,
+                                                facebookConfig: ssoConfigs.facebookConfig || {},
+                                                googleConfig: ssoConfigs.googleConfig || {}
+                                            })}
                                             style={{
-                                                width: "40px",
+                                                position: "relative",
+                                                width: "44px",
                                                 height: "20px",
                                                 backgroundColor: ssoConfigs.google ? "#22c55e" : "#e2e8f0",
                                                 borderRadius: "20px",
-                                                position: "relative",
                                                 cursor: "pointer",
                                                 transition: "0.3s"
                                             }}
