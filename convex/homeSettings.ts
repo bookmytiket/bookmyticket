@@ -92,6 +92,20 @@ export const removeEventPartner = mutation({
     },
 });
 
+export const patchEventPartner = mutation({
+    args: {
+        id: v.id("eventPartners"),
+        name: v.optional(v.string()),
+        logo: v.optional(v.string()),
+        url: v.optional(v.string()),
+        order: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const { id, ...updates } = args;
+        await ctx.db.patch(id, { ...updates, updatedAt: Date.now() });
+    },
+});
+
 // Subnav Items
 export const getSubnavItems = query({
     args: {},

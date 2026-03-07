@@ -113,6 +113,12 @@ export default function AdminHomePage() {
     const convexSsoSettings = useQuery(api.ssoSettings.get);
     const updateSsoSettingsMutation = useMutation(api.ssoSettings.update);
 
+    // Pages management
+    const convexPages = useQuery(api.pages.list) || [];
+    const createPageMutation = useMutation(api.pages.create);
+    const updatePageMutation = useMutation(api.pages.update);
+    const deletePageMutation = useMutation(api.pages.remove);
+
     // Seed defaults for new tables
     useEffect(() => {
         if (allConfig === undefined) return;
@@ -202,7 +208,19 @@ export default function AdminHomePage() {
             ];
             defaults.forEach(d => addEmailTemplateMutation(d));
         }
-    }, [allConfig, convexTicketSettings, convexEmailSettings, convexSeoSettings, convexPolicies, convexSsoSettings, convexEmailTemplates, updateTicketSettingsMutation, updateEmailSettingsMutation, updateSeoSettingsMutation, updatePoliciesMutation, updateSsoSettingsMutation, addEmailTemplateMutation]);
+
+        if (convexPages !== undefined && convexPages.length === 0) {
+            const defaults = [
+                { title: "About Us", slug: "about-us", content: "<h1>About Us</h1><p>Welcome to BookMyTicket. We are committed to creating a platform where business leaders, innovators, and professionals can come together to exchange ideas and experience unforgettable events.</p>", showInFooter: true, order: 0 },
+                { title: "Privacy Policy", slug: "privacy-policy", content: "<h1>Privacy Policy</h1><p>Your privacy is important to us. This policy explains how we handle your personal data.</p>", showInFooter: true, order: 1 },
+                { title: "Terms of Service", slug: "terms-of-service", content: "<h1>Terms of Service</h1><p>By using our service, you agree to these terms.</p>", showInFooter: true, order: 2 },
+                { title: "Event Listing", slug: "event-listing", content: "<h1>Event Listing</h1><p>Check out our latest event listings.</p>", showInFooter: true, order: 3 },
+                { title: "Pricing Plan", slug: "pricing-plan", content: "<h1>Pricing Plan</h1><p>View our event pricing plans.</p>", showInFooter: true, order: 4 },
+                { title: "Contact Us", slug: "contact-us", content: "<h1>Contact Us</h1><p>Get in touch with us at hello@bookmyticket.in</p>", showInFooter: true, order: 5 },
+            ];
+            defaults.forEach(d => createPageMutation(d));
+        }
+    }, [allConfig, convexTicketSettings, convexEmailSettings, convexSeoSettings, convexPolicies, convexSsoSettings, convexEmailTemplates, convexPages, updateTicketSettingsMutation, updateEmailSettingsMutation, updateSeoSettingsMutation, updatePoliciesMutation, updateSsoSettingsMutation, addEmailTemplateMutation, createPageMutation]);
 
     // Fallback settings for stable UI
     const ticketSettings = useMemo(() => convexTicketSettings || {
@@ -258,6 +276,30 @@ export default function AdminHomePage() {
     }), [convexSsoSettings]);
 
     const emailTemplates = convexEmailTemplates;
+    const [pageForm, setPageForm] = useState({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
+    const [pageModal, setPageModal] = useState(null); // 'create' | 'edit'
+
+    const handleSavePage = async () => {
+        if (pageModal === "create") {
+            await createPageMutation({ ...pageForm, order: convexPages.length });
+        } else if (pageModal === "edit" && pageForm._id) {
+            await updatePageMutation({
+                id: pageForm._id,
+                title: pageForm.title,
+                slug: pageForm.slug,
+                content: pageForm.content,
+                showInFooter: pageForm.showInFooter,
+            });
+        }
+        setPageModal(null);
+        setPageForm({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
+    };
+
+    const handleDeletePage = async (id) => {
+        if (confirm("Are you sure you want to delete this page?")) {
+            await deletePageMutation({ id });
+        }
+    };
 
     const [videoBannerConfig, setVideoBannerConfig] = useConvexConfig("admin_video_banner", {
         videoUrl: "/bookmyticket/videoplayback.mp4",
@@ -794,11 +836,11 @@ export default function AdminHomePage() {
 
                     {/* Reports */}
                     <p className="section-header">Reports</p>
-                    <button onClick={() => setActiveTab("financials")} className={`sidebar-item ${activeTab === "financials" ? "active" : ""}`}>
-                        <BarChart3 size={20} /> Financials
-                    </button>
                     <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
                         <MessageCircle size={20} /> Support Tickets
+                    </button>
+                    <button onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
+                        <FileText size={20} /> Pages
                     </button>
 
                     {/* System */}
@@ -2903,7 +2945,101 @@ export default function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
+                    {activeTab === "pages" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Manage Site Pages</h3>
+                                <button
+                                    onClick={() => { setPageModal("create"); setPageForm({ title: "", slug: "", content: "", showInFooter: true }); }}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
+                                >
+                                    <Plus size={18} /> Add New Page
+                                </button>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Title</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Slug</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Footer</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {convexPages.map((page) => (
+                                            <tr key={page._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{page.title}</td>
+                                                <td style={{ padding: "12px", color: t.textSub }}>/p/{page.slug}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{
+                                                        padding: "4px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: 700,
+                                                        backgroundColor: page.showInFooter ? "#22c55e15" : "#f1f5f9",
+                                                        color: page.showInFooter ? "#22c55e" : "#64748b"
+                                                    }}>
+                                                        {page.showInFooter ? "VISIBLE" : "HIDDEN"}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        <button onClick={() => { setPageForm(page); setPageModal("edit"); }} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer" }}><Save size={14} /></button>
+                                                        <button onClick={() => handleDeletePage(page._id)} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {pageModal && (
+                                <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }}>
+                                    <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", width: "600px", border: `1px solid ${t.border}`, maxHeight: "90vh", overflowY: "auto" }}>
+                                        <h3 style={{ marginBottom: "20px" }}>{pageModal === "create" ? "Add New Page" : "Edit Page"}</h3>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>Title</label>
+                                                <input
+                                                    type="text"
+                                                    value={pageForm.title}
+                                                    onChange={(e) => setPageForm({ ...pageForm, title: e.target.value, slug: pageModal === "create" ? e.target.value.toLowerCase().replace(/\s+/g, '-') : pageForm.slug })}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>Slug</label>
+                                                <input
+                                                    type="text"
+                                                    value={pageForm.slug}
+                                                    onChange={(e) => setPageForm({ ...pageForm, slug: e.target.value })}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>Content (HTML)</label>
+                                                <textarea
+                                                    rows={10}
+                                                    value={pageForm.content}
+                                                    onChange={(e) => setPageForm({ ...pageForm, content: e.target.value })}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontFamily: "monospace" }}
+                                                />
+                                            </div>
+                                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                                                <input type="checkbox" checked={pageForm.showInFooter} onChange={(e) => setPageForm({ ...pageForm, showInFooter: e.target.checked })} />
+                                                <span style={{ fontSize: "13px" }}>Show in Footer</span>
+                                            </label>
+                                            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                                                <button onClick={handleSavePage} style={{ flex: 1, padding: "10px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600 }}>Save Page</button>
+                                                <button onClick={() => setPageModal(null)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, background: "none", color: t.textMain }}>Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

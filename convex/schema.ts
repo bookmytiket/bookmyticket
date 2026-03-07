@@ -213,4 +213,13 @@ export default defineSchema({
         target: v.string(), // "all" | "organisers" | "users"
         timestamp: v.number(),
     }),
+
+    pages: defineTable({
+        title: v.string(),
+        slug: v.string(),
+        content: v.string(),
+        showInFooter: v.boolean(),
+        order: v.number(),
+        updatedAt: v.number(),
+    }).index("by_slug", ["slug"]),
 });

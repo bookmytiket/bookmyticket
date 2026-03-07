@@ -32,6 +32,8 @@ const DEFAULT_COPYRIGHT = {
 
 export default function Footer() {
     const rawCopyright = useQuery(api.systemConfig.getConfig, { key: "admin_footer_copyright" });
+    const dynamicPages = useQuery(api.pages.getPublished) || [];
+
     const copyright = (() => {
         if (rawCopyright == null) return DEFAULT_COPYRIGHT;
         try {
@@ -41,6 +43,8 @@ export default function Footer() {
             return DEFAULT_COPYRIGHT;
         }
     })();
+
+    const quickLinks = dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS.map(label => ({ title: label, slug: "#" }));
 
     return (
         <footer style={{ width: "100%", position: "relative" }}>
@@ -103,9 +107,9 @@ export default function Footer() {
                             Quick Links
                         </h4>
                         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
-                            {QUICK_LINKS.map(link => (
-                                <li key={link}>
-                                    <a href="#" style={{
+                            {quickLinks.map(page => (
+                                <li key={page.title}>
+                                    <a href={page.slug === "#" ? "#" : `/p/${page.slug}`} style={{
                                         fontSize: "14px", color: "rgba(255,255,255,0.6)",
                                         textDecoration: "none", transition: "color 0.2s",
                                         display: "flex", alignItems: "center", gap: "6px",
@@ -114,7 +118,7 @@ export default function Footer() {
                                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
                                     >
                                         <span style={{ color: "#6366f1", fontSize: "10px" }}>▶</span>
-                                        {link}
+                                        {page.title}
                                     </a>
                                 </li>
                             ))}
@@ -159,12 +163,12 @@ export default function Footer() {
                 }}>
                     {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
                     <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href={copyright.privacyUrl || "#"} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                    <a href="/p/privacy-policy" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                     >Privacy Policy</a>
                     <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href={copyright.termsUrl || "#"} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                    <a href="/p/terms-of-service" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                     >Terms of Service</a>

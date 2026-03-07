@@ -20,6 +20,7 @@ import type * as homeSettings from "../homeSettings.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as organisers from "../organisers.js";
+import type * as pages from "../pages.js";
 import type * as paymentGateways from "../paymentGateways.js";
 import type * as policies from "../policies.js";
 import type * as promotions from "../promotions.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notifications: typeof notifications;
   organisers: typeof organisers;
+  pages: typeof pages;
   paymentGateways: typeof paymentGateways;
   policies: typeof policies;
   promotions: typeof promotions;
