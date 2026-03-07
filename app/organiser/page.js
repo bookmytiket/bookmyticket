@@ -453,6 +453,19 @@ function OrganiserPanel() {
         normalTicketPrice: "",
         rows: 6, cols: 10,
         categories: DEFAULT_SEAT_CATEGORIES.map(c => ({ ...c })),
+        // Online Event Specific Fields (Image-Based Filling Style)
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
+        eventStatus: "Active",
+        isFeature: "Yes",
+        ticketLimitType: "unlimited",
+        totalTickets: "",
+        price: "",
+        ticketsAreFree: false,
+        meetingUrl: "",
+        earlyBirdDiscount: "disable",
     });
     const [postEvent, setPostEvent] = useState(getInitialPostEvent());
 
@@ -501,6 +514,11 @@ function OrganiserPanel() {
                     seatingEnabled: true, environment: "Indoor", normalTicketCapacity: "", normalTicketPrice: "",
                     rows: 6, cols: 10,
                     categories: defaultCategories,
+                    startDate: "", startTime: "", endDate: "", endTime: "",
+                    eventStatus: "Active", isFeature: "Yes",
+                    ticketLimitType: "unlimited", totalTickets: "",
+                    price: "", ticketsAreFree: false,
+                    meetingUrl: "", earlyBirdDiscount: "disable",
                     ...parsed,
                     categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : defaultCategories,
                 };
@@ -597,39 +615,74 @@ function OrganiserPanel() {
     };
 
     const publishSeatEvent = () => {
-        if (!postEvent.title || !postEvent.venue) {
-            alert("Please fill in Title and Venue.");
+        const isOnline = postEvent.type === "Online";
+
+        // Core validation
+        if (!postEvent.title) {
+            alert("Please fill in Event Title.");
             return;
         }
+
+        if (!isOnline && !postEvent.venue) {
+            alert("Please fill in Venue Name.");
+            return;
+        }
+
         const isMultiple = (postEvent.dateType || "single") === "multiple";
-        const effectiveSlots = isMultiple ? multiSlots.filter(s => s.date) : [{ date: postEvent.date, time: postEvent.time || "" }];
+
+        // Date/Time Mapping
+        const startDate = isOnline ? postEvent.startDate : postEvent.date;
+        const startTime = isOnline ? postEvent.startTime : postEvent.time;
+
+        const effectiveSlots = isMultiple
+            ? multiSlots.filter(s => s.date)
+            : [{ date: startDate, time: startTime || "" }];
+
         const firstSlot = effectiveSlots[0];
         if (!firstSlot || !firstSlot.date) {
-            alert(isMultiple ? "Please add at least one date in Schedule (Multi-Date & Time)." : "Please fill in Date.");
+            alert(isMultiple ? "Please add at least one date in Schedule." : "Please fill in Date.");
             return;
         }
-        // Latitude/Longitude is optional for convenience in dashboard testing
-        const lat = postEvent.latitude || "0";
-        const lng = postEvent.longitude || "0";
-        const isSeating = postEvent.seatingEnabled !== false;
-        const totalSeats = isSeating ? postEvent.rows * postEvent.cols : (parseInt(postEvent.normalTicketCapacity, 10) || 0);
-        if (totalSeats <= 0) {
-            alert(isSeating ? "Please set at least 1 row and 1 seat per row." : "Please set Total Capacity for normal ticketing.");
+
+        const isSeating = !isOnline && postEvent.seatingEnabled !== false;
+
+        // Total Capacity Mapping
+        let totalSeats = 0;
+        if (isOnline) {
+            totalSeats = postEvent.ticketLimitType === "limited" ? (parseInt(postEvent.totalTickets, 10) || 0) : 999999;
+        } else {
+            totalSeats = isSeating ? postEvent.rows * postEvent.cols : (parseInt(postEvent.normalTicketCapacity, 10) || 0);
+        }
+
+        if (!isOnline && totalSeats <= 0) {
+            alert(isSeating ? "Please set at least 1 row and 1 seat per row." : "Please set Total Capacity.");
             return;
         }
+
+        // Price Mapping
+        let finalPrice = 0;
+        if (isOnline) {
+            finalPrice = postEvent.ticketsAreFree ? 0 : (Number(postEvent.price) || 0);
+        } else {
+            finalPrice = isSeating
+                ? (postEvent.categories?.length ? Math.min(...postEvent.categories.map(c => Number(c.price) || 0)) : 0)
+                : (Number(postEvent.normalTicketPrice) || 0);
+        }
+
         const ev = {
             ...postEvent,
             organiserId: effectiveEmail,
             date: firstSlot.date,
             time: firstSlot.time || "TBA",
-            status: "Active",
+            status: postEvent.eventStatus || "Active",
             seatingEnabled: isSeating,
             totalSeats,
-            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:")) ? postEvent.bannerPreview : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
-            price: isSeating
-                ? (postEvent.categories?.length ? Math.min(...postEvent.categories.map(c => Number(c.price) || 0)) : undefined)
-                : (postEvent.normalTicketPrice !== "" && postEvent.normalTicketPrice != null ? Number(postEvent.normalTicketPrice) : undefined)
+            price: finalPrice,
+            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:"))
+                ? postEvent.bannerPreview
+                : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
         };
+
         // Save to Convex
         createEventMutation({
             organiserId: ev.organiserId,
@@ -644,9 +697,12 @@ function OrganiserPanel() {
             totalSeats: ev.totalSeats,
             price: ev.price,
             location: ev.location,
-            venue: ev.venue,
-            address: ev.address,
-            environment: ev.environment,
+            venue: isOnline ? "Online / Virtual" : ev.venue,
+            address: isOnline ? ev.meetingUrl : ev.address,
+            environment: isOnline ? "Virtual" : ev.environment,
+            meetingUrl: isOnline ? ev.meetingUrl : undefined,
+            isFeature: ev.isFeature === "Yes",
+            description: ev.description
         })
             .then(() => {
                 setPostEvent(getInitialPostEvent());
@@ -656,7 +712,6 @@ function OrganiserPanel() {
                 setActiveTab("manage_events");
             })
             .catch(err => alert("Error publishing event: " + err.message));
-
     };
 
     const addDateSlot = () => {
@@ -1041,6 +1096,92 @@ function OrganiserPanel() {
     // Main Dashboard View (Approved)
     const renderDashboardView = () => {
         const renderTabContent = () => {
+            const renderToggle = (label, field, options) => (
+                <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
+                    <div style={{ display: "flex", borderRadius: "10px", overflow: "hidden", border: `1.5px solid ${t.border}` }}>
+                        {options.map((opt, idx) => {
+                            const isActive = postEvent[field] === opt.value;
+                            return (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
+                                    style={{
+                                        flex: 1,
+                                        padding: "14px",
+                                        border: "none",
+                                        borderRight: idx === 0 ? `1.5px solid ${t.border}` : "none",
+                                        backgroundColor: isActive ? "#3b82f615" : t.bg,
+                                        color: isActive ? "#3b82f6" : t.textSub,
+                                        fontWeight: 700,
+                                        fontSize: "14px",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s ease",
+                                        outline: isActive ? "2px solid #3b82f6" : "none",
+                                        zIndex: isActive ? 1 : 0
+                                    }}
+                                >
+                                    {opt.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+
+            const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
+                <div style={{ marginBottom: "20px", gridColumn: fullWidth ? "span 2" : "span 1" }}>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
+                    <input
+                        type={type}
+                        value={postEvent[field] || ""}
+                        onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
+                        placeholder={placeholder}
+                        style={{
+                            width: "100%",
+                            padding: "14px",
+                            borderRadius: "10px",
+                            border: `1.5px solid ${t.border}`,
+                            backgroundColor: t.bg,
+                            color: t.textMain,
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            outline: "none"
+                        }}
+                    />
+                </div>
+            );
+
+            const renderSelect = (label, field, options) => (
+                <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
+                    <div style={{ position: "relative" }}>
+                        <select
+                            value={postEvent[field] || ""}
+                            onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
+                            style={{
+                                width: "100%",
+                                padding: "14px",
+                                paddingRight: "40px",
+                                borderRadius: "10px",
+                                border: `1.5px solid ${t.border}`,
+                                backgroundColor: t.bg,
+                                color: t.textMain,
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                outline: "none",
+                                appearance: "none"
+                            }}
+                        >
+                            {options.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={18} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
+                    </div>
+                </div>
+            );
             switch (activeTab) {
                 case "dashboard":
                     return (
@@ -1210,7 +1351,7 @@ function OrganiserPanel() {
                     );
                 }
                 case "post_event":
-                    // Step 1: Choose Online or Venue (image format)
+                    // Step 1: Choose Online or Venue
                     if (addEventStep === "select_type") {
                         return (
                             <div style={{ backgroundColor: t.bg, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
@@ -1218,16 +1359,8 @@ function OrganiserPanel() {
                                     <button
                                         onClick={() => { setPostEvent(pe => ({ ...pe, type: "Online" })); setAddEventStep("form"); }}
                                         style={{
-                                            background: t.cardBg,
-                                            border: `1px solid ${t.border}`,
-                                            borderRadius: "16px",
-                                            padding: "48px 32px",
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            gap: "16px",
-                                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+                                            background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "48px 32px", cursor: "pointer",
+                                            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
                                         }}
                                     >
                                         <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1238,16 +1371,8 @@ function OrganiserPanel() {
                                     <button
                                         onClick={() => { setPostEvent(pe => ({ ...pe, type: "Venue" })); setAddEventStep("form"); }}
                                         style={{
-                                            background: t.cardBg,
-                                            border: `1px solid ${t.border}`,
-                                            borderRadius: "16px",
-                                            padding: "48px 32px",
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            gap: "16px",
-                                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
+                                            background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "48px 32px", cursor: "pointer",
+                                            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
                                         }}
                                     >
                                         <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f97316", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1259,336 +1384,209 @@ function OrganiserPanel() {
                             </div>
                         );
                     }
-                    // Step 2: Full form (image format: Gallery, Thumbnail, Date Type, Countdown, English section, etc.)
-                    return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}`, maxWidth: "900px", margin: "0 auto" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Add Event</h3>
-                                <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-                                    <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} /> Back
+
+                    // Step 2: Online Form
+                    if (postEvent.type === "Online") {
+                        return (
+                            <div style={{ backgroundColor: t.cardBg, padding: "40px", borderRadius: "24px", border: `1px solid ${t.border}`, maxWidth: "1000px", margin: "0 auto", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                        <div style={{ padding: "12px", backgroundColor: "#3b82f615", borderRadius: "12px", color: "#3b82f6" }}>
+                                            <Video size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Create Online Event</h3>
+                                            <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Fill in the details for your virtual event</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}>
+                                        <ArrowRight size={18} style={{ transform: "rotate(180deg)" }} /> Back to Selection
+                                    </button>
+                                </div>
+
+                                <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
+                                <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "32px", marginBottom: "40px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Highlights / Gallery**</label>
+                                        <div role="button" tabIndex={0} onClick={() => galleryInputRef.current?.click()} style={{ border: `2px dashed ${t.border}`, borderRadius: "20px", padding: "40px 24px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", transition: "0.2s" }}>
+                                            {(postEvent.galleryPreviews || []).length > 0 ? (
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center" }}>
+                                                    {(postEvent.galleryPreviews || []).map((src, idx) => (
+                                                        <div key={idx} style={{ position: "relative" }}>
+                                                            <img src={src} alt="Gallery" style={{ width: "100px", height: "70px", objectFit: "cover", borderRadius: "12px", border: `2px solid ${t.border}` }} />
+                                                            <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-8px", right: "-8px", width: "24px", height: "24px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>×</button>
+                                                        </div>
+                                                    ))}
+                                                    <div style={{ width: "100px", height: "70px", borderRadius: "12px", border: `2px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub, cursor: "pointer" }}><Plus size={24} /></div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ padding: "16px", backgroundColor: "#3b82f610", borderRadius: "16px", color: "#3b82f6", marginBottom: "16px" }}><CloudUpload size={32} /></div>
+                                                    <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: t.textMain }}>Drop files here or click to upload</p>
+                                                    <p style={{ margin: "8px 0 0", fontSize: "13px", color: t.textSub }}>Recommended size: 1170x570 pixels</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Main Thumbnail*</label>
+                                        <div style={{ border: `2px dashed ${t.border}`, borderRadius: "20px", padding: "24px", textAlign: "center", backgroundColor: t.bg, minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                                            {postEvent.bannerPreview ? (
+                                                <div style={{ width: "100%", height: "100%" }}>
+                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "12px" }} />
+                                                    <div style={{ marginTop: "12px", display: "flex", gap: "8px", justifyContent: "center" }}>
+                                                        <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Change</button>
+                                                        <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: "transparent", color: t.textSub, fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Remove</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ padding: "16px", backgroundColor: "#64748b10", borderRadius: "16px", color: t.textSub, marginBottom: "12px" }}><ImageIcon size={32} /></div>
+                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textSub }}>NO IMAGE SELECTED</p>
+                                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ marginTop: "16px", padding: "10px 20px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Select Image</button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "40px" }}>
+                                    {renderToggle("Date Type", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                                    {renderToggle("Countdown Status", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
+                                    {renderToggle("Early Bird Discount", "earlyBirdDiscount", [{ label: "Enable", value: "enable" }, { label: "Disable", value: "disable" }])}
+                                </div>
+
+                                <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "14px 24px", borderRadius: "16px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Sparkles size={20} />
+                                    <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, letterSpacing: "0.5px" }}>Event Primary Information</p>
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                    {renderInput("Event Title", "title", "text", "e.g. Virtual Tech Summit 2026", true)}
+                                    {renderSelect("Category", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
+                                    {renderInput("Meeting URL", "meetingUrl", "url", "https://zoom.us/j/...", false)}
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "40px" }}>
+                                    {renderInput("Start Date", "startDate", "date")}
+                                    {renderInput("Start Time", "startTime", "time")}
+                                    {renderInput("End Date", "endDate", "date")}
+                                    {renderInput("End Time", "endTime", "time")}
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "40px" }}>
+                                    {renderSelect("Status", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                    {renderSelect("Is Feature", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                </div>
+
+                                <div style={{ backgroundColor: t.bg, padding: "32px", borderRadius: "24px", border: `1.5px solid ${t.border}`, marginBottom: "40px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                        <h4 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: t.textMain }}>Ticketing & Pricing</h4>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", fontWeight: 700, color: t.textSub }}>
+                                            <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} style={{ width: "20px", height: "20px", borderRadius: "6px", cursor: "pointer" }} />
+                                            Tickets are Free
+                                        </label>
+                                    </div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                        {renderToggle("Ticket Limit", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
+                                        {postEvent.ticketLimitType === "limited" && renderInput("Total Tickets", "totalTickets", "number", "e.g. 500")}
+                                        <div style={{ gridColumn: postEvent.ticketLimitType === "limited" ? "span 1" : "span 1" }}>
+                                            {!postEvent.ticketsAreFree && renderInput("Price (INR)", "price", "number", "499")}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginBottom: "40px" }}>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Description**</label>
+                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description..." rows={6} style={{ width: "100%", padding: "16px", borderRadius: "16px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 500, resize: "vertical", outline: "none" }} />
+                                </div>
+
+                                <button onClick={publishSeatEvent} style={{ width: "100%", padding: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "16px", fontSize: "18px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", boxShadow: "0 10px 20px -5px rgba(59,130,246,0.3)", transition: "0.2s" }}>
+                                    <Plus size={24} /> Publish Online Event
                                 </button>
                             </div>
-                            {/* Gallery & Thumbnail — image format */}
+                        );
+                    }
+                    // Step 3: Venue Form (Default)
+                    return (
+                        <div style={{ backgroundColor: t.cardBg, padding: "40px", borderRadius: "24px", border: `1px solid ${t.border}`, maxWidth: "1000px", margin: "0 auto", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                                    <div style={{ padding: "12px", backgroundColor: "#f9731615", borderRadius: "12px", color: "#f97316" }}>
+                                        <MapPin size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Create Venue Event</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Organize an in-person event at a physical location</p>
+                                    </div>
+                                </div>
+                                <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+                                    <ArrowRight size={18} style={{ transform: "rotate(180deg)" }} /> Back to Selection
+                                </button>
+                            </div>
+
                             <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
                             <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
-                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Gallery Images**</label>
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => galleryInputRef.current?.click()}
-                                        onKeyDown={e => e.key === "Enter" && galleryInputRef.current?.click()}
-                                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.currentTarget.style.borderColor = "#3b82f6"; }}
-                                        onDragLeave={e => { e.preventDefault(); e.currentTarget.style.borderColor = t.border; }}
-                                        onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = t.border; addGalleryFromFiles(e.dataTransfer.files); }}
-                                        style={{ border: `2px dashed ${t.border}`, borderRadius: "12px", padding: "32px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "100px" }}
-                                    >
-                                        {(postEvent.galleryPreviews || []).length > 0 ? (
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
-                                                {(postEvent.galleryPreviews || []).map((src, idx) => (
-                                                    <div key={idx} style={{ position: "relative" }}>
-                                                        <img src={src} alt={`Gallery ${idx + 1}`} style={{ width: "80px", height: "50px", objectFit: "cover", borderRadius: "8px" }} />
-                                                        <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-6px", right: "-6px", width: "20px", height: "20px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "12px", lineHeight: 1 }}>×</button>
-                                                    </div>
-                                                ))}
-                                                <button type="button" onClick={e => { e.stopPropagation(); galleryInputRef.current?.click(); }} style={{ alignSelf: "center", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px", cursor: "pointer" }}>Add more</button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p style={{ margin: 0, fontSize: "14px", color: t.textSub }}>Drop files here or click to upload</p>
-                                                <p style={{ margin: "8px 0 0", fontSize: "12px", color: t.textSub }}>Image Size 1170x570</p>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Thumbnail Image*</label>
-                                    <div style={{ border: `2px dashed ${t.border}`, borderRadius: "12px", padding: "24px", textAlign: "center", backgroundColor: t.bg, minHeight: "140px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                        {postEvent.bannerPreview ? (
-                                            <>
-                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ maxWidth: "100%", maxHeight: "120px", objectFit: "contain", borderRadius: "8px" }} />
-                                                <div style={{ marginTop: "8px", display: "flex", gap: "8px", justifyContent: "center" }}>
-                                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}>Change</button>
-                                                    <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textSub, fontSize: "11px", cursor: "pointer" }}>Remove</button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ImageIcon size={32} color={t.textSub} style={{ marginBottom: "8px" }} />
-                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>NO IMAGE FOUND</p>
-                                                <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ marginTop: "12px", padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
-                                            </>
-                                        )}
-                                        <p style={{ margin: "8px 0 0", fontSize: "11px", color: t.textSub }}>Image Size: 320x230</p>
-                                    </div>
-                                </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                {renderToggle("Environment", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
+                                {renderToggle("Date Type", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Event Environment*</label>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        {["Indoor", "Outdoor"].map(env => (
-                                            <button key={env} type="button" onClick={() => setPostEvent(pe => ({ ...pe, environment: env }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.environment || "Indoor") === env ? "#3b82f6" : t.bg, color: (postEvent.environment || "Indoor") === env ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{env}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date Type*</label>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        {["Single", "Multiple"].map(opt => (
-                                            <button key={opt} type="button" onClick={() => setPostEvent(pe => ({ ...pe, dateType: opt.toLowerCase() }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.dateType || "single") === opt.toLowerCase() ? "#3b82f6" : t.bg, color: (postEvent.dateType || "single") === opt.toLowerCase() ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{opt}</button>
-                                        ))}
-                                    </div>
-                                </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                {renderInput("Event Title*", "title", "text", "e.g. Rock Concert 2026", true)}
+                                {renderSelect("Category", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Countdown Status*</label>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        {["Active", "Deactive"].map(opt => (
-                                            <button key={opt} type="button" onClick={() => setPostEvent(pe => ({ ...pe, countdownStatus: opt === "Active" ? "active" : "inactive" }))} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: (postEvent.countdownStatus || "active") === (opt === "Active" ? "active" : "inactive") ? "#3b82f6" : t.bg, color: (postEvent.countdownStatus || "active") === (opt === "Active" ? "active" : "inactive") ? "#fff" : t.textSub, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>{opt}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            {/* Schedule (Multi-Date & Time) — shown when Date Type is Multiple */}
-                            {(postEvent.dateType || "single") === "multiple" && (
-                                <div style={{ marginBottom: "24px", padding: "16px", backgroundColor: theme === "dark" ? "#1e293b" : "#f1f5f9", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "12px" }}>Schedule (Multi-Date & Time)*</label>
-                                    {multiSlots.map((slot, idx) => (
-                                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "end", marginBottom: idx < multiSlots.length - 1 ? "12px" : 0 }}>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px", color: t.textSub }}>Date</label>
-                                                <input type="date" value={slot.date} onChange={e => setMultiSlots(prev => prev.map((s, i) => i === idx ? { ...s, date: e.target.value } : s))} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px", color: t.textSub }}>Time</label>
-                                                <input type="time" value={slot.time} onChange={e => setMultiSlots(prev => prev.map((s, i) => i === idx ? { ...s, time: e.target.value } : s))} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                            <button type="button" onClick={() => setMultiSlots(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)} style={{ padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: "#ef4444", cursor: "pointer" }} title="Remove slot"><Trash2 size={18} /></button>
-                                        </div>
-                                    ))}
-                                    <button type="button" onClick={() => setMultiSlots(prev => [...prev, { date: "", time: "" }])} style={{ marginTop: "12px", padding: "10px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <Plus size={16} /> Add Slot
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
+                                    {renderInput("Venue Address*", "address", "text", "Enter physical address", true)}
+                                    <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "12px 24px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <MapPin size={18} /> Select on Map
                                     </button>
+                                </div>
+                                {renderInput("Country", "country", "text", "India")}
+                                {renderInput("City", "city", "text", "Mumbai")}
+                            </div>
+
+                            <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "14px 24px", borderRadius: "16px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Sparkles size={20} />
+                                <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, letterSpacing: "0.5px" }}>Ticketing & Seating Configuration</p>
+                            </div>
+
+                            <div style={{ marginBottom: "32px" }}>
+                                {renderToggle("Ticket / Seating Type", "seatingEnabled", [{ label: "Seating Based", value: true }, { label: "Normal Ticketing", value: false }])}
+                                <p style={{ fontSize: "13px", color: t.textSub, marginTop: "8px" }}>
+                                    {postEvent.seatingEnabled !== false ? "Tickets are linked to specific seats and categories." : "Tickets are sold by quantity only (General Admission)."}
+                                </p>
+                            </div>
+
+                            {postEvent.seatingEnabled !== false ? (
+                                <div style={{ padding: "32px", backgroundColor: t.bg, borderRadius: "24px", border: `1.5px solid ${t.border}`, marginBottom: "32px" }}>
+                                    <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, marginBottom: "20px" }}>Layout Builder</h4>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                        {renderInput("Rows", "rows", "number")}
+                                        {renderInput("Seats per Row", "cols", "number")}
+                                    </div>
+                                    <p style={{ fontSize: "13px", color: t.textSub }}>Set up categories and pricing below the layout preview.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                    {renderInput("Total Capacity", "normalTicketCapacity", "number")}
+                                    {renderInput("Default Price (₹)", "normalTicketPrice", "number")}
                                 </div>
                             )}
-                            {/* English Language (Default) — purple bar */}
-                            <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "10px 18px", borderRadius: "8px", marginBottom: "20px" }}>
-                                <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>English Language (Default)</p>
+
+                            <div style={{ marginBottom: "40px" }}>
+                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Description*</label>
+                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} style={{ width: "100%", padding: "16px", borderRadius: "16px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", resize: "vertical", outline: "none" }} />
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Event Title</label>
-                                    <input
-                                        id="organiser-event-title"
-                                        type="text"
-                                        value={postEvent.title ?? ""}
-                                        onChange={e => {
-                                            const v = e.target.value;
-                                            setPostEvent(prev => ({ ...prev, title: v }));
-                                        }}
-                                        placeholder="e.g. Rock Concert 2026"
-                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Category</label>
-                                    <select value={postEvent.category} onChange={e => setPostEvent(prev => ({ ...prev, category: e.target.value }))} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}>
-                                        {eventCategoryNames.map((name) => (
-                                            <option key={name} value={name}>{name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Venue</label>
-                                    <input type="text" value={postEvent.venue} onChange={e => setPostEvent(prev => ({ ...prev, venue: e.target.value }))} placeholder="Stadium Name" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                </div>
-                                {postEvent.type === "Venue" && (
-                                    <>
-                                        <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Address</label>
-                                                <input type="text" value={postEvent.address} onChange={e => setPostEvent(prev => ({ ...prev, address: e.target.value }))} placeholder="Enter address" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                            <button type="button" onClick={() => { setTempLocation({ lat: parseFloat(postEvent.latitude) || 28.6139, lng: parseFloat(postEvent.longitude) || 77.209 }); setShowMapModal(true); setGeoError(""); }} style={{ padding: "12px 20px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <MapPin size={18} /> Show Map
-                                            </button>
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Latitude</label>
-                                            <input type="text" value={postEvent.latitude} onChange={e => setPostEvent(prev => ({ ...prev, latitude: e.target.value }))} placeholder="Set via map" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Longitude</label>
-                                            <input type="text" value={postEvent.longitude} onChange={e => setPostEvent(prev => ({ ...prev, longitude: e.target.value }))} placeholder="Set via map" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div style={{ gridColumn: "span 2" }}>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Country*</label>
-                                            <input type="text" value={postEvent.country || ""} onChange={e => setPostEvent(prev => ({ ...prev, country: e.target.value }))} placeholder="Select a Country" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>City*</label>
-                                            <input type="text" value={postEvent.city || ""} onChange={e => setPostEvent(prev => ({ ...prev, city: e.target.value }))} placeholder="Select a City" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Zip/Post Code</label>
-                                            <input type="text" value={postEvent.zipCode || ""} onChange={e => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))} placeholder="Enter Zip/Post Code" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div style={{ gridColumn: "span 2" }}>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Description*</label>
-                                            <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={4} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, resize: "vertical" }} />
-                                        </div>
-                                    </>
-                                )}
-                                {/* Seating format: Enable = Seating Based, Disable = Normal Ticketing */}
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "10px" }}>Ticket / Seating Type</label>
-                                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPostEvent(pe => ({ ...pe, seatingEnabled: true }))}
-                                            style={{
-                                                padding: "12px 20px",
-                                                borderRadius: "10px",
-                                                border: `2px solid ${postEvent.seatingEnabled !== false ? "#3b82f6" : t.border}`,
-                                                backgroundColor: postEvent.seatingEnabled !== false ? "#3b82f615" : "transparent",
-                                                color: postEvent.seatingEnabled !== false ? "#3b82f6" : t.textSub,
-                                                fontSize: "13px",
-                                                fontWeight: 700,
-                                                cursor: "pointer",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "8px"
-                                            }}
-                                        >
-                                            <Grid size={18} /> Seating Based (Event-Based Seating)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPostEvent(pe => ({ ...pe, seatingEnabled: false }))}
-                                            style={{
-                                                padding: "12px 20px",
-                                                borderRadius: "10px",
-                                                border: `2px solid ${postEvent.seatingEnabled === false ? "#22c55e" : t.border}`,
-                                                backgroundColor: postEvent.seatingEnabled === false ? "#22c55e15" : "transparent",
-                                                color: postEvent.seatingEnabled === false ? "#22c55e" : t.textSub,
-                                                fontSize: "13px",
-                                                fontWeight: 700,
-                                                cursor: "pointer",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "8px"
-                                            }}
-                                        >
-                                            <Ticket size={18} /> Normal Ticketing
-                                        </button>
-                                        <span style={{ fontSize: "12px", fontWeight: 600, marginLeft: "8px", padding: "6px 12px", borderRadius: "8px", backgroundColor: postEvent.seatingEnabled !== false ? "#3b82f620" : "#64748b30", color: postEvent.seatingEnabled !== false ? "#3b82f6" : t.textSub }}>
-                                            Seating: {postEvent.seatingEnabled !== false ? "Enabled" : "Disabled"}
-                                        </span>
-                                    </div>
-                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "8px", margin: 0 }}>
-                                        {postEvent.seatingEnabled !== false ? "Seating Based: tickets are generated per seat (rows, categories). Set rates per category below." : "Normal Ticketing: sell by quantity only (no seat selection)."}
-                                    </p>
-                                </div>
-                                {(postEvent.dateType || "single") === "single" && (
-                                    <>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Date</label>
-                                            <input type="date" value={postEvent.date} onChange={e => setPostEvent(prev => ({ ...prev, date: e.target.value }))} placeholder="dd/mm/yyyy" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Time</label>
-                                            <input type="time" value={postEvent.time} onChange={e => setPostEvent(prev => ({ ...prev, time: e.target.value }))} placeholder="--:--" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                    </>
-                                )}
-                                {postEvent.seatingEnabled === false && (
-                                    <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", padding: "16px", backgroundColor: theme === "dark" ? "#0f172a" : "#f0fdf4", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Total Capacity*</label>
-                                            <input type="number" min={1} value={postEvent.normalTicketCapacity} onChange={e => setPostEvent(prev => ({ ...prev, normalTicketCapacity: e.target.value }))} placeholder="e.g. 500" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Default Price (optional)</label>
-                                            <input type="number" min={0} value={postEvent.normalTicketPrice} onChange={e => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} placeholder="e.g. 299" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                        </div>
-                                        <p style={{ gridColumn: "span 2", margin: 0, fontSize: "12px", color: t.textSub }}>Normal ticketing: no seat map. Tickets are sold by quantity only.</p>
-                                    </div>
-                                )}
-                                {postEvent.seatingEnabled !== false && (
-                                    <div style={{ gridColumn: "span 2" }}>
-                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}><Grid size={16} /> Seating Layout Builder</h4>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Number of Rows</label>
-                                                <input type="number" min={1} value={postEvent.rows} onChange={e => setPostEvent(prev => ({ ...prev, rows: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "11px", color: t.textSub, marginBottom: "4px" }}>Seats per Row</label>
-                                                <input type="number" min={1} value={postEvent.cols} onChange={e => setPostEvent(prev => ({ ...prev, cols: parseInt(e.target.value, 10) || 1 }))} style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }} />
-                                            </div>
-                                        </div>
-                                        <div style={{ marginBottom: "20px" }}>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Seating categories & rates</label>
-                                            <p style={{ fontSize: "11px", color: t.textSub, marginBottom: "12px", margin: 0 }}>Set name, row range, and price per category. Rows are 1-based (e.g. 1–2 = rows A–B).</p>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                                {(postEvent.categories || []).map((cat, idx) => (
-                                                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "minmax(80px,1fr) 60px minmax(60px,1fr) minmax(60px,1fr) 100px", gap: "10px", alignItems: "end", padding: "12px", backgroundColor: theme === "dark" ? "#1e293b" : "#f8fafc", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                                        <div>
-                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Name</label>
-                                                            <input type="text" value={cat.name} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, name: e.target.value } : c) }))} placeholder="e.g. VIP" style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Color</label>
-                                                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                                                                <input type="color" value={cat.color || "#94a3b8"} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, color: e.target.value } : c) }))} style={{ width: "32px", height: "28px", padding: 0, border: "none", borderRadius: "4px", cursor: "pointer" }} />
-                                                                <input type="text" value={cat.color || ""} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, color: e.target.value } : c) }))} placeholder="#hex" style={{ width: "100%", padding: "6px 6px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "11px" }} />
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Row from</label>
-                                                            <input type="number" min={1} value={cat.rowStart} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, rowStart: parseInt(e.target.value, 10) || 1 } : c) }))} style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Row to</label>
-                                                            <input type="number" min={1} value={cat.rowEnd} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, rowEnd: parseInt(e.target.value, 10) || 1 } : c) }))} style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{ fontSize: "10px", color: t.textSub, marginBottom: "2px", display: "block" }}>Rate (₹)</label>
-                                                            <input type="number" min={0} value={cat.price ?? ""} onChange={e => setPostEvent(pe => ({ ...pe, categories: pe.categories.map((c, i) => i === idx ? { ...c, price: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0 } : c) }))} placeholder="0" style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }} />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "20px", borderRadius: "12px", overflowX: "auto" }}>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-                                                {[...Array(Math.max(1, postEvent.rows))].map((_, rIdx) => {
-                                                    const cat = getSeatCategory(rIdx);
-                                                    return (
-                                                        <div key={rIdx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                                            <span style={{ fontSize: "10px", fontWeight: 800, width: "20px", color: t.textSub }}>{ROW_LABELS[rIdx]}</span>
-                                                            {[...Array(Math.max(1, postEvent.cols))].map((_, cIdx) => (
-                                                                <div key={cIdx} style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: cat.color, opacity: 0.8 }} />
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                })}
-                                                <div style={{ marginTop: "16px", width: "100%", height: "4px", backgroundColor: t.border, borderRadius: "2px" }} />
-                                                <p style={{ fontSize: "10px", color: t.textSub, margin: "4px 0 0" }}>STAGE / SCREEN</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <button onClick={publishSeatEvent} style={{ width: "100%", padding: "16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "12px", fontWeight: 800, cursor: "pointer" }}>
-                                        {postEvent.seatingEnabled !== false ? "Publish Event & Layout" : "Publish Event (Normal Ticketing)"}
-                                    </button>
-                                </div>
-                            </div>
+
+                            <button onClick={publishSeatEvent} style={{ width: "100%", padding: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "16px", fontSize: "18px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", boxShadow: "0 10px 20px -5px rgba(59,130,246,0.3)" }}>
+                                <Plus size={24} /> Publish Venue Event
+                            </button>
                         </div>
                     );
                 case "seat_map":
@@ -1639,6 +1637,7 @@ function OrganiserPanel() {
                             )}
                         </div>
                     );
+
                 case "wallet":
                 case "payout":
                     return (

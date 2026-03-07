@@ -44,7 +44,8 @@ export default function Footer() {
         }
     })();
 
-    const quickLinks = dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS.map(label => ({ title: label, slug: "#" }));
+    const allLinks = dynamicPages.length > 0 ? dynamicPages : QUICK_LINKS.map(label => ({ title: label, slug: "#" }));
+    const quickLinks = allLinks.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
 
     return (
         <footer style={{ width: "100%", position: "relative" }}>
