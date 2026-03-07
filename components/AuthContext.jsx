@@ -83,7 +83,11 @@ export function AuthProvider({ children }) {
     const logout = () => {
         setUser(null);
         localStorage.removeItem("user");
-        router.push("/signin");
+        if (typeof window !== "undefined") {
+            window.location.href = "/signin";
+        } else {
+            router.replace("/signin");
+        }
     };
 
     return (

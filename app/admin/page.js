@@ -8,9 +8,34 @@ import { LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCi
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 
+const useConvexConfig = (key, initialValue, allConfig) => {
+    const setConfigMutation = useMutation(api.systemConfig.setConfig);
+
+    // `getAllConfig` returns an object map: { [key]: value }
+    const rawValue = allConfig && typeof allConfig === "object" ? allConfig[key] : undefined;
+
+    let currentValue = initialValue;
+    if (rawValue !== undefined) {
+        try {
+            // Values are stored as JSON via `setConfig`, but fall back gracefully
+            currentValue = typeof rawValue === "string" ? JSON.parse(rawValue) : rawValue;
+        } catch (e) {
+            console.error(`Error parsing config for ${key}`, e);
+            currentValue = rawValue;
+        }
+    }
+
+    const setValue = (newValue) => {
+        const valueToSave = typeof newValue === "function" ? newValue(currentValue) : newValue;
+        setConfigMutation({ key, value: JSON.stringify(valueToSave) });
+    };
+
+    return [currentValue, setValue];
+};
+
 
 export default function AdminHomePage() {
-    const { user, loading } = useAuth();
+    const { user, loading, logout } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -35,14 +60,15 @@ export default function AdminHomePage() {
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
     const allConfig = useQuery(api.systemConfig.getAllConfig);
 
-    const convexPaymentGateways = useQuery(api.paymentGateways.list) || [];
+    const rawPaymentGateways = useQuery(api.paymentGateways.list);
+    const convexPaymentGateways = rawPaymentGateways || [];
     const addPaymentGatewayMutation = useMutation(api.paymentGateways.add);
     const patchPaymentGatewayMutation = useMutation(api.paymentGateways.patch);
     const removePaymentGatewayMutation = useMutation(api.paymentGateways.remove);
 
     // Seed default gateways if empty
     useEffect(() => {
-        if (convexPaymentGateways.length === 0 && allConfig !== undefined) {
+        if (rawPaymentGateways !== undefined && rawPaymentGateways.length === 0 && allConfig !== undefined) {
             const defaults = [
                 { name: "Stripe", isEnabled: true, config: { apiKey: "", secretKey: "", webhookSecret: "", mode: "test" }, testMode: true },
                 { name: "PayPal", isEnabled: false, config: { apiKey: "", secretKey: "", mode: "test" }, testMode: true },
@@ -75,7 +101,8 @@ export default function AdminHomePage() {
     const convexSeoSettings = useQuery(api.seoSettings.get);
     const updateSeoSettingsMutation = useMutation(api.seoSettings.update);
 
-    const convexEmailTemplates = useQuery(api.emailTemplates.list) || [];
+    const rawEmailTemplates = useQuery(api.emailTemplates.list);
+    const convexEmailTemplates = rawEmailTemplates || [];
     const addEmailTemplateMutation = useMutation(api.emailTemplates.add);
     const patchEmailTemplateMutation = useMutation(api.emailTemplates.patch);
     const removeEmailTemplateMutation = useMutation(api.emailTemplates.remove);
@@ -143,7 +170,7 @@ export default function AdminHomePage() {
             });
         }
 
-        if (convexEmailTemplates.length === 0) {
+        if (rawEmailTemplates !== undefined && rawEmailTemplates.length === 0) {
             const defaults = [
                 { identifier: "booking", name: "Ticket Booking Confirmation", subject: "Your Tickets for {{event_name}}", body: "Hello {{user_name}},\n\nYour tickets for {{event_name}} are confirmed.\n\nDate: {{event_date}}\nVenue: {{event_venue}}\n\nDownload your ticket here: {{ticket_url}}\n\nThank you for booking with us!", autoSend: true },
                 { identifier: "canceled", name: "Ticket Booking Canceled", subject: "Booking Canceled: {{event_name}}", body: "Hello {{user_name}},\n\nYour booking for {{event_name}} has been canceled.\n\nRefund details: {{refund_info}}\n\nWe hope to see you again soon.", autoSend: true },
@@ -369,14 +396,15 @@ export default function AdminHomePage() {
     const [notificationForm, setNotificationForm] = useState({ subject: "", message: "", target: "all" });
 
 
-    const convexApiKeys = useQuery(api.apiKeys.list) || [];
+    const rawApiKeys = useQuery(api.apiKeys.list);
+    const convexApiKeys = rawApiKeys || [];
     const createApiKeyMutation = useMutation(api.apiKeys.create);
     const toggleApiKeyStatusMutation = useMutation(api.apiKeys.toggleStatus);
     const removeApiKeyMutation = useMutation(api.apiKeys.remove);
 
     // Seed default API keys if empty
     useEffect(() => {
-        if (convexApiKeys.length === 0 && allConfig !== undefined) {
+        if (rawApiKeys !== undefined && rawApiKeys.length === 0 && allConfig !== undefined) {
             const defaults = [
                 { label: "Production Mobile App", key: "ak_live_724819...9238" },
                 { label: "Staging Environment", key: "ak_test_123891...0841" }
