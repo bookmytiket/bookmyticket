@@ -117,6 +117,28 @@ export default function AdminHomePage() {
     useEffect(() => {
         if (allConfig === undefined) return;
 
+        if (allConfig["admin_video_banner"] === undefined) {
+            setConfigMutation({
+                key: "admin_video_banner", value: JSON.stringify({
+                    videoUrl: "/bookmyticket/videoplayback.mp4",
+                    title1: "Discover Your Next",
+                    title2: "Unforgettable Experience",
+                    subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
+                    categories: ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"]
+                })
+            });
+        }
+
+        if (allConfig["admin_footer_copyright"] === undefined) {
+            setConfigMutation({
+                key: "admin_footer_copyright", value: JSON.stringify({
+                    copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+                    privacyUrl: "#",
+                    termsUrl: "#"
+                })
+            });
+        }
+
         if (convexTicketSettings === null) {
             updateTicketSettingsMutation({
                 companyName: "book my ticket",
@@ -236,6 +258,20 @@ export default function AdminHomePage() {
     }), [convexSsoSettings]);
 
     const emailTemplates = convexEmailTemplates;
+
+    const [videoBannerConfig, setVideoBannerConfig] = useConvexConfig("admin_video_banner", {
+        videoUrl: "/bookmyticket/videoplayback.mp4",
+        title1: "Discover Your Next",
+        title2: "Unforgettable Experience",
+        subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
+        categories: ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"]
+    });
+
+    const [footerCopyrightConfig, setFooterCopyrightConfig] = useConvexConfig("admin_footer_copyright", {
+        copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+        privacyUrl: "#",
+        termsUrl: "#"
+    });
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
@@ -813,11 +849,13 @@ export default function AdminHomePage() {
                         {isHomeSettingsOpen && (
                             <div className="submenu">
                                 {[
-                                    { label: "Hero Banner", id: "hero" },
+                                    { label: "Hero Banner (Slides)", id: "hero" },
+                                    { label: "Video Banner & Content", id: "video_banner" },
                                     { label: "Branding", id: "branding" },
                                     { label: "Featured Events", id: "events_settings" },
                                     { label: "Event Partners", id: "event_partners" },
                                     { label: "Sections Order", id: "sections" },
+                                    { label: "Copyright & Footer", id: "copyright" },
                                     { label: "SEO & Meta Ads", id: "meta_management" },
                                 ].map((sub) => (
                                     <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
@@ -849,7 +887,7 @@ export default function AdminHomePage() {
                 <header className="top-header">
                     <div>
                         <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
-                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "categories" ? "Event Categories" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "categories" ? "Event Categories" : activeTab === "video_banner" ? "Video Banner & Content" : activeTab === "copyright" ? "Copyright & Footer" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                         </h1>
                         <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>
                             {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "support_tickets" ? "View and manage organiser support tickets; status changes notify organiser by email" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "ticket_settings" ? "Ticket format, logo, send workflow (SMS, Email, WhatsApp PDF)" : activeTab === "categories" ? "Manage event categories" : ""}
@@ -881,7 +919,7 @@ export default function AdminHomePage() {
                 )}
 
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "video_banner" || activeTab === "copyright" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
                             {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings", "ticket_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
@@ -892,11 +930,13 @@ export default function AdminHomePage() {
                                 { id: "ticket_settings", label: "Ticket & Notifications", icon: Ticket },
                                 { id: "api_settings", label: "API Keys", icon: Code },
                             ] : [
-                                { id: "hero", label: "Hero Banner", icon: ImageIcon },
+                                { id: "hero", label: "Hero Slides", icon: ImageIcon },
+                                { id: "video_banner", label: "Video Banner", icon: Video },
                                 { id: "branding", label: "Branding", icon: Sparkles },
                                 { id: "events_settings", label: "Featured Events", icon: Ticket },
                                 { id: "event_partners", label: "Event Partners", icon: Users },
                                 { id: "sections", label: "Sections Order", icon: LayoutDashboard },
+                                { id: "copyright", label: "Copyright & Footer", icon: FileText },
                                 { id: "meta_management", label: "SEO & Ads", icon: Globe },
                             ]).map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="tab-btn"
@@ -1441,6 +1481,101 @@ export default function AdminHomePage() {
                                     style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", border: `2px dashed ${t.border}`, borderRadius: "8px", background: "none", cursor: "pointer", color: t.textSub }}>
                                     <Plus size={18} /> Add Menu Item
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "video_banner" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Video Banner Settings</h3>
+                                <button
+                                    onClick={() => alert('Video Banner menu is saved seamlessly to the frontend via Convex Config!')}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
+                                >
+                                    <Save size={18} /> Save Settings
+                                </button>
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "800px" }}>
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Video Format Source (MP4 URL)</label>
+                                <input
+                                    type="text"
+                                    value={videoBannerConfig?.videoUrl || ""}
+                                    onChange={(e) => setVideoBannerConfig({ ...videoBannerConfig, videoUrl: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                />
+
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Primary Title (Top Line)</label>
+                                <input
+                                    type="text"
+                                    value={videoBannerConfig?.title1 || ""}
+                                    onChange={(e) => setVideoBannerConfig({ ...videoBannerConfig, title1: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                />
+
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Secondary Title (Bottom Line)</label>
+                                <input
+                                    type="text"
+                                    value={videoBannerConfig?.title2 || ""}
+                                    onChange={(e) => setVideoBannerConfig({ ...videoBannerConfig, title2: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                />
+
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Subtitle Description</label>
+                                <textarea
+                                    rows={3}
+                                    value={videoBannerConfig?.subtitle || ""}
+                                    onChange={(e) => setVideoBannerConfig({ ...videoBannerConfig, subtitle: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, resize: 'vertical' }}
+                                />
+
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Banner Categories (Comma separated)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Concert, Sports, Music"
+                                    value={videoBannerConfig?.categories?.join(", ") || ""}
+                                    onChange={(e) => {
+                                        const cats = e.target.value.split(",").map(c => c.trim()).filter(Boolean);
+                                        setVideoBannerConfig({ ...videoBannerConfig, categories: cats });
+                                    }}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "copyright" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Copyright & Footer</h3>
+                                <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>This text appears in the footer on the home page.</p>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "800px" }}>
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Copyright Text</label>
+                                <input
+                                    type="text"
+                                    placeholder="© Copyright 2026 – BookMyTicket. All Rights Reserved."
+                                    value={footerCopyrightConfig?.copyrightText || ""}
+                                    onChange={(e) => setFooterCopyrightConfig({ ...footerCopyrightConfig, copyrightText: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                />
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Privacy Policy URL</label>
+                                <input
+                                    type="text"
+                                    placeholder="# or https://..."
+                                    value={footerCopyrightConfig?.privacyUrl || ""}
+                                    onChange={(e) => setFooterCopyrightConfig({ ...footerCopyrightConfig, privacyUrl: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                />
+                                <label style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, marginBottom: "-8px" }}>Terms of Service URL</label>
+                                <input
+                                    type="text"
+                                    placeholder="# or https://..."
+                                    value={footerCopyrightConfig?.termsUrl || ""}
+                                    onChange={(e) => setFooterCopyrightConfig({ ...footerCopyrightConfig, termsUrl: e.target.value })}
+                                    style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                />
                             </div>
                         </div>
                     )}

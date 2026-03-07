@@ -1,5 +1,8 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
 const QUICK_LINKS = ["About Us", "Our Blogs", "Event Listing", "Pricing Plan", "Contact Us"];
 const GALLERY_IMGS = [];
 
@@ -21,7 +24,24 @@ const SOCIALS = [
     },
 ];
 
+const DEFAULT_COPYRIGHT = {
+    copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+    privacyUrl: "#",
+    termsUrl: "#"
+};
+
 export default function Footer() {
+    const rawCopyright = useQuery(api.systemConfig.getConfig, { key: "admin_footer_copyright" });
+    const copyright = (() => {
+        if (rawCopyright == null) return DEFAULT_COPYRIGHT;
+        try {
+            const parsed = typeof rawCopyright === "string" ? JSON.parse(rawCopyright) : rawCopyright;
+            return typeof parsed === "object" && parsed !== null ? { ...DEFAULT_COPYRIGHT, ...parsed } : DEFAULT_COPYRIGHT;
+        } catch (_) {
+            return DEFAULT_COPYRIGHT;
+        }
+    })();
+
     return (
         <footer style={{ width: "100%", position: "relative" }}>
             {/* Main footer with background image */}
@@ -131,20 +151,20 @@ export default function Footer() {
                 {/* Divider */}
                 <div style={{ position: "relative", zIndex: 1, borderTop: "1px solid rgba(255,255,255,0.08)", margin: "0 20px" }} />
 
-                {/* Copyright bar */}
+                {/* Copyright bar — managed from Admin > Home Page > Copyright & Footer */}
                 <div style={{
                     position: "relative", zIndex: 1,
                     textAlign: "center", padding: "20px",
                     color: "rgba(255,255,255,0.45)", fontSize: "13px",
                 }}>
-                    © Copyright 2026 – BookMyTicket. All Rights Reserved.
+                    {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
                     <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href="#" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                    <a href={copyright.privacyUrl || "#"} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                     >Privacy Policy</a>
                     <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href="#" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                    <a href={copyright.termsUrl || "#"} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
                     >Terms of Service</a>

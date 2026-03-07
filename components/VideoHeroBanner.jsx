@@ -1,11 +1,43 @@
 "use client";
 import React, { useState } from "react";
 import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function VideoHeroBanner() {
     const [searchQuery, setSearchQuery] = useState("");
+    const router = useRouter();
 
-    const categories = ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"];
+    const bannerConfig = useQuery(api.systemConfig.getConfig, { key: "admin_video_banner" });
+    const defaultConfig = {
+        videoUrl: "/bookmyticket/videoplayback.mp4",
+        title1: "Discover Your Next",
+        title2: "Unforgettable Experience",
+        subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
+        categories: ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"]
+    };
+    const config = React.useMemo(() => {
+        if (bannerConfig == null || bannerConfig === undefined) return defaultConfig;
+        try {
+            const parsed = typeof bannerConfig === "string" ? JSON.parse(bannerConfig) : bannerConfig;
+            return typeof parsed === "object" && parsed !== null ? { ...defaultConfig, ...parsed } : defaultConfig;
+        } catch (_) {
+            return defaultConfig;
+        }
+    }, [bannerConfig]);
+
+    const categories = config.categories || ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"];
+
+    const handleSearch = () => {
+        if (searchQuery.trim()) {
+            router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+        }
+    };
+
+    const handleCategoryClick = (cat) => {
+        router.push(`/?category=${encodeURIComponent(cat)}`);
+    };
 
     const videoRef = React.useRef(null);
     React.useEffect(() => {
@@ -57,7 +89,7 @@ export default function VideoHeroBanner() {
             {/* Background Video */}
             <video
                 ref={videoRef}
-                src="/bookmyticket/videoplayback.mp4"
+                src={config.videoUrl || "/bookmyticket/videoplayback.mp4"}
                 autoPlay
                 loop
                 muted
@@ -106,14 +138,14 @@ export default function VideoHeroBanner() {
                     fontFamily: "var(--font-heading), sans-serif",
                     letterSpacing: "-0.02em"
                 }}>
-                    Discover Your Next <br />
+                    {config.title1 || "Discover Your Next"} <br />
                     <span style={{
                         background: "linear-gradient(90deg, #f97316 0%, #ef4444 100%)",
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
                         display: "inline-block"
                     }}>
-                        Unforgettable Experience
+                        {config.title2 || "Unforgettable Experience"}
                     </span>
                 </h1>
 
@@ -126,7 +158,7 @@ export default function VideoHeroBanner() {
                     maxWidth: "800px",
                     lineHeight: 1.5
                 }}>
-                    Explore concerts, shows, nightlife, and exclusive experiences happening around you.
+                    {config.subtitle || "Explore concerts, shows, nightlife, and exclusive experiences happening around you."}
                 </p>
 
                 {/* Search Bar */}
@@ -152,6 +184,7 @@ export default function VideoHeroBanner() {
                             placeholder="Search For Any Event"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             style={{
                                 border: "none",
                                 outline: "none",
@@ -177,6 +210,7 @@ export default function VideoHeroBanner() {
                         gap: "8px",
                         transition: "opacity 0.2s"
                     }}
+                        onClick={handleSearch}
                         onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
                         onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                     >
@@ -214,6 +248,7 @@ export default function VideoHeroBanner() {
                                 e.currentTarget.style.background = "rgba(0, 0, 0, 0.4)";
                                 e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
                             }}
+                            onClick={() => handleCategoryClick(cat)}
                         >
                             {cat}
                         </button>

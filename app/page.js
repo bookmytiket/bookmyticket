@@ -15,7 +15,7 @@ import VirtualEvents from '@/components/VirtualEvents';
 import RecentMemories from '@/components/RecentMemories';
 import Sponsors from '@/components/Sponsors';
 import Footer from '@/components/Footer';
-import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES } from '@/app/data/homeEvents';
+import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 
 function TicketCard({ event }) {
@@ -37,20 +37,26 @@ export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCat = searchParams.get("category");
+  const searchQuery = searchParams.get("q") || "";
   const [newOrgEvents, setNewOrgEvents] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
   const [eventPartners, setEventPartners] = useState([]);
 
   const allConfig = useQuery(api.systemConfig.getAllConfig);
-  const homeSectionsOrder = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_home_sections_order")?.value : null) || [
+  const parseConfig = (val) => {
+    if (val == null) return undefined;
+    try { return typeof val === "string" ? JSON.parse(val) : val; } catch (_) { return val; }
+  };
+  const homeSectionsOrderRaw = parseConfig(allConfig?.admin_home_sections_order);
+  const homeSectionsOrder = Array.isArray(homeSectionsOrderRaw) ? homeSectionsOrderRaw : [
     "Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"
   ];
-  const siteBranding = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_site_branding")?.value : null) || {
+  const siteBranding = parseConfig(allConfig?.admin_site_branding) || {
     name: "book my ticket",
     logoColor: "#111111",
     logoUrl: "/logo.png"
   };
-  const metaSettings = (Array.isArray(allConfig) ? allConfig.find(c => c.key === "admin_meta_settings")?.value : null) || {
+  const metaSettings = parseConfig(allConfig?.admin_meta_settings) || {
     global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
   };
 
@@ -64,7 +70,7 @@ export default function Home() {
 
   const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev) => ({
     ...ev,
-    id: ev._id || ev.id || ev.title?.slice(0, 8) + Date.now(),
+    id: ev._id || ev.id || ev.title?.slice(0, 8) + Math.random().toString(36).substring(7),
     title: ev.title || "Event",
     img: ev.img || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
     date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
@@ -85,11 +91,32 @@ export default function Home() {
 
   const popularEventsList = useMemo(() => normalizedOrgEvents, [normalizedOrgEvents]);
 
+  const allEventsForFilter = useMemo(() => [
+    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []),
+    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
+  ], [normalizedOrgEvents]);
+
   const filteredEvents = useMemo(() => {
-    if (!activeCat) return [];
-    const cat = { name: activeCat, slug: activeCat.toLowerCase().trim().replace(/\s+/g, '-') };
-    return normalizedOrgEvents.filter(ev => eventMatchesCategory(ev, cat));
-  }, [activeCat, normalizedOrgEvents]);
+    let results = allEventsForFilter;
+
+    // 1. Filter by Search Query
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      results = results.filter(ev =>
+        (ev.title && ev.title.toLowerCase().includes(q)) ||
+        (ev.location && ev.location.toLowerCase().includes(q)) ||
+        (ev.category && ev.category.toLowerCase().includes(q))
+      );
+    }
+
+    // 2. Filter by Category
+    if (activeCat) {
+      const cat = { name: activeCat, slug: activeCat.toLowerCase().trim().replace(/\s+/g, '-') };
+      results = results.filter(ev => eventMatchesCategory(ev, cat));
+    }
+
+    return results;
+  }, [activeCat, searchQuery, allEventsForFilter]);
 
 
   useEffect(() => {
@@ -103,19 +130,15 @@ export default function Home() {
   const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
 
   useEffect(() => {
-    if (heroSlidesConfig) {
-      setHeroSlides(Array.isArray(heroSlidesConfig) ? heroSlidesConfig : HERO_BANNER_SLIDES);
-    } else {
-      setHeroSlides(Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
-    }
+    const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
+    const slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
+    setHeroSlides(slides);
   }, [heroSlidesConfig]);
 
   useEffect(() => {
-    if (eventPartnersConfig) {
-      setEventPartners(Array.isArray(eventPartnersConfig) ? eventPartnersConfig : FEATURED_ORGANISERS);
-    } else {
-      setEventPartners(FEATURED_ORGANISERS);
-    }
+    const parsed = eventPartnersConfig != null ? parseConfig(eventPartnersConfig) : null;
+    const partners = Array.isArray(parsed) ? parsed : FEATURED_ORGANISERS;
+    setEventPartners(partners);
   }, [eventPartnersConfig]);
 
   // Removed focus event listener since Convex useQuery is reactive
@@ -144,39 +167,68 @@ export default function Home() {
         </div>
 
 
-        {activeCat ? (
+        {/* Search & Category Filter Results Section */}
+        {(activeCat || searchQuery) ? (
           <section style={{ width: '100%', maxWidth: '1240px', padding: '40px 20px', minHeight: '600px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
-                <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#111827' }}>{activeCat} Events</h1>
-                <p style={{ color: '#666', marginTop: '4px' }}>Discover the best {activeCat.toLowerCase()} experiences in your city.</p>
+                <h2 style={{ fontSize: '32px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em', color: '#0f172a' }}>
+                  {searchQuery ? `Search Results for "${searchQuery}"` : `${activeCat} Events`}
+                </h2>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>
+                  Found {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} {searchQuery ? '' : `in this category`}
+                </p>
               </div>
               <button
                 onClick={() => router.push('/')}
-                style={{ background: '#eee', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, fontSize: '14px' }}
+                style={{
+                  padding: '8px 16px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e2e8f0';
+                  e.currentTarget.style.color = '#0f172a';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.color = '#475569';
+                }}
               >
-                Clear Filter
+                Clear Filters ✕
               </button>
             </div>
 
             {filteredEvents.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '30px' }}>
-                {filteredEvents.map(event => (
-                  <div key={event.id} style={{ transform: 'scale(1.1)', transformOrigin: 'top left' }}>
-                    <TicketCard event={event} />
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '24px'
+              }}>
+                {filteredEvents.map(ev => (
+                  <div key={ev.id} onClick={() => router.push(`/events/${ev.id}`)} style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                    <TicketCard event={ev} />
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '100px 0' }}>
-                <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎪</div>
-                <h3 style={{ fontSize: '20px', fontWeight: 700 }}>No {activeCat} events found right now.</h3>
-                <p style={{ color: '#666' }}>Try selecting another category or check back later!</p>
+              <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>No events found</h3>
+                <p style={{ color: '#64748b', fontSize: '15px', maxWidth: '400px', margin: '0 auto' }}>
+                  We couldn&apos;t find any events matching your criteria. Try adjusting your search term or exploring other categories.
+                </p>
               </div>
             )}
           </section>
         ) : (
-          <>
+          <div style={{ width: '100%' }}>
             {homeSectionsOrder.map((section, idx) => {
               switch (section) {
                 case "Hero Banner":
@@ -224,9 +276,8 @@ export default function Home() {
                 style={{ width: '450px', height: 'auto', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.1))' }}
               />
             </div>
-          </>
+          </div>
         )}
-
       </main>
 
       {/* ── Footer ── */}
