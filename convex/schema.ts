@@ -250,4 +250,10 @@ export default defineSchema({
         order: v.number(),
         updatedAt: v.number(),
     }).index("by_slug", ["slug"]),
+
+    memories: defineTable({
+        imageUrl: v.string(),
+        altText: v.string(),
+        createdAt: v.number(),
+    }),
 });

@@ -18,6 +18,7 @@ import type * as eventBookings from "../eventBookings.js";
 import type * as events from "../events.js";
 import type * as feeSettings from "../feeSettings.js";
 import type * as homeSettings from "../homeSettings.js";
+import type * as memories from "../memories.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as organisers from "../organisers.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   feeSettings: typeof feeSettings;
   homeSettings: typeof homeSettings;
+  memories: typeof memories;
   migrations: typeof migrations;
   notifications: typeof notifications;
   organisers: typeof organisers;

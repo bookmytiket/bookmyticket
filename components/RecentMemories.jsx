@@ -2,11 +2,24 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
 const CircularGallery = dynamic(() => import("./CircularGallery"), { ssr: false });
 
-export default function RecentMemories({ memories = [] }) {
-    const galleryItems = memories.length > 0
-        ? memories.map(mem => ({ image: mem.img, text: mem.alt }))
+export default function RecentMemories({ memories: propMemories = [] }) {
+    const convexMemories = useQuery(api.memories.getMemories);
+
+    // Prioritize memories from Convex, fallback to props (static data)
+    const displayMemories = (convexMemories && convexMemories.length > 0)
+        ? convexMemories
+        : propMemories;
+
+    const galleryItems = displayMemories.length > 0
+        ? displayMemories.map(mem => ({
+            image: mem.imageUrl || mem.img,
+            text: mem.altText || mem.alt
+        }))
         : undefined;
 
     return (

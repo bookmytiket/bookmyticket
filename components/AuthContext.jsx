@@ -22,7 +22,24 @@ export function AuthProvider({ children }) {
             setSelectedCity(storedCity);
         }
         setLoading(false);
-    }, []);
+
+        // Cross-tab logout/login synchronization
+        const handleStorageChange = (e) => {
+            if (e.key === "user") {
+                if (!e.newValue) {
+                    // Logout detected
+                    setUser(null);
+                    router.push("/signin");
+                } else {
+                    // Login detected
+                    setUser(JSON.parse(e.newValue));
+                }
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
+    }, [router]);
 
     const updateCity = (city) => {
         setSelectedCity(city);

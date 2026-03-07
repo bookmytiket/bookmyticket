@@ -164,6 +164,65 @@ function AdminHomePage() {
     const updatePageMutation = useMutation(api.pages.update);
     const deletePageMutation = useMutation(api.pages.remove);
 
+    // Recent Memories management
+    const memories = useQuery(api.memories.getMemories) || [];
+    const createMemoryMutation = useMutation(api.memories.createMemory);
+    const deleteMemoryMutation = useMutation(api.memories.deleteMemory);
+    const [memoryForm, setMemoryForm] = useState({ imageUrl: "", altText: "" });
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleUploadMemory = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch("/api/memories/upload", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.success) {
+                setMemoryForm({ ...memoryForm, imageUrl: data.imageUrl });
+            } else {
+                alert("Upload failed: " + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Upload error");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleSaveMemory = async () => {
+        if (!memoryForm.imageUrl || !memoryForm.altText) {
+            alert("Please provide both an image and alt text.");
+            return;
+        }
+        await createMemoryMutation({
+            imageUrl: memoryForm.imageUrl,
+            altText: memoryForm.altText,
+        });
+        setMemoryForm({ imageUrl: "", altText: "" });
+    };
+
+    const handleDeleteMemory = async (id) => {
+        console.log("Attempting to delete memory with ID:", id);
+        if (confirm("Are you sure you want to delete this memory?")) {
+            try {
+                await deleteMemoryMutation({ id });
+                console.log("Memory deleted successfully");
+            } catch (err) {
+                console.error("Error deleting memory:", err);
+                alert("Failed to delete memory. Check console for details.");
+            }
+        }
+    };
+
     // Seed defaults for new tables
     useEffect(() => {
         if (allConfig === undefined) return;
@@ -915,6 +974,7 @@ function AdminHomePage() {
                                     { label: "Branding", id: "branding" },
                                     { label: "Featured Events", id: "events_settings" },
                                     { label: "Event Partners", id: "event_partners" },
+                                    { label: "Recent Memories", id: "memories" },
                                     { label: "Sections Order", id: "sections" },
                                     { label: "Copyright & Footer", id: "copyright" },
                                     { label: "SEO & Meta Ads", id: "meta_management" },
@@ -996,6 +1056,7 @@ function AdminHomePage() {
                                 { id: "branding", label: "Branding", icon: Sparkles },
                                 { id: "events_settings", label: "Featured Events", icon: Ticket },
                                 { id: "event_partners", label: "Event Partners", icon: Users },
+                                { id: "memories", label: "Recent Memories", icon: ImageIcon },
                                 { id: "sections", label: "Sections Order", icon: LayoutDashboard },
                                 { id: "copyright", label: "Copyright & Footer", icon: FileText },
                                 { id: "meta_management", label: "SEO & Ads", icon: Globe },
@@ -1503,6 +1564,93 @@ function AdminHomePage() {
                                     ))}
                                     {eventPartners.length === 0 && (
                                         <p style={{ textAlign: "center", padding: "24px", color: t.textSub }}>No partners added. Click the button to add one.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "memories" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                <button
+                                    onClick={() => setActiveTab("dashboard")}
+                                    style={{ padding: "8px 16px", backgroundColor: "#334155", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                >
+                                    Return to Dashboard
+                                </button>
+                            </div>
+                            {/* Upload Form */}
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Add New Memory</h3>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+                                    <div style={{ flex: "1 1 300px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>Alt Text / Title</label>
+                                        <input
+                                            type="text"
+                                            value={memoryForm.altText}
+                                            onChange={(e) => setMemoryForm({ ...memoryForm, altText: e.target.value })}
+                                            placeholder="e.g. Concert at Mumbai"
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: "1 1 300px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>Image</label>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <input
+                                                type="text"
+                                                value={memoryForm.imageUrl}
+                                                readOnly
+                                                placeholder="Upload an image..."
+                                                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#f1f5f9" : "#0f172a", color: t.textMain, opacity: 0.7 }}
+                                            />
+                                            <label style={{ padding: "10px 16px", backgroundColor: t.border, borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600, fontSize: "13px" }}>
+                                                {isUploading ? "Uploading..." : <><Upload size={16} /> Upload</>}
+                                                <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUploadMemory} disabled={isUploading} />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleSaveMemory}
+                                        disabled={!memoryForm.imageUrl || !memoryForm.altText || isUploading}
+                                        style={{ padding: "10px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", opacity: (!memoryForm.imageUrl || !memoryForm.altText || isUploading) ? 0.6 : 1 }}
+                                    >
+                                        Save Memory
+                                    </button>
+                                </div>
+                                {memoryForm.imageUrl && (
+                                    <div style={{ width: "200px", height: "120px", borderRadius: "8px", overflow: "hidden", border: `1px solid ${t.border}`, marginTop: "16px" }}>
+                                        <img src={memoryForm.imageUrl} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Memories List */}
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Existing Memories ({memories.length})</h3>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "20px" }}>
+                                    {memories.map((memory) => (
+                                        <div key={memory._id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: theme === "light" ? "#f8fafc" : "#1e293b", position: "relative" }}>
+                                            <div style={{ height: "160px", width: "100%" }}>
+                                                <img src={memory.imageUrl} alt={memory.altText} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            </div>
+                                            <div style={{ padding: "12px" }}>
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: t.textMain }}>{memory.altText}</p>
+                                                <p style={{ margin: "4px 0 0", fontSize: "11px", color: t.textSub }}>Added {new Date(memory.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteMemory(memory._id)}
+                                                style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.2)", zIndex: 10 }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {memories.length === 0 && (
+                                        <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "40px", color: t.textSub }}>
+                                            <ImageIcon size={48} style={{ opacity: 0.2, marginBottom: "12px" }} />
+                                            <p>No memories found. Upload your first memory above!</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
