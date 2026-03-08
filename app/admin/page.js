@@ -96,7 +96,7 @@ function AdminHomePage() {
     };
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [theme, setTheme] = useState("dark");
+    const [theme, setTheme] = useState("light");
     const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
     const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -1027,9 +1027,6 @@ function AdminHomePage() {
                         <div style={{ display: "none", alignItems: "center", gap: "8px", padding: "6px 12px", border: `1px solid ${t.border}`, borderRadius: "6px", color: t.textSub, fontSize: "13px" }}>
                             Select an option <Menu size={14} />
                         </div>
-                        <button onClick={toggleTheme} style={{ background: t.activeLink, color: t.activeText, border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer" }}>
-                            {theme === 'light' ? <Sparkles size={16} /> : <ImageIcon size={16} />}
-                        </button>
                         <button style={{ color: t.activeText, background: t.activeLink, border: `1px solid ${t.activeText}40`, padding: "8px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
                             <Bell size={16} /> Refresh
                         </button>

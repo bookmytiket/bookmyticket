@@ -30,7 +30,7 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft
 } from "lucide-react";
 
 function LocationPickerModal({
@@ -189,7 +189,7 @@ function OrganiserPanel() {
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");
     const [activeTab, setActiveTab] = useState("dashboard");
-    const [theme, setTheme] = useState("dark");
+    const [theme, setTheme] = useState("light");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState({
         eventManagement: true,
@@ -212,8 +212,20 @@ function OrganiserPanel() {
     const [supportTicketSelectOpen, setSupportTicketSelectOpen] = useState(null);
     const [supportTicketDetailId, setSupportTicketDetailId] = useState(null);
     const [supportTicketReplyMessage, setSupportTicketReplyMessage] = useState("");
+    const [showGstModal, setShowGstModal] = useState(false);
+    const [showVendorModal, setShowVendorModal] = useState(false);
+    const [agreedToVendor, setAgreedToVendor] = useState(false);
 
-    // Organiser Profile State
+    const effectiveEmail = user?.identifier || "organiser@bookmyticket.com";
+
+    // KYC Wizard State
+    const [kycStep, setKycStep] = useState(1);
+    const [kycFormData, setKycFormData] = useState({
+        category: "Individual", name: "", panCard: "", website: "", socialLink: "",
+        ostin: "No", itr: "No", fullName: effectiveEmail, email: effectiveEmail,
+        mobile: "", altContact: "", designation: "", city: ""
+    });
+    const [kycFiles, setKycFiles] = useState({ pan: null, cheque: null, aadhar: null });
     const [profile, setProfile] = useState({
         firstName: "",
         lastName: "",
@@ -231,7 +243,6 @@ function OrganiserPanel() {
         transactions: []
     });
 
-    const effectiveEmail = user?.identifier || "organiser@bookmyticket.com";
     const equaliser = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
     const organiserData = useQuery(api.organisers.get, { userId: effectiveEmail });
@@ -251,9 +262,8 @@ function OrganiserPanel() {
                 lastName: organiserData.name.split(' ')[1] || "Doe",
             }));
 
-            // Route to proper stage depending on KYC Status
             if (!organiserData.kycStatus || organiserData.kycStatus === "Pending") {
-                setCurrentStage("kyc_wizard");
+                setCurrentStage("kyc_start");
             } else if (organiserData.kycStatus === "KYC Pending") {
                 setCurrentStage("pending");
             } else {
@@ -983,7 +993,7 @@ function OrganiserPanel() {
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <input type="text" placeholder="Enter 6-digit MFA Code" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, textAlign: "center", letterSpacing: "4px", fontWeight: "bold" }} />
                 <button
-                    onClick={() => setCurrentStage("kyc_docs")}
+                    onClick={() => setCurrentStage("kyc_start")}
                     style={{ width: "100%", padding: "14px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                 >
                     Verify & Continue <ArrowRight size={18} />
@@ -992,92 +1002,297 @@ function OrganiserPanel() {
         </div>
     );
 
-    // KYC Document View
-    const renderKYCDocsView = () => (
-        <div style={{ maxWidth: "600px", margin: "60px auto", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>Identity Verification (KYC)</h2>
-            <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "32px" }}>Step 1: Upload Your Documents</p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {[
-                    { label: "Aadhar Card (Front & Back)", icon: Shield },
-                    { label: "PAN Card", icon: FileText },
-                    { label: "Event Venue Booking Copy / License", icon: Building }
-                ].map((doc, idx) => (
-                    <div key={idx} style={{ padding: "24px", border: `2px dashed ${t.border}`, borderRadius: "12px", textAlign: "center", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"} onMouseOut={(e) => e.currentTarget.style.borderColor = t.border}>
-                        <Upload size={24} color={t.textSub} style={{ marginBottom: "12px" }} />
-                        <p style={{ fontSize: "14px", fontWeight: 600, margin: 0 }}>{doc.label}</p>
-                        <p style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Click to upload or drag & drop</p>
-                    </div>
-                ))}
+    // KYC Start View (Banner & Features)
+    const renderKYCStartView = () => (
+        <div style={{ maxWidth: "1000px", margin: "0 auto", backgroundColor: t.cardBg, borderRadius: "20px", border: `1px solid ${t.border}`, overflow: "hidden" }}>
+            <div style={{ backgroundColor: "#1e1b4b", padding: "30px 40px", color: "#fff", position: "relative" }}>
+                <div style={{ position: "absolute", left: "-20px", top: "20%" }}><img src="data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20L20 0Z' fill='white' fill-opacity='0.1'/%3E%3C/svg%3E" alt="" /></div>
+                <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 900, letterSpacing: "1px" }}>START ONBOARDING</h1>
             </div>
 
-            <button
-                onClick={() => setCurrentStage("kyc_form")}
-                style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "40px" }}
-            >
-                Start Auto-fill Process
-            </button>
+            <div style={{ display: "flex", padding: "24px 40px", gap: "40px", alignItems: "center" }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ backgroundColor: "#f1f5f9", padding: "24px", borderRadius: "20px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <Shield size={80} color="#3b82f6" opacity={0.8} />
+                    </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                    <span style={{ backgroundColor: "#22c55e", color: "#fff", padding: "4px 12px", borderRadius: "16px", fontSize: "12px", fontWeight: 700 }}>Takes 3 mins</span>
+                    <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginTop: "16px", marginBottom: "8px" }}>Host events with confidence</h2>
+                    <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>We prioritize security, trust, and seamless event experiences</p>
+
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "16px" }}>Why KYC Verification?</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                            <div>
+                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Seamless Event Hosting</div>
+                                <div style={{ fontSize: "12px", color: t.textSub }}>Verified hosts enjoy faster and hassle-free event access.</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                            <div>
+                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Regulatory Compliance</div>
+                                <div style={{ fontSize: "12px", color: t.textSub }}>Ensures adherence to industry standards and policies.</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                            <div>
+                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Seamless Payouts</div>
+                                <div style={{ fontSize: "12px", color: t.textSub }}>Ensure smooth and timely settlements.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                        <button onClick={() => setCurrentStage("kyc_wizard")} style={{ backgroundColor: "#1e1b4b", color: "#fff", padding: "12px 24px", borderRadius: "24px", fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>Get Started <ArrowRight size={16} /></button>
+                        <a href="#" style={{ color: t.textMain, fontSize: "14px", textDecoration: "none", display: "flex", alignItems: "center", gap: "6px" }}>Contact Us <ExternalLink size={14} /></a>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 
-    // KYC Form View
-    const renderKYCFormView = () => (
-        <div style={{ maxWidth: "700px", margin: "50px auto", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>Organiser Details</h2>
-            <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "32px" }}>Step 2: Complete Your Profile (Auto-filled from Documents)</p>
+    // KYC Wizard View (3 steps)
+    const renderKYCWizardView = () => (
+        <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", gap: "40px", backgroundColor: t.cardBg, borderRadius: "20px", border: `1px solid ${t.border}`, padding: "40px" }}>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>First Name</label>
-                    <input
-                        type="text"
-                        defaultValue="John"
-                        onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain }}
-                    />
+            {/* Left Sidebar Tracker */}
+            <div style={{ width: "240px", position: "relative", flexShrink: 0 }}>
+                <h2 style={{ fontSize: "18px", fontWeight: 700, color: t.textMain, marginBottom: "32px", margin: 0, paddingLeft: "10px" }}>Organizer KYC</h2>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "40px", position: "relative" }}>
+                    {[
+                        { num: 1, label: "Organization Details" },
+                        { num: 2, label: "Upload Documents" },
+                        { num: 3, label: "Agreement" }
+                    ].map((step, idx) => {
+                        const isActive = kycStep === step.num;
+                        const isCompleted = kycStep > step.num;
+                        return (
+                            <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "16px", zIndex: 2 }}>
+                                <div style={{
+                                    width: "36px",
+                                    height: "36px",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    fontWeight: 700,
+                                    fontSize: "14px",
+                                    marginTop: "2px",
+                                    backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#fff" : "#fff"),
+                                    backgroundImage: isActive ? "linear-gradient(135deg, #f43f5e, #f97316)" : "none",
+                                    color: isActive ? "#fff" : (isCompleted ? "#fff" : "#94a3b8"),
+                                    border: isCompleted ? "none" : (isActive ? "none" : `2px solid #e2e8f0`),
+                                    boxShadow: isActive ? "0 4px 12px rgba(244, 63, 94, 0.3)" : "none"
+                                }}>
+                                    {isCompleted ? <Check size={18} /> : step.num}
+                                </div>
+                                <span style={{ fontSize: "13px", fontWeight: 600, color: isActive ? "#0f172a" : (isCompleted ? "#0f172a" : "#94a3b8") }}>{step.label}</span>
+                            </div>
+                        );
+                    })}
+
+                    <div style={{ position: "absolute", left: "18px", top: "20px", bottom: "20px", width: "2px", backgroundColor: "#e2e8f0", zIndex: 0 }}></div>
+                    <div style={{ position: "absolute", left: "18px", top: "20px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: "#f43f5e", zIndex: 1, transition: "height 0.3s ease" }}></div>
                 </div>
-                <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>Last Name</label>
-                    <input
-                        type="text"
-                        defaultValue="Doe"
-                        onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain }}
-                    />
-                </div>
-                <div style={{ gridColumn: "span 2" }}>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>Organiser Type</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
-                        {["Individual", "Event Organiser", "Pvt Ltd", "Others"].map(opt => (
-                            <button
-                                key={opt}
-                                onClick={() => setProfile({ ...profile, orgType: opt })}
-                                style={{ padding: "12px", borderRadius: "8px", border: `2px solid ${profile.orgType === opt ? "#3b82f6" : t.border}`, backgroundColor: profile.orgType === opt ? "#3b82f615" : "transparent", color: profile.orgType === opt ? "#3b82f6" : t.textSub, fontWeight: 600, cursor: "pointer" }}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                {profile.orgType === "Others" && (
-                    <div style={{ gridColumn: "span 2" }}>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>Remarks</label>
-                        <textarea style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain }} rows={3} />
-                    </div>
-                )}
             </div>
 
-            <button
-                onClick={() => {
-                    alert("KYC Submitted Successfully! Your details have been sent to the Admin Panel for approval.");
-                    setCurrentStage("pending");
-                }}
-                style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "40px" }}
-            >
-                Submit KYC for Approval
-            </button>
-        </div>
+            {/* Content Area */}
+            <div style={{ flex: 1, borderLeft: `1px solid ${t.border}`, paddingLeft: "40px" }}>
+                {kycStep === 1 && (
+                    <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Category <span style={{ color: "#ef4444" }}>*</span></label>
+                            <select value={kycFormData.category} onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }}>
+                                <option value="Company">Company</option>
+                                <option value="Individual">Individual</option>
+                                <option value="Partnership">Partnership</option>
+                                <option value="LLP">LLP</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Name <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" placeholder="As per PAN" value={kycFormData.name} onChange={e => setKycFormData({ ...kycFormData, name: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>PAN <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" placeholder="PAN" value={kycFormData.panCard} onChange={e => setKycFormData({ ...kycFormData, panCard: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Website Link</label>
+                            <input type="text" placeholder="(ex: https://www.abc.com)" value={kycFormData.website} onChange={e => setKycFormData({ ...kycFormData, website: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                            <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "4px" }}>This will help us to verify your KYC soon</div>
+                        </div>
+                        <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Social Media Link</label>
+                                <input type="text" placeholder="(ex: https://www.facebook.com)" value={kycFormData.socialLink} onChange={e => setKycFormData({ ...kycFormData, socialLink: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                                <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "4px" }}>This will help us to verify your KYC soon</div>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                                <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Do you have GSTIN number?</label>
+                                <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}>
+                                        <input type="radio" name="gstin" checked={kycFormData.ostin === "Yes"} onChange={() => setKycFormData({ ...kycFormData, ostin: "Yes" })} style={{ accentColor: "#f43f5e" }} /> Yes
+                                    </label>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}>
+                                        <input type="radio" name="gstin" checked={kycFormData.ostin === "No"} onChange={() => {
+                                            setKycFormData({ ...kycFormData, ostin: "No" });
+                                            setShowGstModal(true);
+                                        }} style={{ accentColor: "#f43f5e" }} /> No
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Have you filled last 2 years ITR return? <span style={{ color: "#ef4444" }}>*</span></label>
+                            <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
+                                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="itr" checked={kycFormData.itr === "Yes"} onChange={() => setKycFormData({ ...kycFormData, itr: "Yes" })} style={{ accentColor: "#f43f5e" }} /> Yes</label>
+                                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="itr" checked={kycFormData.itr === "No"} onChange={() => setKycFormData({ ...kycFormData, itr: "No" })} style={{ accentColor: "#f43f5e" }} /> No</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Full Name <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" value={kycFormData.fullName} onChange={e => setKycFormData({ ...kycFormData, fullName: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Mobile number <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" value={kycFormData.mobile} onChange={e => setKycFormData({ ...kycFormData, mobile: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Alternate number <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" value={kycFormData.altContact} onChange={e => setKycFormData({ ...kycFormData, altContact: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>City <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" placeholder="Enter your City" value={kycFormData.city} onChange={e => setKycFormData({ ...kycFormData, city: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" disabled value={kycFormData.email} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#94a3b8", backgroundColor: "#f1f5f9", outline: "none", fontSize: "14px", cursor: "not-allowed" }} />
+                        </div>
+
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Designation (min 3 letters) <span style={{ color: "#ef4444" }}>*</span></label>
+                            <input type="text" placeholder="Enter your designation" value={kycFormData.designation} onChange={e => setKycFormData({ ...kycFormData, designation: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                        </div>
+                    </div>
+                )}
+
+                {kycStep === 2 && (
+                    <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+                        {[
+                            { id: 'pan', label: 'Upload PAN', file: kycFiles.pan },
+                            { id: 'cheque', label: 'Upload Cancelled Cheque', file: kycFiles.cheque },
+                            { id: 'aadhar', label: 'Upload Aadhar card', file: kycFiles.aadhar }
+                        ].map((doc, idx) => (
+                            <div key={doc.id} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                <label style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>{doc.label} <span style={{ color: "#ef4444" }}>*</span></label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                    <input
+                                        type="file"
+                                        id={`${doc.id}-upload`}
+                                        style={{ fontSize: "12px", color: "#64748b" }}
+                                        onChange={(e) => {
+                                            const f = e.target.files?.[0];
+                                            if (f) setKycFiles({ ...kycFiles, [doc.id]: f.name });
+                                        }}
+                                    />
+                                    <button style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>View Sample</button>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>Max 1 MB</span>
+                                        {doc.file && <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 700, maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={doc.file}>✓ {doc.file}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {kycStep === 3 && (
+                    <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", justifyContent: "center", padding: "40px" }}>
+                            <input
+                                type="checkbox"
+                                id="vendor-agree"
+                                checked={agreedToVendor}
+                                onChange={(e) => setAgreedToVendor(e.target.checked)}
+                                style={{ width: "20px", height: "20px", cursor: "pointer", accentColor: "#f43f5e", marginTop: "2px" }}
+                            />
+                            <label htmlFor="vendor-agree" style={{ fontSize: "16px", color: "#1e293b", fontWeight: 600, cursor: "pointer" }}>
+                                I have read and agreed to the <span onClick={(e) => { e.preventDefault(); setShowVendorModal(true); }} style={{ color: "#3b82f6", textDecoration: "underline" }}>vendor agreement</span>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px" }}>
+                    <button
+                        onClick={() => setKycStep(kycStep - 1)}
+                        disabled={kycStep === 1}
+                        style={{ padding: "12px 32px", borderRadius: "100px", background: kycStep === 1 ? "#e2e8f0" : "linear-gradient(135deg, #94a3b8, #64748b)", color: "#fff", border: "none", fontWeight: 700, cursor: kycStep === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}
+                    >
+                        <ArrowLeft size={16} /> Prev
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (kycStep === 3) {
+                                if (!agreedToVendor) { alert("Please agree to the vendor agreement first."); return; }
+                                if (!organiserData?._id) { alert("Organiser account not found. Please try again later."); return; }
+
+                                submitKycMutation({
+                                    id: organiserData._id,
+                                    kycDetails: {
+                                        category: kycFormData.category,
+                                        panNumber: kycFormData.panCard,
+                                        socialMediaLink: kycFormData.socialLink,
+                                        hasITR: kycFormData.itr === "Yes",
+                                        fullName: kycFormData.fullName,
+                                        email: kycFormData.email,
+                                        mobile: kycFormData.mobile,
+                                        alternateNumber: kycFormData.altContact,
+                                        designation: kycFormData.designation,
+                                        city: kycFormData.city,
+                                        websiteLink: kycFormData.website,
+                                        hasOSTIN: kycFormData.ostin === "Yes",
+                                        panFile: kycFiles.pan || "",
+                                        chequeFile: kycFiles.cheque || "",
+                                        aadharFile: kycFiles.aadhar || "",
+                                        agreementAccepted: agreedToVendor
+                                    }
+                                }).then(() => {
+                                    setCurrentStage("pending");
+                                    setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
+                                }).catch(err => {
+                                    console.error("KYC Submission error:", err);
+                                    alert("Submission failed: " + (err.message || "Unknown error"));
+                                });
+                            } else {
+                                setKycStep(kycStep + 1);
+                            }
+                        }}
+                        style={{ padding: "12px 32px", borderRadius: "100px", background: "linear-gradient(135deg, #f43f5e, #f97316)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease", boxShadow: "0 4px 12px rgba(244, 63, 94, 0.2)" }}
+                    >
+                        {kycStep === 3 ? "Submit" : "Next"} <ArrowRight size={16} />
+                    </button>
+                </div>
+
+                <div style={{ marginTop: "40px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", color: "#22c55e", fontSize: "12px", fontWeight: 700 }}>
+                    <CheckCircle size={14} /> All data in transit is safe and secure, encrypted to BookMyTicket
+                </div>
+            </div>
+        </div >
     );
 
     // Pending View
@@ -1167,7 +1382,7 @@ function OrganiserPanel() {
             </div>
 
             <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px" }}>
-                If you need to make any changes or have queries, please contact us on <a href="mailto:admin@theticket9.com" style={{ color: "#3b82f6" }}>admin@theticket9.com</a>
+                If you need to make any changes or have queries, please contact us on <a href="mailto:admin@bookmyticket.io" style={{ color: "#3b82f6" }}>admin@bookmyticket.io</a>
             </div>
 
             {/* Backdoor for demo */}
@@ -3042,9 +3257,6 @@ function OrganiserPanel() {
                             <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>Welcome back, {profile.firstName || "Organiser"}! Here's what's happening today.</p>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <button onClick={toggleTheme} style={{ background: t.activeLink, color: t.activeText, border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer" }}>
-                                {theme === 'light' ? <Sparkles size={16} /> : <ImageIcon size={16} />}
-                            </button>
                             <button style={{ color: t.activeText, background: t.activeLink, border: `1px solid ${t.activeText}40`, padding: "8px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", position: "relative" }}>
                                 <Bell size={16} />
                                 <div style={{ position: "absolute", top: "6px", right: "6px", width: "7px", height: "7px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
@@ -3132,9 +3344,6 @@ function OrganiserPanel() {
                         <h1 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: 0 }}>Organiser Onboarding</h1>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <button onClick={toggleTheme} style={{ background: t.activeLink, color: t.activeText, border: "none", padding: "8px", borderRadius: "6px", cursor: "pointer" }}>
-                            {theme === 'light' ? <Sparkles size={16} /> : <ImageIcon size={16} />}
-                        </button>
                     </div>
                 </header>
                 <div style={{ padding: "40px" }}>{children}</div>
@@ -3160,14 +3369,213 @@ function OrganiserPanel() {
         );
     }
 
+    const renderModals = () => (
+        <>
+            {showGstModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px" }}>
+                    <div style={{ backgroundColor: "#fff", borderRadius: "8px", maxWidth: "600px", width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
+                        <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>GST Declaration</h2>
+                        </div>
+                        <div style={{ padding: "20px", overflowY: "auto", fontSize: "13px", color: "#475569", lineHeight: "1.6" }}>
+                            <p>I/We, the undersigned Organizer, hereby confirm and acknowledge that As per Section 24(1X) of the CGST Act, 2017, I am/We operate as a supplier rendering services through an e- ticketing platform. I/We further confirm that I/We are not registered under the GST Act, since our annual turnover is below the threshold limit of Rs. 20 Lakhs (supplier supply only services).</p>
+                            <p>I/We hereby affirm that any applicable taxes collected on the Tickets booked through <a href="https://www.bookmyticket.io" style={{ color: "#3b82f6" }}>www.bookmyticket.io</a>, and/or its mobile application and/ or any application that is to be part of BookMyTicket Event Tech Pvt. Ltd, are our liability and shall be properly discharged by us.</p>
+                            <p>I/We acknowledge that the information provided above is true to the best of my/our knowledge, and I/We consent to be bound by any legal actions of the duly appointed attorney. If any of the information provided above is later found to be incorrect, I understand that my membership with your platform will be terminated, and any outstanding payments or unprocessed bills will be withheld by you based on the information provided.</p>
+                            <p>Additionally, I/We shall indemnify and hold harmless you and your officers, representatives, affiliates, successors, and assigns against all costs, penalties, damages, or losses, or any other charges, penalties, or liabilities incurred in relation to any claim raised pursuant to the following:</p>
+                            <ul style={{ paddingLeft: "20px", margin: "10px 0" }}>
+                                <li>Breach, violation, or non-compliance of any of the provisions contained in this declaration.</li>
+                                <li>Any act of omission or commission pursuant to which any of the representations given become untrue.</li>
+                                <li>Violation of any applicable law, including GST laws.</li>
+                                <li>Non-compliance with GST laws.</li>
+                                <li>Any investigations, inquiries, summons, or inspections conducted by any authority.</li>
+                            </ul>
+                            <p>Furthermore, I/We commit to informing you of any subsequent changes in the structure or operations of our business entity that holds membership with your platform. Any such changes affecting the accuracy of the answers given herein will be promptly communicated to you.</p>
+                        </div>
+                        <div style={{ padding: "16px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end" }}>
+                            <button onClick={() => setShowGstModal(false)} style={{ padding: "8px 24px", background: "#f43f5e", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer" }}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showVendorModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px" }}>
+                    <div style={{ backgroundColor: "#fff", borderRadius: "8px", maxWidth: "800px", width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
+                        <div style={{ padding: "20px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>USER AGREEMENT</h2>
+                        </div>
+                        <div style={{ padding: "20px", overflowY: "auto", fontSize: "12px", color: "#334155", lineHeight: "1.6" }}>
+                            <h3>1. SELLER T&C</h3>
+                            <p>This agreement is made on this 8 day of March, 2026 between, BookMyTicket Tech Event Private Ltd, a company incorporated under the Indian Companies Act, 2013 having its registered office located at Coimbatore (hereinafter referred to as 'BookMyTicket', which expression shall unless repugnant to the context or meaning thereof be deemed to include a reference to its successors and permitted assigns);</p>
+                            <p>And Raja Vasudevan, a Company incorporated under the the Companies Act 2013 or an individual having its registered office located at Pollachi PAN:DPIPR3985B/ GST: - (hereinafter referred to as 'Event Manager' which expression shall unless repugnant to the context or meaning thereof be deemed to include a reference to its successors and permitted assigns);</p>
+                            <p>BookMyTicket and Event Manager shall hereinafter be individually referred to as a 'Party' and collectively as the 'Parties'.</p>
+
+                            <h4>Recitals:</h4>
+                            <p>The Event (as defined below) is the property of Event Manager and Event Manager has been appointed to organize the Event. BookMyTicket is engaged in the business of rendering ticket booking services through online platform channels of BookMyTicket, which enable customers to reserve / book tickets to various entertainment events without accessing physical points of booking / sale of the tickets to such events.</p>
+                            <p>The Parties are entering into this Agreement in order to record the terms and conditions based on which, BookMyTicket shall facilitate remote booking of tickets for the Event (as defined below) being organized by the Event Manager and other matters in connection therewith.</p>
+
+                            <h4>1. DEFINITIONS:</h4>
+                            <p>The following capitalized words and expressions, whenever used in this Agreement, unless repugnant to the meaning or context thereof, shall have the respective meanings set forth below: 'Confidential Information' shall include, but is not limited to inventions, ideas, concepts, know-how, techniques, processes, designs, specifications, drawings, patterns, diagrams, flowcharts, data, Intellectual Property Rights, manufacturing techniques, computer software, methods, procedures, materials, operations, reports, studies, and all other technical and business information in oral, written, electronic, digital or physical form that is disclosed by either Party and its directors, employees, advisors and consultants and vice versa under this Agreement and any other agreements/documents and/or transactions contemplated between the Parties under this Agreement; 'Customers' shall mean the customers who have booked Tickets through a Platform; 'Event' shall mean all events done by the organizer at the Venue; 'Event Date' shall mean all dates of the event; 'Intellectual Property Rights' shall mean all rights and interests, vested or arising out of any industrial or intellectual property, whether protected at common law or under statute, which includes (without limitation) any rights and interests in formats of inventions, copyrights, designs, trademarks, trade-names, knowhow, business names, logos, processes, developments, licenses, trade secrets, goodwill, manufacturing techniques, specifications, patterns, drawings, computer software, technical information, research data, concepts, methods, procedures, designs and any other knowledge of any nature whatsoever throughout the world, and including all applications made for the aforesaid, rights to apply in future and any amendments/modifications, renewals, continuations and extensions in any state, country or jurisdiction and all other intellectual property rights whether available at this time and/or in future; 'Losses' means all liabilities, obligations, losses, damages, penalties, actions, judgments, suits, proceedings, costs, expenses and disbursements of any kind or nature whatsoever (including all reasonable costs and expenses of attorneys and the defense, appeal and settlement of any and all suits, actions or proceedings instituted or threatened) and all costs of investigation in connection therewith; 'Ticket' shall mean a ticket or reservation (whether in physical or electronic form, as permitted under law) that allows the holder thereof access to the Event, on the Event date, time and venue identified in such ticket or reservation; Privileged and Confidential 'Venue' shall mean all venues at which the event will take place.</p>
+
+                            <h4>2. APPOINTMENT AND SERVICES:</h4>
+                            <p>2.1. hereby appoints BookMyTicket for providing the Services (as defined hereinafter). BookMyTicket hereby agrees and undertakes that it shall (a) facilitate the booking of Tickets through the Platforms (as defined hereinbelow); and It is clarified that:</p>
+                            <p>2.2. BookMyTicket is a service provider and the sale of Tickets shall at all times be concluded between the Event Manager and the Customer. Accordingly, the Ticket issued to Customers shall be on behalf of the Event Manager; and</p>
+                            <p>2.3. BookMyTicket is not responsible for booking or sale of Tickets through any medium or at any location (such as the Venue or other any physical points of sale) other than the following platforms ('Platforms'):</p>
+                            <ul style={{ paddingLeft: "20px" }}>
+                                <li>i. websites owned or controlled by BookMyTicket (including 'www.bookmyticket.io') accessible through computers or WAP or GPRS enabled mobile phones;</li>
+                                <li>ii. mobile applications of BookMyTicket;</li>
+                                <li>iii. voice and data channels (including IVRs) to be facilitated by BookMyTicket;</li>
+                                <li>iv. any platforms owned and/or operated by third party(ies) associated with BookMyTicket; and</li>
+                                <li>v. any other booking medium that BookMyTicket may introduce in future.</li>
+                            </ul>
+
+                            <h4>3. DUTIES OF EVENT MANAGER:</h4>
+                            <p>3.1. The Event Manager shall:<br />
+                                (a) notify BookMyTicket of all discounts, schemes and benefits that it intends to offer in relation to Tickets at online itself at event manager convenience and in case of totally taking care by BookMyTicket for marketing and sale such cases ;<br />
+                                (b) obtain all necessary approvals, permissions, licenses, no-objections, clearances etc. from the relevant governmental authorities as may be required to hold the Event in accordance with law and availing the Services, at its sole expense and cost;<br />
+                                (c) comply with all laws applicable to the Event in all respects;<br />
+                                (d) immediately notify BookMyTicket, if it discontinues or modifies any aspects of the Event (including any services / facilities associated with the Event) and/or Facilities;<br />
+                                (e) ensure the safety of Customers throughout the Event and undertake necessary measures and actions for such purpose and be solely responsible for any loss, damage or injury caused to Customers without any recourse to BookMyTicket;<br />
+                                (f) promptly notify BookMyTicket of any delay, postponement or cancellation of the Event or any events, facts, circumstances or developments that may be reasonably likely to result in any delay, postponement or cancellation of the Event;<br />
+                                (g) defend at its cost, any suit, claim or action brought against BookMyTicket in connection with the Services or the Event having regard to the expense and effort that the Event Manager would have reasonably invested as if the said suit, claim or action has been brought against it;<br />
+                                (h) it will provide such information as BookMyTicket reasonably requests and shall otherwise cooperate with BookMyTicket in order to give full effect to the provisions/terms of this Agreement;<br />
+                                (i) engage the services of a reputed security agency to provide external physical security at the Venue on the Event Date;<br />
+                                (j) reimburse the full cost and expense of any loss, damage or injury caused to property or personnel (whether owned or contracted) made available by BookMyTicket at the Venue, for the purpose of the Event.</p>
+                            <p>3.2. Without prejudice to any rights of BookMyTicket, Event Manager shall promptly notify BookMyTicket if it is unable to fulfill its obligations mentioned above, whether or not on account of reasons attributable to it.</p>
+
+                            <h4>4. DUTIES OF BOOKMYTICKET:</h4>
+                            <p>4.1. BookMyTicket shall render the Services in a professional and competent manner.</p>
+
+                            <h4>5. REPRESENTATIONS AND WARRANTIES:</h4>
+                            <p>Each Party represents and warrants to the other that:<br />
+                                5.1. It is duly organized, validly constituted under the laws applicable to it and is in good standing and that it has full authority and necessary approvals as required under law, contract and its charter documents to enter into this Agreement and to perform its obligations hereunder according to the terms hereof; and<br />
+                                5.2. That execution and delivery of this Agreement and the performance by it of its obligations under this Agreement have been duly and validly authorized by all necessary corporate or other action as may be required by it. This Agreement constitutes legal, valid, and binding obligation of such Party, enforceable against it in accordance with the terms hereof.</p>
+
+                            <h4>6. CONSIDERATION AND PAYMENT TERMS:</h4>
+                            <p>6.1. BookMyTicket will charge a fixed commission fee of 4% calculable on total Ticketing revenue as consideration towards provision of Services ('Commission Fee').<br />
+                                6.2. BookMyTicket is entitled to charge a booking fee to the Customers transacting on its Platforms.<br />
+                                6.3. The following terms shall be applicable to payments to be made under this Agreement:<br />
+                                (a) BookMyTicket shall release the amount collected by it on account of booking of Tickets through the Platforms to Event Manager on the date or within such time as mentioned in Schedule 2 of this Agreement post deduction of its Commission Fee and/or Consideration.<br />
+                                (b) Upon completion of the Event, BookMyTicket shall raise an invoice on the Event Manager for the amount of Consideration.</p>
+
+                            <h4>7. CANCELLATION OF EVENT:</h4>
+                            <p>7.1. If due to any reason whatsoever (other than due a force majeure event) whether or not attributable to the Event Manager, the Event is canceled, not held at the time or venue originally publicized or delayed past the Event Date or if there is any material change to the Event that entitles customers to seek refunds for the Tickets booked through the Platforms, BookMyTicket shall charge an amount as mentioned in Schedule 2 of this Agreement as a cancellation charge ('Cancellation Charge').<br />
+                                7.2. In the event any refund of the Ticket price and any other costs ('Refund Amount') are required to be processed by BookMyTicket, the Event Manager shall remit to BookMyTicket an amount equivalent to the Refund Amount within five (5) working days of being notified by BookMyTicket in this regard. In the event that the Event Manager fails to refund the Refund Amount to BookMyTicket within such five (5) working days, then without prejudice to its other rights, BookMyTicket shall be entitled to adjust the same against the Advance Amount and amounts pending release to the Event Manager under this Agreement, if any.</p>
+
+                            <h4>8. LIMITATION OF LIABILITY OF BOOKMYTICKET:</h4>
+                            <p>8.1. In no event shall BookMyTicket, nor any employee, officer, affiliate, director, shareholder, agent or sub- contractor acting on behalf of BookMyTicket be liable to any third party for any direct, indirect, incidental, special, punitive, or consequential damages, or lost profits, earnings, or business opportunities, or expenses or costs, even if advised of the possibility thereof, resulting directly or indirectly from, or otherwise arising (however arising, including negligence) out of the performance of this Agreement, including, but not limited to, damages resulting from or arising out of the omissions, interruptions, errors, defects, delays in operation, non-deliveries, mis-deliveries, transmissions by third parties, resulting in any failure of the performance of BookMyTicket. BookMyTicket shall have no liability whatsoever to or any third party in any circumstances. Event Manager shall be solely responsible for the accuracy of all information relating to the Event including validity of the Ticket prices and any other charges and/or other information relating to the Services. Other than as expressly provided in this Agreement, BookMyTicket shall not be responsible for any delivery, after-sales service, payment, invoicing or collection, Customer enquiries (not limited to sales enquiries), technical support maintenance services and/or any other obligations relating to or in respect of the Services unless it is directly related to the Services. Such services shall be the sole responsibility of the Event Manager and the Event Manager shall bear any and all expenses and/or costs relating thereto.</p>
+
+                            <h4>9. INTELLECTUAL PROPERTY RIGHTS:</h4>
+                            <p>9.1. Subject to Clause 9.2., each Party agrees and acknowledges that all the copyrights, trademarks, proprietary and/or licensed software, service marks and trade secrets ('Intellectual Property') of each Party while conducting the business contemplated under this Agreement shall always belong to such respective Party.<br />
+                                9.2. A Party shall be permitted to display the name and / or trademark of the other Party solely on advertisements, promotional material or collateral relating to the Event issued by or on its behalf the Party and for no other purpose. In respect of BookMyTicket's proprietary marks, Event Manager shall obtain prior written permission to use BookMyTicket's display the name and / or trademark and shall only utilize approved logos.<br />
+                                9.3. Each Party agrees that it shall not do or commit any acts of commission or omission, which would impair and/or adversely affect the other Party's rights, ownership and title in its Intellectual Property or the reputation / goodwill attached to its trademarks, trade names and corporate name.<br />
+                                9.4. Nothing stated herein shall constitute an agreement to transfer, assign or license or to grant any Intellectual Property of any Party to the other Party. Neither Party shall use the Intellectual Property of the other Party other than in accordance with Clause 9.2, without the prior written consent of the other Party.</p>
+
+                            <h4>10. TERM:</h4>
+                            <p>10.1. Unless extended mutually in writing by the Parties, this Agreement shall be valid for the period mentioned in Schedule II of this Agreement.<br />
+                                10.2. A Party may terminate this Agreement immediately by notice, if despite notice of breach from the non- defaulting Party, the defaulting Party has not cured the breach within a period of 10 (ten) working days of being notified of the breach as aforesaid.<br />
+                                10.3. Either Party may terminate this Agreement at any time by providing the other Party with a thirty (30) days' prior written notice.<br />
+                                10.4. Upon receipt of a termination notice from the Event Manager, BookMyTicket shall be entitled to immediately discontinue the display of advertisements relating to the Event displayed on its Platforms, if any.<br />
+                                10.5. Termination of this Agreement shall be without prejudice to any rights accrued by Parties prior to termination hereof.</p>
+
+                            <h4>11. LIABILITY:</h4>
+                            <p>Any delay or failure in the performance by BookMyTicket under this Agreement shall be excused and shall be without liability if and to the extent caused by a technical or other failure of any of the Platforms for reasons that are beyond the reasonable anticipation or control of BookMyTicket, despite BookMyTicket's reasonable efforts to prevent, avoid, delay or mitigate the effect of such occurrence.</p>
+
+                            <h4>12. INDEMNITY AND LIABILITY:</h4>
+                            <p>12.1. It is hereby clarified that the Platforms are only a medium through which the Event Manager has chosen to promote the Event and any dispute or claim of the customers regarding the organization of the Event shall be resolved directly by the Event Manager, with the customers, without any reference to BookMyTicket, except for the purpose of processing any refunds to customers who have made bookings using a Platform provided that the Event Manager shall have reimbursed to BookMyTicket the relevant amount to be refunded in advance.<br />
+                                12.2. In the event any suit, claim or action is brought against BookMyTicket in connection with the Event, such suit, claim or action shall be defended by the Event Manager at its cost having regard to the cost and effort that the Event Manager would bear the cost of the said suit, claim or action brought against it.<br />
+                                12.3. Each Party agrees to indemnify and hold harmless the other for any losses caused / suffered to such other due to any breach of the representations, warranties and covenants of such Party. No Party shall be liable for any losses of the other Party that are indirect or remote.<br />
+                                12.4. This Clause shall survive and continue even after the termination of this Agreement.</p>
+
+                            <h4>13. CONFIDENTIALITY:</h4>
+                            <p>13.1. In connection with this Agreement, the Parties may exchange proprietary / confidential information / Intellectual Property (the 'Confidential Information'). Each Party agrees that during the Term of this Agreement it will:<br />
+                                (i) only disclose Confidential Information to its employees, officers, directors, agents and contractors (collectively 'Representatives') on a need to know basis, provided, the receiving Party ensures that such Representatives are aware of and comply with the obligations of confidentiality prior to such disclosure;<br />
+                                (ii) not disclose any Confidential Information to any person other than as permitted under (iii), without the prior written consent of the disclosing Party.<br />
+                                Provided that the aforesaid shall not be applicable and shall impose no obligation on a Party with respect to any portion of Confidential Information which was either at the time received or which thereafter becomes, through no act or failure on the part of such Party, generally known or available to the public; and/or has been disclosed pursuant to the requirements of any statute/ law or a court/ tribunal order. All customer data collected by BookMyTicket or in the possession of BookMyTicket shall be retained by BookMyTicket and Event Manager shall not claim any right, title, interest whatsoever over such property.<br />
+                                13.2. This Clause 13 shall survive and continue even after the termination of this Agreement.</p>
+
+                            <h4>14. Force Majeure:</h4>
+                            <p>14.1. Neither Party will be liable for failure to perform the obligations directly as a consequence of an unforeseeable event which is beyond the reasonable control of the affected Party, such as an act of God, natural disasters, riots, warfare, change in law, administrative or executive order, judicial order, government restrictions, lock downs, change in law and any event of like nature, outbreak of disease including but not limited to epidemic, pandemic and which essentially suspends the performance of the Agreement ('Force Majeure').<br />
+                                14.2. In the event a Force Majeure scenario shall continue unabated for a period of 30 days, the Party suffering such Force Majeure event hereto shall have the right to terminate this Agreement by furnishing written notice to the other with immediate effect, OR, the Parties may mutually decide to extend the Agreement on mutually agreed terms</p>
+
+                            <h4>15. TAXES:</h4>
+                            <p>15.1. Each Party shall be responsible for payment of its respective income tax(es) or other applicable tax(es), including and not restricting Goods Service Tax ('GST'), if applicable, to the extent based upon income derived from performance of this Agreement and as per the applicable tax laws. In case Party is under an obligation to deduct tax at source and/or any levy/tax, the deducting Party shall issue a requisite certificate to the other Party evidencing such deduction of tax.<br />
+                                15.2. As per GST regulations, BookMyTicket shall collect Tax at source (TCS) on the monthly value of supplies made through the Platforms from the date to be notified by the Government. In case the input tax credit including credit of TCS as mentioned, is not allowed to Event Manager due to its non-provision of the correct details to BookMyTicket or due to own non-compliance, BookMyTicket shall not be responsible for such non allowance to Event Manager. Event Manager shall be required to provide the relevant GST registration numbers or any other relevant information that may be required in this relation.<br />
+                                15.3. In case the tax authorities try to recover from BookMyTicket any sum including but not restricted to tax, interest, penalty etc. due to any non-compliance by Event Manager with respect to sale of Tickets through BookMyTicket, BookMyTicket holds right to deduct an amount equivalent to the demand from the payments to be made to Event Manager. In case there are no payments to be made by BookMyTicket, Event Manager shall immediately reimburse to BookMyTicket the demand amounts (including associated litigation cost) if any upon notification by BookMyTicket.</p>
+
+                            <h4>16. GOVERNING LAW & DISPUTE RESOLUTION:</h4>
+                            <p>16.1. The terms of this Agreement shall be construed and interpreted in accordance with the laws of India.<br />
+                                16.2. Any disputes arising out of or in connection with this Agreement, during its subsistence and after its termination in any manner whatsoever, including the validity of this Agreement shall be referred to arbitration of a sole arbitrator mutually appointed by the Parties hereto. The Arbitration proceedings shall be conducted in accordance with the provisions contained in the Arbitration and Conciliation Act, 1996. The place of Arbitration shall be Mumbai and the language of Arbitration shall be English. All fees and costs associated with the arbitral proceedings shall be borne by the Parties equally.<br />
+                                16.3. The Parties hereby agree that the courts of Mumbai shall have exclusive jurisdiction to enforce the arbitral award.</p>
+
+                            <h4>17. BINDING EFFECT:</h4>
+                            <p>17.1. Notwithstanding anything contained herein, this Agreement shall be legally binding on the Parties and shall be enforceable against them.</p>
+
+                            <h4>18. AMENDMENTS:</h4>
+                            <p>18.1. Subject to the terms of this Agreement, no modification of this Agreement shall be binding upon the Parties unless the same is in writing and signed by an authorized representative of each Party. Part performance shall not be deemed a waiver of this requirement.</p>
+
+                            <h4>19. COUNTERPARTS:</h4>
+                            <p>19.1. This Agreement may consist of more than 1 (one) copy, each signed by the Parties to the Agreement. If so, the signed copies are treated as making up the one document and the date on which the last counterpart is executed is the Signing Date.</p>
+
+                            <h4>20. SEVERABILITY:</h4>
+                            <p>20.1. If any provision or part thereof of this Agreement shall be held void or becomes void or unenforceable at any time, then the rest of the terms of this Agreement shall be given effect to as if such provision or part thereof does not exist in this Agreement. The Parties agree that such an event shall not in any manner affect the validity and the enforceability of the rest of the Agreement. No delay or omission by BookMyTicket in enforcing or performing any of the terms or conditions of this Agreement shall be construed as or constitute a waiver of obligations of Evet Manager under this Agreement.</p>
+
+                            <h4>21. ENTIRE UNDERSTANDING AND SET OFF:</h4>
+                            <p>21.1. This Agreement contains the entire arrangement, agreement and understanding of the Parties that relates to the subject matter. If any cost, loss, damage, expense, liability, claim, amount or obligation is incurred/fulfilled by BookMyTicket on behalf of the Event Manager, BookMyTicket shall have the right, and in addition to any other actions permitted by law, to offset the amount of any such cost, loss, damage, expense, liability, obligation or claim or monies against amounts due from Event Manager to BookMyTicket, including the right to offset any payment due from the Event Manager to BookMyTicket under this Agreement or any other agreement. This Agreement shall supersede all prior agreements executed between the Parties.</p>
+
+                            <h4>22. NOTICES:</h4>
+                            <p>Any notices, requests, demands or other communication required or permitted to be given under this Agreement shall be written in English and shall be delivered in any of the following modes of communication, these being: deliveries in person, or email (in PDF format) and properly addressed as follows:</p>
+                            <p>In the case of notices to BookMyTicket, to:<br />
+                                Attention: Santhoshkumar Premraj<br />
+                                Email: support@bookmyticket.io<br />
+                                Address: 28/78 Gothavari Street Gurusamy Nagar Vadavalli Bharathiyar University Coimbatore North Coimbatore TN 641046 IN</p>
+                            <p>In the case of notices to Event Manager, to:<br />
+                                Attention: Raja Vasudevan<br />
+                                Email: message2myemail@gmail.com<br />
+                                Exclusivity (if applicable as per Clause 2.2 of Agreement): YES/NO</p>
+                            <p>IN WITNESS WHEREOF the authorized representative of the parties hereto have set their respective hands on 8 day of March 2026 first hereinabove written.</p>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
+                                <div>
+                                    <b>For BookMyTicket</b><br />
+                                    Authorized Signatory<br />
+                                    Name: ThangaPandian<br />
+                                    Designation: Grievance Officer<br />
+                                    Date: 08/03/2026
+                                </div>
+                                <div>
+                                    <b>For Raja Vasudevan</b><br />
+                                    Authorized Signatory<br />
+                                    Name: Raja Vasudevan<br />
+                                    Designation: System Admin<br />
+                                    Date: 08/03/2026
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ padding: "16px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end" }}>
+                            <button onClick={() => { setAgreedToVendor(true); setShowVendorModal(false); }} style={{ padding: "8px 24px", background: "linear-gradient(135deg, #f43f5e, #f97316)", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer" }}>Agree</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+
     // Main Stage Dispatcher
     switch (currentStage) {
-        case "mfa":
-            return renderRestrictedSidebar(renderMFAView());
-        case "kyc_docs":
-            return renderRestrictedSidebar(renderKYCWizardView());
-        case "kyc_form":
-            return renderRestrictedSidebar(renderKYCWizardView());
+        case "kyc_start":
+            return (
+                <>
+                    {renderModals()}
+                    {renderRestrictedSidebar(renderKYCStartView())}
+                </>
+            );
+        case "kyc_wizard":
+            return (
+                <>
+                    {renderModals()}
+                    {renderRestrictedSidebar(renderKYCWizardView())}
+                </>
+            );
         case "pending":
             return renderRestrictedSidebar(renderPendingView());
         case "approved":
