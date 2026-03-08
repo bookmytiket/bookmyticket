@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FileCheck2, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
@@ -169,6 +169,8 @@ function LocationPickerModal({
     );
 }
 
+const EMPTY_ARRAY = [];
+
 function OrganiserPanel() {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
@@ -240,17 +242,28 @@ function OrganiserPanel() {
                 ...prev,
                 balance: organiserData.walletBalance || 0,
             }));
+            const mappedStatus = organiserData.kycStatus === "Active" ? "KYC Approved" : organiserData.kycStatus;
             setProfile(prev => ({
                 ...prev,
-                kycStatus: organiserData.kycStatus === "Active" ? "KYC Approved" : organiserData.kycStatus,
+                kycStatus: mappedStatus,
                 email: organiserData.userId,
                 firstName: organiserData.name.split(' ')[0] || "John",
                 lastName: organiserData.name.split(' ')[1] || "Doe",
             }));
+
+            // Route to proper stage depending on KYC Status
+            if (!organiserData.kycStatus || organiserData.kycStatus === "Pending") {
+                setCurrentStage("kyc_wizard");
+            } else if (organiserData.kycStatus === "KYC Pending") {
+                setCurrentStage("pending");
+            } else {
+                setCurrentStage("approved");
+            }
         }
     }, [organiserData]);
 
-    const convexSupportTickets = useQuery(api.supportTickets.list) || [];
+    const convexSupportTickets = useQuery(api.supportTickets.list) || EMPTY_ARRAY;
+    const submitKycMutation = useMutation(api.organisers.submitKyc);
     const createTicketMutation = useMutation(api.supportTickets.create);
     const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
 
@@ -277,7 +290,7 @@ function OrganiserPanel() {
     const updateEventMutation = useMutation(api.events.updateEvent);
     const createEventMutation = useMutation(api.events.createEvent);
 
-    const convexBookings = useQuery(api.bookings.getBookings) || [];
+    const convexBookings = useQuery(api.bookings.getBookings) || EMPTY_ARRAY;
     const updateBookingMutation = useMutation(api.bookings.updateBooking);
 
     const [events, setEvents] = useState([]);
@@ -1069,27 +1082,103 @@ function OrganiserPanel() {
 
     // Pending View
     const renderPendingView = () => (
-        <div style={{ maxWidth: "550px", margin: "100px auto", textAlign: "center", backgroundColor: t.cardBg, padding: "50px 40px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
-            <div style={{ backgroundColor: "#f9731615", width: "90px", height: "90px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 30px" }}>
-                <Clock size={45} color="#f97316" className="spin-slow" />
-            </div>
-            <h2 style={{ fontSize: "26px", fontWeight: 800, marginBottom: "16px" }}>KYC Process Under Review</h2>
-            <p style={{ color: t.textSub, fontSize: "15px", lineHeight: "1.7", marginBottom: "40px" }}>
-                Your KYC documents have been successfully submitted and are currently being reviewed by our administration team.
-                <br /><br />
-                <strong>Sidebar menu access is restricted</strong> until your account is approved. You will receive an email confirmation once the process is completed.
-            </p>
-            <div style={{ padding: "16px", backgroundColor: "#3b82f610", borderRadius: "12px", color: "#3b82f6", fontSize: "13px", fontWeight: 600 }}>
-                Estimated Review Time: 12-24 Hours
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, marginBottom: "8px", display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ padding: "4px", backgroundColor: "#f43f5e", borderRadius: "4px", color: "#fff", display: "flex" }}>
+                    <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} />
+                </div>
+                Organizer KYC
             </div>
 
-            {/* Backdoor for demo */}
-            <button
-                onClick={() => setCurrentStage("approved")}
-                style={{ marginTop: "30px", fontSize: "12px", color: t.textSub, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-            >
-                [Demo Only: Simulate Admin Approval]
-            </button>
+            <div style={{ backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}`, padding: "20px" }}>
+                
+                {/* Status Bar */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${t.border}`, borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: t.bg, border: `2px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}>
+                            <CheckCircle size={16} />
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>KYC Submitted</span>
+                    </div>
+                    
+                    <div style={{ flex: 1, height: "2px", backgroundColor: t.border, margin: "0 24px" }}></div>
+                    
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#fff", border: "4px solid #f97316", background: "linear-gradient(135deg, #f97316, #f43f5e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                            <Clock size={20} />
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>Verification Pending</span>
+                    </div>
+                </div>
+
+                {/* Profile Contact Summary */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", borderRadius: "12px", backgroundColor: theme === 'light' ? "#f8fafc" : "#0f172a", marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ width: "50px", height: "50px", borderRadius: "8px", backgroundColor: "#f43f5e15", display: "flex", alignItems: "center", justifyContent: "center", color: "#f43f5e" }}>
+                            <Building size={24} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: t.textMain }}>{profile.firstName}</h3>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textMain, fontWeight: 600, marginTop: "4px" }}>
+                                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#22c55e" }}></div>
+                                Active Business Profile
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                        <ImageIcon size={20} />
+                    </div>
+                </div>
+
+                {/* Details Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                    <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "#3b82f610", color: "#3b82f6" }}><Mail size={18} /></div>
+                        <div>
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "2px" }}>Email Address</div>
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>{profile.email}</div>
+                        </div>
+                    </div>
+                    <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "#22c55e10", color: "#22c55e" }}><AlertCircle size={18} /></div>
+                        <div>
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "2px" }}>Phone Number</div>
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>{kycFormData.mobile || "+918344442221"}</div>
+                        </div>
+                    </div>
+                    <div style={{ padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "#a855f710", color: "#a855f7" }}><MapPin size={18} /></div>
+                        <div>
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "2px" }}>Location</div>
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>{kycFormData.city || "Pollachi"}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                    <div style={{ width: "32%", padding: "16px", borderRadius: "12px", border: `1px solid #f59e0b50`, backgroundColor: "#f59e0b05", display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div style={{ padding: "8px", borderRadius: "8px", backgroundColor: "#f59e0b10", color: "#f59e0b" }}><Calendar size={18} /></div>
+                        <div>
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "2px" }}>Active Since</div>
+                            <div style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px" }}>
+                If you need to make any changes or have queries, please contact us on <a href="mailto:admin@theticket9.com" style={{ color: "#3b82f6" }}>admin@theticket9.com</a>
+            </div>
+            
+             {/* Backdoor for demo */}
+             {true && (
+                <button
+                    onClick={() => setCurrentStage("approved")}
+                    style={{ marginTop: "10px", fontSize: "12px", color: t.textSub, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", alignSelf: "flex-start" }}
+                >
+                    [Demo Only: Simulate Admin Approval]
+                </button>
+             )}
         </div>
     );
 
@@ -1098,8 +1187,8 @@ function OrganiserPanel() {
         const renderTabContent = () => {
             const renderToggle = (label, field, options) => (
                 <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
-                    <div style={{ display: "flex", borderRadius: "10px", overflow: "hidden", border: `1.5px solid ${t.border}` }}>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <div style={{ display: "flex", borderRadius: "4px", overflow: "hidden" }}>
                         {options.map((opt, idx) => {
                             const isActive = postEvent[field] === opt.value;
                             return (
@@ -1109,16 +1198,16 @@ function OrganiserPanel() {
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
                                     style={{
                                         flex: 1,
-                                        padding: "14px",
-                                        border: "none",
-                                        borderRight: idx === 0 ? `1.5px solid ${t.border}` : "none",
-                                        backgroundColor: isActive ? "#3b82f615" : t.bg,
-                                        color: isActive ? "#3b82f6" : t.textSub,
-                                        fontWeight: 700,
-                                        fontSize: "14px",
+                                        padding: "10px",
+                                        border: isActive ? "1px solid #3b82f6" : `1px solid ${t.border}`,
+                                        borderLeft: idx !== 0 && !isActive ? "none" : (isActive ? "1px solid #3b82f6" : `1px solid ${t.border}`),
+                                        backgroundColor: isActive ? "#eff6ff" : t.bg,
+                                        color: isActive ? "#3b82f6" : "#9ca3af",
+                                        fontWeight: 500,
+                                        fontSize: "13px",
                                         cursor: "pointer",
                                         transition: "all 0.2s ease",
-                                        outline: isActive ? "2px solid #3b82f6" : "none",
+                                        outline: "none",
                                         zIndex: isActive ? 1 : 0
                                     }}
                                 >
@@ -1132,7 +1221,7 @@ function OrganiserPanel() {
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
                 <div style={{ marginBottom: "20px", gridColumn: fullWidth ? "span 2" : "span 1" }}>
-                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
                     <input
                         type={type}
                         value={postEvent[field] || ""}
@@ -1140,13 +1229,12 @@ function OrganiserPanel() {
                         placeholder={placeholder}
                         style={{
                             width: "100%",
-                            padding: "14px",
-                            borderRadius: "10px",
-                            border: `1.5px solid ${t.border}`,
+                            padding: "10px 14px",
+                            borderRadius: "4px",
+                            border: `1px solid ${t.border}`,
                             backgroundColor: t.bg,
                             color: t.textMain,
-                            fontSize: "14px",
-                            fontWeight: 600,
+                            fontSize: "13px",
                             outline: "none"
                         }}
                     />
@@ -1155,30 +1243,30 @@ function OrganiserPanel() {
 
             const renderSelect = (label, field, options) => (
                 <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}*</label>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div style={{ position: "relative" }}>
                         <select
                             value={postEvent[field] || ""}
                             onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
                             style={{
                                 width: "100%",
-                                padding: "14px",
+                                padding: "10px 14px",
                                 paddingRight: "40px",
-                                borderRadius: "10px",
-                                border: `1.5px solid ${t.border}`,
+                                borderRadius: "4px",
+                                border: `1px solid ${t.border}`,
                                 backgroundColor: t.bg,
                                 color: t.textMain,
-                                fontSize: "14px",
-                                fontWeight: 600,
+                                fontSize: "13px",
                                 outline: "none",
                                 appearance: "none"
                             }}
                         >
+                            <option value="" disabled hidden>Select</option>
                             {options.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
-                        <ChevronDown size={18} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
+                        <ChevronDown size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
                     </div>
                 </div>
             );
@@ -1388,205 +1476,215 @@ function OrganiserPanel() {
                     // Step 2: Online Form
                     if (postEvent.type === "Online") {
                         return (
-                            <div style={{ backgroundColor: t.cardBg, padding: "40px", borderRadius: "24px", border: `1px solid ${t.border}`, maxWidth: "1000px", margin: "0 auto", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                                        <div style={{ padding: "12px", backgroundColor: "#3b82f615", borderRadius: "12px", color: "#3b82f6" }}>
-                                            <Video size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Create Online Event</h3>
-                                            <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Fill in the details for your virtual event</p>
-                                        </div>
-                                    </div>
-                                    <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}>
-                                        <ArrowRight size={18} style={{ transform: "rotate(180deg)" }} /> Back to Selection
-                                    </button>
-                                </div>
-
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "8px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
                                 <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
                                 <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "32px", marginBottom: "40px" }}>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Highlights / Gallery**</label>
-                                        <div role="button" tabIndex={0} onClick={() => galleryInputRef.current?.click()} style={{ border: `2px dashed ${t.border}`, borderRadius: "20px", padding: "40px 24px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", transition: "0.2s" }}>
-                                            {(postEvent.galleryPreviews || []).length > 0 ? (
-                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center" }}>
-                                                    {(postEvent.galleryPreviews || []).map((src, idx) => (
-                                                        <div key={idx} style={{ position: "relative" }}>
-                                                            <img src={src} alt="Gallery" style={{ width: "100px", height: "70px", objectFit: "cover", borderRadius: "12px", border: `2px solid ${t.border}` }} />
-                                                            <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-8px", right: "-8px", width: "24px", height: "24px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>×</button>
-                                                        </div>
-                                                    ))}
-                                                    <div style={{ width: "100px", height: "70px", borderRadius: "12px", border: `2px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub, cursor: "pointer" }}><Plus size={24} /></div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div style={{ padding: "16px", backgroundColor: "#3b82f610", borderRadius: "16px", color: "#3b82f6", marginBottom: "16px" }}><CloudUpload size={32} /></div>
-                                                    <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: t.textMain }}>Drop files here or click to upload</p>
-                                                    <p style={{ margin: "8px 0 0", fontSize: "13px", color: t.textSub }}>Recommended size: 1170x570 pixels</p>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Main Thumbnail*</label>
-                                        <div style={{ border: `2px dashed ${t.border}`, borderRadius: "20px", padding: "24px", textAlign: "center", backgroundColor: t.bg, minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                                            {postEvent.bannerPreview ? (
-                                                <div style={{ width: "100%", height: "100%" }}>
-                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "12px" }} />
-                                                    <div style={{ marginTop: "12px", display: "flex", gap: "8px", justifyContent: "center" }}>
-                                                        <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Change</button>
-                                                        <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ padding: "10px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: "transparent", color: t.textSub, fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Remove</button>
+                                {/* Gallery Images */}
+                                <div style={{ marginBottom: "24px" }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Gallery Images **</label>
+                                    <div role="button" tabIndex={0} onClick={() => galleryInputRef.current?.click()} style={{ border: `1px dashed #cbd5e1`, borderRadius: "4px", padding: "40px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                        {(postEvent.galleryPreviews || []).length > 0 ? (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center" }}>
+                                                {(postEvent.galleryPreviews || []).map((src, idx) => (
+                                                    <div key={idx} style={{ position: "relative" }}>
+                                                        <img src={src} alt="Gallery" style={{ width: "100px", height: "70px", objectFit: "cover", borderRadius: "4px", border: `1px solid ${t.border}` }} />
+                                                        <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-8px", right: "-8px", width: "20px", height: "20px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div style={{ padding: "16px", backgroundColor: "#64748b10", borderRadius: "16px", color: t.textSub, marginBottom: "12px" }}><ImageIcon size={32} /></div>
-                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textSub }}>NO IMAGE SELECTED</p>
-                                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ marginTop: "16px", padding: "10px 20px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Select Image</button>
-                                                </>
-                                            )}
-                                        </div>
+                                                ))}
+                                                <div style={{ width: "100px", height: "70px", borderRadius: "4px", border: `1px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}><Plus size={20} /></div>
+                                            </div>
+                                        ) : (
+                                            <p style={{ margin: 0, fontSize: "14px", color: "#64748b" }}>Drop files here to upload</p>
+                                        )}
                                     </div>
+                                    <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size 1170x570</p>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "40px" }}>
-                                    {renderToggle("Date Type", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                    {renderToggle("Countdown Status", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
-                                    {renderToggle("Early Bird Discount", "earlyBirdDiscount", [{ label: "Enable", value: "enable" }, { label: "Disable", value: "disable" }])}
+                                {/* Thumbnail Image */}
+                                <div style={{ marginBottom: "24px" }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
+                                    <div style={{ border: `1px solid #e2e8f0`, borderRadius: "4px", padding: "16px", textAlign: "center", backgroundColor: t.bg, display: "inline-block", minWidth: "200px", minHeight: "150px", position: "relative" }}>
+                                        {postEvent.bannerPreview ? (
+                                            <div>
+                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "4px" }} />
+                                                <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ position: "absolute", top: "8px", right: "8px", padding: "4px 8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "4px", fontSize: "10px", cursor: "pointer" }}>Remove</button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                                <ImageIcon size={48} />
+                                                <p style={{ margin: "8px 0 0", fontSize: "12px", fontWeight: 700 }}>NO IMAGE<br />FOUND</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ marginTop: "12px" }}>
+                                        <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
+                                    </div>
+                                    <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size : 320x230</p>
                                 </div>
 
-                                <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "14px 24px", borderRadius: "16px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Sparkles size={20} />
-                                    <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, letterSpacing: "0.5px" }}>Event Primary Information</p>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                    {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                                    {renderToggle("Countdown Status*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                    {renderInput("Event Title", "title", "text", "e.g. Virtual Tech Summit 2026", true)}
-                                    {renderSelect("Category", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
-                                    {renderInput("Meeting URL", "meetingUrl", "url", "https://zoom.us/j/...", false)}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
+                                    {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
+                                    {renderInput("Start Time*", "startTime", "time", "--:--")}
+                                    {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
+                                    {renderInput("End Time*", "endTime", "time", "--:--")}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "40px" }}>
-                                    {renderInput("Start Date", "startDate", "date")}
-                                    {renderInput("Start Time", "startTime", "time")}
-                                    {renderInput("End Date", "endDate", "date")}
-                                    {renderInput("End Time", "endTime", "time")}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                    {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                    {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "40px" }}>
-                                    {renderSelect("Status", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
-                                    {renderSelect("Is Feature", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                </div>
-
-                                <div style={{ backgroundColor: t.bg, padding: "32px", borderRadius: "24px", border: `1.5px solid ${t.border}`, marginBottom: "40px" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                        <h4 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: t.textMain }}>Ticketing & Pricing</h4>
-                                        <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "14px", fontWeight: 700, color: t.textSub }}>
-                                            <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} style={{ width: "20px", height: "20px", borderRadius: "6px", cursor: "pointer" }} />
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px", alignItems: "end" }}>
+                                    {renderToggle("Total Number of Available Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
+                                    <div style={{ marginBottom: "20px" }}>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Price (INR) *</label>
+                                        <input
+                                            type="number"
+                                            value={postEvent.price || ""}
+                                            onChange={(e) => setPostEvent(prev => ({ ...prev, price: e.target.value }))}
+                                            placeholder="Enter Ticket Price"
+                                            disabled={postEvent.ticketsAreFree}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px", outline: "none", marginBottom: "12px" }}
+                                        />
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: t.textMain, cursor: "pointer" }}>
+                                            <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} />
                                             Tickets are Free
                                         </label>
                                     </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                                        {renderToggle("Ticket Limit", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
-                                        {postEvent.ticketLimitType === "limited" && renderInput("Total Tickets", "totalTickets", "number", "e.g. 500")}
-                                        <div style={{ gridColumn: postEvent.ticketLimitType === "limited" ? "span 1" : "span 1" }}>
-                                            {!postEvent.ticketsAreFree && renderInput("Price (INR)", "price", "number", "499")}
-                                        </div>
-                                    </div>
                                 </div>
 
-                                <div style={{ marginBottom: "40px" }}>
-                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Description**</label>
-                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Detailed description..." rows={6} style={{ width: "100%", padding: "16px", borderRadius: "16px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", fontWeight: 500, resize: "vertical", outline: "none" }} />
+                                {renderInput("Meeting Url*", "meetingUrl", "url", "Enter Meeting Url", true)}
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
+                                    {renderToggle("Early Bird Discount*", "earlyBirdDiscount", [{ label: "Disable", value: "disable" }, { label: "Enable", value: "enable" }])}
                                 </div>
 
-                                <button onClick={publishSeatEvent} style={{ width: "100%", padding: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "16px", fontSize: "18px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", boxShadow: "0 10px 20px -5px rgba(59,130,246,0.3)", transition: "0.2s" }}>
-                                    <Plus size={24} /> Publish Online Event
-                                </button>
+                                <div style={{ backgroundColor: "#6366f1", padding: "16px 20px", color: "#fff", fontWeight: 700, fontSize: "15px", marginBottom: "24px", borderRadius: "4px" }}>
+                                    English Language (Default)
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                    {renderInput("Event Title*", "title", "text", "Enter Event Name")}
+                                    {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
+                                </div>
+
+                                <div style={{ marginBottom: "24px" }}>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Description*</label>
+                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={8} style={{ width: "100%", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "14px", resize: "vertical", outline: "none" }} />
+                                </div>
+
+                                {renderInput("Refund Policy*", "refundPolicy", "text", "Enter Refund Policy", true)}
+
+                                <div style={{ marginTop: "40px" }}>
+                                    <button onClick={publishSeatEvent} style={{ padding: "12px 32px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Submit</button>
+                                </div>
                             </div>
                         );
                     }
                     // Step 3: Venue Form (Default)
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "40px", borderRadius: "24px", border: `1px solid ${t.border}`, maxWidth: "1000px", margin: "0 auto", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                                    <div style={{ padding: "12px", backgroundColor: "#f9731615", borderRadius: "12px", color: "#f97316" }}>
-                                        <MapPin size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Create Venue Event</h3>
-                                        <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Organize an in-person event at a physical location</p>
-                                    </div>
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "8px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
+                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
+
+                            {/* Thumbnail Image */}
+                            <div style={{ marginBottom: "24px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
+                                <div style={{ border: `1px solid #e2e8f0`, borderRadius: "4px", padding: "16px", textAlign: "center", backgroundColor: t.bg, display: "inline-block", minWidth: "200px", minHeight: "150px", position: "relative" }}>
+                                    {postEvent.bannerPreview ? (
+                                        <div>
+                                            <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "4px" }} />
+                                            <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ position: "absolute", top: "8px", right: "8px", padding: "4px 8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "4px", fontSize: "10px", cursor: "pointer" }}>Remove</button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                            <ImageIcon size={48} />
+                                            <p style={{ margin: "8px 0 0", fontSize: "12px", fontWeight: 700 }}>NO IMAGE<br />FOUND</p>
+                                        </div>
+                                    )}
                                 </div>
-                                <button type="button" onClick={() => setAddEventStep("select_type")} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
-                                    <ArrowRight size={18} style={{ transform: "rotate(180deg)" }} /> Back to Selection
+                                <div style={{ marginTop: "12px" }}>
+                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
+                                </div>
+                                <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size : 320x230</p>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: "20px", marginBottom: "24px", alignItems: "center" }}>
+                                {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
+                                {renderInput("Start Time*", "startTime", "time", "--:--")}
+                                {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
+                                {renderInput("End Time*", "endTime", "time", "--:--")}
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                                    <button type="button" style={{ width: "40px", height: "35px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={18} /></button>
+                                    <button type="button" style={{ width: "40px", height: "35px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={18} /></button>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                            </div>
+
+                            <div style={{ backgroundColor: "#6366f1", padding: "16px 20px", color: "#fff", fontWeight: 700, fontSize: "15px", marginBottom: "24px", borderRadius: "4px" }}>
+                                English Language (Default)
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {renderInput("Event Title*", "title", "text", "Enter Event Name")}
+                                {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
+                            </div>
+
+                            <div style={{ marginBottom: "24px" }}>
+                                {renderInput("Address*", "address", "text", "Enter Address", true)}
+                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "8px 16px", backgroundColor: "#8b5cf6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "-12px" }}>
+                                    <MapPin size={14} /> Show Map
                                 </button>
                             </div>
 
-                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
-                            <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                {renderToggle("Environment", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
-                                {renderToggle("Date Type", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {renderInput("Latitude", "latitude", "text", "Latitude")}
+                                {renderInput("Longitude", "longitude", "text", "Longitude")}
+                                {renderInput("Country*", "country", "text", "Select a Country")}
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                {renderInput("Event Title*", "title", "text", "e.g. Rock Concert 2026", true)}
-                                {renderSelect("Category", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {renderInput("City*", "city", "text", "Select a City")}
+                                {renderInput("Zip/Post Code", "zipCode", "text", "Enter Zip/Post Code")}
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr auto", gap: "12px", alignItems: "end" }}>
-                                    {renderInput("Venue Address*", "address", "text", "Enter physical address", true)}
-                                    <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "12px 24px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <MapPin size={18} /> Select on Map
-                                    </button>
-                                </div>
-                                {renderInput("Country", "country", "text", "India")}
-                                {renderInput("City", "city", "text", "Mumbai")}
+                            <div style={{ marginBottom: "24px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Description*</label>
+                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={8} style={{ width: "100%", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "14px", resize: "vertical", outline: "none" }} />
                             </div>
 
-                            <div style={{ backgroundColor: "#5b21b6", color: "#fff", padding: "14px 24px", borderRadius: "16px", marginBottom: "32px", display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Sparkles size={20} />
-                                <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, letterSpacing: "0.5px" }}>Ticketing & Seating Configuration</p>
-                            </div>
-
-                            <div style={{ marginBottom: "32px" }}>
+                            <div style={{ marginBottom: "32px", border: `1px solid ${t.border}`, padding: "20px", borderRadius: "8px" }}>
+                                <h4 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 700 }}>Ticketing Setup</h4>
                                 {renderToggle("Ticket / Seating Type", "seatingEnabled", [{ label: "Seating Based", value: true }, { label: "Normal Ticketing", value: false }])}
-                                <p style={{ fontSize: "13px", color: t.textSub, marginTop: "8px" }}>
-                                    {postEvent.seatingEnabled !== false ? "Tickets are linked to specific seats and categories." : "Tickets are sold by quantity only (General Admission)."}
-                                </p>
-                            </div>
-
-                            {postEvent.seatingEnabled !== false ? (
-                                <div style={{ padding: "32px", backgroundColor: t.bg, borderRadius: "24px", border: `1.5px solid ${t.border}`, marginBottom: "32px" }}>
-                                    <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, marginBottom: "20px" }}>Layout Builder</h4>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                {postEvent.seatingEnabled !== false ? (
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "16px" }}>
                                         {renderInput("Rows", "rows", "number")}
                                         {renderInput("Seats per Row", "cols", "number")}
                                     </div>
-                                    <p style={{ fontSize: "13px", color: t.textSub }}>Set up categories and pricing below the layout preview.</p>
-                                </div>
-                            ) : (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                    {renderInput("Total Capacity", "normalTicketCapacity", "number")}
-                                    {renderInput("Default Price (₹)", "normalTicketPrice", "number")}
-                                </div>
-                            )}
-
-                            <div style={{ marginBottom: "40px" }}>
-                                <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textMain }}>Event Description*</label>
-                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} style={{ width: "100%", padding: "16px", borderRadius: "16px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", resize: "vertical", outline: "none" }} />
+                                ) : (
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "16px" }}>
+                                        {renderInput("Total Capacity", "normalTicketCapacity", "number")}
+                                        {renderInput("Default Price (₹)", "normalTicketPrice", "number")}
+                                    </div>
+                                )}
                             </div>
 
-                            <button onClick={publishSeatEvent} style={{ width: "100%", padding: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "16px", fontSize: "18px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", boxShadow: "0 10px 20px -5px rgba(59,130,246,0.3)" }}>
-                                <Plus size={24} /> Publish Venue Event
-                            </button>
+                            <div style={{ marginTop: "40px" }}>
+                                <button onClick={publishSeatEvent} style={{ padding: "12px 32px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Submit</button>
+                            </div>
                         </div>
                     );
                 case "seat_map":
@@ -3059,9 +3157,9 @@ function OrganiserPanel() {
         case "mfa":
             return renderRestrictedSidebar(renderMFAView());
         case "kyc_docs":
-            return renderRestrictedSidebar(renderKYCDocsView());
+            return renderRestrictedSidebar(renderKYCWizardView());
         case "kyc_form":
-            return renderRestrictedSidebar(renderKYCFormView());
+            return renderRestrictedSidebar(renderKYCWizardView());
         case "pending":
             return renderRestrictedSidebar(renderPendingView());
         case "approved":

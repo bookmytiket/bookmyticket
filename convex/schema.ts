@@ -68,7 +68,39 @@ export default defineSchema({
         name: v.string(),
         kycStatus: v.optional(v.string()),
         walletBalance: v.optional(v.number()),
+        kycDetails: v.optional(
+            v.object({
+                category: v.string(),
+                panNumber: v.string(),
+                socialMediaLink: v.optional(v.string()),
+                hasITR: v.boolean(),
+                fullName: v.string(),
+                email: v.string(),
+                mobile: v.string(),
+                alternateNumber: v.optional(v.string()),
+                designation: v.string(),
+                city: v.string(),
+                websiteLink: v.optional(v.string()),
+                hasOSTIN: v.boolean(),
+                panFile: v.string(),
+                chequeFile: v.string(),
+                aadharFile: v.string(),
+                agreementAccepted: v.boolean(),
+            })
+        ),
     }),
+
+    organiserRequests: defineTable({
+        firstName: v.string(),
+        lastName: v.string(),
+        email: v.string(),
+        phone: v.string(),
+        category: v.string(),
+        role: v.string(),
+        remarks: v.optional(v.string()),
+        status: v.string(), // "Pending", "Approved", "Rejected"
+        createdAt: v.number(),
+    }).index("by_status", ["status"]),
 
     systemConfig: defineTable({
         key: v.string(),

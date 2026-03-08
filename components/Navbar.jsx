@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 const SUBNAV_LINKS = [
@@ -204,15 +204,30 @@ export default function Navbar() {
 
 
 
+  const createOrgRequest = useMutation(api.organiserRequests.create);
+  const [orgLoading, setOrgLoading] = useState(false);
 
-  const handleOrgSubmit = (e) => {
+  const handleOrgSubmit = async (e) => {
     e.preventDefault();
-    setOrgSent(true);
-    setTimeout(() => {
-      setOrgSent(false);
-      setOrgOpen(false);
-      setOrgForm({ firstName: "", lastName: "", email: "", phone: "", category: "", role: "Organiser", remarks: "" });
-    }, 2600);
+    if (!orgForm.firstName || !orgForm.lastName || !orgForm.email || !orgForm.phone || !orgForm.category || !orgForm.role) {
+      alert("Please fill all required fields");
+      return;
+    }
+    setOrgLoading(true);
+    try {
+      await createOrgRequest(orgForm);
+      setOrgSent(true);
+      setTimeout(() => {
+        setOrgSent(false);
+        setOrgOpen(false);
+        setOrgForm({ firstName: "", lastName: "", email: "", phone: "", category: "", role: "Organiser", remarks: "" });
+      }, 2600);
+    } catch (err) {
+      alert("Failed to send request. Please try again later.");
+      console.error(err);
+    } finally {
+      setOrgLoading(false);
+    }
   };
 
   const field = (key) => ({

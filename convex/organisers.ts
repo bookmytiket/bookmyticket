@@ -39,6 +39,26 @@ export const patch = mutation({
         password: v.optional(v.string()),
         kycStatus: v.optional(v.string()),
         walletBalance: v.optional(v.number()),
+        kycDetails: v.optional(
+            v.object({
+                category: v.string(),
+                panNumber: v.string(),
+                socialMediaLink: v.optional(v.string()),
+                hasITR: v.boolean(),
+                fullName: v.string(),
+                email: v.string(),
+                mobile: v.string(),
+                alternateNumber: v.optional(v.string()),
+                designation: v.string(),
+                city: v.string(),
+                websiteLink: v.optional(v.string()),
+                hasOSTIN: v.boolean(),
+                panFile: v.string(),
+                chequeFile: v.string(),
+                aadharFile: v.string(),
+                agreementAccepted: v.boolean(),
+            })
+        ),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
@@ -50,5 +70,36 @@ export const remove = mutation({
     args: { id: v.id("organisers") },
     handler: async (ctx, args) => {
         await ctx.db.delete(args.id);
+    },
+});
+
+export const submitKyc = mutation({
+    args: {
+        id: v.id("organisers"),
+        kycDetails: v.object({
+            category: v.string(),
+            panNumber: v.string(),
+            socialMediaLink: v.optional(v.string()),
+            hasITR: v.boolean(),
+            fullName: v.string(),
+            email: v.string(),
+            mobile: v.string(),
+            alternateNumber: v.optional(v.string()),
+            designation: v.string(),
+            city: v.string(),
+            websiteLink: v.optional(v.string()),
+            hasOSTIN: v.boolean(),
+            panFile: v.string(),
+            chequeFile: v.string(),
+            aadharFile: v.string(),
+            agreementAccepted: v.boolean(),
+        }),
+    },
+    handler: async (ctx, args) => {
+        const { id, kycDetails } = args;
+        await ctx.db.patch(id, {
+            kycStatus: "KYC Pending",
+            kycDetails: kycDetails,
+        });
     },
 });

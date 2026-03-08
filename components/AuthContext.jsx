@@ -72,8 +72,9 @@ export function AuthProvider({ children }) {
 
         // Validate Organiser against Convex Database
         if (role === "organiser") {
+            const trimmedIdentifier = identifier.trim();
             const organiserMatch = convexOrganisers.find(
-                (org) => org.userId === identifier && org.password === password && org.kycStatus === "Active"
+                (org) => (org.userId === trimmedIdentifier || org.name === trimmedIdentifier) && org.password === password && org.kycStatus !== "Banned" && org.kycStatus !== "Rejected"
             );
 
             // Fallback for default demo organiser if it hasn't been added to DB yet

@@ -32,6 +32,41 @@ export const HOME_EVENTS = [
   { id: 13, title: "Digital Raaga - Online Singing Contest", date: "Feb 28, 2026", location: "Online", type: "Paid", category: "Musics", img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=280&fit=crop", featured: false, trending: false, exclusive: false, virtual: true, spotlight: false },
   { id: 14, title: "Holi Blast 2026", date: "Mar 8, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Others", img: "https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=500&h=280&fit=crop", featured: true, trending: true, exclusive: false, virtual: false, spotlight: false },
   { id: 15, title: "Women's Day Marathon 2026", date: "Mar 8, 2026", location: "Coimbatore, Tamil Nadu, India", type: "Paid", category: "Marathon", img: "https://images.unsplash.com/photo-1452626038303-9dae5c870eb7?w=500&h=280&fit=crop", featured: true, trending: false, exclusive: false, virtual: false, spotlight: false },
+  {
+    id: 16,
+    title: "The Grand Coimbatore Music Festival 2026",
+    date: "May 15, 2026",
+    time: "06:00 PM",
+    venue: "Codissia Amphitheatre",
+    location: "Codissia Trade Fair Complex, GV Residency, Coimbatore",
+    city: "Coimbatore",
+    address: "Avinashi Road, Civil Aerodrome Post, Coimbatore, Tamil Nadu 641014",
+    type: "Paid",
+    price: "499",
+    category: "Concert",
+    img: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1000&h=600&fit=crop",
+    featured: true,
+    trending: true,
+    exclusive: true,
+    virtual: false,
+    spotlight: false,
+    ageLimit: "6+ Years",
+    language: "Tamil, English, Hindi",
+    description: "Experience the biggest music festival in Coimbatore with top artists performing live under the stars. Enjoy a night of rhythm, lights, and food.",
+    features: [
+      { icon: '🛡️', label: 'CCTV Surveillance & Security' },
+      { icon: '🪑', label: 'Premium Seating Available' },
+      { icon: '🚗', label: 'Ample Parking Space' },
+      { icon: '🍽️', label: 'Multi-cuisine Food Stall' },
+    ],
+    parking: "Free Parking is available for all ticket holders at the main Codissia parking lot.",
+    refundPolicy: [
+      "No refund once tickets are booked.",
+      "In case of event cancellation, a full refund will be processed within 7-10 working days.",
+      "Resale of tickets is strictly prohibited."
+    ],
+    tags: ["Concert", "Music Festival", "Live Event", "Coimbatore Events"]
+  },
 ];
 
 export const MEMORIES = [

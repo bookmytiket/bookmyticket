@@ -13,6 +13,7 @@ import PopularEvents from '@/components/PopularEvents';
 import ExclusiveEvents from '@/components/ExclusiveEvents';
 import VirtualEvents from '@/components/VirtualEvents';
 import RecentMemories from '@/components/RecentMemories';
+import VenueEventCard from '@/components/VenueEventCard';
 import Sponsors from '@/components/Sponsors';
 import Footer from '@/components/Footer';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
@@ -49,7 +50,7 @@ export default function Home() {
   };
   const homeSectionsOrderRaw = parseConfig(allConfig?.admin_home_sections_order);
   const homeSectionsOrder = Array.isArray(homeSectionsOrderRaw) ? homeSectionsOrderRaw : [
-    "Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"
+    "Hero Banner", "Sub Navigation", "Featured Events", "Venue Events", "Coming Soon", "Spotlight", "Top Hand-picked"
   ];
   const siteBranding = parseConfig(allConfig?.admin_site_branding) || {
     name: "book my ticket",
@@ -68,9 +69,9 @@ export default function Home() {
 
   const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
-  const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev) => ({
+  const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev, idx) => ({
     ...ev,
-    id: ev._id || ev.id || ev.title?.slice(0, 8) + Math.random().toString(36).substring(7),
+    id: ev._id || ev.id || `${ev.title?.slice(0, 8)}-${idx}`,
     title: ev.title || "Event",
     img: ev.img || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
     date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
@@ -80,6 +81,11 @@ export default function Home() {
     spotlight: ev.spotlight === true,
     exclusive: ev.exclusive === true,
   })), [newOrgEvents]);
+
+  const allEventsForFilter = useMemo(() => [
+    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []),
+    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
+  ], [normalizedOrgEvents]);
 
   const featuredEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.featured), [normalizedOrgEvents]);
 
@@ -91,10 +97,9 @@ export default function Home() {
 
   const popularEventsList = useMemo(() => normalizedOrgEvents, [normalizedOrgEvents]);
 
-  const allEventsForFilter = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []),
-    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
-  ], [normalizedOrgEvents]);
+  const venueEventsList = useMemo(() => {
+    return allEventsForFilter.filter(e => (e.venue || e.location) && !e.virtual && (e.id === 16 || e.id === "16"));
+  }, [allEventsForFilter]);
 
   const filteredEvents = useMemo(() => {
     let results = allEventsForFilter;
@@ -243,6 +248,25 @@ export default function Home() {
                   return <div key={idx} style={{ width: '100%' }}><ComingSoonEvents events={normalizedOrgEvents} /></div>;
                 case "Top Hand-picked":
                   return <div key={idx} style={{ width: '100%' }}><PopularEvents events={popularEventsList} /></div>;
+                case "Venue Events":
+                  return (
+                    <section key={idx} style={{ width: '100%', padding: '60px 0', backgroundColor: '#f8fafc' }}>
+                      <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <span style={{ color: '#f84464', fontSize: '20px' }}>★</span>
+                          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Discover Venue Events</h2>
+                        </div>
+                        <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '32px' }}>Experience the best in-person events at top venues near you</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
+                          {venueEventsList.map(ev => (
+                            <div key={ev.id}>
+                              <VenueEventCard event={ev} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  );
                 default:
                   return null;
               }

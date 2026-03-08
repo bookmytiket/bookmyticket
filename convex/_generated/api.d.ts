@@ -21,6 +21,7 @@ import type * as homeSettings from "../homeSettings.js";
 import type * as memories from "../memories.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
+import type * as organiserRequests from "../organiserRequests.js";
 import type * as organisers from "../organisers.js";
 import type * as pages from "../pages.js";
 import type * as paymentGateways from "../paymentGateways.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   memories: typeof memories;
   migrations: typeof migrations;
   notifications: typeof notifications;
+  organiserRequests: typeof organiserRequests;
   organisers: typeof organisers;
   pages: typeof pages;
   paymentGateways: typeof paymentGateways;
