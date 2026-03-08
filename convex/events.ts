@@ -39,6 +39,12 @@ export const createEvent = mutation({
         spotlight: v.optional(v.boolean()),
         exclusive: v.optional(v.boolean()),
         environment: v.optional(v.string()),
+        description: v.optional(v.string()),
+        meetingUrl: v.optional(v.string()),
+        rows: v.optional(v.number()),
+        cols: v.optional(v.number()),
+        normalTicketCapacity: v.optional(v.number()),
+        normalTicketPrice: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("events", args);
@@ -70,6 +76,12 @@ export const updateEvent = mutation({
         address: v.optional(v.string()),
         status: v.optional(v.string()),
         environment: v.optional(v.string()),
+        description: v.optional(v.string()),
+        meetingUrl: v.optional(v.string()),
+        rows: v.optional(v.number()),
+        cols: v.optional(v.number()),
+        normalTicketCapacity: v.optional(v.number()),
+        normalTicketPrice: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;

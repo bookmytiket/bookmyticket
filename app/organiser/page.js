@@ -27,7 +27,7 @@ class OrganiserErrorBoundary extends Component {
 }
 import {
     LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles,
-    CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2,
+    CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft
@@ -656,8 +656,8 @@ function OrganiserPanel() {
         const isMultiple = (postEvent.dateType || "single") === "multiple";
 
         // Date/Time Mapping
-        const startDate = isOnline ? postEvent.startDate : postEvent.date;
-        const startTime = isOnline ? postEvent.startTime : postEvent.time;
+        const startDate = postEvent.startDate;
+        const startTime = postEvent.startTime;
 
         const effectiveSlots = isMultiple
             ? multiSlots.filter(s => s.date)
@@ -726,8 +726,12 @@ function OrganiserPanel() {
             address: isOnline ? ev.meetingUrl : ev.address,
             environment: isOnline ? "Virtual" : ev.environment,
             meetingUrl: isOnline ? ev.meetingUrl : undefined,
-            isFeature: ev.isFeature === "Yes",
-            description: ev.description
+            featured: ev.isFeature === "Yes",
+            description: ev.description,
+            rows: postEvent.seatingEnabled !== false ? Number(postEvent.rows) : undefined,
+            cols: postEvent.seatingEnabled !== false ? Number(postEvent.cols) : undefined,
+            normalTicketCapacity: postEvent.seatingEnabled === false ? Number(postEvent.normalTicketCapacity) : undefined,
+            normalTicketPrice: postEvent.seatingEnabled === false ? Number(postEvent.normalTicketPrice) : undefined
         })
             .then(() => {
                 setPostEvent(getInitialPostEvent());
@@ -1736,12 +1740,53 @@ function OrganiserPanel() {
                                     {renderToggle("Countdown Status*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-                                    {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
-                                    {renderInput("Start Time*", "startTime", "time", "--:--")}
-                                    {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
-                                    {renderInput("End Time*", "endTime", "time", "--:--")}
-                                </div>
+                                {postEvent.dateType === "single" ? (
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
+                                        {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
+                                        {renderInput("Start Time*", "startTime", "time", "--:--")}
+                                        {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
+                                        {renderInput("End Time*", "endTime", "time", "--:--")}
+                                    </div>
+                                ) : (
+                                    <div style={{ marginBottom: "24px" }}>
+                                        {multiSlots.map((slot, idx) => (
+                                            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "20px", marginBottom: "12px", alignItems: "center" }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Date {idx + 1}</label>
+                                                    <input
+                                                        type="date"
+                                                        value={slot.date}
+                                                        onChange={(e) => {
+                                                            const newSlots = [...multiSlots];
+                                                            newSlots[idx].date = e.target.value;
+                                                            setMultiSlots(newSlots);
+                                                        }}
+                                                        style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
+                                                    />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Time {idx + 1}</label>
+                                                    <input
+                                                        type="time"
+                                                        value={slot.time}
+                                                        onChange={(e) => {
+                                                            const newSlots = [...multiSlots];
+                                                            newSlots[idx].time = e.target.value;
+                                                            setMultiSlots(newSlots);
+                                                        }}
+                                                        style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
+                                                    />
+                                                </div>
+                                                <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
+                                                    <button type="button" onClick={() => setMultiSlots([...multiSlots, { date: "", time: "" }])} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={16} /></button>
+                                                    {multiSlots.length > 1 && (
+                                                        <button type="button" onClick={() => setMultiSlots(multiSlots.filter((_, i) => i !== idx))} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={16} /></button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                                     {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
@@ -1826,16 +1871,53 @@ function OrganiserPanel() {
                                 {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: "20px", marginBottom: "24px", alignItems: "center" }}>
-                                {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
-                                {renderInput("Start Time*", "startTime", "time", "--:--")}
-                                {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
-                                {renderInput("End Time*", "endTime", "time", "--:--")}
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
-                                    <button type="button" style={{ width: "40px", height: "35px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={18} /></button>
-                                    <button type="button" style={{ width: "40px", height: "35px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={18} /></button>
+                            {postEvent.dateType === "single" ? (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
+                                    {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
+                                    {renderInput("Start Time*", "startTime", "time", "--:--")}
+                                    {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
+                                    {renderInput("End Time*", "endTime", "time", "--:--")}
                                 </div>
-                            </div>
+                            ) : (
+                                <div style={{ marginBottom: "24px" }}>
+                                    {multiSlots.map((slot, idx) => (
+                                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "20px", marginBottom: "12px", alignItems: "center" }}>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Date {idx + 1}</label>
+                                                <input
+                                                    type="date"
+                                                    value={slot.date}
+                                                    onChange={(e) => {
+                                                        const newSlots = [...multiSlots];
+                                                        newSlots[idx].date = e.target.value;
+                                                        setMultiSlots(newSlots);
+                                                    }}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Time {idx + 1}</label>
+                                                <input
+                                                    type="time"
+                                                    value={slot.time}
+                                                    onChange={(e) => {
+                                                        const newSlots = [...multiSlots];
+                                                        newSlots[idx].time = e.target.value;
+                                                        setMultiSlots(newSlots);
+                                                    }}
+                                                    style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
+                                                <button type="button" onClick={() => setMultiSlots([...multiSlots, { date: "", time: "" }])} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={16} /></button>
+                                                {multiSlots.length > 1 && (
+                                                    <button type="button" onClick={() => setMultiSlots(multiSlots.filter((_, i) => i !== idx))} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={16} /></button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                                 {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
@@ -3027,7 +3109,6 @@ function OrganiserPanel() {
                                                 date: firstSlot?.date || "TBA",
                                                 time: firstSlot?.time || "TBA",
                                                 img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
-                                                status: "Active"
                                             });
                                             setShowCreateEvent(false);
                                             setNewEvent({ title: "", type: "Venue", venue: "", slots: [{ date: "", time: "" }] });
@@ -3085,7 +3166,7 @@ function OrganiserPanel() {
                 <aside className="sidebar">
                     <div className="sidebar-logo">
                         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px" }}>
-                            <img src="/logo.png" alt="Logo" style={{ height: "36px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }} />
+                            <img src="/logo.png" alt="Logo" style={{ height: "48px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }} />
                         </Link>
                     </div>
 
@@ -3276,12 +3357,9 @@ function OrganiserPanel() {
                     <Link href="/" style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
+                        justifyContent: "flex-start",
                         gap: "10px",
-                        background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                        padding: '12px 10px',
-                        borderRadius: '12px',
-                        border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
+                        padding: '10px 4px',
                         textDecoration: "none",
                         transition: 'all 0.3s ease'
                     }}>
@@ -3289,7 +3367,7 @@ function OrganiserPanel() {
                             src="/logo.png"
                             alt="Logo"
                             style={{
-                                height: "44px",
+                                height: "56px",
                                 objectFit: "contain",
                                 maxWidth: "100%",
                                 filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',

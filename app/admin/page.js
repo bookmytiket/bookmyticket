@@ -813,19 +813,16 @@ function AdminHomePage() {
                     <div style={{
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
+                        justifyContent: "flex-start",
                         gap: "10px",
-                        background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                        padding: '12px 10px',
-                        borderRadius: '12px',
-                        border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'
+                        padding: '10px 4px',
                     }}>
                         {siteBranding.logoUrl ? (
                             <img
                                 src={siteBranding.logoUrl}
                                 alt="Logo"
                                 style={{
-                                    height: "44px",
+                                    height: "56px",
                                     objectFit: "contain",
                                     maxWidth: "100%",
                                     filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',

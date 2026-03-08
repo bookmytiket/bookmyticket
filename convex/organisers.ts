@@ -13,7 +13,7 @@ export const get = query({
     handler: async (ctx, args) => {
         return await ctx.db
             .query("organisers")
-            .filter((q) => q.eq(q.field("userId"), args.userId))
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
             .unique();
     },
 });
@@ -27,6 +27,14 @@ export const create = mutation({
         walletBalance: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
+        // Check if organiser already exists
+        const existing = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .unique();
+        if (existing) {
+            return existing._id;
+        }
         const id = await ctx.db.insert("organisers", args);
         return id;
     },
@@ -111,6 +119,16 @@ export const approveRequest = mutation({
         if (!request) throw new Error("Request not found");
         if (request.status !== "Pending") throw new Error("Request is not pending");
 
+        // Check if organiser already exists
+        const existing = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", request.email))
+            .unique();
+        if (existing) {
+            await ctx.db.patch(args.id, { status: "Approved" });
+            return "Already Approved";
+        }
+
         // Generate a random 8-character temporary password
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
         let tempPassword = "";
@@ -131,5 +149,25 @@ export const approveRequest = mutation({
         await ctx.db.patch(args.id, { status: "Approved" });
 
         return tempPassword;
+    },
+});
+
+export const cleanupDuplicates = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const organisers = await ctx.db.query("organisers").collect();
+        const seen = new Set();
+        const toDelete = [];
+        for (const org of organisers) {
+            if (seen.has(org.userId)) {
+                toDelete.push(org._id);
+            } else {
+                seen.add(org.userId);
+            }
+        }
+        for (const id of toDelete) {
+            await ctx.db.delete(id);
+        }
+        return { deleted: toDelete.length };
     },
 });

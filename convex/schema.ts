@@ -23,6 +23,12 @@ export default defineSchema({
         exclusive: v.optional(v.boolean()),
         status: v.optional(v.string()),
         environment: v.optional(v.string()), // 'Indoor' or 'Outdoor'
+        description: v.optional(v.string()),
+        meetingUrl: v.optional(v.string()),
+        rows: v.optional(v.number()),
+        cols: v.optional(v.number()),
+        normalTicketCapacity: v.optional(v.number()),
+        normalTicketPrice: v.optional(v.number()),
     }),
 
     bookings: defineTable({
@@ -88,7 +94,7 @@ export default defineSchema({
                 agreementAccepted: v.boolean(),
             })
         ),
-    }),
+    }).index("by_userId", ["userId"]),
 
     organiserRequests: defineTable({
         firstName: v.string(),
