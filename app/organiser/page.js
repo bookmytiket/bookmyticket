@@ -1091,7 +1091,7 @@ function OrganiserPanel() {
             </div>
 
             <div style={{ backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}`, padding: "20px" }}>
-                
+
                 {/* Status Bar */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${t.border}`, borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -1100,9 +1100,9 @@ function OrganiserPanel() {
                         </div>
                         <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>KYC Submitted</span>
                     </div>
-                    
+
                     <div style={{ flex: 1, height: "2px", backgroundColor: t.border, margin: "0 24px" }}></div>
-                    
+
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#fff", border: "4px solid #f97316", background: "linear-gradient(135deg, #f97316, #f43f5e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
                             <Clock size={20} />
@@ -1169,16 +1169,16 @@ function OrganiserPanel() {
             <div style={{ fontSize: "12px", color: t.textSub, marginTop: "8px" }}>
                 If you need to make any changes or have queries, please contact us on <a href="mailto:admin@theticket9.com" style={{ color: "#3b82f6" }}>admin@theticket9.com</a>
             </div>
-            
-             {/* Backdoor for demo */}
-             {true && (
+
+            {/* Backdoor for demo */}
+            {true && (
                 <button
                     onClick={() => setCurrentStage("approved")}
                     style={{ marginTop: "10px", fontSize: "12px", color: t.textSub, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", alignSelf: "flex-start" }}
                 >
                     [Demo Only: Simulate Admin Approval]
                 </button>
-             )}
+            )}
         </div>
     );
 
@@ -3018,7 +3018,11 @@ function OrganiserPanel() {
                         </button>
 
                         <button
-                            onClick={() => { if (confirm("Are you sure you want to logout?")) { logout(); } }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                router.push('/signin');
+                                setTimeout(() => logout(), 100);
+                            }}
                             className="sidebar-item"
                             style={{ color: "#ef4444" }}
                         >
@@ -3098,7 +3102,11 @@ function OrganiserPanel() {
                 </nav>
 
                 <button
-                    onClick={() => { if (confirm("Are you sure you want to logout?")) { logout(); } }}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        router.push('/signin');
+                        setTimeout(() => logout(), 100);
+                    }}
                     className="sidebar-item"
                     style={{ color: "#ef4444", borderTop: `1px solid ${t.border}`, marginTop: "8px" }}
                 >
