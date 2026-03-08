@@ -103,3 +103,33 @@ export const submitKyc = mutation({
         });
     },
 });
+
+export const approveRequest = mutation({
+    args: { id: v.id("organiserRequests") },
+    handler: async (ctx, args) => {
+        const request = await ctx.db.get(args.id);
+        if (!request) throw new Error("Request not found");
+        if (request.status !== "Pending") throw new Error("Request is not pending");
+
+        // Generate a random 8-character temporary password
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        let tempPassword = "";
+        for (let i = 0; i < 8; i++) {
+            tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // Create the organiser account
+        await ctx.db.insert("organisers", {
+            userId: request.email,
+            password: tempPassword,
+            name: `${request.firstName} ${request.lastName}`,
+            kycStatus: "Start Onboarding",
+            walletBalance: 0,
+        });
+
+        // Update the request status
+        await ctx.db.patch(args.id, { status: "Approved" });
+
+        return tempPassword;
+    },
+});

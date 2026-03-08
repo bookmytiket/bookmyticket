@@ -262,12 +262,14 @@ function OrganiserPanel() {
                 lastName: organiserData.name.split(' ')[1] || "Doe",
             }));
 
-            if (!organiserData.kycStatus || organiserData.kycStatus === "Pending") {
+            if (!organiserData.kycStatus || organiserData.kycStatus === "Pending" || organiserData.kycStatus === "Start Onboarding") {
                 setCurrentStage("kyc_start");
-            } else if (organiserData.kycStatus === "KYC Pending") {
+            } else if (organiserData.kycStatus === "KYC Pending" || organiserData.kycStatus === "Submitted") {
                 setCurrentStage("pending");
-            } else {
+            } else if (organiserData.kycStatus === "Active") {
                 setCurrentStage("approved");
+            } else {
+                setCurrentStage("kyc_start");
             }
         }
     }, [organiserData]);
@@ -1385,15 +1387,6 @@ function OrganiserPanel() {
                 If you need to make any changes or have queries, please contact us on <a href="mailto:admin@bookmyticket.io" style={{ color: "#3b82f6" }}>admin@bookmyticket.io</a>
             </div>
 
-            {/* Backdoor for demo */}
-            {true && (
-                <button
-                    onClick={() => setCurrentStage("approved")}
-                    style={{ marginTop: "10px", fontSize: "12px", color: t.textSub, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", alignSelf: "flex-start" }}
-                >
-                    [Demo Only: Simulate Admin Approval]
-                </button>
-            )}
         </div>
     );
 

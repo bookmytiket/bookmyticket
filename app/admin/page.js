@@ -98,10 +98,13 @@ function AdminHomePage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [theme, setTheme] = useState("light");
     const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
+    const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
+    const [generatedTempPassword, setGeneratedTempPassword] = useState("");
     const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isGrowthOpen, setIsGrowthOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [openRequestActionId, setOpenRequestActionId] = useState(null);
     // Payment gateways: which config modal is open + saved configs per gateway
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
     const allConfig = useQuery(api.systemConfig.getAllConfig);
@@ -469,6 +472,7 @@ function AdminHomePage() {
 
     const convexOrganiserRequests = useQuery(api.organiserRequests.list) || [];
     const updateOrganiserRequestStatusMutation = useMutation(api.organiserRequests.updateStatus);
+    const approveOrganiserRequestMutation = useMutation(api.organisers.approveRequest);
 
     const [events, setEvents] = useState([]);
 
@@ -1939,122 +1943,120 @@ function AdminHomePage() {
                     )}
 
                     {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests"].includes(activeTab) && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
-                                    {activeTab === "all_org" ? "Manage Organizers" :
-                                        activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                </h3>
-                                <div style={{ display: "flex", gap: "12px" }}>
-                                    <div style={{ position: "relative" }}>
-                                        <input
-                                            type="text"
-                                            placeholder="Search organizers..."
-                                            style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", width: "200px" }}
-                                        />
+                        <>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
+                                        {activeTab === "all_org" ? "Manage Organizers" :
+                                            activeTab.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                    </h3>
+                                    <div style={{ display: "flex", gap: "12px" }}>
+                                        <div style={{ position: "relative" }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Search organizers..."
+                                                style={{ padding: "8px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", width: "200px" }}
+                                            />
+                                        </div>
+                                        {/* Manual creation removed as per new workflow request */}
                                     </div>
-                                    <button
-                                        onClick={() => setShowCreateModal(true)}
-                                        className="tab-btn" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
-                                        <Plus size={18} /> Create Organiser
-                                    </button>
+                                </div>
+                                <div className="table-container" style={{ position: "relative" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Username</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Balance</th>
+                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mappedOrganizers.filter(org => {
+                                                if (activeTab === "all_org") return true;
+                                                if (activeTab === "active_org") return org.status === "Active";
+                                                if (activeTab === "banned_org") return org.status === "Banned";
+                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Pending", "Submitted"].includes(org.status);
+                                                if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
+                                                if (activeTab === "email_unverified") return org.id % 2 === 0;
+                                                if (activeTab === "mobile_unverified") return org.id % 3 === 0;
+                                                if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active"].includes(org.status);
+                                                return true;
+                                            }).map((org) => (
+                                                <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{org.username}</td>
+                                                    <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{org.email}</td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <span style={{
+                                                            padding: "4px 10px",
+                                                            borderRadius: "20px",
+                                                            fontSize: "11px",
+                                                            fontWeight: 700,
+                                                            backgroundColor:
+                                                                org.status === 'Active' ? '#22c55e15' :
+                                                                    org.status === 'Banned' ? '#ef444415' :
+                                                                        (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f9731615' : '#64748b15',
+                                                            color:
+                                                                org.status === 'Active' ? '#22c55e' :
+                                                                    org.status === 'Banned' ? '#ef4444' :
+                                                                        (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f97316' : t.textSub
+                                                        }}>
+                                                            {(org.status === 'Pending' || org.status === 'Submitted') ? 'KYC PENDING' : org.status.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
+                                                    <td style={{ padding: "12px", position: "relative" }}>
+                                                        <button onClick={() => setOpenActionDropdown(openActionDropdown === org.id ? null : org.id)} style={{ padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                            <MoreVertical size={16} />
+                                                        </button>
+                                                        {openActionDropdown === org.id && (
+                                                            <div style={{ position: "absolute", right: "20px", top: "45px", backgroundColor: theme === 'light' ? '#fff' : '#1e293b', border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", zIndex: 100, width: "160px", overflow: "hidden" }}>
+                                                                <button style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                    <Save size={16} /> Edit Profile
+                                                                </button>
+                                                                {(org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted' || org.status === 'Start Onboarding') && (
+                                                                    <>
+                                                                        <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#3b82f6", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                            <FileText size={16} /> View KYC
+                                                                        </button>
+
+                                                                        <button onClick={() => {
+                                                                            patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
+                                                                            setOpenActionDropdown(null);
+                                                                            alert(`Organiser ${org.username} KYC has been approved! They now have full portal access.`);
+                                                                        }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                            <CheckCircle size={16} /> Approve KYC
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                {org.status === 'Active' && (
+                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <Bell size={16} /> Ban User
+                                                                    </button>
+                                                                )}
+                                                                {org.status === 'Banned' && (
+                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <CheckCircle size={16} /> Unban User
+                                                                    </button>
+                                                                )}
+                                                                <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                    <X size={16} /> Reject User
+                                                                </button>
+                                                                <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
+                                                                <button onClick={() => { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                    <Trash2 size={16} /> Delete User
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Username</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Balance</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {mappedOrganizers.filter(org => {
-                                            if (activeTab === "all_org") return true;
-                                            if (activeTab === "active_org") return org.status === "Active";
-                                            if (activeTab === "banned_org") return org.status === "Banned";
-                                            if (activeTab === "kyc_pending") return org.status === "KYC Pending";
-                                            if (activeTab === "with_balance", "org_requests") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
-                                            if (activeTab === "email_unverified") return org.id % 2 === 0;
-                                            if (activeTab === "mobile_unverified") return org.id % 3 === 0;
-                                            if (activeTab === "kyc_unverified") return org.status !== "KYC Pending" && org.status !== "Active";
-                                            return true;
-                                        }).map((org) => (
-                                            <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{org.username}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{org.email}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{
-                                                        padding: "4px 10px",
-                                                        borderRadius: "20px",
-                                                        fontSize: "11px",
-                                                        fontWeight: 700,
-                                                        backgroundColor:
-                                                            org.status === 'Active' ? '#22c55e15' :
-                                                                org.status === 'Banned' ? '#ef444415' :
-                                                                    (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f9731615' : '#64748b15',
-                                                        color:
-                                                            org.status === 'Active' ? '#22c55e' :
-                                                                org.status === 'Banned' ? '#ef4444' :
-                                                                    (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f97316' : t.textSub
-                                                    }}>
-                                                        {(org.status === 'Pending' || org.status === 'Submitted') ? 'KYC PENDING' : org.status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
-                                                <td style={{ padding: "12px", position: "relative" }}>
-                                                    <button onClick={() => setOpenActionDropdown(openActionDropdown === org.id ? null : org.id)} style={{ padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                        <MoreVertical size={16} />
-                                                    </button>
-                                                    {openActionDropdown === org.id && (
-                                                        <div style={{ position: "absolute", right: "20px", top: "45px", backgroundColor: theme === 'light' ? '#fff' : '#1e293b', border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", zIndex: 100, width: "160px", overflow: "hidden" }}>
-                                                            <button style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                <Save size={16} /> Edit Profile
-                                                            </button>
-                                                            {(org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') && (
-                                                                <>
-                                                                    <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#3b82f6", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <FileText size={16} /> View KYC
-                                                                    </button>
-
-                                                                    <button onClick={() => {
-                                                                        patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
-                                                                        setOpenActionDropdown(null);
-                                                                        alert(`Organiser ${org.username} KYC has been approved! They now have full portal access.`);
-                                                                    }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <CheckCircle size={16} /> Approve KYC
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {org.status === 'Active' && (
-                                                                <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                    <Bell size={16} /> Ban User
-                                                                </button>
-                                                            )}
-                                                            {org.status === 'Banned' && (
-                                                                <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                    <CheckCircle size={16} /> Unban User
-                                                                </button>
-                                                            )}
-                                                            <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                <X size={16} /> Reject User
-                                                            </button>
-                                                            <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
-                                                            <button onClick={() => { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                <Trash2 size={16} /> Delete User
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        </>
                     )}
 
                     {activeTab === "org_requests" && (
@@ -2099,37 +2101,69 @@ function AdminHomePage() {
                                                         {req.status.toUpperCase()}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                <td style={{ padding: "12px", position: "relative" }}>
+                                                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                                                         {req.status === 'Pending' && (
-                                                            <>
-                                                                <button title="Approve & Create Account" onClick={async () => {
-                                                                    try {
-                                                                        console.log("Approving request", req._id);
-                                                                        const newOrgId = await createOrganizerMutation({
-                                                                            name: `${req.firstName} ${req.lastName}`,
-                                                                            userId: req.email,
-                                                                            password: 'P@ssword123!',
-                                                                            kycStatus: 'Pending',
-                                                                            walletBalance: 0
-                                                                        });
-                                                                        console.log("Created Org", newOrgId);
-                                                                        await updateOrganiserRequestStatusMutation({ id: req._id, status: 'Approved' });
-                                                                        console.log("Updated Request status");
-                                                                        alert('Successfully approved! Account active.');
-                                                                    } catch (err) {
-                                                                        console.error("Approval error:", err);
-                                                                        alert('Error: ' + err.message);
-                                                                    }
-                                                                }} style={{ padding: "6px", borderRadius: "6px", border: `2px solid #22c55e`, background: "#22c55e15", color: "#22c55e", cursor: "pointer" }}><CheckCircle size={14} /></button>
-                                                                <button title="Reject Request" onClick={async () => {
-                                                                    try {
-                                                                        await updateOrganiserRequestStatusMutation({ id: req._id, status: 'Rejected' });
-                                                                    } catch (err) {
-                                                                        alert('Error rejecting: ' + err.message);
-                                                                    }
-                                                                }} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><X size={14} /></button>
-                                                            </>
+                                                            <div style={{ position: "relative" }}>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setOpenRequestActionId(openRequestActionId === req._id ? null : req._id);
+                                                                    }}
+                                                                    style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: t.textSub, cursor: "pointer" }}
+                                                                >
+                                                                    <MoreVertical size={16} />
+                                                                </button>
+
+                                                                {openRequestActionId === req._id && (
+                                                                    <div style={{
+                                                                        position: "absolute",
+                                                                        right: 0,
+                                                                        top: "100%",
+                                                                        marginTop: "4px",
+                                                                        backgroundColor: t.cardBg,
+                                                                        border: `1px solid ${t.border}`,
+                                                                        borderRadius: "8px",
+                                                                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                                                        zIndex: 100,
+                                                                        minWidth: "120px",
+                                                                        overflow: "hidden"
+                                                                    }}>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                try {
+                                                                                    console.log("Approving request", req._id);
+                                                                                    const tempPass = await approveOrganiserRequestMutation({ id: req._id });
+                                                                                    setGeneratedTempPassword(tempPass);
+                                                                                    setShowTempPasswordModal(true);
+                                                                                    setOpenRequestActionId(null);
+                                                                                } catch (err) {
+                                                                                    console.error("Approval error:", err);
+                                                                                    alert('Error: ' + err.message);
+                                                                                }
+                                                                            }}
+                                                                            style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#22c55e", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                                                        >
+                                                                            <CheckCircle size={14} /> Approve
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                try {
+                                                                                    await updateOrganiserRequestStatusMutation({ id: req._id, status: 'Rejected' });
+                                                                                    setOpenRequestActionId(null);
+                                                                                } catch (err) {
+                                                                                    alert('Error rejecting: ' + err.message);
+                                                                                }
+                                                                            }}
+                                                                            style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#ef4444", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderTop: `1px solid ${t.border}` }}
+                                                                        >
+                                                                            <X size={14} /> Reject
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </td>
@@ -2143,6 +2177,7 @@ function AdminHomePage() {
                             </div>
                         </div>
                     )}
+
 
                     {activeTab === "send_notif" && (
                         <div style={{ maxWidth: "800px" }}>
@@ -2160,7 +2195,7 @@ function AdminHomePage() {
                                             {[
                                                 { id: 'all', label: 'All Organisers', count: mappedOrganizers.length },
                                                 { id: 'active', label: 'Active Only', count: mappedOrganizers.filter(o => o.status === 'Active').length },
-                                                { id: 'pending', label: 'KYC Pending', count: mappedOrganizers.filter(o => o.status === 'KYC Pending').length }
+                                                { id: 'pending', label: 'KYC Pending', count: mappedOrganizers.filter(o => ["KYC Pending", "Pending", "Submitted"].includes(o.status)).length }
                                             ].map(opt => (
                                                 <button
                                                     key={opt.id}
@@ -2216,7 +2251,7 @@ function AdminHomePage() {
                                             if (!notificationForm.subject || !notificationForm.message) return alert("Please fill in both subject and message.");
                                             const targetCount = notificationForm.target === 'all' ? mappedOrganizers.length :
                                                 notificationForm.target === 'active' ? mappedOrganizers.filter(o => o.status === 'Active').length :
-                                                    mappedOrganizers.filter(o => o.status === 'KYC Pending').length;
+                                                    mappedOrganizers.filter(o => ["KYC Pending", "Pending", "Submitted"].includes(o.status)).length;
 
                                             await sendNotificationMutation({
                                                 subject: notificationForm.subject,
@@ -3340,65 +3375,76 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {showCreateModal && (
-                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", width: "400px", border: `1px solid ${t.border}` }}>
-                                <h3 style={{ marginBottom: "24px", fontSize: "20px", fontWeight: 700 }}>Add New Organiser</h3>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", marginBottom: "8px", color: t.textSub }}>Username</label>
-                                        <input
-                                            type="text"
-                                            value={newOrg.username}
-                                            onChange={(e) => setNewOrg({ ...newOrg, username: e.target.value })}
-                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", marginBottom: "8px", color: t.textSub }}>Email Address</label>
-                                        <input
-                                            type="email"
-                                            value={newOrg.email}
-                                            onChange={(e) => setNewOrg({ ...newOrg, email: e.target.value })}
-                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", marginBottom: "8px", color: t.textSub }}>Password</label>
-                                        <input
-                                            type="password"
-                                            value={newOrg.password}
-                                            onChange={(e) => setNewOrg({ ...newOrg, password: e.target.value })}
-                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
-                                    </div>
-                                    <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
-                                        <button
-                                            onClick={() => {
-                                                createOrganizerMutation({
-                                                    name: newOrg.username,
-                                                    userId: newOrg.email,
-                                                    password: newOrg.password,
-                                                    kycStatus: "Pending", // Forces them into KYC flow
-                                                    walletBalance: 0
-                                                }).then(() => {
-                                                    setShowCreateModal(false);
-                                                    alert(`Organiser account created! Login credentials have been sent to ${newOrg.email}`);
-                                                    setNewOrg({ username: "", password: "", email: "" });
-                                                }).catch(err => {
-                                                    alert("Error creating organiser: " + err.message);
-                                                });
-                                            }}
-                                            style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
-                                            Create Organiser
-                                        </button>
-                                        <button
-                                            onClick={() => setShowCreateModal(false)}
-                                            style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "transparent", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 600, cursor: "pointer" }}>
-                                            Cancel
-                                        </button>
-                                    </div>
+                    {showTempPasswordModal && (
+                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", width: "450px", border: `1px solid ${t.border}`, textAlign: "center", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                                <div style={{ backgroundColor: "#22c55e", color: "#fff", width: "64px", height: "64px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 8px 16px rgba(34, 197, 94, 0.2)" }}>
+                                    <CheckCircle size={32} />
                                 </div>
+                                <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginBottom: "12px" }}>Request Approved!</h2>
+                                <p style={{ color: t.textSub, marginBottom: "32px", fontSize: "15px", lineHeight: "1.5" }}>
+                                    The organiser account has been successfully created.
+                                    Please share this temporary password with the applicant so they can log in.
+                                </p>
+
+                                <div style={{
+                                    backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b',
+                                    padding: "24px",
+                                    borderRadius: "16px",
+                                    border: `2px dashed ${t.border}`,
+                                    position: "relative",
+                                    marginBottom: "32px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center"
+                                }}>
+                                    <span style={{
+                                        fontSize: "28px",
+                                        fontWeight: 800,
+                                        letterSpacing: "4px",
+                                        color: "#3b82f6",
+                                        fontFamily: "monospace"
+                                    }}>{generatedTempPassword}</span>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(generatedTempPassword);
+                                            alert("Password copied to clipboard!");
+                                        }}
+                                        style={{
+                                            position: "absolute",
+                                            top: "-12px",
+                                            right: "12px",
+                                            backgroundColor: "#1e1b4b",
+                                            color: "#fff",
+                                            border: "none",
+                                            borderRadius: "20px",
+                                            padding: "6px 14px",
+                                            fontSize: "11px",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                                        }}
+                                    >
+                                        COPY
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={() => setShowTempPasswordModal(false)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "16px",
+                                        backgroundColor: "#1e1b4b",
+                                        color: "#fff",
+                                        border: "none",
+                                        borderRadius: "12px",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        transition: "all 0.2s"
+                                    }}
+                                >
+                                    Confirm & Close
+                                </button>
                             </div>
                         </div>
                     )}
