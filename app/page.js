@@ -177,8 +177,16 @@ export default function Home() {
           <section style={{ width: '100%', maxWidth: '1240px', padding: '40px 20px', minHeight: '600px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '20px' }}>
               <div>
-                <h2 style={{ fontSize: '32px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em', color: '#0f172a' }}>
-                  {searchQuery ? `Search Results for "${searchQuery}"` : `${activeCat} Events`}
+                <h2 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.04em', color: '#0f172a', lineHeight: 1.1 }}>
+                  {searchQuery ? `Search Results for "${searchQuery}"` : (
+                    <>
+                      {activeCat} <span style={{
+                        background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}>Events</span>
+                    </>
+                  )}
                 </h2>
                 <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>
                   Found {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} {searchQuery ? '' : `in this category`}
@@ -253,8 +261,22 @@ export default function Home() {
                     <section key={idx} style={{ width: '100%', padding: '60px 0', backgroundColor: '#f8fafc' }}>
                       <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ color: '#f84464', fontSize: '20px' }}>★</span>
-                          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Discover Venue Events</h2>
+                          <h2 style={{
+                            fontSize: "28px",
+                            fontWeight: 900,
+                            color: '#1e293b',
+                            margin: 0,
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
+                            fontFamily: "var(--font-heading)"
+                          }}>
+                            Discover Venue <span style={{
+                              background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              display: 'inline-block'
+                            }}>Events</span>
+                          </h2>
                         </div>
                         <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '32px' }}>Experience the best in-person events at top venues near you</p>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>

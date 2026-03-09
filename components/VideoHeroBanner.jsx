@@ -15,7 +15,7 @@ export default function VideoHeroBanner() {
         title1: "Discover Your Next",
         title2: "Unforgettable Experience",
         subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
-        categories: ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"]
+        categories: ["Event Posted", "Event Booked", "Sponsors"]
     };
     const config = React.useMemo(() => {
         if (bannerConfig == null || bannerConfig === undefined) return defaultConfig;
@@ -27,7 +27,7 @@ export default function VideoHeroBanner() {
         }
     }, [bannerConfig]);
 
-    const categories = config.categories || ["Concert", "Sports", "Musics", "Live Shows", "Comedy Show"];
+    const categories = config.categories || ["Event Posted", "Event Booked", "Sponsors"];
 
     const handleSearch = () => {
         if (searchQuery.trim()) {
@@ -131,16 +131,16 @@ export default function VideoHeroBanner() {
                 {/* Main Heading */}
                 <h1 style={{
                     fontSize: "clamp(36px, 5vw, 64px)",
-                    fontWeight: 800,
+                    fontWeight: 900,
                     color: "#fff",
                     lineHeight: 1.1,
                     marginBottom: "20px",
                     fontFamily: "var(--font-heading), sans-serif",
-                    letterSpacing: "-0.02em"
+                    letterSpacing: "-0.04em"
                 }}>
                     {config.title1 || "Discover Your Next"} <br />
                     <span style={{
-                        background: "linear-gradient(90deg, #f97316 0%, #ef4444 100%)",
+                        background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
                         display: "inline-block"
@@ -197,7 +197,7 @@ export default function VideoHeroBanner() {
                         />
                     </div>
                     <button style={{
-                        background: "linear-gradient(90deg, #f97316 0%, #ef4444 100%)",
+                        background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
                         color: "#fff",
                         border: "none",
                         borderRadius: "8px",
@@ -219,41 +219,6 @@ export default function VideoHeroBanner() {
                     </button>
                 </div>
 
-                {/* Category Pills */}
-                <div style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "12px"
-                }}>
-                    {categories.map((cat) => (
-                        <button
-                            key={cat}
-                            style={{
-                                background: "rgba(0, 0, 0, 0.4)",
-                                backdropFilter: "blur(8px)",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                color: "#fff",
-                                padding: "10px 24px",
-                                borderRadius: "50px",
-                                fontSize: "14px",
-                                fontWeight: 500,
-                                cursor: "pointer",
-                                transition: "all 0.2s ease"
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-                                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.4)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(0, 0, 0, 0.4)";
-                                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
-                            }}
-                            onClick={() => handleCategoryClick(cat)}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
             </div>
         </section>
     );

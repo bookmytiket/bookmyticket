@@ -123,8 +123,24 @@ export default function VirtualEvents({ events = [] }) {
 
                 {/* Centered Header */}
                 <div style={{ textAlign: "center", marginBottom: "28px" }}>
-                    <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", margin: "0 0 8px", display: "inline-flex", alignItems: "center", gap: "8px", fontFamily: "var(--font-heading)" }}>
-                        Virtual Events <span style={{ fontSize: "22px" }}>💻</span>
+                    <h2 style={{
+                        fontSize: "28px",
+                        fontWeight: 900,
+                        color: "#111827",
+                        margin: "0 0 8px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        letterSpacing: "-0.04em",
+                        lineHeight: 1.1,
+                        fontFamily: "var(--font-heading)"
+                    }}>
+                        Virtual <span style={{
+                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            display: 'inline-block'
+                        }}>Events</span> 💻
                     </h2>
                     <p style={{ fontSize: "14px", color: "#9ca3af", margin: 0, fontWeight: 500 }}>
                         Join us from anywhere and be part of exciting virtual experiences!

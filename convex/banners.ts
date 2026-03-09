@@ -38,14 +38,23 @@ export const requestBanner = mutation({
         lastName: v.string(),
         email: v.string(),
         phone: v.string(),
-        link: v.optional(v.string()),
-        imageStorageId: v.optional(v.string()), // Temporary storage ID or raw URL
+        link: v.optional(v.string()), // Kept as optional for backend flexibility
+        imageStorageId: v.optional(v.string()), // Base64 data from frontend
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("heroBanners", {
             ...args,
-            status: "pending",
+            status: "pending_payment", // Initial state
             createdAt: Date.now(),
+        });
+    },
+});
+
+export const finalizePayment = mutation({
+    args: { id: v.id("heroBanners") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.id, {
+            status: "pending", // Now moves to Admin review
         });
     },
 });

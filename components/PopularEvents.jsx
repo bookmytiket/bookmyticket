@@ -106,8 +106,21 @@ export default function PopularEvents({ events }) {
                 {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div>
-                        <h2 id="popular-events-heading" style={{ fontSize: "22px", fontWeight: 800, color: "#111827", margin: 0, fontFamily: "var(--font-heading)" }}>
-                            Explore Popular Events
+                        <h2 id="popular-events-heading" style={{
+                            fontSize: "28px",
+                            fontWeight: 900,
+                            color: "#111827",
+                            margin: 0,
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
+                            fontFamily: "var(--font-heading)"
+                        }}>
+                            Explore Popular <span style={{
+                                background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                display: 'inline-block'
+                            }}>Events</span>
                         </h2>
                         <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
                             Discover what everyone is talking about

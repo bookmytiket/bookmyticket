@@ -48,22 +48,28 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div>
                         <h2 style={{
-                            fontSize: "22px",
-                            fontWeight: 800,
+                            fontSize: "28px",
+                            fontWeight: 900,
                             color: "#111827",
                             margin: 0,
-                            letterSpacing: "-0.3px",
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
                             fontFamily: "var(--font-heading)",
                             display: "flex",
                             alignItems: "center",
-                            gap: "8px",
+                            gap: "12px",
                         }}>
-                            <span style={{ display: "inline-flex", color: "#ef4444" }}>
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <span style={{ display: "inline-flex", color: "#f84464" }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
                                 </svg>
                             </span>
-                            Recently Viewed Events
+                            Recently <span style={{
+                                background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                display: 'inline-block'
+                            }}>Viewed</span>
                         </h2>
                         <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
                             Here&apos;s a quick look at events you&apos;ve shown interest in.

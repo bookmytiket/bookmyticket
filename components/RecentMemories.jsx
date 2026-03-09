@@ -35,9 +35,15 @@ export default function RecentMemories({ memories: propMemories = [] }) {
                     }}>✦ Our Gallery</span>
                     <h2 style={{
                         fontSize: "40px", fontWeight: 900, color: "#111827",
-                        margin: 0, fontFamily: "var(--font-heading)", lineHeight: 1
+                        margin: 0, fontFamily: "var(--font-heading)", lineHeight: 1,
+                        letterSpacing: "-0.04em"
                     }}>
-                        Recent Memories 2024
+                        Recent Memories <span style={{
+                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            display: 'inline-block'
+                        }}>2024</span>
                     </h2>
                 </div>
             </div>

@@ -80,15 +80,23 @@ export default function ComingSoonEvents({ events = [] }) {
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
                 <div style={{ marginBottom: "20px" }}>
                     <h2 style={{
-                        fontSize: "22px",
-                        fontWeight: 800,
+                        fontSize: "28px",
+                        fontWeight: 900,
                         color: "#111827",
                         margin: 0,
+                        letterSpacing: "-0.04em",
+                        lineHeight: 1.1,
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
+                        gap: "10px",
+                        fontFamily: "var(--font-heading)"
                     }}>
-                        Coming Soon Events 🎯
+                        Coming <span style={{
+                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            display: 'inline-block'
+                        }}>Soon</span> 🎯
                     </h2>
                     <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
                         Handpicked experiences and standout events you won't want to miss!

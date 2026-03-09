@@ -11,8 +11,21 @@ export default function Sponsors() {
         <section style={{ width: "100%", background: "#f8fafc", padding: "48px 0", overflow: "hidden" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px 0", textAlign: "center", marginBottom: "32px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.1em" }}>✦ Partners</span>
-                <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#111827", margin: "8px 0 0", fontFamily: "var(--font-heading)" }}>
-                    Our Official Sponsors
+                <h2 style={{
+                    fontSize: "28px",
+                    fontWeight: 900,
+                    color: "#111827",
+                    margin: "8px 0 0",
+                    fontFamily: "var(--font-heading)",
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1.1
+                }}>
+                    Our Official <span style={{
+                        background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        display: 'inline-block'
+                    }}>Sponsors</span>
                 </h2>
             </div>
 

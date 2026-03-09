@@ -18,7 +18,22 @@ export default function FeaturedOrganisers({ organisers = [] }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <span style={{ color: "#f59e0b", fontSize: "20px" }}>★</span>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#111827", margin: 0 }}>Our Event Partners</h2>
+            <h2 style={{
+              fontSize: "28px",
+              fontWeight: 900,
+              color: "#111827",
+              margin: 0,
+              letterSpacing: "-0.04em",
+              lineHeight: 1.1,
+              fontFamily: "var(--font-heading)"
+            }}>
+              Our Event <span style={{
+                background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                display: 'inline-block'
+              }}>Partners</span>
+            </h2>
           </div>
           <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>Discover events from our trusted organisers worldwide</p>
         </div>

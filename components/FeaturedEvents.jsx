@@ -23,14 +23,20 @@ export default function FeaturedEvents({ events }) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div>
                         <h2 style={{
-                            fontSize: "22px",
-                            fontWeight: 800,
+                            fontSize: "28px",
+                            fontWeight: 900,
                             color: "#111827",
                             margin: 0,
-                            letterSpacing: "-0.3px",
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
                             fontFamily: "var(--font-heading)"
                         }}>
-                            Featured Events
+                            Featured <span style={{
+                                background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                display: 'inline-block'
+                            }}>Events</span>
                         </h2>
                         <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
                             Explore top events near you

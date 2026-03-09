@@ -115,8 +115,24 @@ export default function TrendingEvents({ events = DEFAULT_TRENDING }) {
                 {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div>
-                        <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#111827", margin: 0, display: "flex", alignItems: "center", gap: "8px", fontFamily: "var(--font-heading)" }}>
-                            Trending Events <span>🔥</span>
+                        <h2 style={{
+                            fontSize: "28px",
+                            fontWeight: 900,
+                            color: "#111827",
+                            margin: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
+                            fontFamily: "var(--font-heading)"
+                        }}>
+                            Trending <span style={{
+                                background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                display: 'inline-block'
+                            }}>Events</span> 🔥
                         </h2>
                         <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
                             These are trending now!
