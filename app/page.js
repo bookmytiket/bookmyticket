@@ -167,7 +167,7 @@ export default function Home() {
         `}</style>
 
         {/* 0) Hero Banner (Carousel) — uses Admin Home Page > Hero Banner slides when set */}
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '100%', paddingTop: '44px' }}>
           <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
         </div>
 
@@ -237,7 +237,7 @@ export default function Home() {
             {homeSectionsOrder.map((section, idx) => {
               switch (section) {
                 case "Hero Banner":
-                  return <div key={idx} style={{ width: '100%' }}><VideoHeroBanner /></div>;
+                  return <div key={idx} style={{ width: '100%', paddingTop: '44px' }}><VideoHeroBanner /></div>;
                 case "Sub Navigation":
                   return <div key={idx} style={{ width: '100%' }}><RecentlyViewedEvents /></div>;
                 case "Featured Events":

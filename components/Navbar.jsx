@@ -34,54 +34,93 @@ const CITY_GRADIENTS = [
   "linear-gradient(135deg, #ff9a9e, #fecfef)",
 ];
 
+const CITY_ICONS = {
+  "Bengaluru": (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M10 54h44M14 54V24l8-4v34M22 54V10l10-4 10 4v44M42 54V30l8-4v28" stroke="currentColor" strokeWidth="2" fill="none" />
+      <rect x="25" y="14" width="2" height="2" /><rect x="25" y="22" width="2" height="2" /><rect x="25" y="30" width="2" height="2" />
+      <rect x="37" y="14" width="2" height="2" /><rect x="37" y="22" width="2" height="2" /><rect x="37" y="30" width="2" height="2" />
+    </svg>
+  ),
+  Mumbai: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M8 56h48M12 56V28l12-10 12 10v28M36 56V32l8-6 8 6v26" stroke="currentColor" strokeWidth="2" fill="none" />
+      <circle cx="24" cy="24" r="3" />
+    </svg>
+  ),
+  Delhi: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M12 56h40M16 56V20l16-8 16 8v36" stroke="currentColor" strokeWidth="2" fill="none" />
+      <path d="M24 56V40h16v16" stroke="currentColor" strokeWidth="2" fill="none" />
+    </svg>
+  ),
+  Dubai: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M32 56V4M20 56C20 30 32 4 32 4s12 26 12 52" stroke="currentColor" strokeWidth="2" fill="none" />
+      <path d="M22 48h20M24 40h16M26 32h12" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  ),
+  Singapore: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M10 56h44M20 56V20c0-6 12-6 12 0v36M32 56V30c0-6 12-6 12 0v26" stroke="currentColor" strokeWidth="2" fill="none" />
+      <circle cx="32" cy="12" r="2" />
+    </svg>
+  ),
+  Generic: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
+      <path d="M12 56h40M16 56V24l16-10 16 10v32" stroke="currentColor" strokeWidth="2" fill="none" />
+    </svg>
+  )
+};
+
 const POPULAR_CITIES_BY_COUNTRY = {
   "India": [
-    { name: "Bengaluru", icon: "🏙️" },
-    { name: "Chennai", icon: "🌊" },
-    { name: "Coimbatore", icon: "🏔️" },
-    { name: "Hyderabad", icon: "🕌" },
-    { name: "Kochi", icon: "⛵" },
-    { name: "Kolkata", icon: "🌉" },
-    { name: "New Delhi", icon: "🏛️" },
-    { name: "Mumbai", icon: "🌃" },
+    { name: "Bengaluru", iconId: "Bengaluru" },
+    { name: "Mumbai", iconId: "Mumbai" },
+    { name: "Delhi", iconId: "Delhi" },
+    { name: "Chennai", iconId: "Generic" },
+    { name: "Hyderabad", iconId: "Generic" },
+    { name: "Coimbatore", iconId: "Generic" },
+    { name: "Kochi", iconId: "Generic" },
+    { name: "Kolkata", iconId: "Generic" },
   ],
   "UAE": [
-    { name: "Dubai", icon: "🏗️" },
-    { name: "Abu Dhabi", icon: "🌴" },
-    { name: "Sharjah", icon: "🕌" },
-    { name: "Al Ain", icon: "🌿" },
-    { name: "Ajman", icon: "🏝️" },
+    { name: "Dubai", iconId: "Dubai" },
+    { name: "Abu Dhabi", iconId: "Generic" },
+    { name: "Sharjah", iconId: "Generic" },
+    { name: "Al Ain", iconId: "Generic" },
+    { name: "Ajman", iconId: "Generic" },
   ],
   "Singapore": [
-    { name: "Central", icon: "🌆" },
-    { name: "North", icon: "🌳" },
-    { name: "South", icon: "🏖️" },
-    { name: "East", icon: "✈️" },
-    { name: "West", icon: "🌉" },
+    { name: "Central", iconId: "Singapore" },
+    { name: "North", iconId: "Generic" },
+    { name: "South", iconId: "Generic" },
+    { name: "East", iconId: "Generic" },
+    { name: "West", iconId: "Generic" },
   ],
   "Malaysia": [
-    { name: "Kuala Lumpur", icon: "🗼" },
-    { name: "George Town", icon: "🎨" },
-    { name: "Ipoh", icon: "🏛️" },
-    { name: "Johor Bahru", icon: "🌁" },
+    { name: "Kuala Lumpur", iconId: "Generic" },
+    { name: "George Town", iconId: "Generic" },
+    { name: "Ipoh", iconId: "Generic" },
+    { name: "Johor Bahru", iconId: "Generic" },
   ],
   "Thailand": [
-    { name: "Bangkok", icon: "⛩️" },
-    { name: "Phuket Town", icon: "🏝️" },
-    { name: "Chiang Mai", icon: "🌸" },
-    { name: "Pattaya", icon: "🎪" },
+    { name: "Bangkok", iconId: "Generic" },
+    { name: "Phuket Town", iconId: "Generic" },
+    { name: "Chiang Mai", iconId: "Generic" },
+    { name: "Pattaya", iconId: "Generic" },
   ],
   "Germany": [
-    { name: "Berlin", icon: "🚪" },
-    { name: "Hamburg", icon: "⚓" },
-    { name: "Munich", icon: "🍺" },
-    { name: "Cologne", icon: "⛪" },
+    { name: "Berlin", iconId: "Generic" },
+    { name: "Hamburg", iconId: "Generic" },
+    { name: "Munich", iconId: "Generic" },
+    { name: "Cologne", iconId: "Generic" },
   ],
   "United States": [
-    { name: "New York City", icon: "🗽" },
-    { name: "Los Angeles", icon: "🎬" },
-    { name: "Chicago", icon: "🌬️" },
-    { name: "Houston", icon: "🚀" },
+    { name: "New York City", iconId: "Generic" },
+    { name: "Los Angeles", iconId: "Generic" },
+    { name: "Chicago", iconId: "Generic" },
+    { name: "Houston", iconId: "Generic" },
   ]
 };
 
@@ -284,6 +323,7 @@ export default function Navbar() {
               </button>
 
               <button className="nav-action-organiser hide-mobile" onClick={() => setOrgOpen(true)}>Become an Organiser</button>
+              <Link href="/advertise" className="nav-action-advertise hide-mobile">Elevate Your Brand</Link>
 
               {user ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "10px" }}>
@@ -458,107 +498,107 @@ export default function Navbar() {
 
               <h2 className="loc-title">Select Your Location to Continue</h2>
 
-              <div className="loc-search-group">
-                <div className="loc-search-box">
-                  <svg className="loc-icon-search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                  <input
-                    className="loc-input"
-                    placeholder="Seach city or location..."
-                    value={locSearch}
-                    onChange={(e) => {
-                      setLocSearch(e.target.value);
-                      if (e.target.value.length > 0) setShowOtherCities(true);
-                    }}
-                    autoFocus
-                  />
-                  <button className="loc-search-clear-mini" onClick={() => { setLocSearch(""); setShowOtherCities(false); }} style={{ opacity: locSearch ? 1 : 0 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                </div>
-                <div className="loc-gps-divider"></div>
+              <div className="loc-search-box">
+                <svg className="loc-icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input
+                  className="loc-input"
+                  placeholder="Search city or location..."
+                  value={locSearch}
+                  onChange={(e) => {
+                    setLocSearch(e.target.value);
+                    if (e.target.value.length > 0) setShowOtherCities(true);
+                  }}
+                  autoFocus
+                />
+                <button className="loc-search-clear-mini" onClick={() => { setLocSearch(""); setShowOtherCities(false); }} style={{ opacity: locSearch ? 1 : 0, transition: "opacity 0.2s" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="loc-gps-divider"></div>
+              <button
+                className={`loc-gps-target ${geoLoading ? 'animating' : ''}`}
+                onClick={handleGeoLocation}
+                disabled={geoLoading}
+                title="Detect my location"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <line x1="12" y1="1" x2="12" y2="5"></line>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="1" y1="12" x2="5" y2="12"></line>
+                  <line x1="19" y1="12" x2="23" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div className="loc-country-tabs">
+              {COUNTRIES.map((c) => (
                 <button
-                  className={`loc-gps-target ${geoLoading ? 'animating' : ''}`}
-                  onClick={handleGeoLocation}
-                  disabled={geoLoading}
-                  title="Use current location"
+                  key={c.label}
+                  className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
+                  onClick={() => setActiveCountry(c.label)}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <line x1="12" y1="1" x2="12" y2="5"></line>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="1" y1="12" x2="5" y2="12"></line>
-                    <line x1="19" y1="12" x2="23" y2="12"></line>
-                  </svg>
+                  <span className="loc-tab-flag">{c.flag}</span>
+                  <span className="loc-tab-label">{c.label}</span>
                 </button>
-              </div>
+              ))}
+            </div>
 
-              <div className="loc-country-tabs">
-                {COUNTRIES.map((c) => (
-                  <button
-                    key={c.label}
-                    className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
-                    onClick={() => setActiveCountry(c.label)}
-                  >
-                    <span className="loc-tab-flag">{c.flag}</span>
-                    <span className="loc-tab-label">{c.label}</span>
-                  </button>
-                ))}
-              </div>
+            <p className="loc-section-label">Popular Cities</p>
 
-              <p className="loc-section-label">Popular Cities</p>
-
-              <div className="loc-cities-grid">
-                {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.name.toLowerCase().includes(locSearch.toLowerCase())).map((city) => (
-                  <button
-                    key={city.name}
-                    className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
-                    onClick={() => { updateCity(city.name); setLocOpen(false); }}
-                  >
-                    <div className="loc-city-icon-wrap" style={{ background: CITY_GRADIENTS[(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).indexOf(city) % CITY_GRADIENTS.length] }}>
-                      <span className="loc-city-emoji">{city.icon}</span>
-                    </div>
-                    <span className="loc-city-name">{city.name}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="loc-others-wrapper">
-                <button className="loc-others-btn" onClick={() => setShowOtherCities(!showOtherCities)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  <span>{selectedCity && !(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).find(c => c.name === selectedCity) ? selectedCity : "Events in other cities"}</span>
-                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-                </button>
-
-                {showOtherCities && (
-                  <div className="loc-select-dropdown">
-                    <div className="loc-dropdown-inner">
-                      {(ALL_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.toLowerCase().includes(locSearch.toLowerCase())).map(city => (
-                        <div
-                          key={city}
-                          className={`loc-dropdown-item ${selectedCity === city ? 'selected' : ''}`}
-                          onClick={() => { updateCity(city); setLocOpen(false); setShowOtherCities(false); }}
-                        >
-                          {city}
-                          {selectedCity === city && <span className="loc-check">✓</span>}
-                        </div>
-                      ))}
-                    </div>
+            <div className="loc-cities-grid">
+              {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.name.toLowerCase().includes(locSearch.toLowerCase())).map((city) => (
+                <button
+                  key={city.name}
+                  className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
+                  onClick={() => { updateCity(city.name); setLocOpen(false); }}
+                >
+                  <div className="loc-city-icon-wrap" style={{ border: selectedCity === city.name ? "2.5px solid #6366f1" : "1.5px solid #e2e8f0" }}>
+                    <span className="loc-city-svg">{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
                   </div>
-                )}
-              </div>
+                  <span className="loc-city-name" style={{ color: selectedCity === city.name ? "#6366f1" : "#475569", fontWeight: selectedCity === city.name ? "700" : "600" }}>{city.name}</span>
+                </button>
+              ))}
+            </div>
 
-              <div className="loc-footer-graphic">
-                <div className="loc-skyline">
-                  <svg viewBox="0 0 800 200" className="skyline-svg">
-                    <path d="M0,200 L800,200 L800,100 L760,100 L760,120 L720,120 L720,80 L680,80 L680,140 L640,140 L640,110 L600,110 L600,130 L560,130 L560,70 L520,70 L520,150 L480,150 L480,100 L440,100 L440,130 L400,130 L400,80 L360,80 L360,140 L320,140 L320,110 L280,110 L280,130 L240,130 L240,70 L200,70 L200,150 L160,150 L160,100 L120,100 L120,130 L80,130 L80,90 L40,90 L40,140 L0,140 Z" fill="#eeeeee" />
-                  </svg>
-                  <div className="loc-master-pin">
-                    <div className="pin-pulse"></div>
-                    <div className="pin-main">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="#fff" strokeWidth="1">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" fill="#fff" />
-                      </svg>
+            <div className="loc-others-wrapper">
+              <button className="loc-others-btn" onClick={() => setShowOtherCities(!showOtherCities)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                <span>{selectedCity && !(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).find(c => c.name === selectedCity) ? selectedCity : "Events in other cities"}</span>
+                <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+
+              {showOtherCities && (
+                <div className="loc-select-dropdown">
+                  <div className="loc-dropdown-inner">
+                    {(ALL_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.toLowerCase().includes(locSearch.toLowerCase())).map(city => (
+                      <div
+                        key={city}
+                        className={`loc-dropdown-item ${selectedCity === city ? 'selected' : ''}`}
+                        onClick={() => { updateCity(city); setLocOpen(false); setShowOtherCities(false); }}
+                      >
+                        {city}
+                        {selectedCity === city && <span className="loc-check">✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="loc-footer-graphic">
+              <div className="loc-skyline">
+                <svg viewBox="0 0 800 200" className="skyline-svg">
+                  <path d="M0,200 L800,200 L800,100 L760,100 L760,120 L720,120 L720,80 L680,80 L680,140 L640,140 L640,110 L600,110 L600,130 L560,130 L560,70 L520,70 L520,150 L480,150 L480,100 L440,100 L440,130 L400,130 L400,80 L360,80 L360,140 L320,140 L320,110 L280,110 L280,130 L240,130 L240,70 L200,70 L200,150 L160,150 L160,100 L120,100 L120,130 L80,130 L80,90 L40,90 L40,140 L0,140 Z" fill="#eeeeee" />
+                </svg>
+                <div className="loc-master-pin">
+                  <div className="pin-pulse"></div>
+                  <div className="pin-main">
+                    <div className="ticket9-pin-logo">
+                      <div className="t9-pin-outer">
+                        <span>9</span>
+                      </div>
+                      <div className="t9-pin-tail"></div>
                     </div>
                   </div>
                 </div>

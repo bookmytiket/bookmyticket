@@ -18,7 +18,8 @@ const THEME = {
     sidebarBorder: "#e2e8f0",
     activeItem: "#f1f5f9",
     activeText: "#000000",
-    accent: "#FCE15D",
+    accent: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
+    accentGlow: "rgba(192, 38, 211, 0.3)",
 };
 
 export default function ProfilePage() {
@@ -135,7 +136,7 @@ export default function ProfilePage() {
                                     {bookingFilter === "cancelled" ? "You don't have any cancelled ticket requests." : "Browse our events to start your next adventure!"}
                                 </p>
                                 {bookingFilter === "all" && (
-                                    <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#000", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: "0 4px 12px rgba(252,225,93,0.3)" }}>
+                                    <Link href="/" style={{ padding: "10px 24px", background: t.accent, color: "#fff", borderRadius: "50px", textDecoration: "none", fontWeight: "700", fontSize: "14px", display: "inline-block", boxShadow: `0 4px 12px ${t.accentGlow}` }}>
                                         Explore Events
                                     </Link>
                                 )}
@@ -162,7 +163,7 @@ export default function ProfilePage() {
                                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Confirm New Password</label>
                                 <input type="password" placeholder="Confirm new password" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, outline: "none", fontSize: "14px" }} />
                             </div>
-                            <button style={{ marginTop: "8px", padding: "14px", borderRadius: "10px", border: "none", background: t.accent, color: "#000", fontWeight: "700", cursor: "pointer" }}>
+                            <button style={{ marginTop: "8px", padding: "14px", borderRadius: "10px", border: "none", background: t.accent, color: "#fff", fontWeight: "700", cursor: "pointer", boxShadow: `0 4px 12px ${t.accentGlow}` }}>
                                 Update Password
                             </button>
                         </div>
@@ -182,7 +183,7 @@ export default function ProfilePage() {
                     <ArrowLeft size={16} /> Back to Home
                 </Link>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: t.accent, color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "14px" }}>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: t.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "14px" }}>
                         {user.name?.[0]?.toUpperCase() || "U"}
                     </div>
                 </div>
@@ -193,7 +194,7 @@ export default function ProfilePage() {
                 {/* Profile Sidebar */}
                 <aside style={{ width: "260px", backgroundColor: t.sidebarBg, borderRadius: "16px", border: `1px solid ${t.sidebarBorder}`, overflow: "hidden", flexShrink: 0 }}>
                     <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", borderBottom: `1px solid ${t.sidebarBorder}` }}>
-                        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: t.accent, color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "24px", marginBottom: "12px" }}>
+                        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: t.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "24px", marginBottom: "12px" }}>
                             {user.name?.[0]?.toUpperCase() || "U"}
                         </div>
                         <h2 style={{ fontSize: "16px", fontWeight: "700", color: t.textMain, margin: "0 0 4px" }}>{user.name || "Public User"}</h2>

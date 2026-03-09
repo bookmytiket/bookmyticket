@@ -5,12 +5,14 @@ export default function LeftBanner({ slides }) {
     const [currentSlide, setCurrentSlide] = useState(0);
 
     useEffect(() => {
-        if (!slides || slides.length <= 1) return;
+        const slideCount = slides?.length || 0;
+        if (slideCount <= 1) return;
+
         const timer = setInterval(() => {
-            setCurrentSlide(p => (p + 1) % slides.length);
-        }, 4000);
+            setCurrentSlide(p => (p + 1) % slideCount);
+        }, 5000);
         return () => clearInterval(timer);
-    }, [slides]);
+    }, [slides?.length]);
 
     if (!slides || slides.length === 0) return null;
 

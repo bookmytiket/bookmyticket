@@ -294,4 +294,27 @@ export default defineSchema({
         altText: v.string(),
         createdAt: v.number(),
     }),
+
+    bannerPackages: defineTable({
+        name: v.string(), // "Weekly", "Monthly", "Yearly"
+        price: v.number(),
+        durationDays: v.number(),
+        type: v.string(), // e.g., "hero"
+    }),
+
+    heroBanners: defineTable({
+        userId: v.optional(v.string()), // Optional if admin uploads directly
+        packageId: v.optional(v.id("bannerPackages")), // Optional if admin uploads
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        email: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        imageStorageId: v.optional(v.string()), // For temporary upload placeholder or reference
+        imageUrl: v.optional(v.string()), // Set upon approval/upload
+        link: v.optional(v.string()),
+        startDate: v.optional(v.number()),
+        endDate: v.optional(v.number()),
+        status: v.string(), // "pending", "approved", "expired"
+        createdAt: v.number(),
+    }).index("by_status", ["status"]),
 });

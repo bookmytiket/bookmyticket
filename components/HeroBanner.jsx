@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 const FEATURES = [
     { num: "01", title: "Create Event Page", sub: "Do-it-yourself approach" },
@@ -62,26 +64,24 @@ function PromoSlide() {
     );
 }
 
-/* ── Helper: thumbnail preview for peek slides ── */
-function SlideThumbnail({ slide }) {
-    if (slide.custom) {
-        return (
-            <div style={{
-                width: "100%", height: "100%",
-                background: "linear-gradient(120deg,#0b0727,#2d0a6b)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-                <span style={{ color: "#e2a0ff", fontWeight: 900, fontSize: "14px", letterSpacing: "2px", textTransform: "uppercase" }}>🎟 Events</span>
-            </div>
-        );
-    }
-    return <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
-}
-
 export default function HeroBanner({ slides: propSlides }) {
-    const slides = Array.isArray(propSlides) && propSlides.length > 0
-        ? propSlides.map(s => ({ image: s.img || s.image, alt: s.alt || s.title || "Slide", custom: s.custom }))
-        : DEFAULT_BANNER_SLIDES;
+    const activeAds = useQuery(api.banners.getActiveBanners) || [];
+
+    const slides = useMemo(() => {
+        const adSlides = activeAds.map(ad => ({
+            image: ad.imageUrl,
+            alt: "Advertisement",
+            url: ad.link,
+            isAd: true
+        }));
+
+        const baseSlides = Array.isArray(propSlides) && propSlides.length > 0
+            ? propSlides.map(s => ({ image: s.img || s.image, alt: s.alt || s.title || "Slide", url: s.url }))
+            : DEFAULT_BANNER_SLIDES;
+
+        return [{ custom: true }, ...adSlides, ...baseSlides];
+    }, [activeAds, propSlides]);
+
     const [current, setCurrent] = useState(0);
     const [sliding, setSliding] = useState(false);
     const [dir, setDir] = useState(1);
@@ -96,8 +96,8 @@ export default function HeroBanner({ slides: propSlides }) {
             setSliding(true);
             setTimeout(() => {
                 setCurrent((idx + total) % total);
-                setTimeout(() => setSliding(false), 50); // slight debounce
-            }, 400); // Wait for exit animation
+                setTimeout(() => setSliding(false), 50);
+            }, 400);
         },
         [sliding, total]
     );
@@ -113,8 +113,6 @@ export default function HeroBanner({ slides: propSlides }) {
 
     if (total === 0) return null;
 
-    const prevIdx = (current - 1 + total) % total;
-    const nextIdx = (current + 1) % total;
     const slide = slides[current];
 
     return (
@@ -124,28 +122,28 @@ export default function HeroBanner({ slides: propSlides }) {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                {/* Left peek slide */}
-                <div className="bms-slide-peek bms-peek-left" onClick={prev}>
-                    <SlideThumbnail slide={slides[prevIdx]} />
-                    <div className="bms-peek-dim" />
-                </div>
-
-                {/* Main active slide */}
-                <div className={`bms-slide-main ${sliding ? (dir === 1 ? "slide-exit-left" : "slide-exit-right") : "slide-enter"}`}>
+                {/* Main full-width active slide */}
+                <div className={`bms-slide-main-full ${sliding ? (dir === 1 ? "slide-exit-left" : "slide-exit-right") : "slide-enter"}`}>
                     {slide.custom ? (
                         <PromoSlide />
                     ) : (
-                        <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "20px" }} />
+                        <div
+                            onClick={() => slide.url && window.open(slide.url, "_blank")}
+                            style={{ width: "100%", height: "100%", cursor: slide.url ? "pointer" : "default", position: "relative" }}
+                        >
+                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
+                            <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            <div style={{ position: "absolute", bottom: "10%", left: "40px", right: "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
+                                <h2 style={{ fontSize: "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.4)" }}>
+                                    {slide.title || "Live Events & Experiences"}
+                                </h2>
+                                <p style={{ fontSize: "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.9)", fontWeight: 500, margin: 0 }}>
+                                    {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
+                                </p>
+                            </div>
+                        </div>
                     )}
                 </div>
-
-                {/* Right peek slide */}
-                <div className="bms-slide-peek bms-peek-right" onClick={next}>
-                    <SlideThumbnail slide={slides[nextIdx]} />
-                    <div className="bms-peek-dim" />
-                </div>
-
-
             </div>
         </div>
     );

@@ -175,6 +175,14 @@ function AdminHomePage() {
     const [memoryForm, setMemoryForm] = useState({ imageUrl: "", altText: "" });
     const [isUploading, setIsUploading] = useState(false);
 
+    // Banner Ads management
+    const bannerRequests = useQuery(api.banners.getPendingRequests) || [];
+    const allBanners = useQuery(api.banners.getAllBanners) || [];
+    const approveBannerMutation = useMutation(api.banners.approveBanner);
+    const deleteBannerMutation = useMutation(api.banners.deleteBanner);
+    const [approvingBanner, setApprovingBanner] = useState(null);
+    const [bannerImage, setBannerImage] = useState("");
+
     const handleUploadMemory = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -846,6 +854,9 @@ function AdminHomePage() {
                     <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
                         <LayoutDashboard size={20} /> Dashboard
                     </button>
+                    <button onClick={() => setActiveTab("banner_ads")} className={`sidebar-item ${activeTab === "banner_ads" ? "active" : ""}`}>
+                        <Megaphone size={20} /> Banner Ads {bannerRequests.length > 0 && <span className="badge-orange">{bannerRequests.length}</span>}
+                    </button>
 
                     {/* Operations */}
                     <p className="section-header">Operations</p>
@@ -1130,6 +1141,148 @@ function AdminHomePage() {
                             </div>
                         );
                     })()}
+
+                    {activeTab === "banner_ads" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                            {/* Pending Requests */}
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Pending Ad Requests</h3>
+                                {bannerRequests.length === 0 ? (
+                                    <p style={{ color: t.textSub, fontSize: "14px" }}>No pending requests.</p>
+                                ) : (
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>User</th>
+                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Package</th>
+                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Target URL</th>
+                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Date</th>
+                                                    <th style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {bannerRequests.map((req) => (
+                                                    <tr key={req._id} style={{ borderBottom: `1px solid ${t.sidebarBorder}` }}>
+                                                        <td style={{ padding: "12px", fontSize: "14px", fontWeight: 600 }}>{req.userId}</td>
+                                                        <td style={{ padding: "12px", fontSize: "14px" }}>
+                                                            {/* We'd normally fetch package details, but for now just show ID or constant */}
+                                                            Hero Banner
+                                                        </td>
+                                                        <td style={{ padding: "12px", fontSize: "13px", color: "#3b82f6" }}>
+                                                            <a href={req.link} target="_blank" rel="noreferrer">{req.link || "N/A"}</a>
+                                                        </td>
+                                                        <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>
+                                                            {new Date(req.createdAt).toLocaleDateString()}
+                                                        </td>
+                                                        <td style={{ padding: "12px" }}>
+                                                            <button
+                                                                onClick={() => setApprovingBanner(req)}
+                                                                style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "#10b981", color: "#fff", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                                                            >
+                                                                Approve / Upload
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Active Banners */}
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "20px" }}>Active / All Banners</h3>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                                    {allBanners.filter(b => b.status !== "pending").map((banner) => (
+                                        <div key={banner._id} style={{ borderRadius: "12px", border: `1px solid ${t.border}`, overflow: "hidden", position: "relative" }}>
+                                            <img src={banner.imageUrl} alt="Banner" style={{ width: "100%", height: "140px", objectFit: "cover" }} />
+                                            <div style={{ padding: "12px" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                                    <span style={{ fontSize: "12px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", backgroundColor: banner.endDate > Date.now() ? "#dcfce7" : "#fee2e2", color: banner.endDate > Date.now() ? "#166534" : "#991b1b" }}>
+                                                        {banner.endDate > Date.now() ? "Active" : "Expired"}
+                                                    </span>
+                                                    <button onClick={() => deleteBannerMutation({ id: banner._id })} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                </div>
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Starts: {new Date(banner.startDate).toLocaleDateString()}</p>
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Ends: {new Date(banner.endDate).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Approval Modal */}
+                    {approvingBanner && (
+                        <div className="modal-backdrop" onClick={() => setApprovingBanner(null)}>
+                            <div className="org-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "500px", padding: "32px" }}>
+                                <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "16px" }}>Approve Banner</h2>
+                                <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>
+                                    Upload the banner image and confirm the duration for <strong>{approvingBanner.userId}</strong>.
+                                </p>
+
+                                <div style={{ marginBottom: "20px" }}>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Banner Image (844x322 recommended)</label>
+                                    <div style={{ border: `2px dashed ${t.border}`, borderRadius: "12px", padding: "20px", textAlign: "center", cursor: "pointer" }}>
+                                        <input
+                                            type="file"
+                                            id="banner-upload"
+                                            hidden
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                const formData = new FormData();
+                                                formData.append("file", file);
+                                                try {
+                                                    const res = await fetch("/api/memories/upload", { method: "POST", body: formData });
+                                                    const data = await res.json();
+                                                    if (data.success) setBannerImage(data.imageUrl);
+                                                } catch (err) { alert("Upload failed"); }
+                                            }}
+                                        />
+                                        <label htmlFor="banner-upload" style={{ cursor: "pointer" }}>
+                                            {bannerImage ? (
+                                                <img src={bannerImage} alt="Preview" style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "8px" }} />
+                                            ) : (
+                                                <div style={{ color: t.textSub }}>
+                                                    <Upload size={32} style={{ marginBottom: "8px" }} />
+                                                    <p style={{ margin: 0 }}>Click to upload banner</p>
+                                                </div>
+                                            )}
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button
+                                        onClick={async () => {
+                                            if (!bannerImage) { alert("Please upload an image"); return; }
+                                            await approveBannerMutation({
+                                                id: approvingBanner._id,
+                                                imageUrl: bannerImage,
+                                                durationDays: 7, // Default to 7 if package info isn't reactive here
+                                                link: approvingBanner.link
+                                            });
+                                            setApprovingBanner(null);
+                                            setBannerImage("");
+                                        }}
+                                        style={{ flex: 1, padding: "12px", borderRadius: "8px", backgroundColor: "#1e293b", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
+                                    >
+                                        Approve (Weekly)
+                                    </button>
+                                    <button
+                                        onClick={() => setApprovingBanner(null)}
+                                        style={{ padding: "12px 24px", borderRadius: "8px", border: `1px solid ${t.border}`, background: "none", fontWeight: 700, cursor: "pointer" }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {activeTab === "all_events" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>

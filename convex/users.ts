@@ -32,7 +32,7 @@ export const create = mutation({
             .withIndex("by_email", (q) => q.eq("email", args.email))
             .unique();
         if (existing) {
-            throw new Error("User already exists");
+            throw new Error("ACCOUNT_EXISTS");
         }
         return await ctx.db.insert("users", args);
     },

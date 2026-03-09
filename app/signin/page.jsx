@@ -8,7 +8,7 @@ import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { hashPassword } from "@/app/utils/hashPassword";
 
-const BANNER_SLIDES = [
+const FALLBACK_BANNER_SLIDES = [
     { img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", sub: "Book tickets for concerts, sports & more" },
     { img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1080&h=1080&fit=crop", title: "Sports & Marathons", sub: "Events & activities near you" },
     { img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1080&h=1080&fit=crop", title: "Comedy & Live Shows", sub: "Laugh out loud experiences" }
@@ -18,6 +18,21 @@ export default function SignInPage() {
     const { login } = useAuth();
     const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
     const convex = useConvex();
+
+    // Fetch Active Banners for the left panel
+    const activeBanners = useQuery(api.banners.getActiveBanners);
+    const [displaySlides, setDisplaySlides] = useState(FALLBACK_BANNER_SLIDES);
+
+    useEffect(() => {
+        if (activeBanners && activeBanners.length > 0) {
+            const mapped = activeBanners.map(b => ({
+                img: b.imageUrl,
+                title: "",
+                sub: ""
+            }));
+            setDisplaySlides(mapped);
+        }
+    }, [activeBanners]);
 
     // Sign In
     const [identifier, setIdentifier] = useState("");
@@ -107,7 +122,14 @@ export default function SignInPage() {
             });
             setSignupSuccess(true);
         } catch (err) {
-            setSignupError(err.message || "An account with this email already exists.");
+            const msg = err.message || "";
+            if (msg.includes("ACCOUNT_EXISTS")) {
+                setSignupError("An account with this email already exists. Please Sign In instead.");
+            } else {
+                // Strip raw Convex error prefix if present
+                const cleanMsg = msg.replace(/^\[CONVEX M\(.*\)\] \[Request ID: .*\] Server Error Uncaught Error: /, "");
+                setSignupError(cleanMsg || "An error occurred during signup. Please try again.");
+            }
         }
     };
 
@@ -128,9 +150,9 @@ export default function SignInPage() {
 
     const inp = { width: "100%", padding: "13px 16px", borderRadius: "10px", border: "1.5px solid #d1d5db", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "18px", transition: "border-color .2s" };
     const lbl = { display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "6px" };
-    const fr = e => { e.target.style.borderColor = "#FCE15D"; };
+    const fr = e => { e.target.style.borderColor = "#c026d3"; };
     const bg = e => { e.target.style.borderColor = "#d1d5db"; };
-    const submitBtn = { width: "100%", padding: "14px", borderRadius: "50px", border: "none", background: "#FCE15D", color: "#000", fontWeight: 800, fontSize: "15px", cursor: "pointer", boxShadow: "0 6px 20px rgba(252,225,93,0.3)", marginBottom: "20px", marginTop: "4px" };
+    const submitBtn = { width: "100%", padding: "14px", borderRadius: "50px", border: "none", background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)", color: "#fff", fontWeight: 800, fontSize: "15px", cursor: "pointer", boxShadow: "0 6px 20px rgba(192,38,211,0.3)", marginBottom: "20px", marginTop: "4px" };
     const linkBtn = { background: "none", border: "none", color: "#0f172a", fontWeight: 700, cursor: "pointer", fontSize: "14px", textDecoration: "underline", padding: 0 };
 
     return (
@@ -138,7 +160,7 @@ export default function SignInPage() {
 
             {/* ══ LEFT PANEL — Hero Banner ══ */}
             <div style={{ flex: 1.1, position: "relative", overflow: "hidden" }} className="hide-on-mobile">
-                <LeftBanner slides={BANNER_SLIDES} />
+                <LeftBanner slides={displaySlides} />
             </div>
 
             {/* ══ RIGHT PANEL — Auth Form ══ */}

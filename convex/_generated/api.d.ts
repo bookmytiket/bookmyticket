@@ -11,6 +11,7 @@
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
+import type * as banners from "../banners.js";
 import type * as bookings from "../bookings.js";
 import type * as emailSettings from "../emailSettings.js";
 import type * as emailTemplates from "../emailTemplates.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
   auth: typeof auth;
+  banners: typeof banners;
   bookings: typeof bookings;
   emailSettings: typeof emailSettings;
   emailTemplates: typeof emailTemplates;

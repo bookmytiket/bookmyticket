@@ -53,7 +53,6 @@ export default function ExternalAdBanner({ ads = [] }) {
                 </div>
                 {/* Right: content panel — same style as Spotlight (white bg, title, CTA) */}
                 <div style={{ padding: "28px 32px", display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: "#fff", borderRadius: `0 ${BANNER_BORDER_RADIUS}px ${BANNER_BORDER_RADIUS}px 0` }}>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: "#9ca3af", letterSpacing: "0.5px", margin: "0 0 12px", textTransform: "uppercase" }}>Sponsored</p>
                   <h3 style={{ fontSize: "22px", fontWeight: 700, color: "#111827", margin: "0 0 24px", lineHeight: 1.25 }}>{ad.title || ad.alt}</h3>
                   {ad.link ? (
                     <Link
