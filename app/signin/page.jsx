@@ -2,16 +2,16 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
-import LeftBanner from "@/components/LeftBanner";
+import HeroBanner from "@/components/HeroBanner";
 import { useAuth } from "@/components/AuthContext";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { hashPassword } from "@/app/utils/hashPassword";
 
 const FALLBACK_BANNER_SLIDES = [
-    { img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", sub: "Book tickets for concerts, sports & more" },
-    { img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1080&h=1080&fit=crop", title: "Sports & Marathons", sub: "Events & activities near you" },
-    { img: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1080&h=1080&fit=crop", title: "Comedy & Live Shows", sub: "Laugh out loud experiences" }
+    { image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", subtitle: "Book tickets for concerts, sports & more" },
+    { image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1080&h=1080&fit=crop", title: "Sports & Marathons", subtitle: "Events & activities near you" },
+    { image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1080&h=1080&fit=crop", title: "Comedy & Live Shows", subtitle: "Laugh out loud experiences" }
 ];
 
 export default function SignInPage() {
@@ -26,9 +26,9 @@ export default function SignInPage() {
     useEffect(() => {
         if (activeBanners && activeBanners.length > 0) {
             const mapped = activeBanners.map(b => ({
-                img: b.imageUrl,
+                image: b.imageUrl,
                 title: "",
-                sub: ""
+                subtitle: ""
             }));
             setDisplaySlides(mapped);
         }
@@ -159,12 +159,16 @@ export default function SignInPage() {
         <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter','Roboto',sans-serif", background: "#f8fafc" }}>
 
             {/* ══ LEFT PANEL — Hero Banner ══ */}
-            <div style={{ flex: 1.1, position: "relative", overflow: "hidden" }} className="hide-on-mobile">
-                <LeftBanner slides={displaySlides} />
+            <div style={{ flex: 1.1, position: "relative", overflow: "hidden", padding: "24px" }} className="hide-on-mobile signin-left-banner">
+                <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "20px", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+                        <HeroBanner slides={displaySlides} />
+                    </div>
+                </div>
             </div>
 
             {/* ══ RIGHT PANEL — Auth Form ══ */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px 40px", position: "relative" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", position: "relative" }}>
 
                 <div style={{ width: "100%", maxWidth: "420px" }}>
 

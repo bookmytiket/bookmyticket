@@ -72,11 +72,26 @@ body {
 .bms-banner-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 4500 / 1400;
-  max-height: 480px;
+  aspect-ratio: 4500 / 1200;
+  max-height: 340px;
   border-radius: 20px;
   overflow: hidden;
   user-select: none;
+}
+
+/* Override for Signin Page Left Panel */
+.signin-left-banner .bms-banner-wrap {
+  height: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+.signin-left-banner .bms-banner-stage {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 20px;
 }
 
 /* Main center slide - now full width */
