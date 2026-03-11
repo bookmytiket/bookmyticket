@@ -123,30 +123,35 @@ function AdvertiseContent() {
             <Navbar />
 
             <main style={{ maxWidth: '1200px', margin: '140px auto 100px', padding: '0 24px' }}>
-                <ScrollStack useWindowScroll={true}>
-                    <ScrollStackItem>
-                        {/* Header Section */}
-                        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                            <h1 style={{
-                                fontFamily: 'var(--font-heading)',
-                                fontSize: '56px',
-                                fontWeight: 900,
-                                color: '#111',
-                                marginBottom: '20px',
-                                letterSpacing: '-0.04em',
-                                lineHeight: 1
-                            }}>
-                                Elevate Your <span style={{
-                                    background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent'
-                                }}>Brand</span>
-                            </h1>
-                            <p style={{ fontSize: '20px', color: '#666', maxWidth: '700px', margin: '0 auto', fontWeight: 500 }}>
-                                Get featured on our premium Hero Banner and reach thousands of daily visitors.
-                            </p>
-                        </div>
-                    </ScrollStackItem>
+                {/* Header Section - Moved out of ScrollStack for cleaner appearance */}
+                <div style={{ textAlign: 'center', marginBottom: '80px', animation: 'fadeInUp 0.8s ease-out forwards' }}>
+                    <h1 style={{
+                        fontFamily: 'var(--font-heading)',
+                        fontSize: '64px',
+                        fontWeight: 900,
+                        color: '#111',
+                        marginBottom: '20px',
+                        letterSpacing: '-0.04em',
+                        lineHeight: 1.1
+                    }}>
+                        Elevate Your <span style={{
+                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                        }}>Brand</span>
+                    </h1>
+                    <p style={{ fontSize: '20px', color: '#666', maxWidth: '700px', margin: '0 auto', fontWeight: 500, lineHeight: 1.6 }}>
+                        Get featured on our premium Hero Banner and reach thousands of daily visitors.
+                    </p>
+                    <style jsx>{`
+                        @keyframes fadeInUp {
+                            from { opacity: 0; transform: translateY(30px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                    `}</style>
+                </div>
+
+                <ScrollStack useWindowScroll={true} itemScale={0.05} blurAmount={2} itemStackDistance={30}>
 
                     {success || isSuccessFromURL ? (
                         <ScrollStackItem>

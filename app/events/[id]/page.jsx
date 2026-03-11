@@ -21,6 +21,8 @@ import {
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from '@/components/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const DEFAULT_FEATURES = [
@@ -33,6 +35,8 @@ const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed
 
 export default function EventDetailPage({ params }) {
     const { id } = React.use(params);
+    const { user } = useAuth();
+    const router = useRouter();
     const convexEvents = useQuery(api.events.getActiveEvents) || [];
     const [storageLoaded, setStorageLoaded] = useState(false);
 
@@ -268,8 +272,17 @@ export default function EventDetailPage({ params }) {
                 <div style={{ width: '320px' }}>
                     <div style={{ position: 'sticky', top: '130px' }}>
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
-                            <Link href={`/events/${id}/book`} style={{ display: 'block', textDecoration: 'none' }}>
-                                <button type="button" style={{
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const bookUrl = `/events/${id}/book`;
+                                    if (!user) {
+                                        router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                    } else {
+                                        router.push(bookUrl);
+                                    }
+                                }}
+                                style={{
                                     width: '100%',
                                     padding: '16px',
                                     background: '#F43F5E',
@@ -280,10 +293,10 @@ export default function EventDetailPage({ params }) {
                                     fontWeight: 800,
                                     cursor: 'pointer',
                                     boxShadow: '0 4px 6px -1px rgba(244, 63, 94, 0.3)'
-                                }}>
-                                    Book Now
-                                </button>
-                            </Link>
+                                }}
+                            >
+                                Book Now
+                            </button>
                         </div>
 
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>

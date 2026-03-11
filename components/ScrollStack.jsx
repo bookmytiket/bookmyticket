@@ -78,16 +78,26 @@ const ScrollStack = ({
             if (!card) return;
 
             const cardStaticTop = cardOffsetsRef.current[i] || 0;
+            const cardHeight = card.offsetHeight;
             if (!cardStaticTop) return;
 
-            const triggerStart = cardStaticTop - stackPositionPx - itemStackDistance * i;
-            const triggerEnd = cardStaticTop - scaleEndPositionPx;
-            const pinStart = cardStaticTop - stackPositionPx - itemStackDistance * i;
-            const pinEnd = (endElementTop || (cardStaticTop + 1000)) - containerHeight / 2;
+            // Header/Subnav allowance (can be passed as prop later)
+            const topMargin = stackPositionPx + (itemStackDistance * i);
 
-            const scaleProgress = calculateProgress(scrollTop, triggerStart, triggerEnd);
+            // Adjust trigger for smoother entry
+            const triggerStart = cardStaticTop - containerHeight;
+            const triggerEnd = cardStaticTop - topMargin;
+
+            // Pinning logic
+            const pinStart = cardStaticTop - topMargin;
+            let pinEnd = (endElementTop || (cardStaticTop + 2000)) - containerHeight / 1.5;
+
+            // Progress for scaling/blur
+            const scaleProgress = calculateProgress(scrollTop, pinStart, pinStart + containerHeight);
+
             const targetScale = baseScale + i * itemScale;
-            const scale = 1 - scaleProgress * (1 - targetScale);
+            // Use a smoother power function for scaling
+            const scale = 1 - Math.pow(scaleProgress, 1.5) * (1 - targetScale);
             const rotation = rotationAmount ? i * rotationAmount * scaleProgress : 0;
 
             let blur = 0;
@@ -103,7 +113,7 @@ const ScrollStack = ({
 
                 if (i < topCardIndex) {
                     const depthInStack = topCardIndex - i;
-                    blur = Math.max(0, depthInStack * blurAmount);
+                    blur = Math.min(8, depthInStack * blurAmount);
                 }
             }
 
@@ -111,10 +121,14 @@ const ScrollStack = ({
             const isPinned = scrollTop >= pinStart && scrollTop <= pinEnd;
 
             if (isPinned) {
-                translateY = scrollTop - cardStaticTop + stackPositionPx + itemStackDistance * i;
+                translateY = scrollTop - cardStaticTop + topMargin;
             } else if (scrollTop > pinEnd) {
-                translateY = pinEnd - cardStaticTop + stackPositionPx + itemStackDistance * i;
+                translateY = pinEnd - cardStaticTop + topMargin;
             }
+
+            // Accessibility Fix: If the card is too tall to fit in the remaining viewport space,
+            // we should allow it to scroll away earlier or adjust translateY so the bottom isn't cut.
+            // However, a simpler UX fix is to ensure the stack-end element is far enough.
 
             const transform = `translate3d(0, ${translateY}px, 0) scale(${scale}) rotate(${rotation}deg)`;
             const filter = blur > 0 ? `blur(${blur}px)` : '';
@@ -122,6 +136,7 @@ const ScrollStack = ({
             card.style.transform = transform;
             card.style.filter = filter;
             card.style.zIndex = i;
+            card.style.opacity = scrollTop > pinEnd + 200 ? Math.max(0, 1 - (scrollTop - pinEnd - 200) / 400) : 1;
 
             if (i === cardsRef.current.length - 1) {
                 const isInView = scrollTop >= pinStart && scrollTop <= pinEnd;

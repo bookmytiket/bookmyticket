@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import HeroBanner from "@/components/HeroBanner";
 import { useAuth } from "@/components/AuthContext";
@@ -16,6 +17,9 @@ const FALLBACK_BANNER_SLIDES = [
 
 export default function SignInPage() {
     const { login } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirectPath = searchParams.get("redirect");
     const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
     const convex = useConvex();
 
@@ -78,7 +82,7 @@ export default function SignInPage() {
 
         // 1. Admin login (no hashing for hardcoded admin)
         if (id === "bookmyticket-admin") {
-            const ok = login(identifier.trim(), password, "admin");
+            const ok = await login(identifier.trim(), password, "admin", null, redirectPath);
             if (!ok) setLoginError("Invalid admin credentials.");
             return;
         }
@@ -88,7 +92,7 @@ export default function SignInPage() {
             const hashed = await hashPassword(password);
             const user = await convex.query(api.users.getByEmail, { email: id });
             if (user && user.password === hashed) {
-                login(identifier, password, "user", user);
+                await login(identifier, password, "user", user, redirectPath);
                 return;
             } else if (user && user.password !== hashed) {
                 setLoginError("Invalid email or password. Please try again.");
@@ -99,7 +103,7 @@ export default function SignInPage() {
         }
 
         // 3. Fallback to Organiser
-        const ok = login(identifier, password, "organiser");
+        const ok = await login(identifier, password, "organiser", null, redirectPath);
         if (ok) return;
 
         setLoginError("Invalid email or password. Please try again.");

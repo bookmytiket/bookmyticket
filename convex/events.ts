@@ -45,6 +45,18 @@ export const createEvent = mutation({
         cols: v.optional(v.number()),
         normalTicketCapacity: v.optional(v.number()),
         normalTicketPrice: v.optional(v.number()),
+        virtual: v.optional(v.boolean()),
+        seatCategories: v.optional(v.array(v.object({
+            name: v.string(),
+            price: v.number(),
+            rows: v.number(),
+            isFree: v.optional(v.boolean()),
+        }))),
+        dateSlots: v.optional(v.array(v.object({
+            date: v.string(),
+            time: v.string(),
+        }))),
+        layoutType: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("events", args);
@@ -82,6 +94,18 @@ export const updateEvent = mutation({
         cols: v.optional(v.number()),
         normalTicketCapacity: v.optional(v.number()),
         normalTicketPrice: v.optional(v.number()),
+        virtual: v.optional(v.boolean()),
+        seatCategories: v.optional(v.array(v.object({
+            name: v.string(),
+            price: v.number(),
+            rows: v.number(),
+            isFree: v.optional(v.boolean()),
+        }))),
+        dateSlots: v.optional(v.array(v.object({
+            date: v.string(),
+            time: v.string(),
+        }))),
+        layoutType: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;

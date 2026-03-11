@@ -380,7 +380,7 @@ function OrganiserPanel() {
 
     // Add Event: first step is choosing Online vs Venue (image format)
     const [addEventStep, setAddEventStep] = useState("select_type"); // 'select_type' | 'form'
-    const [multiSlots, setMultiSlots] = useState([{ date: "", time: "" }]);
+
     const [showMapModal, setShowMapModal] = useState(false);
     const [tempLocation, setTempLocation] = useState({ lat: 28.6139, lng: 77.209 });
     const [isGeoLoading, setIsGeoLoading] = useState(false);
@@ -476,23 +476,23 @@ function OrganiserPanel() {
         environment: "Indoor",
         normalTicketCapacity: "",
         normalTicketPrice: "",
-        rows: 6, cols: 10,
-        categories: DEFAULT_SEAT_CATEGORIES.map(c => ({ ...c })),
-        // Online Event Specific Fields (Image-Based Filling Style)
-        startDate: "",
-        startTime: "",
-        endDate: "",
-        endTime: "",
-        eventStatus: "Active",
-        isFeature: "Yes",
-        ticketLimitType: "unlimited",
-        totalTickets: "",
-        price: "",
-        ticketsAreFree: false,
-        meetingUrl: "",
-        earlyBirdDiscount: "disable",
+        rows: 10, cols: 10,
+        categories: [
+            { name: "VIP", price: 2000, rows: 2, isFree: false },
+            { name: "Gold", price: 1000, rows: 4, isFree: false },
+            { name: "Silver", price: 500, rows: 4, isFree: false },
+        ],
+        // Online Event Specific Fields
+        startDate: "", startTime: "", endDate: "", endTime: "",
+        dateSlots: [{ date: "", time: "" }],
+        eventStatus: "Active", isFeature: "Yes",
+        ticketLimitType: "unlimited", totalTickets: "",
+        price: "", ticketsAreFree: false,
+        meetingUrl: "", earlyBirdDiscount: "disable",
+        layoutType: "stage",
     });
     const [postEvent, setPostEvent] = useState(getInitialPostEvent());
+    const [publishError, setPublishError] = useState("");
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -531,21 +531,8 @@ function OrganiserPanel() {
                     { name: "General", color: "#22c55e", rowStart: 5, rowEnd: 6, price: 800 },
                 ];
                 const merged = {
-                    title: "", category: "Concert", type: "Venue", venue: "", date: "", time: "",
-                    dateType: "single", countdownStatus: "active",
-                    description: "", banner: null, bannerPreview: null,
-                    galleryImages: [], galleryPreviews: [],
-                    address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
-                    seatingEnabled: true, environment: "Indoor", normalTicketCapacity: "", normalTicketPrice: "",
-                    rows: 6, cols: 10,
-                    categories: defaultCategories,
-                    startDate: "", startTime: "", endDate: "", endTime: "",
-                    eventStatus: "Active", isFeature: "Yes",
-                    ticketLimitType: "unlimited", totalTickets: "",
-                    price: "", ticketsAreFree: false,
-                    meetingUrl: "", earlyBirdDiscount: "disable",
+                    ...getInitialPostEvent(),
                     ...parsed,
-                    categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : defaultCategories,
                 };
                 setPostEvent(merged);
             } catch (_) { /* ignore */ }
@@ -574,8 +561,13 @@ function OrganiserPanel() {
     // Derive seat category for a given row index (0-based)
     const getSeatCategory = (rowIdx) => {
         const categories = postEvent.categories || [];
+        let currentRow = 0;
         for (const cat of categories) {
-            if (rowIdx + 1 >= cat.rowStart && rowIdx + 1 <= cat.rowEnd) return cat;
+            const nextMax = currentRow + Number(cat.rows);
+            if (rowIdx + 1 > currentRow && rowIdx + 1 <= nextMax) {
+                return { ...cat, color: cat.name === "VIP" ? "#f59e0b" : cat.name === "Gold" ? "#6366f1" : "#22c55e" };
+            }
+            currentRow = nextMax;
         }
         return { name: "General", color: "#94a3b8", price: 0 };
     };
@@ -641,106 +633,105 @@ function OrganiserPanel() {
 
     const publishSeatEvent = () => {
         const isOnline = postEvent.type === "Online";
-
-        // Core validation
-        if (!postEvent.title) {
-            alert("Please fill in Event Title.");
-            return;
-        }
-
-        if (!isOnline && !postEvent.venue) {
-            alert("Please fill in Venue Name.");
-            return;
-        }
-
         const isMultiple = (postEvent.dateType || "single") === "multiple";
+        const today = new Date().toISOString().split("T")[0];
 
-        // Date/Time Mapping
-        const startDate = postEvent.startDate;
-        const startTime = postEvent.startTime;
+        // Core validation — use toast-style state, not alert()
+        if (!postEvent.title?.trim()) {
+            setPublishError("Please fill in Event Title.");
+            return;
+        }
+        setPublishError("");
+
+        // Date/Time Mapping — default to today if not set
+        const startDate = postEvent.startDate || today;
+        const startTime = postEvent.startTime || "";
 
         const effectiveSlots = isMultiple
-            ? multiSlots.filter(s => s.date)
-            : [{ date: startDate, time: startTime || "" }];
+            ? (postEvent.dateSlots || []).filter(s => s.date)
+            : [{ date: startDate, time: startTime }];
 
-        const firstSlot = effectiveSlots[0];
-        if (!firstSlot || !firstSlot.date) {
-            alert(isMultiple ? "Please add at least one date in Schedule." : "Please fill in Date.");
-            return;
-        }
+        const firstSlot = effectiveSlots[0] || { date: today, time: "" };
 
         const isSeating = !isOnline && postEvent.seatingEnabled !== false;
+        const categories = postEvent.categories || [];
 
-        // Total Capacity Mapping
-        let totalSeats = 0;
+        // Total Capacity
+        let totalSeats = 100;
         if (isOnline) {
-            totalSeats = postEvent.ticketLimitType === "limited" ? (parseInt(postEvent.totalTickets, 10) || 0) : 999999;
+            totalSeats = postEvent.ticketLimitType === "limited" ? (parseInt(postEvent.totalTickets, 10) || 100) : 999999;
         } else {
-            totalSeats = isSeating ? postEvent.rows * postEvent.cols : (parseInt(postEvent.normalTicketCapacity, 10) || 0);
+            if (isSeating) {
+                totalSeats = categories.reduce((sum, cat) => sum + (Number(cat.rows) * Number(postEvent.cols || 10)), 0) || 100;
+            } else {
+                totalSeats = (parseInt(postEvent.normalTicketCapacity, 10) || 100);
+            }
         }
 
-        if (!isOnline && totalSeats <= 0) {
-            alert(isSeating ? "Please set at least 1 row and 1 seat per row." : "Please set Total Capacity.");
-            return;
-        }
-
-        // Price Mapping
+        // Price (minimum across categories)
         let finalPrice = 0;
         if (isOnline) {
             finalPrice = postEvent.ticketsAreFree ? 0 : (Number(postEvent.price) || 0);
+        } else if (isSeating && categories.length > 0) {
+            const prices = categories.map(c => c.isFree ? 0 : Number(c.price) || 0);
+            finalPrice = Math.min(...prices);
         } else {
-            finalPrice = isSeating
-                ? (postEvent.categories?.length ? Math.min(...postEvent.categories.map(c => Number(c.price) || 0)) : 0)
-                : (Number(postEvent.normalTicketPrice) || 0);
+            finalPrice = Number(postEvent.normalTicketPrice) || 0;
         }
 
-        const ev = {
-            ...postEvent,
+        const imgUrl = (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:"))
+            ? postEvent.bannerPreview
+            : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
+
+        // Build payload with ONLY fields accepted by Convex
+        const payload = {
             organiserId: effectiveEmail,
-            date: firstSlot.date,
+            title: (postEvent.title || "Untitled Event").trim(),
+            category: postEvent.category || undefined,
+            type: postEvent.type || undefined,
+            date: firstSlot.date || today,
             time: firstSlot.time || "TBA",
-            status: postEvent.eventStatus || "Active",
+            img: imgUrl,
+            bannerPreview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
             seatingEnabled: isSeating,
             totalSeats,
             price: finalPrice,
-            img: (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:"))
-                ? postEvent.bannerPreview
-                : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
+            location: postEvent.location || undefined,
+            venue: isOnline ? "Online / Virtual" : (postEvent.venue || undefined),
+            address: isOnline ? postEvent.meetingUrl : (postEvent.address || undefined),
+            environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
+            meetingUrl: isOnline ? (postEvent.meetingUrl || undefined) : undefined,
+            featured: postEvent.isFeature === "Yes" ? true : false,
+            description: postEvent.description || undefined,
+            rows: isSeating ? categories.reduce((sum, c) => sum + (Number(c.rows) || 0), 0) : undefined,
+            cols: isSeating ? (Number(postEvent.cols) || 10) : undefined,
+            normalTicketCapacity: !isSeating && !isOnline ? (Number(postEvent.normalTicketCapacity) || undefined) : undefined,
+            normalTicketPrice: !isSeating && !isOnline ? (Number(postEvent.normalTicketPrice) || undefined) : undefined,
+            virtual: isOnline ? true : false,
+            seatCategories: isSeating && categories.length > 0 ? categories.map(c => ({
+                name: c.name || "General",
+                price: Number(c.price) || 0,
+                rows: Number(c.rows) || 0,
+                isFree: !!c.isFree
+            })) : undefined,
+            dateSlots: isMultiple && effectiveSlots.length > 0 ? effectiveSlots.map(s => ({ date: s.date, time: s.time || "" })) : undefined,
+            layoutType: isSeating ? (postEvent.layoutType || "stage") : undefined,
         };
 
-        // Save to Convex
-        createEventMutation({
-            organiserId: ev.organiserId,
-            title: ev.title,
-            category: ev.category,
-            type: ev.type,
-            date: ev.date,
-            time: ev.time,
-            img: ev.img,
-            bannerPreview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
-            seatingEnabled: ev.seatingEnabled,
-            totalSeats: ev.totalSeats,
-            price: ev.price,
-            location: ev.location,
-            venue: isOnline ? "Online / Virtual" : ev.venue,
-            address: isOnline ? ev.meetingUrl : ev.address,
-            environment: isOnline ? "Virtual" : ev.environment,
-            meetingUrl: isOnline ? ev.meetingUrl : undefined,
-            featured: ev.isFeature === "Yes",
-            description: ev.description,
-            rows: postEvent.seatingEnabled !== false ? Number(postEvent.rows) : undefined,
-            cols: postEvent.seatingEnabled !== false ? Number(postEvent.cols) : undefined,
-            normalTicketCapacity: postEvent.seatingEnabled === false ? Number(postEvent.normalTicketCapacity) : undefined,
-            normalTicketPrice: postEvent.seatingEnabled === false ? Number(postEvent.normalTicketPrice) : undefined
-        })
+        // Remove undefined keys (Convex may reject them in some versions)
+        Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+        createEventMutation(payload)
             .then(() => {
                 setPostEvent(getInitialPostEvent());
                 setAddEventStep("select_type");
-                setMultiSlots([{ date: "", time: "" }]);
                 try { localStorage.removeItem("organiser_draft"); } catch (_) { }
                 setActiveTab("manage_events");
             })
-            .catch(err => alert("Error publishing event: " + err.message));
+            .catch(err => {
+                console.error("Error publishing event:", err);
+                setPublishError("Failed to publish: " + (err?.message || "Unknown error"));
+            });
     };
 
     const addDateSlot = () => {
@@ -1430,6 +1421,109 @@ function OrganiserPanel() {
                     </div>
                 </div>
             );
+            const renderSeatVisualization = (eventData, isPreview = false) => {
+                const rows = Math.max(0, Math.floor(Number(eventData.rows) || 0));
+                const cols = Math.max(0, Math.floor(Number(eventData.cols) || 0));
+                const layout = eventData.layoutType || "stage";
+                const categories = eventData.seatCategories || eventData.categories || [];
+
+                // Helper to get category for a row
+                const getRowCategory = (rIdx) => {
+                    let currentRowSum = 0;
+                    for (const cat of categories) {
+                        const catRows = Math.max(0, Math.floor(Number(cat.rows) || 0));
+                        if (rIdx < currentRowSum + catRows) {
+                            let color = "#3b82f6";
+                            if (cat.name === "VIP") color = "#f59e0b";
+                            else if (cat.name === "Gold" || cat.name === "Premium") color = "#6366f1";
+                            else if (cat.name === "Silver") color = "#22c55e";
+                            return { ...cat, color };
+                        }
+                        currentRowSum += catRows;
+                    }
+                    return { name: "General", color: "#94a3b8", price: 0 };
+                };
+
+                const totalCalculatedRows = categories.reduce((sum, c) => sum + Math.max(0, Math.floor(Number(c.rows) || 0)), 0);
+                const effectiveRows = Math.min(100, isPreview ? totalCalculatedRows : (rows || totalCalculatedRows));
+                const effectiveCols = Math.min(100, cols);
+
+                return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: isPreview ? "20px" : "40px", borderRadius: "16px", overflowX: "auto", border: isPreview ? `1px dashed ${t.border}` : "none" }}>
+                        {/* Stage/Entrance Indicator */}
+                        {(layout === "stage" || layout === "rate") && (
+                            <div style={{ marginBottom: "30px", width: "60%", textAlign: "center" }}>
+                                <div style={{ height: "6px", backgroundColor: "#3b82f6", borderRadius: "3px", marginBottom: "8px", boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)" }} />
+                                <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "3px", color: t.textSub, margin: 0, fontWeight: 800 }}>STAGE / PERFORMANCE AREA</p>
+                            </div>
+                        )}
+                        {layout === "ground" && (
+                            <div style={{ marginBottom: "20px", padding: "8px 24px", border: `2px dashed ${t.border}`, borderRadius: "100px", color: t.textSub, fontSize: "10px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>
+                                ENTRANCE / EXIT
+                            </div>
+                        )}
+
+                        {[...Array(effectiveRows)].map((_, rIdx) => {
+                            const rowLabel = ROW_LABELS[rIdx] || `R${rIdx + 1}`;
+                            const cat = getRowCategory(rIdx);
+
+                            return (
+                                <div key={rIdx} style={{ display: "flex", gap: isPreview ? "6px" : "10px", alignItems: "center", marginBottom: layout === "ground" && (rIdx + 1) % 3 === 0 ? "15px" : "0" }}>
+                                    <span style={{ width: isPreview ? "45px" : "60px", textAlign: "right", fontWeight: 800, fontSize: "10px", color: cat.color, marginRight: "8px", display: "flex", flexDirection: "column" }}>
+                                        <span>{rowLabel}</span>
+                                        {layout === "rate" && <span style={{ fontSize: "8px", opacity: 0.7 }}>₹{cat.price}</span>}
+                                    </span>
+                                    {[...Array(effectiveCols)].map((_, cIdx) => {
+                                        const seatId = `${rowLabel}${cIdx + 1}`;
+                                        const isBooked = !isPreview && mockBookedSeats[eventData.id]?.has(seatId);
+                                        const isAisle = layout === "ground" && (cIdx + 1) % 4 === 1 && cIdx !== 0;
+
+                                        return (
+                                            <div key={cIdx} style={{ display: "flex", alignItems: "center" }}>
+                                                {isAisle && <div style={{ width: isPreview ? "12px" : "20px" }} />}
+                                                <div title={`${seatId} (${cat.name} - ₹${cat.price})`} style={{
+                                                    width: isPreview ? "18px" : "28px",
+                                                    height: isPreview ? "18px" : "28px",
+                                                    borderRadius: "4px 4px 3px 3px",
+                                                    backgroundColor: isBooked ? "#f84464" : `${cat.color}15`,
+                                                    border: `1.5px solid ${isBooked ? "#f84464" : cat.color}`,
+                                                    position: "relative",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    fontSize: isPreview ? "7px" : "9px",
+                                                    fontWeight: 800,
+                                                    color: isBooked ? "#fff" : cat.color
+                                                }}>
+                                                    <div style={{
+                                                        position: "absolute", top: "-3px", left: "3px", right: "3px", height: "3px",
+                                                        backgroundColor: isBooked ? "#f84464" : cat.color, borderRadius: "1px 1px 0 0", opacity: 0.6
+                                                    }} />
+                                                    {cIdx + 1}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )
+                        })}
+
+                        {layout === "ground" && (
+                            <div style={{ marginTop: "20px", width: "70%", height: "2px", backgroundColor: t.border, borderRadius: "1px" }} />
+                        )}
+
+                        {!isPreview && (
+                            <div style={{ marginTop: "32px", display: "flex", gap: "24px", padding: "16px 32px", backgroundColor: t.cardBg, borderRadius: "100px", border: `1px solid ${t.border}`, boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f59e0b" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>VIP</span></div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#6366f1" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>Premium</span></div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#22c55e" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>General</span></div>
+                                <div style={{ width: "1px", height: "16px", backgroundColor: t.border }}></div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f84464" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>Booked</span></div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
                 <div style={{ marginBottom: "20px", gridColumn: fullWidth ? "span 2" : "span 1" }}>
@@ -1688,292 +1782,254 @@ function OrganiserPanel() {
                     // Step 2: Online Form
                     if (postEvent.type === "Online") {
                         return (
-                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "8px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
                                 <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
                                 <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
 
-                                {/* Gallery Images */}
-                                <div style={{ marginBottom: "24px" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Gallery Images **</label>
-                                    <div role="button" tabIndex={0} onClick={() => galleryInputRef.current?.click()} style={{ border: `1px dashed #cbd5e1`, borderRadius: "4px", padding: "40px", textAlign: "center", backgroundColor: t.bg, cursor: "pointer", minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                        {(postEvent.galleryPreviews || []).length > 0 ? (
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center" }}>
-                                                {(postEvent.galleryPreviews || []).map((src, idx) => (
-                                                    <div key={idx} style={{ position: "relative" }}>
-                                                        <img src={src} alt="Gallery" style={{ width: "100px", height: "70px", objectFit: "cover", borderRadius: "4px", border: `1px solid ${t.border}` }} />
-                                                        <button type="button" onClick={e => { e.stopPropagation(); removeGalleryImage(idx); }} style={{ position: "absolute", top: "-8px", right: "-8px", width: "20px", height: "20px", borderRadius: "50%", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-                                                    </div>
-                                                ))}
-                                                <div style={{ width: "100px", height: "70px", borderRadius: "4px", border: `1px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}><Plus size={20} /></div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "20px" }}>
+                                    {/* Thumbnail Image */}
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
+                                        <div style={{ border: `1px solid ${t.border}`, borderRadius: "8px", padding: "12px", textAlign: "center", backgroundColor: t.bg, display: "flex", alignItems: "center", gap: "16px", minHeight: "100px" }}>
+                                            <div style={{ width: "120px", height: "80px", borderRadius: "4px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                {postEvent.bannerPreview ? (
+                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                ) : <ImageIcon size={32} color="#94a3b8" />}
                                             </div>
-                                        ) : (
-                                            <p style={{ margin: 0, fontSize: "14px", color: "#64748b" }}>Drop files here to upload</p>
-                                        )}
+                                            <div style={{ textAlign: "left" }}>
+                                                <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer", marginBottom: "4px" }}>Choose Image</button>
+                                                <p style={{ fontSize: "11px", color: "#f59e0b", margin: 0 }}>Size : 320x230</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size 1170x570</p>
+                                    {/* Gallery Images Snippet */}
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Gallery Images</label>
+                                        <div onClick={() => galleryInputRef.current?.click()} style={{ border: `1px dashed ${t.border}`, borderRadius: "8px", padding: "12px", backgroundColor: t.bg, cursor: "pointer", minHeight: "100px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                                            {(postEvent.galleryPreviews || []).slice(0, 3).map((src, idx) => (
+                                                <img key={idx} src={src} alt="G" style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "4px" }} />
+                                            ))}
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "4px", border: `1px dashed ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}><Plus size={16} /></div>
+                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0, marginLeft: "auto" }}>1170x570</p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Thumbnail Image */}
-                                <div style={{ marginBottom: "24px" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
-                                    <div style={{ border: `1px solid #e2e8f0`, borderRadius: "4px", padding: "16px", textAlign: "center", backgroundColor: t.bg, display: "inline-block", minWidth: "200px", minHeight: "150px", position: "relative" }}>
-                                        {postEvent.bannerPreview ? (
-                                            <div>
-                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "4px" }} />
-                                                <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ position: "absolute", top: "8px", right: "8px", padding: "4px 8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "4px", fontSize: "10px", cursor: "pointer" }}>Remove</button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                                                <ImageIcon size={48} />
-                                                <p style={{ margin: "8px 0 0", fontSize: "12px", fontWeight: 700 }}>NO IMAGE<br />FOUND</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ marginTop: "12px" }}>
-                                        <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
-                                    </div>
-                                    <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size : 320x230</p>
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
                                     {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                    {renderToggle("Countdown Status*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
-                                </div>
-
-                                {postEvent.dateType === "single" ? (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-                                        {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
-                                        {renderInput("Start Time*", "startTime", "time", "--:--")}
-                                        {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
-                                        {renderInput("End Time*", "endTime", "time", "--:--")}
-                                    </div>
-                                ) : (
-                                    <div style={{ marginBottom: "24px" }}>
-                                        {multiSlots.map((slot, idx) => (
-                                            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "20px", marginBottom: "12px", alignItems: "center" }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Date {idx + 1}</label>
-                                                    <input
-                                                        type="date"
-                                                        value={slot.date}
-                                                        onChange={(e) => {
-                                                            const newSlots = [...multiSlots];
-                                                            newSlots[idx].date = e.target.value;
-                                                            setMultiSlots(newSlots);
-                                                        }}
-                                                        style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
-                                                    />
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Time {idx + 1}</label>
-                                                    <input
-                                                        type="time"
-                                                        value={slot.time}
-                                                        onChange={(e) => {
-                                                            const newSlots = [...multiSlots];
-                                                            newSlots[idx].time = e.target.value;
-                                                            setMultiSlots(newSlots);
-                                                        }}
-                                                        style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
-                                                    />
-                                                </div>
-                                                <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
-                                                    <button type="button" onClick={() => setMultiSlots([...multiSlots, { date: "", time: "" }])} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={16} /></button>
-                                                    {multiSlots.length > 1 && (
-                                                        <button type="button" onClick={() => setMultiSlots(multiSlots.filter((_, i) => i !== idx))} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={16} /></button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                    {renderToggle("Countdown*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
                                     {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
                                     {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px", alignItems: "end" }}>
-                                    {renderToggle("Total Number of Available Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
+                                {postEvent.dateType === "single" && (
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
+                                        {renderInput("Start Date*", "startDate", "date")}
+                                        {renderInput("Start Time*", "startTime", "time")}
+                                        {renderInput("End Date*", "endDate", "date")}
+                                        {renderInput("End Time*", "endTime", "time")}
+                                    </div>
+                                )}
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "end" }}>
+                                    {renderToggle("Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
                                     <div style={{ marginBottom: "20px" }}>
                                         <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Price (INR) *</label>
-                                        <input
-                                            type="number"
-                                            value={postEvent.price || ""}
-                                            onChange={(e) => setPostEvent(prev => ({ ...prev, price: e.target.value }))}
-                                            placeholder="Enter Ticket Price"
-                                            disabled={postEvent.ticketsAreFree}
-                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px", outline: "none", marginBottom: "12px" }}
-                                        />
-                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: t.textMain, cursor: "pointer" }}>
-                                            <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} />
-                                            Tickets are Free
-                                        </label>
+                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                            <input type="number" value={postEvent.price || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, price: e.target.value }))} disabled={postEvent.ticketsAreFree} style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px" }} />
+                                            <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: t.textMain, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                                <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, price: e.target.checked ? "0" : prev.price }))} /> Free
+                                            </label>
+                                        </div>
                                     </div>
+                                    {renderToggle("Early Bird*", "earlyBirdDiscount", [{ label: "Off", value: "disable" }, { label: "On", value: "enable" }])}
                                 </div>
 
                                 {renderInput("Meeting Url*", "meetingUrl", "url", "Enter Meeting Url", true)}
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "32px" }}>
-                                    {renderToggle("Early Bird Discount*", "earlyBirdDiscount", [{ label: "Disable", value: "disable" }, { label: "Enable", value: "enable" }])}
-                                </div>
-
-                                <div style={{ backgroundColor: "#6366f1", padding: "16px 20px", color: "#fff", fontWeight: 700, fontSize: "15px", marginBottom: "24px", borderRadius: "4px" }}>
-                                    English Language (Default)
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "12px" }}>
                                     {renderInput("Event Title*", "title", "text", "Enter Event Name")}
                                     {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                                 </div>
 
-                                <div style={{ marginBottom: "24px" }}>
+                                <div style={{ marginBottom: "16px" }}>
                                     <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Description*</label>
-                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={8} style={{ width: "100%", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "14px", resize: "vertical", outline: "none" }} />
+                                    <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
                                 </div>
 
-                                {renderInput("Refund Policy*", "refundPolicy", "text", "Enter Refund Policy", true)}
-
-                                <div style={{ marginTop: "40px" }}>
-                                    <button onClick={publishSeatEvent} style={{ padding: "12px 32px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Submit</button>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div style={{ flex: 1, marginRight: "16px" }}>{renderInput("Refund Policy*", "refundPolicy", "text", "Policy Details")}</div>
+                                    <button onClick={publishSeatEvent} style={{ padding: "12px 40px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", height: "42px", marginTop: "4px" }}>Submit Online Event</button>
                                 </div>
                             </div>
                         );
                     }
-                    // Step 3: Venue Form (Default)
+                    // Step 3: Venue Form
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "8px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
                             <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
 
-                            {/* Thumbnail Image */}
-                            <div style={{ marginBottom: "24px" }}>
-                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
-                                <div style={{ border: `1px solid #e2e8f0`, borderRadius: "4px", padding: "16px", textAlign: "center", backgroundColor: t.bg, display: "inline-block", minWidth: "200px", minHeight: "150px", position: "relative" }}>
-                                    {postEvent.bannerPreview ? (
-                                        <div>
-                                            <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "130px", objectFit: "cover", borderRadius: "4px" }} />
-                                            <button type="button" onClick={() => setPostEvent(pe => ({ ...pe, banner: null, bannerPreview: null }))} style={{ position: "absolute", top: "8px", right: "8px", padding: "4px 8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "4px", fontSize: "10px", cursor: "pointer" }}>Remove</button>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "20px" }}>
+                                {/* Thumbnail Image */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
+                                    <div style={{ border: `1px solid ${t.border}`, borderRadius: "8px", padding: "12px", textAlign: "center", backgroundColor: t.bg, display: "flex", alignItems: "center", gap: "16px", minHeight: "100px" }}>
+                                        <div style={{ width: "120px", height: "80px", borderRadius: "4px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            {postEvent.bannerPreview ? (
+                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            ) : <ImageIcon size={32} color="#94a3b8" />}
                                         </div>
-                                    ) : (
-                                        <div style={{ color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                                            <ImageIcon size={48} />
-                                            <p style={{ margin: "8px 0 0", fontSize: "12px", fontWeight: 700 }}>NO IMAGE<br />FOUND</p>
+                                        <div style={{ textAlign: "left" }}>
+                                            <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer", marginBottom: "4px" }}>Choose Image</button>
+                                            <p style={{ fontSize: "11px", color: "#f59e0b", margin: 0 }}>Size : 320x230</p>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
-                                <div style={{ marginTop: "12px" }}>
-                                    <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Choose Image</button>
+                                {/* Basic Info */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                    {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                                    {renderSelect("Visibility*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                    {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                    {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
                                 </div>
-                                <p style={{ fontSize: "12px", color: "#f59e0b", marginTop: "8px", margin: "8px 0 0" }}>Image Size : 320x230</p>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                             </div>
 
                             {postEvent.dateType === "single" ? (
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-                                    {renderInput("Start Date*", "startDate", "date", "dd/mm/yyyy")}
-                                    {renderInput("Start Time*", "startTime", "time", "--:--")}
-                                    {renderInput("End Date*", "endDate", "date", "dd/mm/yyyy")}
-                                    {renderInput("End Time*", "endTime", "time", "--:--")}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "16px" }}>
+                                    {renderInput("Start Date*", "startDate", "date")}
+                                    {renderInput("Start Time*", "startTime", "time")}
+                                    {renderInput("End Date*", "endDate", "date")}
+                                    {renderInput("End Time*", "endTime", "time")}
                                 </div>
                             ) : (
-                                <div style={{ marginBottom: "24px" }}>
-                                    {multiSlots.map((slot, idx) => (
-                                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "20px", marginBottom: "12px", alignItems: "center" }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Date {idx + 1}</label>
-                                                <input
-                                                    type="date"
-                                                    value={slot.date}
-                                                    onChange={(e) => {
-                                                        const newSlots = [...multiSlots];
-                                                        newSlots[idx].date = e.target.value;
-                                                        setMultiSlots(newSlots);
-                                                    }}
-                                                    style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
-                                                />
+                                <div style={{ marginBottom: "20px", padding: "16px", border: `1px dashed ${t.border}`, borderRadius: "12px", backgroundColor: t.cardBg }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textSub }}>Multiple Date/Time Slots</p>
+                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}><Plus size={14} /> Add Slot</button>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        {(postEvent.dateSlots || []).length === 0 ? (
+                                            <p style={{ fontSize: "12px", color: t.textSub, textAlign: "center", margin: "10px 0" }}>No slots added. Click "Add Slot" to start.</p>
+                                        ) : (postEvent.dateSlots || []).map((slot, idx) => (
+                                            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "center" }}>
+                                                <input type="date" value={slot.date} onChange={e => {
+                                                    const ns = [...postEvent.dateSlots]; ns[idx].date = e.target.value;
+                                                    setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                }} style={{ padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                <input type="time" value={slot.time} onChange={e => {
+                                                    const ns = [...postEvent.dateSlots]; ns[idx].time = e.target.value;
+                                                    setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                }} style={{ padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
                                             </div>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px", color: t.textSub }}>Time {idx + 1}</label>
-                                                <input
-                                                    type="time"
-                                                    value={slot.time}
-                                                    onChange={(e) => {
-                                                        const newSlots = [...multiSlots];
-                                                        newSlots[idx].time = e.target.value;
-                                                        setMultiSlots(newSlots);
-                                                    }}
-                                                    style={{ width: "100%", padding: "10px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }}
-                                                />
-                                            </div>
-                                            <div style={{ display: "flex", gap: "8px", marginTop: "20px" }}>
-                                                <button type="button" onClick={() => setMultiSlots([...multiSlots, { date: "", time: "" }])} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#22c55e", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={16} /></button>
-                                                {multiSlots.length > 1 && (
-                                                    <button type="button" onClick={() => setMultiSlots(multiSlots.filter((_, i) => i !== idx))} style={{ width: "32px", height: "32px", borderRadius: "4px", border: "none", backgroundColor: "#ef4444", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={16} /></button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
-                                {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                            </div>
-
-                            <div style={{ backgroundColor: "#6366f1", padding: "16px 20px", color: "#fff", fontWeight: 700, fontSize: "15px", marginBottom: "24px", borderRadius: "4px" }}>
-                                English Language (Default)
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                {renderInput("Event Title*", "title", "text", "Enter Event Name")}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                {renderInput("Event Title*", "title", "text", "Name of the event")}
                                 {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                             </div>
 
-                            <div style={{ marginBottom: "24px" }}>
-                                {renderInput("Address*", "address", "text", "Enter Address", true)}
-                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "8px 16px", backgroundColor: "#8b5cf6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "-12px" }}>
-                                    <MapPin size={14} /> Show Map
-                                </button>
+                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "16px", alignItems: "end" }}>
+                                {renderInput("Venue Address*", "venue", "text", "Venue Name / Address")}
+                                {renderInput("City*", "city", "text", "City")}
+                                {renderInput("Country*", "country", "text", "Country")}
+                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "10px", backgroundColor: "#8b5cf6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "20px" }}>Open Map</button>
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                {renderInput("Latitude", "latitude", "text", "Latitude")}
-                                {renderInput("Longitude", "longitude", "text", "Longitude")}
-                                {renderInput("Country*", "country", "text", "Select a Country")}
-                            </div>
+                            <div style={{ marginBottom: "20px", border: `1px solid ${t.border}`, padding: "20px", borderRadius: "12px", backgroundColor: t.bg }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                                    <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 800 }}>Ticketing & Seating</h4>
+                                    <div style={{ width: "200px" }}>
+                                        {renderToggle("", "seatingEnabled", [{ label: "Seats", value: true }, { label: "Standard", value: false }])}
+                                    </div>
+                                </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
-                                {renderInput("City*", "city", "text", "Select a City")}
-                                {renderInput("Zip/Post Code", "zipCode", "text", "Enter Zip/Post Code")}
-                            </div>
-
-                            <div style={{ marginBottom: "24px" }}>
-                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Description*</label>
-                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} placeholder="Enter Event Description" rows={8} style={{ width: "100%", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "14px", resize: "vertical", outline: "none" }} />
-                            </div>
-
-                            <div style={{ marginBottom: "32px", border: `1px solid ${t.border}`, padding: "20px", borderRadius: "8px" }}>
-                                <h4 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 700 }}>Ticketing Setup</h4>
-                                {renderToggle("Ticket / Seating Type", "seatingEnabled", [{ label: "Seating Based", value: true }, { label: "Normal Ticketing", value: false }])}
                                 {postEvent.seatingEnabled !== false ? (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "16px" }}>
-                                        {renderInput("Rows", "rows", "number")}
-                                        {renderInput("Seats per Row", "cols", "number")}
+                                    <div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                                            {renderInput("Seats per Row*", "cols", "number", "e.g. 10")}
+                                            {renderSelect("Seat Map Layout*", "layoutType", [
+                                                { label: "Stage-Based", value: "stage" },
+                                                { label: "Ground-Based", value: "ground" },
+                                                { label: "Rate-Based", value: "rate" }
+                                            ])}
+                                            <div style={{ fontSize: "12px", color: t.textSub, marginTop: "24px" }}>
+                                                Total Rows will be calculated based on categories below.
+                                            </div>
+                                        </div>
+                                        <div style={{ backgroundColor: t.cardBg, borderRadius: "8px", padding: "16px", border: `1px solid ${t.border}` }}>
+                                            <p style={{ fontSize: "12px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>SEATING CATEGORIES (VIP, GOLD, SILVER)</p>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                {(postEvent.categories || []).map((cat, idx) => (
+                                                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: "12px", alignItems: "center" }}>
+                                                        <input value={cat.name} onChange={e => {
+                                                            const nc = [...postEvent.categories]; nc[idx].name = e.target.value;
+                                                            setPostEvent(prev => ({ ...prev, categories: nc }));
+                                                        }} placeholder="Category Name" style={{ padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                        <input type="number" value={cat.rows} onChange={e => {
+                                                            const nc = [...postEvent.categories]; nc[idx].rows = e.target.value;
+                                                            setPostEvent(prev => ({ ...prev, categories: nc }));
+                                                        }} placeholder="Rows" style={{ padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                            <input type="number" value={cat.price} disabled={cat.isFree} onChange={e => {
+                                                                const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
+                                                                setPostEvent(prev => ({ ...prev, categories: nc }));
+                                                            }} placeholder="Price" style={{ width: "100%", padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: cat.isFree ? t.border : t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                            <label style={{ display: "flex", alignItems: "center", fontSize: "11px", color: t.textSub, cursor: "pointer" }}>
+                                                                <input type="checkbox" checked={cat.isFree} onChange={e => {
+                                                                    const nc = [...postEvent.categories]; nc[idx].isFree = e.target.checked;
+                                                                    if (e.target.checked) nc[idx].price = 0;
+                                                                    setPostEvent(prev => ({ ...prev, categories: nc }));
+                                                                }} />Free
+                                                            </label>
+                                                        </div>
+                                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== idx) }))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                    </div>
+                                                ))}
+                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content" }}><Plus size={14} /> Add Category</button>
+                                            </div>
+                                        </div>
+
+                                        {/* Live Preview Section */}
+                                        <div style={{ marginTop: "24px" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                                                <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "1px" }}>Live Map Preview</p>
+                                                <span style={{ fontSize: "10px", color: "#3b82f6", fontWeight: 700, backgroundColor: "#3b82f615", padding: "2px 8px", borderRadius: "100px" }}>Real-time</span>
+                                            </div>
+                                            {renderSeatVisualization(postEvent, true)}
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "16px" }}>
-                                        {renderInput("Total Capacity", "normalTicketCapacity", "number")}
-                                        {renderInput("Default Price (₹)", "normalTicketPrice", "number")}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                        {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
+                                        <div style={{ marginBottom: "20px" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Ticket Price (₹)*</label>
+                                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: t.textMain, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                                    <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
-                            <div style={{ marginTop: "40px" }}>
-                                <button onClick={publishSeatEvent} style={{ padding: "12px 32px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Submit</button>
+                            <div style={{ marginBottom: "20px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Event Description*</label>
+                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
+                                {publishError && (
+                                    <div style={{ padding: "10px 16px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "13px", fontWeight: 600, maxWidth: "500px", width: "100%" }}>
+                                        ⚠️ {publishError}
+                                    </div>
+                                )}
+                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>Publish Event</button>
                             </div>
                         </div>
                     );
@@ -2002,25 +2058,7 @@ function OrganiserPanel() {
                                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f84464" }}></div><span style={{ fontSize: "12px" }}>Booked</span></div>
                                         </div>
                                     </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: "40px", borderRadius: "16px", overflowX: "auto" }}>
-                                        {[...Array(selectedEventForSeatMap.rows || 6)].map((_, rIdx) => {
-                                            const rowLabel = ROW_LABELS[rIdx];
-                                            return (
-                                                <div key={rIdx} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                                    <span style={{ width: "24px", textAlign: "center", fontWeight: 800, fontSize: "12px", color: t.textSub }}>{rowLabel}</span>
-                                                    {[...Array(selectedEventForSeatMap.cols || 10)].map((_, cIdx) => {
-                                                        const seatId = `${rowLabel}${cIdx + 1}`;
-                                                        const isBooked = mockBookedSeats[selectedEventForSeatMap.id]?.has(seatId);
-                                                        return (
-                                                            <div key={cIdx} title={seatId} style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: isBooked ? "#f84464" : "#3b82f630", border: `1px solid ${isBooked ? "#f84464" : "#3b82f6"}`, transition: "0.2s", cursor: "pointer" }} />
-                                                        );
-                                                    })}
-                                                </div>
-                                            )
-                                        })}
-                                        <div style={{ marginTop: "40px", width: "60%", height: "4px", backgroundColor: t.border, borderRadius: "2px", border: "1.5px solid #3b82f650" }} />
-                                        <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "2px", color: t.textSub, marginTop: "10px" }}>STAGE / SCREEN THIS WAY</p>
-                                    </div>
+                                    {renderSeatVisualization(selectedEventForSeatMap)}
                                 </div>
                             )}
                         </div>
@@ -2132,8 +2170,8 @@ function OrganiserPanel() {
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || "—"}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.time || "—"}</div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.dateSlots?.length > 1 ? `${ev.dateSlots.length} Dates` : (ev.date || "—")}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.dateSlots?.length > 1 ? "Multiple Slots" : (ev.time || "—")}</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
                                                         <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats || "N/A"}</div>
@@ -2208,8 +2246,8 @@ function OrganiserPanel() {
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || "—"}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.time || "—"}</div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.dateSlots?.length > 1 ? `${ev.dateSlots.length} Dates` : (ev.date || "—")}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{ev.dateSlots?.length > 1 ? "Multiple Slots" : (ev.time || "—")}</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
                                                         <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.bookedSeats || 0}</div>

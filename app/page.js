@@ -80,6 +80,7 @@ export default function Home() {
     trending: ev.trending !== false,
     spotlight: ev.spotlight === true,
     exclusive: ev.exclusive === true,
+    virtual: ev.virtual === true || ev.type === "Online",
   })), [newOrgEvents]);
 
   const allEventsForFilter = useMemo(() => [

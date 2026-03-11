@@ -1,0 +1,25 @@
+
+> bookmyticket@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.20.10.2:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1088ms
+ HEAD / 200 in 1046ms (compile: 807ms, render: 239ms)
+ GET / 200 in 82ms (compile: 6ms, render: 75ms)
+ GET /profile?tab=my_booking 200 in 160ms (compile: 144ms, render: 16ms)
+ GET /profile 200 in 11ms (compile: 1861µs, render: 9ms)
+ GET /profile 200 in 13ms (compile: 1911µs, render: 11ms)
+ GET /profile 200 in 11ms (compile: 1787µs, render: 9ms)
+ GET /profile 200 in 10ms (compile: 1633µs, render: 8ms)
+ GET /profile 200 in 11ms (compile: 1847µs, render: 9ms)
+ GET /profile 200 in 13ms (compile: 1957µs, render: 11ms)
+ GET / 200 in 11ms (compile: 2ms, render: 9ms)
+ GET /advertise 200 in 64ms (compile: 49ms, render: 15ms)
+✓ Compiled in 138ms
+✓ Compiled in 11ms
+ GET /profile 200 in 12ms (compile: 1492µs, render: 10ms)

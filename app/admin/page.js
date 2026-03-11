@@ -99,7 +99,10 @@ function AdminHomePage() {
     const [theme, setTheme] = useState("light");
     const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
     const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [selectedRequestForApproval, setSelectedRequestForApproval] = useState(null);
     const [generatedTempPassword, setGeneratedTempPassword] = useState("");
+    const [manualApprovalPassword, setManualApprovalPassword] = useState("");
     const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isGrowthOpen, setIsGrowthOpen] = useState(false);
@@ -2174,7 +2177,6 @@ function AdminHomePage() {
                                                                         <button onClick={() => {
                                                                             patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
                                                                             setOpenActionDropdown(null);
-                                                                            alert(`Organiser ${org.username} KYC has been approved! They now have full portal access.`);
                                                                         }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                             <CheckCircle size={16} /> Approve KYC
                                                                         </button>
@@ -2210,11 +2212,11 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "org_requests" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Organiser Requests</h3>
                             </div>
-                            <div style={{ overflowX: "auto" }}>
+                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                     <thead>
                                         <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
@@ -2280,18 +2282,11 @@ function AdminHomePage() {
                                                                         overflow: "hidden"
                                                                     }}>
                                                                         <button
-                                                                            onClick={async (e) => {
+                                                                            onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                try {
-                                                                                    console.log("Approving request", req._id);
-                                                                                    const tempPass = await approveOrganiserRequestMutation({ id: req._id });
-                                                                                    setGeneratedTempPassword(tempPass);
-                                                                                    setShowTempPasswordModal(true);
-                                                                                    setOpenRequestActionId(null);
-                                                                                } catch (err) {
-                                                                                    console.error("Approval error:", err);
-                                                                                    alert('Error: ' + err.message);
-                                                                                }
+                                                                                setSelectedRequestForApproval(req);
+                                                                                setShowApprovalModal(true);
+                                                                                setOpenRequestActionId(null);
                                                                             }}
                                                                             style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#22c55e", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                                                                         >
@@ -3522,6 +3517,77 @@ function AdminHomePage() {
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
                             <button onClick={() => setActiveTab("dashboard")} style={{ marginTop: "24px", padding: "10px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Return to Dashboard</button>
+                        </div>
+                    )}
+
+
+                    {/* Organiser Approval Modal */}
+                    {showApprovalModal && selectedRequestForApproval && (
+                        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: "20px" }}>
+                            <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "450px", borderRadius: "24px", border: `1px solid ${t.border}`, boxShadow: "0 20px 50px rgba(0,0,0,0.3)", padding: "32px", position: "relative" }}>
+                                <button onClick={() => setShowApprovalModal(false)} style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={20} /></button>
+
+                                <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#22c55e15", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
+                                        <CheckCircle size={32} />
+                                    </div>
+                                    <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginBottom: "8px" }}>Approve Organiser</h2>
+                                    <p style={{ color: t.textSub, fontSize: "14px" }}>Reviewing request from <strong>{selectedRequestForApproval.firstName} {selectedRequestForApproval.lastName}</strong> ({selectedRequestForApproval.email})</p>
+                                </div>
+
+                                <div style={{ spaceY: "20px" }}>
+                                    <div style={{ marginBottom: "20px" }}>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Set Manual Password (Optional)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Leave blank for autogenerated password"
+                                            value={manualApprovalPassword}
+                                            onChange={(e) => setManualApprovalPassword(e.target.value)}
+                                            style={{
+                                                width: "100%",
+                                                padding: "12px 16px",
+                                                borderRadius: "12px",
+                                                border: `1px solid ${t.border}`,
+                                                backgroundColor: t.bg,
+                                                color: t.textMain,
+                                                fontSize: "14px",
+                                                outline: "none"
+                                            }}
+                                        />
+                                        <p style={{ fontSize: "12px", color: t.textSub, marginTop: "8px", lineHeight: "1.4" }}>
+                                            If left blank, the system will generate a secure temporary password and show it to you on the next screen.
+                                        </p>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "12px" }}>
+                                        <button
+                                            onClick={() => setShowApprovalModal(false)}
+                                            style={{ flex: 1, padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 600, cursor: "pointer" }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const tempPass = await approveOrganiserRequestMutation({
+                                                        id: selectedRequestForApproval._id,
+                                                        password: manualApprovalPassword.trim() || undefined
+                                                    });
+                                                    setGeneratedTempPassword(tempPass);
+                                                    setShowApprovalModal(false);
+                                                    setShowTempPasswordModal(true);
+                                                    setManualApprovalPassword("");
+                                                } catch (err) {
+                                                    alert("Error: " + err.message);
+                                                }
+                                            }}
+                                            style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "white", fontWeight: 600, cursor: "pointer" }}
+                                        >
+                                            Confirm Approval
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 

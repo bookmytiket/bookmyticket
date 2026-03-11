@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 const AuthContext = createContext();
@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [selectedCity, setSelectedCity] = useState("Coimbatore");
     const router = useRouter();
+    const convex = useConvex();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -48,14 +49,14 @@ export function AuthProvider({ children }) {
 
     const convexOrganisers = useQuery(api.organisers.list) || [];
 
-    const login = (identifier, password, role, userData = null) => {
+    const login = async (identifier, password, role, userData = null, redirectPath = null) => {
         // Master Admin remains hardcoded
         if (role === "admin") {
             if (identifier === "bookmyticket-admin" && password === "D0n+$h@rE2k26") {
                 const mockUser = { identifier, role, name: "Master Admin" };
                 setUser(mockUser);
                 localStorage.setItem("user", JSON.stringify(mockUser));
-                router.push("/admin");
+                router.push(redirectPath || "/admin");
                 return true;
             }
             return false;
@@ -66,32 +67,37 @@ export function AuthProvider({ children }) {
             const authUser = { identifier, role: "user", name: userData.name, id: userData._id };
             setUser(authUser);
             localStorage.setItem("user", JSON.stringify(authUser));
-            router.push("/");
+            router.push(redirectPath || "/");
             return true;
         }
 
         // Validate Organiser against Convex Database
         if (role === "organiser") {
-            const trimmedIdentifier = identifier.trim();
-            const organiserMatch = convexOrganisers.find(
-                (org) => (org.userId === trimmedIdentifier || org.name === trimmedIdentifier) && org.password === password && org.kycStatus !== "Banned" && org.kycStatus !== "Rejected"
-            );
+            try {
+                const result = await convex.query(api.organisers.verifyCredentials, {
+                    identifier,
+                    password
+                });
 
-            // Fallback for default demo organiser if it hasn't been added to DB yet
-            const isDemoMatch = identifier === "organiser@bookmyticket.com" && password === "organiser123";
+                if (result.success) {
+                    const org = result.organiser;
+                    const authUser = { identifier, role: "organiser", name: org.name, id: org._id };
+                    setUser(authUser);
+                    localStorage.setItem("user", JSON.stringify(authUser));
+                    router.push(redirectPath || "/organiser");
+                    return true;
+                }
 
-            if (organiserMatch) {
-                const authUser = { identifier, role: "organiser", name: organiserMatch.name, id: organiserMatch._id };
-                setUser(authUser);
-                localStorage.setItem("user", JSON.stringify(authUser));
-                router.push("/organiser");
-                return true;
-            } else if (isDemoMatch) {
-                const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
-                setUser(mockUser);
-                localStorage.setItem("user", JSON.stringify(mockUser));
-                router.push("/organiser");
-                return true;
+                // Fallback for default demo organiser if it hasn't been added to DB yet
+                if (identifier === "organiser@bookmyticket.com" && password === "organiser123") {
+                    const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
+                    setUser(mockUser);
+                    localStorage.setItem("user", JSON.stringify(mockUser));
+                    router.push(redirectPath || "/organiser");
+                    return true;
+                }
+            } catch (err) {
+                console.error("Organiser login error:", err);
             }
         }
 

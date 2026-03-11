@@ -236,7 +236,7 @@ export default function EventCheckoutPage({ params }) {
                             style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
                             aria-label="Confirm and pay"
                         >
-                            Confirm & Pay
+                            {total > 0 ? "Confirm & Pay" : "Confirm Booking"}
                         </button>
                     </div>
                 </div>

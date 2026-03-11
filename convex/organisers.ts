@@ -113,7 +113,7 @@ export const submitKyc = mutation({
 });
 
 export const approveRequest = mutation({
-    args: { id: v.id("organiserRequests") },
+    args: { id: v.id("organiserRequests"), password: v.optional(v.string()) },
     handler: async (ctx, args) => {
         const request = await ctx.db.get(args.id);
         if (!request) throw new Error("Request not found");
@@ -129,11 +129,14 @@ export const approveRequest = mutation({
             return "Already Approved";
         }
 
-        // Generate a random 8-character temporary password
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-        let tempPassword = "";
-        for (let i = 0; i < 8; i++) {
-            tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+        // Generate a random 8-character temporary password if none provided
+        let tempPassword = args.password;
+        if (!tempPassword) {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+            tempPassword = "";
+            for (let i = 0; i < 8; i++) {
+                tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
         }
 
         // Create the organiser account
@@ -149,6 +152,39 @@ export const approveRequest = mutation({
         await ctx.db.patch(args.id, { status: "Approved" });
 
         return tempPassword;
+    },
+});
+
+export const verifyCredentials = query({
+    args: { identifier: v.string(), password: v.string() },
+    handler: async (ctx, args) => {
+        const trimmedIdentifier = args.identifier.trim();
+        const organiser = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", trimmedIdentifier))
+            .unique();
+
+        if (organiser && organiser.password === args.password) {
+            if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
+                return { success: false, error: "Account is restricted." };
+            }
+            return { success: true, organiser };
+        }
+
+        // Check by name if ID didn't match (logic from AuthContext)
+        const allOrganisers = await ctx.db.query("organisers").collect();
+        const nameMatch = allOrganisers.find(
+            (org) => org.name === trimmedIdentifier && org.password === args.password
+        );
+
+        if (nameMatch) {
+            if (nameMatch.kycStatus === "Banned" || nameMatch.kycStatus === "Rejected") {
+                return { success: false, error: "Account is restricted." };
+            }
+            return { success: true, organiser: nameMatch };
+        }
+
+        return { success: false, error: "Invalid email/username or password." };
     },
 });
 

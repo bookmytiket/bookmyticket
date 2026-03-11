@@ -112,7 +112,7 @@ function VirtualCard({ event }) {
 }
 
 export default function VirtualEvents({ events = [] }) {
-    const VIRTUAL_EVENTS = events.filter((e) => e.virtual);
+    const VIRTUAL_EVENTS = events.filter((e) => e.virtual || e.type === "Online");
     const scrollRef = useRef(null);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });
