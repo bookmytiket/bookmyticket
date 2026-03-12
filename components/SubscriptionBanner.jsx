@@ -55,12 +55,12 @@ export default function SubscriptionBanner() {
                 <form
                     onSubmit={handleSubscribe}
                     style={{
-                        flex: "1 1 400px",
+                        flex: "1 1 300px",
                         display: "flex",
                         maxWidth: "600px",
                         background: "#fff",
                         borderRadius: "100px",
-                        padding: "6px",
+                        padding: "4px",
                         boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
                     }}
                 >

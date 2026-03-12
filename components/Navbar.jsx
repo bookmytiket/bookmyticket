@@ -425,8 +425,59 @@ export default function Navbar() {
               <Link href="/signin" className="nav-cta-btn" style={{ height: '45px', padding: '0 30px' }}>Sign In</Link>
             )}
 
-            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none" }}>
+            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '8px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Search - Persistent */}
+        <div className="show-mobile" style={{
+          padding: '10px 16px 16px',
+          background: 'transparent'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: scrolled ? 'rgba(255,255,255,0.15)' : '#f1f5f9',
+            borderRadius: '12px',
+            padding: '4px 6px',
+            border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+            width: '100%'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
+              <Search size={16} color="#f844a4" />
+              <input
+                placeholder="Find events..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/?q=${encodeURIComponent(search)}`)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  padding: '8px 10px',
+                  fontSize: '14px',
+                  width: '100%',
+                  color: scrolled ? '#fff' : '#1e293b'
+                }}
+              />
+            </div>
+            <button
+              onClick={() => router.push(`/?q=${encodeURIComponent(search)}`)}
+              style={{
+                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Search
             </button>
           </div>
         </div>

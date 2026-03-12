@@ -48,7 +48,7 @@ export default defineSchema({
     }),
 
     bookings: defineTable({
-        eventId: v.id("events"),
+        eventId: v.string(),
         userId: v.string(),
         tickets: v.optional(v.number()),
         ticketCount: v.number(),
@@ -66,7 +66,7 @@ export default defineSchema({
 
     pwaScans: defineTable({
         bookingId: v.id("bookings"),
-        eventId: v.id("events"),
+        eventId: v.string(),
         organiserId: v.string(),
         scannedAt: v.number(),
         status: v.string(), // "valid", "already_used", "invalid"
@@ -74,7 +74,7 @@ export default defineSchema({
 
     eventBookings: defineTable({
         bookingId: v.id("bookings"),
-        eventId: v.id("events"),
+        eventId: v.string(),
         organiserId: v.string(),
         customerName: v.string(),
         customerEmail: v.string(),

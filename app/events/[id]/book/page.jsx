@@ -143,14 +143,14 @@ export default function EventBookPage({ params }) {
     };
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px', paddingBottom: '60px' }}>
+        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)', paddingBottom: '60px' }}>
             <div className="container" style={{ padding: '24px 0', maxWidth: '1100px' }}>
                 <Link href={`/events/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px', marginBottom: '24px', textDecoration: 'none' }}>
                     ← Back to event
                 </Link>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '32px', alignItems: 'start' }}>
-                    <div>
+                <div className="event-detail-layout" style={{ alignItems: 'start', paddingTop: 0 }}>
+                    <div style={{ flex: '1', minWidth: 0 }}>
                         {/* Event Header */}
                         <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
                             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: '0 0 12px 0' }}>{event.title}</h1>
@@ -295,7 +295,7 @@ export default function EventBookPage({ params }) {
                     </div>
 
                     {/* Order Summary */}
-                    <div style={{ position: 'sticky', top: '110px' }}>
+                    <div className="event-detail-right-col" style={{ position: 'sticky', top: '110px' }}>
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
                                 <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

@@ -7,10 +7,11 @@ export const getBookings = query({
         const bookings = await ctx.db.query("bookings").collect();
         return Promise.all(
             bookings.map(async (booking) => {
-                const event = await ctx.db.get(booking.eventId);
+                const validEventId = ctx.db.normalizeId("events", booking.eventId);
+                const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
                 return {
                     ...booking,
-                    eventName: event ? event.title : "Unknown Event",
+                    eventName: event && event.title ? event.title : "Static Event",
                     customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
                 };
             })
@@ -23,19 +24,21 @@ export const getBookingById = query({
     handler: async (ctx, args) => {
         const booking = (await ctx.db.get(args.id as any)) as any;
         if (!booking || !("eventId" in booking)) return null;
-        const event = (await ctx.db.get(booking.eventId)) as any;
-        if (!event || !("title" in event)) return null;
+
+        const validEventId = ctx.db.normalizeId("events", booking.eventId);
+        const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+
         return {
             ...booking,
-            eventName: event.title,
-            location: event.location || "TBA",
+            eventName: event && "title" in event ? event.title : "Static Event",
+            location: event && "location" in event ? event.location : "TBA",
         };
     },
 });
 
 export const createBooking = mutation({
     args: {
-        eventId: v.id("events"),
+        eventId: v.string(), // changed to string to allow static events
         userId: v.string(),
         ticketCount: v.number(),
         totalPrice: v.number(),
@@ -47,17 +50,20 @@ export const createBooking = mutation({
 
         // Update Organiser Wallet ONLY if status is 'Confirmed'
         if (args.status === 'Confirmed') {
-            const event = await ctx.db.get(args.eventId);
-            if (event && event.organiserId) {
-                const organiser = await ctx.db
-                    .query("organisers")
-                    .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                    .unique();
+            const validEventId = ctx.db.normalizeId("events", args.eventId);
+            if (validEventId !== null) {
+                const event = (await ctx.db.get(validEventId)) as any;
+                if (event && event.organiserId) {
+                    const organiser = (await ctx.db
+                        .query("organisers")
+                        .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                        .unique()) as any;
 
-                if (organiser) {
-                    await ctx.db.patch(organiser._id, {
-                        walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
-                    });
+                    if (organiser) {
+                        await ctx.db.patch(organiser._id, {
+                            walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
+                        });
+                    }
                 }
             }
         }
@@ -75,17 +81,20 @@ export const confirmBooking = mutation({
         await ctx.db.patch(args.id, { status: "Confirmed" });
 
         // Update Organiser Wallet
-        const event = await ctx.db.get(booking.eventId);
-        if (event && event.organiserId) {
-            const organiser = await ctx.db
-                .query("organisers")
-                .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                .unique();
+        const validEventId = ctx.db.normalizeId("events", booking.eventId);
+        if (validEventId !== null) {
+            const event = (await ctx.db.get(validEventId)) as any;
+            if (event && event.organiserId) {
+                const organiser = (await ctx.db
+                    .query("organisers")
+                    .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                    .unique()) as any;
 
-            if (organiser) {
-                await ctx.db.patch(organiser._id, {
-                    walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
-                });
+                if (organiser) {
+                    await ctx.db.patch(organiser._id, {
+                        walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
+                    });
+                }
             }
         }
     },

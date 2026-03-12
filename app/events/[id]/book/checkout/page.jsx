@@ -97,7 +97,7 @@ export default function EventCheckoutPage({ params }) {
 
         try {
             const bookingId = await createBookingMutation({
-                eventId: event._id || event.id,
+                eventId: String(event._id || event.id),
                 userId: "customer@gmail.com", // Mock user for now
                 ticketCount: qty,
                 totalPrice: total,
@@ -158,7 +158,7 @@ export default function EventCheckoutPage({ params }) {
 
     if (bookingDone) {
         return (
-            <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px', paddingBottom: '60px' }}>
+            <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)', paddingBottom: '60px' }}>
                 <div className="container" style={{ padding: '24px 0', maxWidth: '680px' }}>
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                         <div style={{ fontSize: '48px', marginBottom: '8px' }}>✓</div>
@@ -191,7 +191,7 @@ export default function EventCheckoutPage({ params }) {
     }
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px', paddingBottom: '60px' }}>
+        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)', paddingBottom: '60px' }}>
             <div className="container" style={{ padding: '24px 0', maxWidth: '900px' }}>
                 <Link href={`/events/${id}/book`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px', marginBottom: '24px', textDecoration: 'none' }}>
                     ← Back to tickets
@@ -199,13 +199,13 @@ export default function EventCheckoutPage({ params }) {
 
                 <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '24px', color: '#111827' }}>Booking confirmation</h1>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '32px', alignItems: 'start' }}>
+                <div className="event-detail-layout" style={{ alignItems: 'start', paddingTop: 0 }}>
                     <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <p style={{ fontSize: '14px', color: '#4b5563', marginBottom: '16px' }}>Name, email, and payment will be collected on the next step.</p>
                         <p style={{ fontWeight: 600, color: '#111827' }}>Event: {event.title}</p>
                         <p style={{ fontSize: '14px', color: '#4b5563', marginTop: '8px' }}>{qty} ticket{qty !== 1 ? 's' : ''}</p>
                     </div>
-                    <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div className="event-detail-right-col" style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <div style={{ width: '100%', height: '120px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
                             <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>

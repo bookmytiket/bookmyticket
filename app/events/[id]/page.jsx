@@ -115,7 +115,7 @@ export default function EventDetailPage({ params }) {
     }
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '102px' }}>
+        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)' }}>
 
             {/* ── Image-based Hero Banner (full-bleed) ── */}
             <section style={{ position: 'relative', width: '100%', minHeight: '420px', maxHeight: '55vh', backgroundColor: '#0f172a' }}>
@@ -149,10 +149,10 @@ export default function EventDetailPage({ params }) {
                 </div>
             </section>
 
-            <div className="container" style={{ padding: '40px 0', display: 'flex', gap: '30px' }}>
+            <div className="container event-detail-layout">
 
                 {/* ── Left Column ── */}
-                <div style={{ flex: '1' }}>
+                <div style={{ flex: '1', minWidth: 0 }}>
 
                     {/* Main Card (Title & Info Area) */}
                     <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '30px' }}>
@@ -167,7 +167,7 @@ export default function EventDetailPage({ params }) {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '20px' }}>
+                        <div className="grid-cols-2-responsive" style={{ marginTop: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563' }}>
                                 <Calendar className="text-orange-500" size={20} />
                                 <div>
@@ -206,7 +206,7 @@ export default function EventDetailPage({ params }) {
                     {/* Event Comforts & Features */}
                     <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '20px' }}>Event Comforts & Features</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="grid-cols-2-responsive">
                             {event.features.map((f, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563' }}>
                                     <span className="text-orange-500">{f.icon}</span>
@@ -269,7 +269,7 @@ export default function EventDetailPage({ params }) {
                 </div>
 
                 {/* ── Right Column (Booking Side) ── */}
-                <div style={{ width: '320px' }}>
+                <div className="event-detail-right-col">
                     <div style={{ position: 'sticky', top: '130px' }}>
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
                             <button

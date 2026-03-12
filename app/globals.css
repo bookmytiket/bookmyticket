@@ -57,7 +57,16 @@ body {
   color: var(--text-dark);
   background: var(--white);
   overflow-x: hidden;
+  width: 100%;
   line-height: 1.6;
+  position: relative;
+}
+
+main {
+  overflow-x: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ════════════ HERO BANNER (Full-Width High-Res — 4727x2000 Aspect) ════════════ */
@@ -65,7 +74,7 @@ body {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 16px;
   background: transparent;
   overflow: hidden;
 }
@@ -512,6 +521,40 @@ nextjs-portal {
 
   100% {
     background-position: 0% 50%;
+  }
+}
+
+/* ════════════ EVENT DETAIL REPSPONSIVE ════════════ */
+.event-detail-layout {
+  display: flex;
+  gap: 30px;
+  padding: 40px 0;
+}
+
+.event-detail-right-col {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .event-detail-layout {
+    flex-direction: column;
+  }
+
+  .event-detail-right-col {
+    width: 100%;
+  }
+}
+
+.grid-cols-2-responsive {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .grid-cols-2-responsive {
+    grid-template-columns: 1fr;
   }
 }
 
