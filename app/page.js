@@ -15,9 +15,11 @@ import VirtualEvents from '@/components/VirtualEvents';
 import RecentMemories from '@/components/RecentMemories';
 import VenueEventCard from '@/components/VenueEventCard';
 import Sponsors from '@/components/Sponsors';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
 import Footer from '@/components/Footer';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
+import { useAuth } from '@/components/AuthContext';
 
 function TicketCard({ event }) {
   return (
@@ -88,22 +90,19 @@ export default function Home() {
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
   ], [normalizedOrgEvents]);
 
-  const featuredEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.featured), [normalizedOrgEvents]);
-
-  const trendingEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.trending), [normalizedOrgEvents]);
-
-  const spotlightEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.spotlight), [normalizedOrgEvents]);
-
-  const exclusiveEventsList = useMemo(() => normalizedOrgEvents.filter((e) => e.exclusive), [normalizedOrgEvents]);
-
-  const popularEventsList = useMemo(() => normalizedOrgEvents, [normalizedOrgEvents]);
-
-  const venueEventsList = useMemo(() => {
-    return allEventsForFilter.filter(e => (e.venue || e.location) && !e.virtual && (e.id === 16 || e.id === "16"));
-  }, [allEventsForFilter]);
+  const { selectedCity } = useAuth();
 
   const filteredEvents = useMemo(() => {
     let results = allEventsForFilter;
+
+    // 0. Filter by Selected City
+    if (selectedCity) {
+      results = results.filter(ev =>
+        (ev.city && ev.city.toLowerCase() === selectedCity.toLowerCase()) ||
+        (ev.district && ev.district.toLowerCase() === selectedCity.toLowerCase()) ||
+        (ev.location && ev.location.toLowerCase().includes(selectedCity.toLowerCase()))
+      );
+    }
 
     // 1. Filter by Search Query
     if (searchQuery) {
@@ -122,7 +121,21 @@ export default function Home() {
     }
 
     return results;
-  }, [activeCat, searchQuery, allEventsForFilter]);
+  }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);
+
+  const featuredEventsList = useMemo(() => filteredEvents.filter((e) => e.featured), [filteredEvents]);
+
+  const trendingEventsList = useMemo(() => filteredEvents.filter((e) => e.trending), [filteredEvents]);
+
+  const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight), [filteredEvents]);
+
+  const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive), [filteredEvents]);
+
+  const popularEventsList = useMemo(() => filteredEvents, [filteredEvents]);
+
+  const venueEventsList = useMemo(() => {
+    return filteredEvents.filter(e => (e.venue || e.location) && !e.virtual);
+  }, [filteredEvents]);
 
 
   useEffect(() => {
@@ -315,14 +328,8 @@ export default function Home() {
               <Sponsors />
             </div>
 
-            {/* Dynamic Ticket Element before Footer */}
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-              <img
-                src="/ticket.png"
-                alt="Floating Ticket"
-                style={{ width: '450px', height: 'auto', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.1))' }}
-              />
-            </div>
+            {/* Subscription Banner before Footer */}
+            <SubscriptionBanner />
           </div>
         )}
       </main>

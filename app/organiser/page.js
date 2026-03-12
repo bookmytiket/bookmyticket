@@ -5,6 +5,7 @@ import { FileCheck2, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
+import { Country, State, City } from 'country-state-city';
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -471,7 +472,9 @@ function OrganiserPanel() {
         dateType: "single", countdownStatus: "active",
         description: "", banner: null, bannerPreview: null,
         galleryImages: [], galleryPreviews: [],
-        address: "", latitude: "", longitude: "", country: "", city: "", zipCode: "",
+        address: "", latitude: "", longitude: "",
+        country: "", state: "", district: "", city: "", zipCode: "",
+        countryCode: "", stateCode: "",
         seatingEnabled: true,
         environment: "Indoor",
         normalTicketCapacity: "",
@@ -684,6 +687,13 @@ function OrganiserPanel() {
             : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
 
         // Build payload with ONLY fields accepted by Convex
+        if (!isOnline) {
+            if (!postEvent.country) { setPublishError("Please select a Country."); return; }
+            if (!postEvent.state) { setPublishError("Please select a State."); return; }
+            if (!postEvent.district) { setPublishError("Please select a District."); return; }
+            if (!postEvent.city) { setPublishError("Please select a City."); return; }
+        }
+
         const payload = {
             organiserId: effectiveEmail,
             title: (postEvent.title || "Untitled Event").trim(),
@@ -699,6 +709,10 @@ function OrganiserPanel() {
             location: postEvent.location || undefined,
             venue: isOnline ? "Online / Virtual" : (postEvent.venue || undefined),
             address: isOnline ? postEvent.meetingUrl : (postEvent.address || undefined),
+            country: !isOnline ? postEvent.country : undefined,
+            state: !isOnline ? postEvent.state : undefined,
+            district: !isOnline ? postEvent.district : undefined,
+            city: !isOnline ? postEvent.city : undefined,
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
             meetingUrl: isOnline ? (postEvent.meetingUrl || undefined) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
@@ -1547,35 +1561,63 @@ function OrganiserPanel() {
                 </div>
             );
 
-            const renderSelect = (label, field, options) => (
-                <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
-                    <div style={{ position: "relative" }}>
-                        <select
-                            value={postEvent[field] || ""}
-                            onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
-                            style={{
-                                width: "100%",
-                                padding: "10px 14px",
-                                paddingRight: "40px",
-                                borderRadius: "4px",
-                                border: `1px solid ${t.border}`,
-                                backgroundColor: t.bg,
-                                color: t.textMain,
-                                fontSize: "13px",
-                                outline: "none",
-                                appearance: "none"
-                            }}
-                        >
-                            <option value="" disabled hidden>Select</option>
-                            {options.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                        <ChevronDown size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
+            const renderSelect = (label, field, options) => {
+                const handleSelectChange = (e) => {
+                    const val = e.target.value;
+                    const updates = { [field]: val };
+
+                    // Cascading Reset Logic
+                    if (field === "country") {
+                        updates.state = "";
+                        updates.district = "";
+                        updates.city = "";
+                        // If selecting Country, find its code for children
+                        const countryObj = Country.getAllCountries().find(c => c.name === val);
+                        updates.countryCode = countryObj?.isoCode || "";
+                    } else if (field === "state") {
+                        updates.district = "";
+                        updates.city = "";
+                        // Find state code
+                        const stateObj = State.getStatesOfCountry(postEvent.countryCode).find(s => s.name === val);
+                        updates.stateCode = stateObj?.isoCode || "";
+                    } else if (field === "district") {
+                        // For world-wide data, we use 'City' as 'District' because 4 levels aren't standard globally in this lib
+                        updates.city = "";
+                    }
+
+                    setPostEvent(prev => ({ ...prev, ...updates }));
+                };
+
+                return (
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
+                        <div style={{ position: "relative" }}>
+                            <select
+                                value={postEvent[field] || ""}
+                                onChange={handleSelectChange}
+                                style={{
+                                    width: "100%",
+                                    padding: "10px 14px",
+                                    paddingRight: "40px",
+                                    borderRadius: "4px",
+                                    border: `1px solid ${t.border}`,
+                                    backgroundColor: t.bg,
+                                    color: t.textMain,
+                                    fontSize: "13px",
+                                    outline: "none",
+                                    appearance: "none"
+                                }}
+                            >
+                                <option value="" disabled hidden>Select</option>
+                                {options.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
+                        </div>
                     </div>
-                </div>
-            );
+                );
+            };
             switch (activeTab) {
                 case "dashboard":
                     return (
@@ -1932,10 +1974,17 @@ function OrganiserPanel() {
                                 {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "16px", alignItems: "end" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr auto", gap: "12px", alignItems: "end", marginBottom: "20px" }}>
                                 {renderInput("Venue Address*", "venue", "text", "Venue Name / Address")}
-                                {renderInput("City*", "city", "text", "City")}
-                                {renderInput("Country*", "country", "text", "Country")}
+
+                                {renderSelect("Country*", "country", Country.getAllCountries().map(c => ({ label: c.name, value: c.name })))}
+
+                                {renderSelect("State*", "state", !postEvent.countryCode ? [] : State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name })))}
+
+                                {renderSelect("District*", "district", (!postEvent.countryCode || !postEvent.stateCode) ? [] : City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name })))}
+
+                                {renderInput("City*", "city", "text", "City / Area")}
+
                                 <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "10px", backgroundColor: "#8b5cf6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "20px" }}>Open Map</button>
                             </div>
 

@@ -17,6 +17,7 @@
   --accent-gradient: linear-gradient(135deg, #f84464 0%, #c026d3 100%);
   --accent-gradient-hover: linear-gradient(135deg, #fb7185 0%, #d946ef 100%);
 
+  --evente-pink: #f43f5e;
   --primary: var(--accent);
   --primary-dark: var(--accent-dark);
   --primary-light: var(--accent-light);
@@ -368,11 +369,8 @@ nextjs-portal {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: transparent;
   transition: all 0.3s;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .header-scrolled {
@@ -517,15 +515,230 @@ nextjs-portal {
   }
 }
 
-.header-top {
+/* Evente Top Bar */
+.header-top-bar {
+  background: var(--evente-secondary);
+  color: #fff;
+  height: 42px;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
   padding: 0 2rem;
-  height: 58px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-top-bar-inner {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-bar-info {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.top-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.top-bar-item:hover {
+  opacity: 1;
+}
+
+.top-bar-socials {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.social-link {
+  opacity: 0.7;
+  transition: all 0.2s;
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.social-link:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 15px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-main {
+  width: 92%;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  height: 75px;
   background: #fde047;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  transition: background 0.3s ease;
+  /* Reverted to Yellow */
+  border-radius: 12px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.header-logo {
+  flex-shrink: 0;
+  margin-right: 40px;
+}
+
+.header-nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 35px;
+}
+
+.nav-link-item {
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #000;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  position: relative;
+  transition: color 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-link-item:hover,
+.nav-link-item.active {
+  color: var(--evente-pink);
+}
+
+.nav-link-item svg.chevron {
+  width: 12px;
+  height: 12px;
+  opacity: 0.5;
+}
+
+.header-actions-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #000;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.action-icon-btn:hover {
+  color: var(--evente-pink);
+}
+
+.cart-icon-wrap {
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #000;
+  color: #fff;
+  font-size: 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.nav-cta-btn {
+  background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%);
+  /* Pink to Purple Gradient */
+  color: #fff !important;
+  padding: 0 25px;
+  height: 55px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s;
+}
+
+.nav-cta-btn:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #c084fc 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3);
+}
+
+.header-scrolled {
+  padding: 5px 0;
+}
+
+.header-scrolled .header-main {
+  height: 70px;
+  border-radius: 0;
+  width: 100%;
+  max-width: none;
+  background: rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.header-scrolled .header-logo img {
+  filter: brightness(0) invert(1);
+}
+
+.header-scrolled .nav-org-btn,
+.header-scrolled .nav-action-signin {
+  color: #fff !important;
+}
+
+.nav-org-btn {
+  background: none;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  margin-right: 15px;
+  cursor: pointer;
+  color: #000;
+  transition: all 0.3s ease;
 }
 
 .header-logo {
@@ -537,7 +750,6 @@ nextjs-portal {
   flex-shrink: 0;
   transition: all 0.2s;
   text-transform: lowercase;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .header-logo:hover {
@@ -867,13 +1079,16 @@ nextjs-portal {
 
 .loc-modal,
 .org-modal {
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 16px;
   width: 100%;
   max-width: 580px;
   position: relative;
   animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes modalPop {
@@ -897,8 +1112,8 @@ nextjs-portal {
 
 .org-modal-head {
   padding: 32px 32px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  background: linear-gradient(135deg, #667eea08, #764ba208);
+  border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
 }
 
 .org-modal-title {
@@ -1051,7 +1266,22 @@ nextjs-portal {
 .loc-modal {
   padding: 32px 40px 0 40px;
   max-width: 840px;
+  width: 90%;
   background: #ffffff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalScaleUp {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .loc-close-x {
@@ -1063,6 +1293,7 @@ nextjs-portal {
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 0.2s;
+  z-index: 10;
 }
 
 .loc-close-x:hover {
@@ -1070,8 +1301,8 @@ nextjs-portal {
 }
 
 .loc-title {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   color: #1e293b;
   text-align: center;
   margin-bottom: 24px;
@@ -1080,10 +1311,15 @@ nextjs-portal {
 .loc-search-group {
   display: flex;
   align-items: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 4px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 16px;
   margin-bottom: 24px;
+  transition: border-color 0.2s;
+}
+
+.loc-search-group:focus-within {
+  border-color: #ef4444;
 }
 
 .loc-search-box {
@@ -1097,10 +1333,10 @@ nextjs-portal {
   flex: 1;
   border: none;
   outline: none;
-  height: 48px;
+  height: 40px;
   font-size: 1rem;
   color: #1e293b;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .loc-input::placeholder {
@@ -1108,7 +1344,7 @@ nextjs-portal {
 }
 
 .loc-gps-divider {
-  width: 1px;
+  width: 1.5px;
   height: 24px;
   background: #e2e8f0;
   margin: 0 16px;
@@ -1126,12 +1362,11 @@ nextjs-portal {
 
 .loc-gps-target:hover {
   transform: scale(1.15);
-  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4));
 }
 
 .loc-country-tabs {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 32px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -1142,13 +1377,13 @@ nextjs-portal {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 10px 20px;
+  border-radius: 25px;
   border: 1px solid #e2e8f0;
   background: white;
   white-space: nowrap;
-  font-size: 0.88rem;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
@@ -1175,7 +1410,7 @@ nextjs-portal {
 .loc-cities-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 32px;
   padding: 4px;
   border-bottom: 1px solid #f1f5f9;
@@ -1186,9 +1421,9 @@ nextjs-portal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 12px 4px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
@@ -1197,8 +1432,8 @@ nextjs-portal {
 }
 
 .loc-city-card:hover {
-  background: #f8fafc;
-  transform: translateY(-2px);
+  background: #f1f5f9;
+  transform: translateY(-4px);
 }
 
 .loc-city-card.active {
@@ -1209,12 +1444,12 @@ nextjs-portal {
 .loc-city-icon-wrap {
   width: 72px;
   height: 72px;
-  border-radius: 18px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 8px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s ease;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
 }
 
@@ -1225,9 +1460,74 @@ nextjs-portal {
   transition: transform 0.25s ease;
 }
 
+.loc-others-wrapper {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.loc-others-btn {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.loc-others-btn:hover {
+  border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.loc-select-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 650px;
+  margin: 16px auto;
+  animation: fadeInDown 0.3s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loc-select-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  outline: none;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.loc-select-input:focus {
+  border-color: #6366f1;
+  background: #fff;
+}
+
 .loc-city-card:hover .loc-city-icon-wrap {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  background: #fff !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
 .loc-city-card:hover .loc-city-emoji {

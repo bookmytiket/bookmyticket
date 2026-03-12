@@ -9,7 +9,8 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedCity, setSelectedCity] = useState("Coimbatore");
+    const [selectedCity, setSelectedCity] = useState("");
+    const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "" });
     const router = useRouter();
     const convex = useConvex();
 
@@ -21,6 +22,10 @@ export function AuthProvider({ children }) {
         const storedCity = localStorage.getItem("selectedCity");
         if (storedCity) {
             setSelectedCity(storedCity);
+        }
+        const storedHierarchy = localStorage.getItem("locationHierarchy");
+        if (storedHierarchy) {
+            setLocationHierarchy(JSON.parse(storedHierarchy));
         }
         setLoading(false);
 
@@ -42,9 +47,13 @@ export function AuthProvider({ children }) {
         return () => window.removeEventListener("storage", handleStorageChange);
     }, [router]);
 
-    const updateCity = (city) => {
+    const updateCity = (city, hierarchy = null) => {
         setSelectedCity(city);
         localStorage.setItem("selectedCity", city);
+        if (hierarchy) {
+            setLocationHierarchy(hierarchy);
+            localStorage.setItem("locationHierarchy", JSON.stringify(hierarchy));
+        }
     };
 
     const convexOrganisers = useQuery(api.organisers.list) || [];
@@ -111,7 +120,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity, locationHierarchy }}>
             {children}
         </AuthContext.Provider>
     );

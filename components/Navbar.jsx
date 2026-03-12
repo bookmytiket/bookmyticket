@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
+import { Country, State, City } from "country-state-city";
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -36,39 +38,34 @@ const CITY_GRADIENTS = [
 
 const CITY_ICONS = {
   "Bengaluru": (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M10 54h44M14 54V24l8-4v34M22 54V10l10-4 10 4v44M42 54V30l8-4v28" stroke="currentColor" strokeWidth="2" fill="none" />
-      <rect x="25" y="14" width="2" height="2" /><rect x="25" y="22" width="2" height="2" /><rect x="25" y="30" width="2" height="2" />
-      <rect x="37" y="14" width="2" height="2" /><rect x="37" y="22" width="2" height="2" /><rect x="37" y="30" width="2" height="2" />
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+      <path d="M10 54h44M14 54V24l8-4v34M22 54V10l10-4 10 4v44M42 54V30l8-4v28" />
+      <rect x="25" y="14" width="2" height="2" fill="currentColor" opacity="0.3" />
+      <rect x="37" y="14" width="2" height="2" fill="currentColor" opacity="0.3" />
     </svg>
   ),
   Mumbai: (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M8 56h48M12 56V28l12-10 12 10v28M36 56V32l8-6 8 6v26" stroke="currentColor" strokeWidth="2" fill="none" />
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+      <path d="M8 56h48M12 56V28l12-10 12 10v28M36 56V32l8-6 8 6v26" />
       <circle cx="24" cy="24" r="3" />
     </svg>
   ),
   Delhi: (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M12 56h40M16 56V20l16-8 16 8v36" stroke="currentColor" strokeWidth="2" fill="none" />
-      <path d="M24 56V40h16v16" stroke="currentColor" strokeWidth="2" fill="none" />
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+      <path d="M12 56h40M16 56V20l16-8 16 8v36" />
+      <path d="M24 56V40h16v16" />
     </svg>
   ),
-  Dubai: (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M32 56V4M20 56C20 30 32 4 32 4s12 26 12 52" stroke="currentColor" strokeWidth="2" fill="none" />
-      <path d="M22 48h20M24 40h16M26 32h12" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  Singapore: (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M10 56h44M20 56V20c0-6 12-6 12 0v36M32 56V30c0-6 12-6 12 0v26" stroke="currentColor" strokeWidth="2" fill="none" />
-      <circle cx="32" cy="12" r="2" />
+  Coimbatore: (
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+      <rect x="24" y="20" width="16" height="36" />
+      <circle cx="32" cy="30" r="4" />
+      <path d="M24 20l8-8 8 8" />
     </svg>
   ),
   Generic: (
-    <svg viewBox="0 0 64 64" width="40" height="40" fill="currentColor">
-      <path d="M12 56h40M16 56V24l16-10 16 10v32" stroke="currentColor" strokeWidth="2" fill="none" />
+    <svg viewBox="0 0 64 64" width="40" height="40" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+      <path d="M12 56h40M16 56V24l16-10 16 10v32" />
     </svg>
   )
 };
@@ -80,7 +77,7 @@ const POPULAR_CITIES_BY_COUNTRY = {
     { name: "Delhi", iconId: "Delhi" },
     { name: "Chennai", iconId: "Generic" },
     { name: "Hyderabad", iconId: "Generic" },
-    { name: "Coimbatore", iconId: "Generic" },
+    { name: "Coimbatore", iconId: "Coimbatore" },
     { name: "Kochi", iconId: "Generic" },
     { name: "Kolkata", iconId: "Generic" },
   ],
@@ -156,6 +153,13 @@ export default function Navbar() {
   const searchParams = useSearchParams();
   const activeCat = searchParams.get("category") || "";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [locOpen, setLocOpen] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCity && !locOpen) {
+      setLocOpen(true);
+    }
+  }, [selectedCity, locOpen]);
 
 
   const convexCategories = useQuery(api.systemConfig.getConfig, { key: "admin_categories" });
@@ -178,12 +182,18 @@ export default function Navbar() {
   };
 
 
-  /* Location modal */
-  const [locOpen, setLocOpen] = useState(false);
+  /* Location modal states */
   const [locSearch, setLocSearch] = useState("");
   const [activeCountry, setActiveCountry] = useState("India");
   const [showOtherCities, setShowOtherCities] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+
+  // country-state-city states
+  const [selCountry, setSelCountry] = useState("");
+  const [selCountryCode, setSelCountryCode] = useState("");
+  const [selState, setSelState] = useState("");
+  const [selStateCode, setSelStateCode] = useState("");
+  const [selCity, setSelCity] = useState("");
 
   const handleGeoLocation = () => {
     setGeoLoading(true);
@@ -294,141 +304,132 @@ export default function Navbar() {
   return (
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
-        <div className="header-top">
+        {/* Main Navbar */}
+        <div className="header-main" style={{ justifyContent: 'space-between' }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick}>
-            <img src="/logo.png" alt="Logo" style={{ height: "65px", width: "auto", display: "block" }} />
+            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "60px" : "70px", width: "auto", display: "block", transition: "height 0.3s ease" }} />
           </Link>
 
-          <div className="nav-search-wrap">
-            <svg className="nav-search-icon-left" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              id="nav-search"
-              className="nav-search-input"
-              placeholder="Search For Any Event"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="nav-search-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+
+          {/* Desktop Searchbar - Premium Version */}
+          <div className="nav-search-wrap hide-mobile" style={{
+            marginLeft: '20px',
+            marginRight: '20px',
+            maxWidth: '450px',
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: scrolled ? 'rgba(255,255,255,0.1)' : '#f8fafc',
+            borderRadius: '12px',
+            padding: '4px 6px',
+            border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
+              <Search size={18} color={scrolled ? "#fff" : "#f84464"} />
+              <input
+                className="nav-search-input"
+                placeholder="Search events, artists, venues..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/?q=${encodeURIComponent(search)}`)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  width: '100%',
+                  color: scrolled ? '#fff' : '#1e293b'
+                }}
+              />
+            </div>
+            <button
+              onClick={() => router.push(`/?q=${encodeURIComponent(search)}`)}
+              style={{
+                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 16px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
               Search
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
-            <div className="header-actions">
-              <button id="location-btn" className="nav-location-btn" onClick={() => setLocOpen(true)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                {selectedCity}
-                <svg className="nav-loc-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
-              </button>
+          {/* Location Selection Button */}
+          <button
+            className="nav-loc-btn hide-mobile"
+            onClick={() => setLocOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: scrolled ? '#fff' : '#1e293b',
+              marginRight: 'auto'
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span style={{ fontWeight: 700, fontSize: '15px' }}>{selectedCity || "Select Location"}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.6 }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
 
-              <button className="nav-action-organiser hide-mobile" onClick={() => setOrgOpen(true)}>Become an Organiser</button>
-              <Link href="/advertise" className="nav-action-advertise hide-mobile">Elevate Your Brand</Link>
-
-              {user ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "10px" }}>
-                  <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile">Dashboard</Link>
-                  <div style={{ position: "relative" }}>
-                    <div
-                      onClick={() => setProfileOpen(!profileOpen)}
-                      title={user.name}
-                      style={{ width: "35px", height: "35px", borderRadius: "50%", background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", cursor: "pointer", fontSize: "14px", userSelect: "none" }}
-                    >
-                      {user.name && user.name.length > 0 ? user.name[0].toUpperCase() : user.firstName && user.firstName.length > 0 ? user.firstName[0].toUpperCase() : "U"}
-                    </div>
-
-                    {/* Public User Profile Dropdown */}
-                    {profileOpen && (
-                      <div style={{
-                        position: "absolute",
-                        top: "45px",
-                        right: "0",
-                        background: "#fff",
-                        borderRadius: "12px",
-                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                        border: "1px solid #e2e8f0",
-                        width: "180px",
-                        overflow: "hidden",
-                        zIndex: 100,
-                        display: "flex",
-                        flexDirection: "column",
-                        transformOrigin: "top right",
-                        animation: "dropdownFadeIn 0.2s ease"
-                      }}>
-                        <Link href="/profile?tab=my_booking" style={{ padding: "12px 16px", textDecoration: "none", color: "#1e293b", fontSize: "14px", fontWeight: "500", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }} onClick={() => setProfileOpen(false)}>
-                          🎟️ My Booking
-                        </Link>
-                        <Link href="/profile?tab=change_password" style={{ padding: "12px 16px", textDecoration: "none", color: "#1e293b", fontSize: "14px", fontWeight: "500", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: "8px" }} onClick={() => setProfileOpen(false)}>
-                          🔒 Change Password
-                        </Link>
-                        <button onClick={() => { setProfileOpen(false); logout(); }} style={{ padding: "12px 16px", textDecoration: "none", color: "#ef4444", fontSize: "14px", fontWeight: "600", background: "none", border: "none", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
-                          🚪 Logout
-                        </button>
-                      </div>
-                    )}
-                    {/* Close dropdown when clicking outside */}
-                    {profileOpen && (
-                      <div
-                        style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
-                        onClick={() => setProfileOpen(false)}
-                      />
-                    )}
+          <div className="header-actions-area">
+            <button
+              className="nav-cta-btn hide-mobile"
+              onClick={() => setOrgOpen(true)}
+              style={{ height: '45px', padding: '0 20px', fontSize: '0.75rem' }}
+            >
+              Become an Organiser
+            </button>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+                  Dashboard
+                </Link>
+                <div style={{ position: "relative" }}>
+                  <div
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    style={{ width: "35px", height: "35px", borderRadius: "50%", background: "var(--evente-pink)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", cursor: "pointer", fontSize: "14px" }}
+                  >
+                    {user.name && user.name[0].toUpperCase()}
                   </div>
+                  {profileOpen && (
+                    <div className="profile-dropdown" style={{
+                      position: "absolute", top: "45px", right: "0", background: "#fff",
+                      borderRadius: "8px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                      border: "1px solid #e2e8f0", width: "160px", zIndex: 100, display: "flex", flexDirection: "column"
+                    }}>
+                      <Link href="/profile" style={{ padding: "10px 15px", textDecoration: "none", color: "#1e293b", fontSize: "14px" }} onClick={() => setProfileOpen(false)}>My Profile</Link>
+                      <button onClick={logout} style={{ padding: "10px 15px", textAlign: "left", background: "none", border: "none", color: "#ef4444", fontWeight: "600", cursor: "pointer" }}>Logout</button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{ marginLeft: "10px" }} className="hide-mobile">
-                  <Link href="/signin" className="nav-action-signin">Sign In</Link>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <Link href="/signin" className="nav-cta-btn" style={{ height: '45px', padding: '0 30px' }}>Sign In</Link>
+            )}
 
-            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", fontSize: "1.5rem", padding: "0.5rem" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
+            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
           </div>
         </div>
-
-
-        {/* Sub-NavigationBar (Desktop/Tablet) */}
-        {
-          (isHome || pathname === "/") && !scrolled && (
-
-            <div className="header-subnav">
-              <div className="header-subnav-inner">
-                <div className="header-subnav-left">
-                  {SUBNAV_LINKS.map(({ href, label }) => (
-                    <Link key={label} href={href} className="subnav-link" onClick={label === "Events" ? handleEventsClick : undefined}>
-                      {label}
-
-                    </Link>
-                  ))}
-                  <span className="subnav-sep" />
-                  {navCategories.map((cat) => (
-                    <button
-                      key={cat}
-                      className={`subnav-cat${activeCat === cat ? " active" : ""}`}
-                      onClick={() => setActiveCat(cat === activeCat ? "" : cat)}
-                    >{cat}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )
-        }
-
       </header>
       {isHome && !scrolled && (
         <div style={{ position: "fixed", top: "calc(var(--header-h) - 40px)", left: 0, right: 0, zIndex: 999, background: "transparent", pointerEvents: "auto" }}>
@@ -447,15 +448,6 @@ export default function Navbar() {
                 </button>
               </div>
 
-              <div className="nav-search-wrap show-mobile" style={{ display: "flex", maxWidth: "none", marginBottom: "1rem" }}>
-                <span className="nav-search-icon">🔍</span>
-                <input
-                  className="nav-search-input"
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
 
               <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "0.5rem" }}>Navigation</p>
               {SUBNAV_LINKS.map(({ href, label }) => (
@@ -499,119 +491,150 @@ export default function Navbar() {
 
       {
         locOpen && (
-          <div className="modal-backdrop" onClick={() => setLocOpen(false)}>
-            <div className="loc-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="loc-close-x" onClick={() => setLocOpen(false)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-
-              <h2 className="loc-title">Select Your Location to Continue</h2>
-
-              <div className="loc-search-box">
-                <svg className="loc-icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input
-                  className="loc-input"
-                  placeholder="Search city or location..."
-                  value={locSearch}
-                  onChange={(e) => {
-                    setLocSearch(e.target.value);
-                    if (e.target.value.length > 0) setShowOtherCities(true);
-                  }}
-                  autoFocus
-                />
-                <button className="loc-search-clear-mini" onClick={() => { setLocSearch(""); setShowOtherCities(false); }} style={{ opacity: locSearch ? 1 : 0, transition: "opacity 0.2s" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <div className="modal-backdrop" onClick={() => selectedCity && setLocOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="loc-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
+              {selectedCity && (
+                <button className="loc-close-x" onClick={() => setLocOpen(false)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
-              </div>
-              <div className="loc-gps-divider"></div>
-              <button
-                className={`loc-gps-target ${geoLoading ? 'animating' : ''}`}
-                onClick={handleGeoLocation}
-                disabled={geoLoading}
-                title="Detect my location"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <line x1="12" y1="1" x2="12" y2="5"></line>
-                  <line x1="12" y1="19" x2="12" y2="23"></line>
-                  <line x1="1" y1="12" x2="5" y2="12"></line>
-                  <line x1="19" y1="12" x2="23" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-
-            <div className="loc-country-tabs">
-              {COUNTRIES.map((c) => (
-                <button
-                  key={c.label}
-                  className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
-                  onClick={() => setActiveCountry(c.label)}
-                >
-                  <span className="loc-tab-flag">{c.flag}</span>
-                  <span className="loc-tab-label">{c.label}</span>
-                </button>
-              ))}
-            </div>
-
-            <p className="loc-section-label">Popular Cities</p>
-
-            <div className="loc-cities-grid">
-              {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.name.toLowerCase().includes(locSearch.toLowerCase())).map((city) => (
-                <button
-                  key={city.name}
-                  className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
-                  onClick={() => { updateCity(city.name); setLocOpen(false); }}
-                >
-                  <div className="loc-city-icon-wrap" style={{ border: selectedCity === city.name ? "2.5px solid #6366f1" : "1.5px solid #e2e8f0" }}>
-                    <span className="loc-city-svg">{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
-                  </div>
-                  <span className="loc-city-name" style={{ color: selectedCity === city.name ? "#6366f1" : "#475569", fontWeight: selectedCity === city.name ? "700" : "600" }}>{city.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="loc-others-wrapper">
-              <button className="loc-others-btn" onClick={() => setShowOtherCities(!showOtherCities)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                <span>{selectedCity && !(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).find(c => c.name === selectedCity) ? selectedCity : "Events in other cities"}</span>
-                <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-              </button>
-
-              {showOtherCities && (
-                <div className="loc-select-dropdown">
-                  <div className="loc-dropdown-inner">
-                    {(ALL_CITIES_BY_COUNTRY[activeCountry] || []).filter(c => c.toLowerCase().includes(locSearch.toLowerCase())).map(city => (
-                      <div
-                        key={city}
-                        className={`loc-dropdown-item ${selectedCity === city ? 'selected' : ''}`}
-                        onClick={() => { updateCity(city); setLocOpen(false); setShowOtherCities(false); }}
-                      >
-                        {city}
-                        {selectedCity === city && <span className="loc-check">✓</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
-            </div>
 
-            <div className="loc-footer-graphic">
-              <div className="loc-skyline">
-                <svg viewBox="0 0 800 200" className="skyline-svg">
-                  <path d="M0,200 L800,200 L800,100 L760,100 L760,120 L720,120 L720,80 L680,80 L680,140 L640,140 L640,110 L600,110 L600,130 L560,130 L560,70 L520,70 L520,150 L480,150 L480,100 L440,100 L440,130 L400,130 L400,80 L360,80 L360,140 L320,140 L320,110 L280,110 L280,130 L240,130 L240,70 L200,70 L200,150 L160,150 L160,100 L120,100 L120,130 L80,130 L80,90 L40,90 L40,140 L0,140 Z" fill="#eeeeee" />
-                </svg>
-                <div className="loc-master-pin">
-                  <div className="pin-pulse"></div>
-                  <div className="pin-main">
-                    <div className="ticket9-pin-logo">
-                      <div className="t9-pin-outer">
-                        <span>9</span>
-                      </div>
-                      <div className="t9-pin-tail"></div>
-                    </div>
-                  </div>
+              <h2 className="loc-title" style={{ marginTop: '10px' }}>Select Your Location to Continue</h2>
+
+              <div className="loc-search-group" style={{ marginBottom: '24px' }}>
+                <div className="loc-search-box">
+                  <svg className="loc-icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input
+                    className="loc-input"
+                    placeholder="Search For A Location..."
+                    value={locSearch}
+                    onChange={(e) => setLocSearch(e.target.value)}
+                    autoFocus
+                  />
+                  {locSearch && (
+                    <button className="loc-search-clear-mini" onClick={() => setLocSearch("")} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  )}
                 </div>
+                <div className="loc-gps-divider"></div>
+                <button
+                  className={`loc-gps-target ${geoLoading ? 'animating' : ''}`}
+                  onClick={handleGeoLocation}
+                  disabled={geoLoading}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <line x1="12" y1="1" x2="12" y2="5"></line>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="1" y1="12" x2="5" y2="12"></line>
+                    <line x1="19" y1="12" x2="23" y2="12"></line>
+                  </svg>
+                </button>
               </div>
+
+              <div className="loc-country-tabs" style={{ marginBottom: '20px' }}>
+                {COUNTRIES.map((c) => (
+                  <button
+                    key={c.label}
+                    className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
+                    onClick={() => setActiveCountry(c.label)}
+                    style={{ border: activeCountry === c.label ? '1.5px solid #6366f1' : '1px solid #e2e8f0', color: activeCountry === c.label ? '#6366f1' : '#64748b' }}
+                  >
+                    <span className="loc-tab-flag">{c.flag}</span>
+                    <span className="loc-tab-label" style={{ fontWeight: activeCountry === c.label ? '700' : '500' }}>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginBottom: '24px' }}></div>
+
+              <p className="loc-section-label">Popular Cities</p>
+
+              <div className="loc-cities-grid">
+                {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).map((city) => (
+                  <button
+                    key={city.name}
+                    className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
+                    onClick={() => { updateCity(city.name); setLocOpen(false); }}
+                    style={{ border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid transparent' }}
+                  >
+                    <div className="loc-city-icon-wrap" style={{ background: '#f8fafc', border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid #f1f5f9' }}>
+                      <span className="loc-city-svg" style={{ color: '#94a3b8' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
+                    </div>
+                    <span className="loc-city-name" style={{ color: selectedCity === city.name ? "#6366f1" : "#475569", fontWeight: selectedCity === city.name ? "700" : "500", fontSize: '12px' }}>{city.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginTop: '32px', marginBottom: '24px' }}></div>
+
+              <div className="loc-others-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 20px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  width: 'fit-content',
+                  cursor: 'pointer'
+                }} onClick={() => setShowOtherCities(!showOtherCities)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#475569' }}>Events in other cities</span>
+                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ transition: 'transform 0.3s' }}><polyline points="6 9 12 15 18 9" /></svg>
+                </div>
+
+                {showOtherCities && (
+                  <div className="loc-select-group">
+                    <select
+                      className="loc-select-input"
+                      value={selCountry}
+                      onChange={(e) => {
+                        const code = Country.getAllCountries().find(c => c.name === e.target.value)?.isoCode || "";
+                        setSelCountry(e.target.value);
+                        setSelCountryCode(code);
+                        setSelState("");
+                        setSelStateCode("");
+                        setSelCity("");
+                      }}
+                    >
+                      <option value="">Select Country</option>
+                      {Country.getAllCountries().map(c => <option key={c.isoCode} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <select
+                      className="loc-select-input"
+                      value={selState}
+                      disabled={!selCountryCode}
+                      onChange={(e) => {
+                        const code = State.getStatesOfCountry(selCountryCode).find(s => s.name === e.target.value)?.isoCode || "";
+                        setSelState(e.target.value);
+                        setSelStateCode(code);
+                        setSelCity("");
+                      }}
+                    >
+                      <option value="">Select State</option>
+                      {selCountryCode && State.getStatesOfCountry(selCountryCode).map(s => <option key={s.isoCode} value={s.name}>{s.name}</option>)}
+                    </select>
+                    <select
+                      className="loc-select-input"
+                      value={selCity}
+                      disabled={!selStateCode}
+                      onChange={(e) => {
+                        setSelCity(e.target.value);
+                        updateCity(e.target.value, { country: selCountry, state: selState, city: e.target.value });
+                        setLocOpen(false);
+                        setShowOtherCities(false);
+                      }}
+                    >
+                      <option value="">Select City</option>
+                      {selCountryCode && selStateCode && City.getCitiesOfState(selCountryCode, selStateCode).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ paddingBottom: '32px' }}></div>
             </div>
           </div>
         )

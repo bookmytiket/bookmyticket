@@ -161,63 +161,6 @@ export default function VideoHeroBanner() {
                     {config.subtitle || "Explore concerts, shows, nightlife, and exclusive experiences happening around you."}
                 </p>
 
-                {/* Search Bar */}
-                <div style={{
-                    display: "flex",
-                    width: "100%",
-                    maxWidth: "600px",
-                    backgroundColor: "#fff",
-                    borderRadius: "12px",
-                    padding: "6px",
-                    marginBottom: "32px",
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.2)"
-                }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        flex: 1,
-                        paddingLeft: "12px"
-                    }}>
-                        <Search size={20} color="#6b7280" />
-                        <input
-                            type="text"
-                            placeholder="Search For Any Event"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            style={{
-                                border: "none",
-                                outline: "none",
-                                width: "100%",
-                                padding: "12px 14px",
-                                fontSize: "16px",
-                                color: "#111827",
-                                background: "transparent"
-                            }}
-                        />
-                    </div>
-                    <button style={{
-                        background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "8px",
-                        padding: "0 28px",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        transition: "opacity 0.2s"
-                    }}
-                        onClick={handleSearch}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-                    >
-                        <Search size={18} />
-                        Search
-                    </button>
-                </div>
 
             </div>
         </section>
