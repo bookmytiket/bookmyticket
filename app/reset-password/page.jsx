@@ -6,6 +6,8 @@ import { api } from "@/convex/_generated/api";
 import { Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
+import { hashPassword } from "@/app/utils/hashPassword";
+
 function ResetPasswordForm() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -36,7 +38,8 @@ function ResetPasswordForm() {
 
         setStatus("loading");
         try {
-            await resetPassMutation({ token, email, newPassword });
+            const hashed = await hashPassword(newPassword);
+            await resetPassMutation({ token, email, newPassword: hashed });
             setStatus("success");
         } catch (err) {
             setStatus("error");

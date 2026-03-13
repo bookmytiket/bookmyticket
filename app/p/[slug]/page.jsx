@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-export default function CustomPage() {
+export default function LandingPage({ params }) {
     const { slug } = useParams();
     const page = useQuery(api.pages.getBySlug, { slug });
 

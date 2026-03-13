@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "picsum.photos" },
@@ -8,16 +9,6 @@ const nextConfig = {
       { protocol: "https", hostname: "flagcdn.com" },
       { protocol: "https", hostname: "flagicons.lipis.dev" },
     ],
-  },
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-        ],
-      },
-    ];
   },
 };
 

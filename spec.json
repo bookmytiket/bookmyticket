@@ -1,0 +1,3738 @@
+{
+  "url": "https://tangible-possum-27.convex.cloud",
+  "functions": [
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "events.js:getActiveEvents",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "events.js:getOrganiserEvents",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "address": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "bannerPreview": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "category": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "cols": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "date": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "dateSlots": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "date": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "time": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": true
+          },
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "environment": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "exclusive": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "featured": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "img": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "layoutType": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "meetingUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "normalTicketCapacity": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "normalTicketPrice": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "price": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "rows": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "seatCategories": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "isFree": {
+                    "fieldType": {
+                      "type": "boolean"
+                    },
+                    "optional": true
+                  },
+                  "name": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "price": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  },
+                  "rows": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": true
+          },
+          "seatingEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "spotlight": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "time": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "totalSeats": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "trending": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "type": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "venue": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "virtual": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "events.js:createEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "events",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "events.js:deleteEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "address": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "bannerPreview": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "category": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "cols": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "date": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "dateSlots": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "date": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "time": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": true
+          },
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "environment": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "events",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "img": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "layoutType": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "meetingUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "normalTicketCapacity": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "normalTicketPrice": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "price": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "rows": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "seatCategories": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "isFree": {
+                    "fieldType": {
+                      "type": "boolean"
+                    },
+                    "optional": true
+                  },
+                  "name": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "price": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  },
+                  "rows": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": true
+          },
+          "seatingEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "time": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "totalSeats": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "type": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "venue": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "virtual": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "events.js:updateEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "key": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "systemConfig.js:getConfig",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "systemConfig.js:getAllConfig",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "key": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "value": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "systemConfig.js:setConfig",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:getBookings",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:getBookingById",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "eventId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "scanned": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "ticketCount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "totalPrice": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:createBooking",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "bookings",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:confirmBooking",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "bookings",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "scanned": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:updateBooking",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "migrations.js:migrateOrganisers",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "organisers.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "organisers.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "kycStatus": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "walletBalance": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organisers",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "kycDetails": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "aadharFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "agreementAccepted": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "alternateNumber": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "category": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "chequeFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "city": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "designation": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "email": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "fullName": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "hasITR": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "hasOSTIN": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "mobile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "panFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "panNumber": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "socialMediaLink": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "websiteLink": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                }
+              }
+            },
+            "optional": true
+          },
+          "kycStatus": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "walletBalance": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:patch",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organisers",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organisers",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "kycDetails": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "aadharFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "agreementAccepted": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "alternateNumber": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "category": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "chequeFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "city": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "designation": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "email": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "fullName": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "hasITR": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "hasOSTIN": {
+                  "fieldType": {
+                    "type": "boolean"
+                  },
+                  "optional": false
+                },
+                "mobile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "panFile": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "panNumber": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "socialMediaLink": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "websiteLink": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:submitKyc",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organiserRequests",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:approveRequest",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "identifier": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "organisers.js:verifyCredentials",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "organisers.js:cleanupDuplicates",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "supportTickets.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "issue": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "supportTickets.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "adminNotes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "supportTickets",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "supportTickets.js:updateStatus",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "supportTickets",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "supportTickets.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "auth.js:forgotPassword",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "token": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "auth.js:verifyResetToken",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "newPassword": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "token": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "auth.js:resetPassword",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "users.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "users.js:getByEmail",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "createdAt": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "role": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "users.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "password": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "users.js:updatePassword",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "analytics.js:getDashboardStats",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "promotions.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "active": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "bogo": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "code": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "type": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "usage": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "validUntil": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "value": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "promotions.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "promotions",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "promotions.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "active": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "promotions",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "usage": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "validUntil": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "promotions.js:patch",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "notifications.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "message": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "target": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "notifications.js:send",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "apiKeys.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "key": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "label": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "apiKeys.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "apiKeys",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "apiKeys.js:toggleStatus",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "apiKeys",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "apiKeys.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "paymentGateways.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "config": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "isEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "testMode": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "paymentGateways.js:add",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "config": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "paymentGateways",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "isEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "testMode": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "paymentGateways.js:patch",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "paymentGateways",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "paymentGateways.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "ticketSettings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "autoApprove": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "companyName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "ticketSettings",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "importantInfo": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "invoicePrefix": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "logoUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "notifyOrganiser": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "notifyUser": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "sendPdfWhatsApp": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "sendViaEmail": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "sendViaSms": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "supportUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "ticketSettings.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "emailSettings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "from": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "host": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "emailSettings",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "pass": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "port": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "user": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "emailSettings.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "seoSettings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "globalDescription": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "globalKeywords": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "globalTitle": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "seoSettings",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "metaAdsCode": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "seoSettings.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "emailTemplates.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "autoSend": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "body": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "identifier": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "emailTemplates.js:add",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "autoSend": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "body": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "emailTemplates",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "identifier": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "emailTemplates.js:patch",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "emailTemplates",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "emailTemplates.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "policies.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingHeader": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "cancellationPolicy": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "eventDisclaimer": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "policies",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "paymentTerms": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "policies.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "ssoSettings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "facebookConfig": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "facebookEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "googleConfig": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "googleEnabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "ssoSettings",
+              "type": "id"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "ssoSettings.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "feeSettings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "convenienceFeeType": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "convenienceFeeValue": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "gstPercent": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "feeSettings.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "homeSettings.js:getHomeSections",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "order": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "string"
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:updateHomeSections",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "homeSettings.js:getBannerSlides",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alt": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "img": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "sub": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "url": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:addBannerSlide",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alt": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "bannerSlides",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "img": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "sub": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "url": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:updateBannerSlide",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "bannerSlides",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:removeBannerSlide",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "homeSettings.js:getEventPartners",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "logo": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "url": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:addEventPartner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "eventPartners",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:removeEventPartner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "eventPartners",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "logo": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "url": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:patchEventPartner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "homeSettings.js:getSubnavItems",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "icon": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "label": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:addSubnavItems",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "subnavItems",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:removeSubnavItem",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "homeSettings.js:getCategories",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "count": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "icon": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:addCategory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "count": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "icon": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "categories",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:patchCategory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "categories",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "homeSettings.js:removeCategory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "siteBranding.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "logoColor": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "logoUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "siteBranding.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "pages.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "pages.js:getPublished",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "pages.js:getBySlug",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "content": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "showInFooter": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "pages.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "content": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "pages",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "order": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "showInFooter": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "pages.js:update",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "pages",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "pages.js:remove",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "eventBookings.js:getByOrganiser",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "eventId": {
+            "fieldType": {
+              "tableName": "events",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "eventBookings.js:getByEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "eventBookings.js:getAll",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingId": {
+            "fieldType": {
+              "tableName": "bookings",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "customerEmail": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "customerName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "eventId": {
+            "fieldType": {
+              "tableName": "events",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "ticketCount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "totalAmount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "eventBookings.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "pwaScans.js:getScans",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "pwaScans.js:getScansByOrganiser",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingId": {
+            "fieldType": {
+              "tableName": "bookings",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "eventId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "organiserId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "pwaScans.js:logScan",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "altText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "imageUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "memories.js:createMemory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "altText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "memories",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "imageUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "memories.js:updateMemory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "memories",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "memories.js:deleteMemory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "memories.js:getMemories",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "firstName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "lastName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "phone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "remarks": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "role": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organiserRequests.js:create",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Query",
+      "identifier": "organiserRequests.js:list",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organiserRequests",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organiserRequests.js:updateStatus",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "organiserRequests",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "organiserRequests.js:approve",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "banners.js:getPackages",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "banners.js:seedPackages",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "firstName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "imageStorageId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "lastName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "link": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "packageId": {
+            "fieldType": {
+              "tableName": "bannerPackages",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "phone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "banners.js:requestBanner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "heroBanners",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "banners.js:finalizePayment",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "banners.js:getPendingRequests",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "banners.js:getAllBanners",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "durationDays": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "heroBanners",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "imageUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "link": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "banners.js:approveBanner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "heroBanners",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "banners.js:deleteBanner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "banners.js:getActiveBanners",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    }
+  ]
+}

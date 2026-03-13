@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
 import { Country, State, City } from 'country-state-city';
+import { Html5Qrcode } from "html5-qrcode";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -190,6 +191,13 @@ function OrganiserPanel() {
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");
     const [activeTab, setActiveTab] = useState("dashboard");
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab");
+        if (tab) setActiveTab(tab);
+        else if (user?.role === "staff") setActiveTab("pwa_scanner");
+    }, [user]);
     const [theme, setTheme] = useState("light");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState({
@@ -203,11 +211,11 @@ function OrganiserPanel() {
     const [pwaScanInput, setPwaScanInput] = useState("");
     const [pwaScanResult, setPwaScanResult] = useState(null);
     const [pwaCameraOpen, setPwaCameraOpen] = useState(false);
-    const pwaVideoRef = useRef(null);
-    const pwaStreamRef = useRef(null);
-    const pwaScanLoopRef = useRef(null);
     const [supportTicketsList, setSupportTicketsList] = useState([]);
     const [supportTicketForm, setSupportTicketForm] = useState({ email: "", subject: "", description: "", attachmentFileName: "" });
+    const [showStaffModal, setShowStaffModal] = useState(false);
+    const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "" });
+    const [editingStaffId, setEditingStaffId] = useState(null);
     const [supportTicketSearchId, setSupportTicketSearchId] = useState("");
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
     const [supportTicketSelectOpen, setSupportTicketSelectOpen] = useState(null);
@@ -217,7 +225,8 @@ function OrganiserPanel() {
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [agreedToVendor, setAgreedToVendor] = useState(false);
 
-    const effectiveEmail = user?.identifier || "organiser@bookmyticket.com";
+    const effectiveEmail = user?.role === "staff" ? user.organiserId : (user?.identifier || "organiser@bookmyticket.com");
+    const isStaff = user?.role === "staff";
 
     // KYC Wizard State
     const [kycStep, setKycStep] = useState(1);
@@ -305,6 +314,11 @@ function OrganiserPanel() {
 
     const convexBookings = useQuery(api.bookings.getBookings) || EMPTY_ARRAY;
     const updateBookingMutation = useMutation(api.bookings.updateBooking);
+    const createStaffMutation = useMutation(api.staff.createStaff);
+    const updateStaffMutation = useMutation(api.staff.updateStaff);
+    const deleteStaffMutation = useMutation(api.staff.deleteStaff);
+    const staffAccounts = useQuery(api.staff.list, { organiserId: effectiveEmail }) || EMPTY_ARRAY;
+    const validateAndLogScanMutation = useMutation(api.pwaScans.validateAndLogScan);
 
     const [events, setEvents] = useState([]);
     useEffect(() => {
@@ -394,66 +408,61 @@ function OrganiserPanel() {
     const validateBookingId = useCallback(async (id) => {
         const rawId = String(id).trim();
         if (!rawId) return;
-        // Search in Convex bookings (exact or short ID match)
-        const booking = convexBookings.find(b =>
-            String(b._id) === rawId ||
-            String(b.id) === rawId ||
-            (rawId.length >= 6 && String(b._id).toUpperCase().includes(rawId.toUpperCase()))
-        );
-        if (!booking) {
-            setPwaScanResult({ status: "not_found", id: rawId });
-            return;
-        }
-        if (booking.scanned) {
-            setPwaScanResult({ status: "already_used", booking });
-            return;
-        }
-        try {
-            await updateBookingMutation({ id: booking._id, scanned: true });
-            setPwaScanResult({ status: "valid", booking: { ...booking, scanned: true, scannedAt: new Date().toISOString() } });
+
+        // Use the centralized robust validation mutation
+        const result = await validateAndLogScanMutation({
+            bookingId: rawId,
+            eventId: "manual_or_scan", // Will be validated by ID if present
+            organiserId: effectiveEmail
+        });
+
+        if (result.success) {
+            setPwaScanResult({ status: "valid", message: result.message });
             setPwaScanInput("");
-        } catch (_) {
-            setPwaScanResult({ status: "not_found", id: rawId });
+        } else {
+            setPwaScanResult({
+                status: result.message.includes("already") ? "already_used" : "error",
+                message: result.message
+            });
         }
-    }, [convexBookings, updateBookingMutation]);
+    }, [effectiveEmail, validateAndLogScanMutation]);
 
     useEffect(() => {
         if (!pwaCameraOpen || typeof window === "undefined") return;
-        let stream = null;
-        const video = pwaVideoRef.current;
-        if (!video) return;
-        const startCamera = async () => {
+
+        const scannerId = "pwa-qr-reader";
+        let html5QrCode = null;
+
+        const startScanning = async () => {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                pwaStreamRef.current = stream;
-                video.srcObject = stream;
-                await video.play();
-                if (typeof BarcodeDetector !== "undefined") {
-                    const detector = new BarcodeDetector({ formats: ["qr_code"] });
-                    const scan = async () => {
-                        if (!pwaCameraOpen || !video.srcObject || video.readyState < 2) return;
-                        try {
-                            const codes = await detector.detect(video);
-                            if (codes && codes.length > 0 && codes[0].rawValue) {
-                                const id = codes[0].rawValue;
-                                validateBookingId(id);
-                                setPwaCameraOpen(false);
-                                return;
-                            }
-                        } catch (_) { }
-                        pwaScanLoopRef.current = requestAnimationFrame(scan);
-                    };
-                    pwaScanLoopRef.current = requestAnimationFrame(scan);
-                }
+                html5QrCode = new Html5Qrcode(scannerId);
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        validateBookingId(decodedText);
+                        setPwaCameraOpen(false);
+                        html5QrCode.stop().catch(console.error);
+                    },
+                    (errorMessage) => {
+                        // Suppress scanning noise errors
+                    }
+                );
             } catch (err) {
-                console.warn("Camera or BarcodeDetector not available", err);
+                console.error("Scanning start error:", err);
             }
         };
-        startCamera();
+
+        startScanning();
+
         return () => {
-            if (pwaScanLoopRef.current) cancelAnimationFrame(pwaScanLoopRef.current);
-            if (pwaStreamRef.current) { pwaStreamRef.current.getTracks().forEach(t => t.stop()); pwaStreamRef.current = null; }
-            if (video && video.srcObject) video.srcObject = null;
+            if (html5QrCode) {
+                if (html5QrCode.isScanning) {
+                    html5QrCode.stop().catch(console.error);
+                }
+            }
         };
     }, [pwaCameraOpen, validateBookingId]);
 
@@ -2575,9 +2584,6 @@ function OrganiserPanel() {
                                             >
                                                 <Camera size={22} /> Launch Camera Scanner
                                             </button>
-                                            {typeof window !== "undefined" && typeof BarcodeDetector === "undefined" && (
-                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "12px 0 0" }}>Native scanner requires Chrome (Android/Desktop). Use manual entry if unavailable.</p>
-                                            )}
                                         </div>
 
                                         {pwaCameraOpen && (
@@ -2586,10 +2592,7 @@ function OrganiserPanel() {
                                                     <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>Scanner Active</p>
                                                     <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ background: "none", border: "none", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>Close Camera</button>
                                                 </div>
-                                                <div style={{ position: "relative", width: "100%", maxWidth: "400px", margin: "0 auto", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000", aspectRatio: "1", boxShadow: "0 0 0 4px rgba(59, 130, 246, 0.2)" }}>
-                                                    <video ref={pwaVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
-                                                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "70%", height: "70%", border: "2px solid #3b82f6", borderRadius: "20px", boxShadow: "0 0 0 4000px rgba(0,0,0,0.5)" }}></div>
-                                                </div>
+                                                <div id="pwa-qr-reader" style={{ width: "100%", maxWidth: "400px", margin: "0 auto", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000" }}></div>
                                             </div>
                                         )}
 
@@ -3102,6 +3105,94 @@ function OrganiserPanel() {
                         </div>
                     );
                 }
+
+                case "staff_accounts": {
+                    const Breadcrumb = ({ title }) => (
+                        <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Home size={14} />
+                                <span>Settings</span>
+                            </div>
+                            <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
+                            <div style={{ color: "#3b82f6", fontWeight: 700 }}>{title}</div>
+                        </div>
+                    );
+
+                    return (
+                        <div>
+                            <Breadcrumb title="Staff Accounts" />
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Staff Management</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Manage staff access for the mobile scanner application.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setEditingStaffId(null); setStaffFormData({ name: "", email: "", password: "" }); setShowStaffModal(true); }}
+                                        style={{ backgroundColor: "#3b82f6", color: "#fff", padding: "12px 24px", borderRadius: "10px", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                        <Plus size={20} /> Add Staff
+                                    </button>
+                                </div>
+
+                                {staffAccounts.length === 0 ? (
+                                    <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "20px", border: `2px dashed ${t.border}` }}>
+                                        <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#3b82f610", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                            <Users size={32} color="#3b82f6" />
+                                        </div>
+                                        <h4 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>No Staff Accounts</h4>
+                                        <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "320px", margin: "0 auto", lineHeight: 1.5 }}>Create staff accounts to allow your team to scan tickets using the mobile app.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Staff Member</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Username/Email</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Password</th>
+                                                    <th style={{ textAlign: "left", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Created</th>
+                                                    <th style={{ textAlign: "right", padding: "16px", color: t.textSub, fontSize: "13px", fontWeight: 800, textTransform: "uppercase" }}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {staffAccounts.map((s) => (
+                                                    <tr key={s._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                        <td style={{ padding: "16px" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#3b82f620", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{s.name.charAt(0)}</div>
+                                                                <span style={{ fontWeight: 700, color: t.textMain }}>{s.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ padding: "16px", color: t.textMain, fontWeight: 600 }}>{s.email}</td>
+                                                        <td style={{ padding: "16px", color: t.textMain, fontFamily: "monospace" }}>{s.password}</td>
+                                                        <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.createdAt).toLocaleDateString()}</td>
+                                                        <td style={{ padding: "16px", textAlign: "right" }}>
+                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                                                                <button
+                                                                    onClick={() => { setEditingStaffId(s._id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
+                                                                    style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}
+                                                                >
+                                                                    <Settings size={18} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => { if (confirm("Delete this staff account?")) await deleteStaffMutation({ id: s._id }); }}
+                                                                    style={{ border: "none", background: "#ef444410", color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                }
                 default:
                     return <div>Coming Soon</div>;
             }
@@ -3211,6 +3302,73 @@ function OrganiserPanel() {
                         </div>
                     </div>
                 )}
+                {/* Staff Modal */}
+                {showStaffModal && (
+                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "480px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{editingStaffId ? "Edit Staff Account" : "Add Staff Account"}</h2>
+                                <button onClick={() => setShowStaffModal(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Full Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter staff name"
+                                        value={staffFormData.name}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Username / Email</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. staff_john"
+                                        value={staffFormData.email}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, email: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Password</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Set access password"
+                                        value={staffFormData.password}
+                                        onChange={(e) => setStaffFormData(prev => ({ ...prev, password: e.target.value }))}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            if (!staffFormData.name || !staffFormData.email || !staffFormData.password) { alert("Please fill all fields"); return; }
+
+                                            await import("@/app/utils/hashPassword").then(async ({ hashPassword }) => {
+                                                const hashedPassword = await hashPassword(staffFormData.password);
+                                                if (editingStaffId) {
+                                                    await updateStaffMutation({ id: editingStaffId, ...staffFormData, password: hashedPassword });
+                                                } else {
+                                                    await createStaffMutation({ ...staffFormData, password: hashedPassword, organiserId: effectiveEmail });
+                                                }
+                                                setShowStaffModal(false);
+                                                setStaffFormData({ name: "", email: "", password: "" });
+                                                setEditingStaffId(null);
+                                            });
+                                        } catch (err) {
+                                            alert(err.message || "Failed to save staff account");
+                                        }
+                                    }}
+                                    style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "12px" }}
+                                >
+                                    {editingStaffId ? "Update Account" : "Create Account"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Payout Modal */}
                 {showPayoutModal && (
                     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
@@ -3265,7 +3423,7 @@ function OrganiserPanel() {
                         />
                         <div className="sidebar-profile-info">
                             <p className="sidebar-profile-name">{profile.firstName || 'Organizer'} {profile.lastName}</p>
-                            <p className="sidebar-profile-role">Organizer</p>
+                            <p className="sidebar-profile-role">{user?.role === "staff" ? "Event Staff" : "Organizer"}</p>
                         </div>
                     </div>
 
@@ -3283,74 +3441,78 @@ function OrganiserPanel() {
                     </div>
 
                     <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
-                        <button
-                            onClick={() => setActiveTab("dashboard")}
-                            className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <LayoutDashboard size={20} />
-                                <span>Dashboard</span>
-                            </div>
-                        </button>
+                        {!isStaff && (
+                            <>
+                                <button
+                                    onClick={() => setActiveTab("dashboard")}
+                                    className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <LayoutDashboard size={20} />
+                                        <span>Dashboard</span>
+                                    </div>
+                                </button>
 
-                        <div>
-                            <button
-                                onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
-                                className="sidebar-item"
-                                style={{ color: (activeTab === "post_event" || activeTab === "manage_events" || activeTab === "venue_events" || activeTab === "online_events") ? t.textMain : t.textSub }}
-                            >
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Grid size={20} />
-                                    <span>Event Management</span>
+                                <div>
+                                    <button
+                                        onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
+                                        className="sidebar-item"
+                                        style={{ color: (activeTab === "post_event" || activeTab === "manage_events" || activeTab === "venue_events" || activeTab === "online_events") ? t.textMain : t.textSub }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <Grid size={20} />
+                                            <span>Event Management</span>
+                                        </div>
+                                        {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    </button>
+                                    {sidebarOpen.eventManagement && (
+                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                            <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
+                                            <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
+                                            <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
+                                            <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
+                                        </div>
+                                    )}
                                 </div>
-                                {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                            {sidebarOpen.eventManagement && (
-                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                    <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
-                                    <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
-                                    <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
-                                    <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
-                                </div>
-                            )}
-                        </div>
 
-                        <div>
-                            <button
-                                onClick={() => setSidebarOpen(prev => ({ ...prev, eventBookings: !prev.eventBookings }))}
-                                className="sidebar-item"
-                                style={{ color: (activeTab === "all_bookings" || activeTab === "completed_bookings" || activeTab === "pending_bookings" || activeTab === "rejected_bookings" || activeTab === "booking_report") ? t.textMain : t.textSub }}
-                            >
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Users size={20} />
-                                    <span>Event Bookings</span>
+                                <div>
+                                    <button
+                                        onClick={() => setSidebarOpen(prev => ({ ...prev, eventBookings: !prev.eventBookings }))}
+                                        className="sidebar-item"
+                                        style={{ color: (activeTab === "all_bookings" || activeTab === "completed_bookings" || activeTab === "pending_bookings" || activeTab === "rejected_bookings" || activeTab === "booking_report") ? t.textMain : t.textSub }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <Users size={20} />
+                                            <span>Event Bookings</span>
+                                        </div>
+                                        {sidebarOpen.eventBookings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    </button>
+                                    {sidebarOpen.eventBookings && (
+                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                            <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
+                                            <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed Bookings</button>
+                                            <button onClick={() => setActiveTab("pending_bookings")} className={`sidebar-dropdown-item ${activeTab === "pending_bookings" ? "active" : ""}`}>Pending Bookings</button>
+                                            <button onClick={() => setActiveTab("rejected_bookings")} className={`sidebar-dropdown-item ${activeTab === "rejected_bookings" ? "active" : ""}`}>Rejected Bookings</button>
+                                            <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
+                                        </div>
+                                    )}
                                 </div>
-                                {sidebarOpen.eventBookings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                            {sidebarOpen.eventBookings && (
-                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                    <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
-                                    <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed Bookings</button>
-                                    <button onClick={() => setActiveTab("pending_bookings")} className={`sidebar-dropdown-item ${activeTab === "pending_bookings" ? "active" : ""}`}>Pending Bookings</button>
-                                    <button onClick={() => setActiveTab("rejected_bookings")} className={`sidebar-dropdown-item ${activeTab === "rejected_bookings" ? "active" : ""}`}>Rejected Bookings</button>
-                                    <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
-                                </div>
-                            )}
-                        </div>
 
-                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Wallet size={20} />
-                                <span>Withdraw</span>
-                            </div>
-                        </button>
+                                <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Wallet size={20} />
+                                        <span>Withdraw</span>
+                                    </div>
+                                </button>
 
-                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <ArrowLeftRight size={20} />
-                                <span>Transactions</span>
-                            </div>
-                        </button>
+                                <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <ArrowLeftRight size={20} />
+                                        <span>Transactions</span>
+                                    </div>
+                                </button>
+                            </>
+                        )}
 
                         <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -3359,32 +3521,43 @@ function OrganiserPanel() {
                             </div>
                         </button>
 
-                        <div>
-                            <button
-                                onClick={() => setSidebarOpen(prev => ({ ...prev, supportTickets: !prev.supportTickets }))}
-                                className="sidebar-item"
-                                style={{ color: activeTab === "support_tickets" ? t.textMain : t.textSub }}
-                            >
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <FileText size={20} />
-                                    <span>Support Tickets</span>
-                                </div>
-                                {sidebarOpen.supportTickets ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                            {sidebarOpen.supportTickets && (
-                                <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "all_tickets" ? "active" : ""}`}>All Tickets</button>
-                                    <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "add_ticket" ? "active" : ""}`}>Add Ticket</button>
-                                </div>
-                            )}
-                        </div>
+                        {!isStaff && (
+                            <>
+                                <button onClick={() => setActiveTab("staff_accounts")} className={`sidebar-item ${activeTab === "staff_accounts" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Users size={20} />
+                                        <span>Staff Accounts</span>
+                                    </div>
+                                </button>
 
-                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Users size={20} />
-                                <span>Edit Profile</span>
-                            </div>
-                        </button>
+                                <div>
+                                    <button
+                                        onClick={() => setSidebarOpen(prev => ({ ...prev, supportTickets: !prev.supportTickets }))}
+                                        className="sidebar-item"
+                                        style={{ color: activeTab === "support_tickets" ? t.textMain : t.textSub }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <FileText size={20} />
+                                            <span>Support Tickets</span>
+                                        </div>
+                                        {sidebarOpen.supportTickets ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    </button>
+                                    {sidebarOpen.supportTickets && (
+                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
+                                            <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "all_tickets" ? "active" : ""}`}>All Tickets</button>
+                                            <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "add_ticket" ? "active" : ""}`}>Add Ticket</button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Users size={20} />
+                                        <span>Edit Profile</span>
+                                    </div>
+                                </button>
+                            </>
+                        )}
 
                         <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

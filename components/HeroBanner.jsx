@@ -64,7 +64,7 @@ function PromoSlide() {
     );
 }
 
-export default function HeroBanner({ slides: propSlides }) {
+export default function HeroBanner({ slides: propSlides, showDetails = true, showPromo = true }) {
     const activeAds = useQuery(api.banners.getActiveBanners) || [];
 
     const slides = useMemo(() => {
@@ -79,8 +79,12 @@ export default function HeroBanner({ slides: propSlides }) {
             ? propSlides.map(s => ({ image: s.img || s.image, alt: s.alt || s.title || "Slide", url: s.url }))
             : DEFAULT_BANNER_SLIDES;
 
-        return [{ custom: true }, ...adSlides, ...baseSlides];
-    }, [activeAds, propSlides]);
+        const final = [...adSlides, ...baseSlides];
+        if (showPromo) {
+            final.unshift({ custom: true });
+        }
+        return final;
+    }, [activeAds, propSlides, showPromo]);
 
     const [current, setCurrent] = useState(0);
     const [sliding, setSliding] = useState(false);
@@ -133,14 +137,16 @@ export default function HeroBanner({ slides: propSlides }) {
                         >
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
                             <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                            <div style={{ position: "absolute", bottom: "10%", left: "40px", right: "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
-                                <h2 style={{ fontSize: "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.4)" }}>
-                                    {slide.title || "Live Events & Experiences"}
-                                </h2>
-                                <p style={{ fontSize: "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.9)", fontWeight: 500, margin: 0 }}>
-                                    {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
-                                </p>
-                            </div>
+                            {showDetails && (
+                                <div style={{ position: "absolute", bottom: "10%", left: "40px", right: "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
+                                    <h2 style={{ fontSize: "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.4)" }}>
+                                        {slide.title || "Live Events & Experiences"}
+                                    </h2>
+                                    <p style={{ fontSize: "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.9)", fontWeight: 500, margin: 0 }}>
+                                        {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

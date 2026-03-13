@@ -59,3 +59,34 @@ export const logScan = mutation({
         });
     },
 });
+
+export const validateAndLogScan = mutation({
+    args: {
+        bookingId: v.id("bookings"),
+        eventId: v.string(),
+        organiserId: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const booking = await ctx.db.get(args.bookingId);
+
+        if (!booking) {
+            await ctx.db.insert("pwaScans", { ...args, status: "invalid", scannedAt: Date.now() });
+            return { success: false, message: "Ticket not found" };
+        }
+
+        if (args.eventId !== "manual_or_scan" && booking.eventId !== args.eventId) {
+            await ctx.db.insert("pwaScans", { ...args, status: "invalid", scannedAt: Date.now() });
+            return { success: false, message: "Ticket is for a different event" };
+        }
+
+        if (booking.scanned) {
+            await ctx.db.insert("pwaScans", { ...args, status: "already_used", scannedAt: Date.now() });
+            return { success: false, message: "Ticket already used" };
+        }
+
+        await ctx.db.patch(args.bookingId, { scanned: true, scannedAt: Date.now() });
+        await ctx.db.insert("pwaScans", { ...args, status: "valid", scannedAt: Date.now() });
+
+        return { success: true, message: "Ticket validated successfully! Checked in." };
+    }
+});

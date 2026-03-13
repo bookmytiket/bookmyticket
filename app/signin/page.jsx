@@ -42,6 +42,7 @@ export default function SignInPage() {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
+    const [isStaff, setIsStaff] = useState(false);
     const [loginError, setLoginError] = useState("");
 
     // Sign Up
@@ -78,35 +79,43 @@ export default function SignInPage() {
         e.preventDefault();
         setLoginError("");
 
-        const id = identifier.trim().toLowerCase();
+        const rawId = identifier.trim();
+        const id = rawId.toLowerCase();
+        const hashed = await hashPassword(password);
 
-        // 1. Admin login (no hashing for hardcoded admin)
-        if (id === "bookmyticket-admin") {
-            const ok = await login(identifier.trim(), password, "admin", null, redirectPath);
-            if (!ok) setLoginError("Invalid admin credentials.");
+        // 1. Admin login check (Raw ID and Raw Password)
+        if (rawId === "bookmyticket-admin") {
+            const ok = await login(rawId, password, "admin", null, redirectPath);
+            if (ok) return;
+            setLoginError("Invalid admin credentials.");
             return;
         }
 
-        // 2. Try Public User in Convex (hash password for comparison)
+        // 2. Public User check (Lowercased ID, Hashed Password)
         try {
-            const hashed = await hashPassword(password);
-            const user = await convex.query(api.users.getByEmail, { email: id });
-            if (user && user.password === hashed) {
-                await login(identifier, password, "user", user, redirectPath);
-                return;
-            } else if (user && user.password !== hashed) {
-                setLoginError("Invalid email or password. Please try again.");
-                return;
+            const user = await convex.query(api.users.getByIdentifier, { identifier: id });
+            if (user) {
+                if (user.password === hashed) {
+                    await login(id, hashed, "user", user, redirectPath);
+                    return;
+                } else {
+                    setLoginError("Invalid password. Please try again.");
+                    return;
+                }
             }
         } catch (err) {
-            // Ignore and fall through to organiser check
+            console.error("User login error:", err);
         }
 
-        // 3. Fallback to Organiser
-        const ok = await login(identifier, password, "organiser", null, redirectPath);
-        if (ok) return;
+        // 3. Staff check (Lowercased ID, Hashed Password)
+        const staffOk = await login(id, hashed, "staff", null, redirectPath);
+        if (staffOk) return;
 
-        setLoginError("Invalid email or password. Please try again.");
+        // 4. Organiser check fallback (Lowercased ID, Hashed Password)
+        const orgOk = await login(id, hashed, "organiser", null, redirectPath);
+        if (orgOk) return;
+
+        setLoginError("Invalid username / email or password. Please try again.");
     };
 
     const handleSignup = async (e) => {
@@ -166,7 +175,7 @@ export default function SignInPage() {
             <div style={{ flex: 1.1, position: "relative", overflow: "hidden", padding: "24px" }} className="hide-on-mobile signin-left-banner">
                 <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "20px", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-                        <HeroBanner slides={displaySlides} />
+                        <HeroBanner slides={displaySlides} showDetails={false} showPromo={false} />
                     </div>
                 </div>
             </div>
@@ -192,11 +201,12 @@ export default function SignInPage() {
                                 </p>
                             </div>
 
+
                             <form onSubmit={handleLogin}>
-                                <label style={lbl}>Email address</label>
+                                <label style={lbl}>Username / Email</label>
                                 <input
                                     type="text" required
-                                    placeholder="example@example.com"
+                                    placeholder="yourname or name@example.com"
                                     value={identifier}
                                     onChange={e => setIdentifier(e.target.value)}
                                     style={inp} onFocus={fr} onBlur={bg}

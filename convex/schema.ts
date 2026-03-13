@@ -140,10 +140,11 @@ export default defineSchema({
     users: defineTable({
         name: v.string(),
         email: v.string(),
+        username: v.optional(v.string()),
         password: v.string(),
         role: v.string(), // 'user'
         createdAt: v.string(),
-    }).index("by_email", ["email"]),
+    }).index("by_email", ["email"]).index("by_username", ["username"]),
 
     passwordResetTokens: defineTable({
         email: v.string(),
@@ -333,4 +334,11 @@ export default defineSchema({
         status: v.string(), // "pending", "approved", "expired"
         createdAt: v.number(),
     }).index("by_status", ["status"]),
+    staff: defineTable({
+        email: v.string(), // acts as username
+        password: v.string(),
+        name: v.string(),
+        organiserId: v.string(), // ID or email of the organiser who created this staff
+        createdAt: v.number(),
+    }).index("by_email", ["email"]).index("by_organiserId", ["organiserId"]),
 });

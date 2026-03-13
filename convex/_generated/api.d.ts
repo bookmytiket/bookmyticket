@@ -32,8 +32,10 @@ import type * as pwaScans from "../pwaScans.js";
 import type * as seoSettings from "../seoSettings.js";
 import type * as siteBranding from "../siteBranding.js";
 import type * as ssoSettings from "../ssoSettings.js";
+import type * as staff from "../staff.js";
 import type * as supportTickets from "../supportTickets.js";
 import type * as systemConfig from "../systemConfig.js";
+import type * as test from "../test.js";
 import type * as ticketSettings from "../ticketSettings.js";
 import type * as users from "../users.js";
 
@@ -68,8 +70,10 @@ declare const fullApi: ApiFromModules<{
   seoSettings: typeof seoSettings;
   siteBranding: typeof siteBranding;
   ssoSettings: typeof ssoSettings;
+  staff: typeof staff;
   supportTickets: typeof supportTickets;
   systemConfig: typeof systemConfig;
+  test: typeof test;
   ticketSettings: typeof ticketSettings;
   users: typeof users;
 }>;
