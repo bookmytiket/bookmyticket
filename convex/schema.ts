@@ -219,7 +219,7 @@ export default defineSchema({
         body: v.string(),
         autoSend: v.boolean(),
         updatedAt: v.number(),
-    }),
+    }).index("by_identifier", ["identifier"]),
 
     policies: defineTable({
         bookingHeader: v.string(),

@@ -110,6 +110,10 @@ function AdminHomePage() {
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     // Payment gateways: which config modal is open + saved configs per gateway
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
+    const [activeTemplate, setActiveTemplate] = useState(null);
+    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [eventPartners, setEventPartners] = useState([]);
     const allConfig = useQuery(api.systemConfig.getAllConfig);
 
     const rawPaymentGateways = useQuery(api.paymentGateways.list);
@@ -164,6 +168,8 @@ function AdminHomePage() {
 
     const convexSsoSettings = useQuery(api.ssoSettings.get);
     const updateSsoSettingsMutation = useMutation(api.ssoSettings.update);
+
+    const convexCategories = useQuery(api.homeSettings.getCategories) || [];
 
     // Pages management
     const convexPages = useQuery(api.pages.list) || [];
@@ -395,6 +401,14 @@ function AdminHomePage() {
     }), [convexSsoSettings]);
 
     const emailTemplates = convexEmailTemplates;
+
+    useEffect(() => {
+        if (activeTemplate) {
+            setEditingTemplate({ ...activeTemplate });
+        } else {
+            setEditingTemplate(null);
+        }
+    }, [activeTemplate]);
     const [pageForm, setPageForm] = useState({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
     const [pageModal, setPageModal] = useState(null); // 'create' | 'edit'
 
@@ -580,6 +594,20 @@ function AdminHomePage() {
     const createApiKeyMutation = useMutation(api.apiKeys.create);
     const toggleApiKeyStatusMutation = useMutation(api.apiKeys.toggleStatus);
     const removeApiKeyMutation = useMutation(api.apiKeys.remove);
+
+    // Sync categories from Convex
+    useEffect(() => {
+        if (convexCategories.length > 0) {
+            setCategories(convexCategories.map(c => ({ ...c, id: c._id })));
+        }
+    }, [convexCategories]);
+
+    // Sync event partners from Convex
+    useEffect(() => {
+        if (convexEventPartners.length > 0) {
+            setEventPartners(convexEventPartners.map(p => ({ ...p, id: p._id })));
+        }
+    }, [convexEventPartners]);
 
     // Seed default API keys if empty
     useEffect(() => {
@@ -2873,21 +2901,21 @@ function AdminHomePage() {
 
                                 {/* Right Side: Editor */}
                                 <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    {activeTemplate ? (
+                                    {editingTemplate ? (
                                         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Edit {activeTemplate.name}</h3>
+                                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Edit {editingTemplate.name}</h3>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                                     <span style={{ fontSize: "12px", color: t.textSub }}>Auto-send:</span>
                                                     <button
-                                                        onClick={() => setEmailTemplates(emailTemplates.map(t => t.id === activeTemplate.id ? { ...t, autoSend: !t.autoSend } : t))}
+                                                        onClick={() => setEditingTemplate({ ...editingTemplate, autoSend: !editingTemplate.autoSend })}
                                                         style={{
                                                             width: "44px", height: "22px", borderRadius: "11px",
-                                                            backgroundColor: activeTemplate.autoSend ? "#3b82f6" : "#cbd5e1",
+                                                            backgroundColor: editingTemplate.autoSend ? "#3b82f6" : "#cbd5e1",
                                                             border: "none", cursor: "pointer", position: "relative", transition: "0.3s"
                                                         }}>
                                                         <div style={{
-                                                            position: "absolute", top: "2px", left: activeTemplate.autoSend ? "24px" : "2px",
+                                                            position: "absolute", top: "2px", left: editingTemplate.autoSend ? "24px" : "2px",
                                                             width: "18px", height: "18px", borderRadius: "50%", background: "#fff", transition: "0.3s"
                                                         }} />
                                                     </button>
@@ -2898,8 +2926,8 @@ function AdminHomePage() {
                                                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Email Subject</label>
                                                 <input
                                                     type="text"
-                                                    value={activeTemplate.subject}
-                                                    onChange={(e) => setEmailTemplates(emailTemplates.map(t => t.id === activeTemplate.id ? { ...t, subject: e.target.value } : t))}
+                                                    value={editingTemplate.subject}
+                                                    onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
                                                     style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none" }}
                                                 />
                                             </div>
@@ -2909,7 +2937,8 @@ function AdminHomePage() {
                                                 <textarea
                                                     rows={10}
                                                     placeholder="HTML content here..."
-                                                    defaultValue={`Hello {{user_name}},\n\nYour ticket for {{event_name}} has been confirmed successfully.\nTicket ID: {{ticket_id}}\nBooking Date: {{booking_date}}\n\nThank you for booking with us!`}
+                                                    value={editingTemplate.body}
+                                                    onChange={(e) => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
                                                     style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", fontFamily: "monospace" }}
                                                 />
                                             </div>
@@ -2922,8 +2951,21 @@ function AdminHomePage() {
                                             </div>
 
                                             <button
-                                                onClick={() => {
-                                                    alert("Template saved successfully!");
+                                                onClick={async () => {
+                                                    try {
+                                                        await patchEmailTemplateMutation({
+                                                            id: editingTemplate._id,
+                                                            subject: editingTemplate.subject,
+                                                            body: editingTemplate.body,
+                                                            autoSend: editingTemplate.autoSend,
+                                                            name: editingTemplate.name,
+                                                            identifier: editingTemplate.identifier
+                                                        });
+                                                        alert("Template saved successfully!");
+                                                    } catch (err) {
+                                                        console.error("Failed to save template:", err);
+                                                        alert("Error saving template.");
+                                                    }
                                                 }}
                                                 style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
                                                 Save Template Changes

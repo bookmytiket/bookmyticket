@@ -32,7 +32,7 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy
 } from "lucide-react";
 
 function LocationPickerModal({
@@ -216,6 +216,7 @@ function OrganiserPanel() {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "" });
     const [editingStaffId, setEditingStaffId] = useState(null);
+    const [deletingStaffId, setDeletingStaffId] = useState(null);
     const [supportTicketSearchId, setSupportTicketSearchId] = useState("");
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
     const [supportTicketSelectOpen, setSupportTicketSelectOpen] = useState(null);
@@ -993,6 +994,83 @@ function OrganiserPanel() {
             @media (max-width: 1024px) {
                 .sidebar { transform: translateX(-100%); }
                 .main-content { margin-left: 0; }
+            }
+            .mobile-header {
+                display: none;
+                height: 60px;
+                background-color: ${t.header};
+                border-bottom: 1px solid ${t.border};
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 16px;
+                position: sticky;
+                top: 0;
+                z-index: 90;
+            }
+            .bottom-nav {
+                display: none;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 70px;
+                background-color: ${t.header};
+                border-top: 1px solid ${t.border};
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                z-index: 1000;
+                padding-bottom: env(safe-area-inset-bottom);
+                backdrop-filter: blur(10px);
+                background-color: ${theme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)'};
+            }
+            .bottom-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                color: ${t.textSub};
+                font-size: 11px;
+                font-weight: 600;
+                text-decoration: none;
+                border: none;
+                background: none;
+                cursor: pointer;
+                transition: all 0.2s;
+                padding: 8px;
+                border-radius: 12px;
+            }
+            .bottom-nav-item.active {
+                color: #3b82f6;
+            }
+            .pwa-scanner-grid {
+                display: grid; 
+                grid-template-columns: 1fr 400px; 
+                gap: 32px; 
+                align-items: start; 
+                margin-bottom: 32px;
+            }
+            @media (max-width: 768px) {
+                .mobile-header { display: flex; }
+                .bottom-nav { display: flex; }
+                .main-content { padding-bottom: 80px; }
+                .pwa-scanner-grid { 
+                    grid-template-columns: 1fr; 
+                    gap: 20px;
+                }
+                .manual-validation-box {
+                    flex-direction: column;
+                }
+                .manual-validation-box button {
+                    width: 100%;
+                    padding: 16px!important;
+                }
+                .scan-table-desktop { display: none; }
+                .scan-cards-mobile { display: flex; flex-direction: column; gap: 12px; }
+            }
+            @media (min-width: 769px) {
+                .scan-cards-mobile { display: none; }
+                .scan-table-desktop { display: block; }
             }
         `}</style>
     );
@@ -2567,8 +2645,9 @@ function OrganiserPanel() {
 
                     return (
                         <div>
-                            <Breadcrumb title="PWA Ticket Scanner" />
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "32px", alignItems: "start", marginBottom: "32px" }}>
+                        <div style={{ padding: isStaff ? "0 16px" : "0" }}>
+                            {!isStaff && <Breadcrumb title="PWA Ticket Scanner" />}
+                            <div className="pwa-scanner-grid">
                                 <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                     <div style={{ marginBottom: "32px" }}>
                                         <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Validation</h3>
@@ -2598,7 +2677,7 @@ function OrganiserPanel() {
 
                                         <div>
                                             <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Manual Validation</label>
-                                            <div style={{ display: "flex", gap: "12px" }}>
+                                            <div className="manual-validation-box" style={{ display: "flex", gap: "12px" }}>
                                                 <input
                                                     type="text"
                                                     placeholder="Enter Booking ID (e.g. ORD-123456...)"
@@ -2669,7 +2748,7 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div style={{ overflowX: "auto" }}>
+                                <div className="scan-table-desktop" style={{ overflowX: "auto" }}>
                                     <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
                                         <thead>
                                             <tr style={{ textAlign: "left" }}>
@@ -2700,11 +2779,32 @@ function OrganiserPanel() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <div className="scan-cards-mobile" style={{ display: "none" }}>
+                                    {recentScans.length === 0 ? (
+                                        <div style={{ textAlign: "center", padding: "32px", color: t.textSub }}>No scans yet</div>
+                                    ) : (
+                                        recentScans.map(b => (
+                                            <div key={b._id} style={{ backgroundColor: t.bg, padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                                                    <span style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, backgroundColor: t.cardBg, padding: "4px 8px", borderRadius: "6px" }}>#{b._id.slice(-8).toUpperCase()}</span>
+                                                    <div style={{ color: "#22c55e", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "4px" }}>
+                                                        <CheckCircle size={14} /> Valid
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.eventName || "—"}</div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.userName || "Guest User"}</div>
+                                                <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scannedAt || b._creationTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    );
-                }
-                case "support_tickets": {
+                    </div>
+                );
+            }
+            case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
                     const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
@@ -3168,20 +3268,26 @@ function OrganiserPanel() {
                                                         <td style={{ padding: "16px", color: t.textMain, fontFamily: "monospace" }}>{s.password}</td>
                                                         <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.createdAt).toLocaleDateString()}</td>
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
-                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                                                                <button
-                                                                    onClick={() => { setEditingStaffId(s._id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
-                                                                    style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}
-                                                                >
-                                                                    <Settings size={18} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={async () => { if (confirm("Delete this staff account?")) await deleteStaffMutation({ id: s._id }); }}
-                                                                    style={{ border: "none", background: "#ef444410", color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}
-                                                                >
-                                                                    <Trash2 size={18} />
-                                                                </button>
-                                                            </div>
+                                                                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
+                                                                        <button
+                                                                            onClick={() => { setEditingStaffId(s._id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
+                                                                            style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                            title="Edit Staff"
+                                                                        >
+                                                                            <Settings size={18} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => { 
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                setDeletingStaffId(s._id);
+                                                                            }}
+                                                                            style={{ border: "none", background: "#ef444415", color: "#ef4444", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                            title="Delete Staff"
+                                                                        >
+                                                                            <Trash2 size={18} />
+                                                                        </button>
+                                                                    </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -3190,6 +3296,41 @@ function OrganiserPanel() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Custom Deletion Confirmation Modal */}
+                            {deletingStaffId && (
+                                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
+                                    <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "400px", border: `1px solid ${t.border}`, textAlign: "center" }}>
+                                        <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#ef444410", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                            <Trash2 size={32} color="#ef4444" />
+                                        </div>
+                                        <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>Delete Staff Account?</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, margin: "0 0 24px", lineHeight: 1.5 }}>This action cannot be undone. The staff member will lose access to the scanner app.</p>
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <button 
+                                                onClick={() => setDeletingStaffId(null)}
+                                                style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button 
+                                                onClick={async () => {
+                                                    try {
+                                                        const idToDelete = deletingStaffId;
+                                                        setDeletingStaffId(null);
+                                                        await deleteStaffMutation({ id: idToDelete });
+                                                    } catch (err) {
+                                                        alert("Failed to delete staff account: " + err.message);
+                                                    }
+                                                }}
+                                                style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                                Delete
+                                            </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         </div>
                     );
                 }
@@ -3585,6 +3726,22 @@ function OrganiserPanel() {
 
                 {/* Main Content */}
                 <div className="main-content">
+                    {isStaff && (
+                        <div className="mobile-header">
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <QrCode size={18} color="#fff" />
+                                </div>
+                                <span style={{ fontWeight: 800, fontSize: "16px", color: t.textMain }}>Staff Portal</span>
+                            </div>
+                            <button
+                                onClick={logout}
+                                style={{ background: "none", border: "none", color: "#ef4444", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                                <LogOut size={16} /> Logout
+                            </button>
+                        </div>
+                    )}
                     <header className="top-header">
                         <div>
                             <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>{activeTab.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
@@ -3603,6 +3760,32 @@ function OrganiserPanel() {
                             Copyright ©2026. All Rights Reserved.
                         </footer>
                     </main>
+
+                    {isStaff && (
+                        <div className="bottom-nav">
+                            <button 
+                                className={`bottom-nav-item ${activeTab === "pwa_scanner" ? "active" : ""}`}
+                                onClick={() => setActiveTab("pwa_scanner")}
+                            >
+                                <Camera size={24} />
+                                <span>Scanner</span>
+                            </button>
+                            <button 
+                                className={`bottom-nav-item ${activeTab === "support_tickets" ? "active" : ""}`}
+                                onClick={() => setActiveTab("support_tickets")}
+                            >
+                                <LifeBuoy size={24} />
+                                <span>Support</span>
+                            </button>
+                            <button 
+                                className={`bottom-nav-item ${activeTab === "settings" ? "active" : ""}`}
+                                onClick={() => setActiveTab("settings")}
+                            >
+                                <Settings size={24} />
+                                <span>Settings</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         );

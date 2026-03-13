@@ -104,6 +104,13 @@ main {
   border-radius: 20px;
 }
 
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
 /* Main center slide - now full width */
 .bms-slide-main-full {
   position: relative;

@@ -47,3 +47,25 @@ export const remove = mutation({
         await ctx.db.delete(args.id);
     },
 });
+
+export const deduplicate = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const allTemplates = await ctx.db.query("emailTemplates").collect();
+        const seen = new Map();
+        let deletedCount = 0;
+
+        // Sort by updatedAt descending to keep the most recent
+        const sortedTemplates = allTemplates.sort((a, b) => b.updatedAt - a.updatedAt);
+
+        for (const template of sortedTemplates) {
+            if (seen.has(template.identifier)) {
+                await ctx.db.delete(template._id);
+                deletedCount++;
+            } else {
+                seen.set(template.identifier, true);
+            }
+        }
+        return { deletedCount };
+    },
+});
