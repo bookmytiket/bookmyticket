@@ -4,17 +4,26 @@ import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+import { Redirect } from 'expo-router';
 
-  if (!user) return null;
+import { useRouter } from 'expo-router';
+
+export default function ProfileScreen() {
+  const { user, logout, loading } = useAuth();
+  const router = useRouter();
+
+  if (loading) return null;
+  if (!user) return <Redirect href="/(auth)/signin" />;
 
   const menuItems = [
-    { icon: 'person-outline', label: 'Edit Profile', color: '#3b82f6' },
-    { icon: 'notifications-outline', label: 'Notifications', color: '#10b981' },
-    { icon: 'lock-closed-outline', label: 'Security', color: '#f59e0b' },
-    { icon: 'help-circle-outline', label: 'Help & Support', color: '#6366f1' },
-    { icon: 'information-circle-outline', label: 'About', color: '#64748b' },
+    { icon: 'person-outline', label: 'Edit Profile', color: '#3b82f6', action: () => {} },
+    ...(user.role === 'organiser' || user.role === 'admin' ? [
+      { icon: 'business-outline', label: 'Organiser Dashboard', color: '#c026d3', action: () => router.push('/organiser') }
+    ] : []),
+    { icon: 'notifications-outline', label: 'Notifications', color: '#10b981', action: () => {} },
+    { icon: 'lock-closed-outline', label: 'Security', color: '#f59e0b', action: () => {} },
+    { icon: 'help-circle-outline', label: 'Help & Support', color: '#6366f1', action: () => {} },
+    { icon: 'information-circle-outline', label: 'About', color: '#64748b', action: () => {} },
   ];
 
   return (
@@ -38,7 +47,7 @@ export default function ProfileScreen() {
 
       <View style={styles.menuSection}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.action}>
             <View style={[styles.iconContainer, { backgroundColor: item.color + '10' }]}>
               <Ionicons name={item.icon} size={22} color={item.color} />
             </View>

@@ -8,10 +8,9 @@ export default function TabLayout() {
 
   if (loading) return null;
 
-  // Redirect to signin if not authenticated
-  if (!user) {
-    return <Redirect href="/(auth)/signin" />;
-  }
+  // No global redirect here to allow public browsing of Home/Explore
+  // Protected tabs (Bookings/Profile) should handle their own redirect or we can use a wrapper
+
 
   return (
     <Tabs screenOptions={{

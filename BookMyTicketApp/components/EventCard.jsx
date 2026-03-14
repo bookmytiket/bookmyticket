@@ -1,36 +1,44 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 export default function EventCard({ event, onPress }) {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.88}>
+      {/* Event Image */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: event.img }} style={styles.image} />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.6)']}
-          style={styles.imageGradient}
-        />
-        <View style={styles.priceTag}>
-          <Text style={styles.priceText}>₹{event.price || 'TBA'}</Text>
-        </View>
+
+        {/* Wishlist icon */}
+        <TouchableOpacity style={styles.wishIcon}>
+          <Ionicons name="heart-outline" size={16} color="#fff" />
+        </TouchableOpacity>
       </View>
-      
+
+      {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.category}>{event.category || 'Event'}</Text>
-        <Text style={styles.title} numberOfLines={1}>{event.title}</Text>
-        
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailItem}>
-            <Ionicons name="calendar-outline" size={14} color="#64748b" />
-            <Text style={styles.detailText}>{event.date}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Ionicons name="location-outline" size={14} color="#64748b" />
-            <Text style={styles.detailText} numberOfLines={1}>{event.location}</Text>
-          </View>
+        <Text style={styles.title} numberOfLines={2}>{event.title}</Text>
+
+        <View style={styles.detailRow}>
+          <Ionicons name="location-outline" size={13} color="#64748b" />
+          <Text style={styles.detailText} numberOfLines={1}>{event.location}</Text>
         </View>
+
+        <View style={styles.detailRow}>
+          <Ionicons name="calendar-outline" size={13} color="#64748b" />
+          <Text style={styles.detailText}>{event.date}</Text>
+        </View>
+
+        {/* Price tag */}
+        {event.price ? (
+          <View style={styles.paidBadge}>
+            <Text style={styles.paidText}>Paid</Text>
+          </View>
+        ) : (
+          <View style={[styles.paidBadge, styles.freeBadge]}>
+            <Text style={[styles.paidText, styles.freeText]}>Free</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -39,76 +47,74 @@ export default function EventCard({ event, onPress }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 20,
-    width: 280,
-    marginRight: 20,
+    borderRadius: 12,
+    width: 220,
+    marginRight: 16,
+    marginBottom: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   imageContainer: {
-    height: 160,
+    height: 140,
     width: '100%',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
     position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  imageGradient: {
+  wishIcon: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 40,
-  },
-  priceTag: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  priceText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 20,
+    padding: 6,
   },
   content: {
-    padding: 16,
-  },
-  category: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#f84464',
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    padding: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1e293b',
     marginBottom: 8,
+    lineHeight: 19,
   },
-  detailsContainer: {
-    marginTop: 4,
-  },
-  detailItem: {
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
     marginBottom: 4,
   },
   detailText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
-    marginLeft: 6,
+    flex: 1,
+  },
+  paidBadge: {
+    alignSelf: 'flex-end',
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    backgroundColor: '#f84464',
+    borderRadius: 4,
+  },
+  freeBadge: {
+    backgroundColor: '#16a34a',
+  },
+  paidText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  freeText: {
+    color: '#fff',
   },
 });
