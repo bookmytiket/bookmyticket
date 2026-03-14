@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:android": "eas build --platform android --profile production",
-    "build:android:preview": "eas build --platform android --profile preview"
+    "build:android:preview": "eas build --platform android --profile preview",
+    "convex:sync": "cp -r ../convex/_generated/* convex/_generated/ 2>/dev/null || echo 'Run from project root: npx convex codegen && cp -r convex/_generated/* mobile/convex/_generated/'"
   },
   "dependencies": {
     "@expo/metro-runtime": "^55.0.6",
@@ -19,7 +20,6 @@
     "@react-navigation/native-stack": "^7.14.5",
     "convex": "^1.33.1",
     "expo": "~55.0.6",
-    "expo-barcode-scanner": "^13.0.1",
     "expo-camera": "^55.0.9",
     "expo-font": "~55.0.4",
     "expo-secure-store": "^55.0.8",
