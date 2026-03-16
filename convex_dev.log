@@ -1,0 +1,420 @@
+- Preparing Convex functions...
+
+[32m✔[39m 18:16:41 Convex functions ready! (4.74s)
+Retrying request (attempt 3/6)...
+- Preparing Convex functions...
+
+[32m✔[39m 16:00:33 Convex functions ready! (4.06s)
+- Preparing Convex functions...
+
+[32m✔[39m 16:02:48 Convex functions ready! (3.36s)
+3/12/2026, 6:38:48 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:38:52 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:38:53 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:38:53 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:38:53 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:47:20 PM [CONVEX M(users:create)] Uncaught Error: ACCOUNT_EXISTS
+    at handler (../convex/users.ts:36:15)
+
+3/12/2026, 6:48:13 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:14 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:15 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:21 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:21 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:22 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:22 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:22 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:48:22 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:50:24 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:50:25 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:50:25 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:52:40 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+- Preparing Convex functions...
+
+[31m✖[39m TypeScript typecheck via `tsc` failed.
+To ignore failing typecheck, use `--typecheck=disable`.
+- Collecting TypeScript errors
+
+[96mconvex/bookings.ts[0m:[93m10[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m10[0m                 const event = await ctx.db.get(booking.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~~~~[0m
+[96mconvex/bookings.ts[0m:[93m13[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m13[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+[96mconvex/bookings.ts[0m:[93m78[0m:[93m40[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m78[0m         const event = await ctx.db.get(booking.eventId);
+[7m  [0m [91m                                       ~~~~~~~~~~~~~~~[0m
+
+[96mconvex/bookings.ts[0m:[93m79[0m:[93m28[0m - [91merror[0m[90m TS2339: [0mProperty 'organiserId' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'organiserId' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m79[0m         if (event && event.organiserId) {
+[7m  [0m [91m                           ~~~~~~~~~~~[0m
+[96mconvex/bookings.ts[0m:[93m82[0m:[93m62[0m - [91merror[0m[90m TS2339: [0mProperty 'organiserId' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'organiserId' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m82[0m                 .filter((q) => q.eq(q.field("userId"), event.organiserId))
+[7m  [0m [91m                                                             ~~~~~~~~~~~[0m
+
+[96mconvex/pwaScans.ts[0m:[93m11[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m11[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+
+[96mconvex/pwaScans.ts[0m:[93m14[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m14[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+[96mconvex/pwaScans.ts[0m:[93m33[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m33[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+[96mconvex/pwaScans.ts[0m:[93m36[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m36[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+Found 9 errors in 2 files.
+
+Errors  Files
+     5  convex/bookings.ts[90m:10[0m
+     4  convex/pwaScans.ts[90m:11[0m
+- Preparing Convex functions...
+
+[31m✖[39m TypeScript typecheck via `tsc` failed.
+To ignore failing typecheck, use `--typecheck=disable`.
+- Collecting TypeScript errors
+
+[96mconvex/pwaScans.ts[0m:[93m11[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m11[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+[96mconvex/pwaScans.ts[0m:[93m14[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m14[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+[96mconvex/pwaScans.ts[0m:[93m33[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m33[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+[96mconvex/pwaScans.ts[0m:[93m36[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m36[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+Found 4 errors in the same file, starting at: convex/pwaScans.ts[90m:11[0m
+- Preparing Convex functions...
+
+[31m✖[39m TypeScript typecheck via `tsc` failed.
+To ignore failing typecheck, use `--typecheck=disable`.
+- Collecting TypeScript errors
+
+[96mconvex/pwaScans.ts[0m:[93m11[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m11[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+[96mconvex/pwaScans.ts[0m:[93m14[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m14[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+Found 2 errors in the same file, starting at: convex/pwaScans.ts[90m:11[0m
+Filesystem changed during push, retrying...
+- Preparing Convex functions...
+
+[31m✖[39m TypeScript typecheck via `tsc` failed.
+To ignore failing typecheck, use `--typecheck=disable`.
+- Collecting TypeScript errors
+
+[96mconvex/pwaScans.ts[0m:[93m11[0m:[93m48[0m - [91merror[0m[90m TS2345: [0mArgument of type 'string' is not assignable to parameter of type 'Id<TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: ...'.
+  Type 'string' is not assignable to type '{ __tableName: TableNamesInDataModel<{ events: { document: { _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; ... 29 more ...; title: string; }; fieldPaths: "_id" | ExtractFieldPaths<...>; indexes: { ...; }; sear...'.
+
+[7m11[0m                 const event = await ctx.db.get(scan.eventId);
+[7m  [0m [91m                                               ~~~~~~~~~~~~[0m
+[96mconvex/pwaScans.ts[0m:[93m14[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'title' does not exist on type '{ _id: Id<"events">; _creationTime: number; type?: string | undefined; category?: string | undefined; date?: string | undefined; time?: string | undefined; img?: string | undefined; ... 28 more ...; title: string; } | ... 30 more ... | { ...; }'.
+  Property 'title' does not exist on type '{ _id: Id<"bookings">; _creationTime: number; tickets?: number | undefined; customerDetails?: { name: string; email: string; phone: string; } | undefined; paymentIntentId?: string | undefined; ... 6 more ...; totalPrice: number; }'.
+
+[7m14[0m                     eventName: event ? event.title : "Unknown Event",
+[7m  [0m [91m                                             ~~~~~[0m
+
+Found 2 errors in the same file, starting at: convex/pwaScans.ts[90m:11[0m
+- Preparing Convex functions...
+
+[32m✔[39m 19:03:42 Convex functions ready! (3.62s)
+3/12/2026, 6:54:33 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:34 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:35 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:35 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:35 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:43 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:54:46 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:56:11 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:56:59 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:09 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:10 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:10 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:13 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:14 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:14 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:15 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:15 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:57:48 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 6:58:23 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 7:00:23 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 7:00:24 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: 1.0
+Validator: v.id("events")
+
+
+3/12/2026, 7:01:39 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:01:40 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:01:40 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:03:14 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:03:31 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:03:32 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+
+3/12/2026, 7:03:37 PM [CONVEX M(bookings:createBooking)] ArgumentValidationError: Value does not match validator.
+Path: .eventId
+Value: "1"
+Validator: v.id("events")
+
+

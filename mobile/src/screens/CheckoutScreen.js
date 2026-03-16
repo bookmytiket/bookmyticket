@@ -1,0 +1,197 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '../utils/feeBreakdown';
+import { HOME_EVENTS } from '../data/homeEvents';
+
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop';
+
+function getEventById(id, convexEvents) {
+  const sid = String(id);
+  const fromHome = (HOME_EVENTS || []).find((e) => String(e.id) === sid);
+  const fromConvex = (convexEvents || []).find((e) => String(e._id) === sid || String(e.id) === sid);
+  const raw = fromHome || fromConvex;
+  if (!raw) return null;
+  return {
+    ...raw,
+    id: raw._id || raw.id,
+    title: raw.title || 'Event',
+    date: raw.date || 'TBA',
+    location: raw.location || raw.venue || raw.address || 'Venue',
+    price: raw.price ?? raw.normalTicketPrice ?? 499,
+  };
+}
+
+export default function CheckoutScreen() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { eventId, event: routeEvent } = route.params || {};
+  const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
+  const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: 'admin_fee_settings' });
+
+  const [qty, setQty] = useState(1);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
+
+  React.useEffect(() => {
+    if (rawFeeSettings !== undefined && rawFeeSettings !== null) {
+      try {
+        const parsed = typeof rawFeeSettings === 'string' ? JSON.parse(rawFeeSettings) : rawFeeSettings;
+        if (parsed) setFeeSettings((p) => ({ ...p, ...parsed }));
+      } catch (_) {}
+    }
+  }, [rawFeeSettings]);
+
+  const event = useMemo(() => {
+    if (routeEvent) return { ...routeEvent, id: routeEvent._id || routeEvent.id };
+    return getEventById(eventId, convexEvents);
+  }, [eventId, routeEvent, convexEvents]);
+
+  const ticketPrice = event?.price ?? 499;
+  const baseAmount = ticketPrice * Math.max(1, qty);
+  const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, feeSettings), [baseAmount, feeSettings]);
+
+  const createBooking = useMutation(api.bookings.createBooking);
+
+  const handleConfirm = useCallback(async () => {
+    if (!event) return;
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      Alert.alert('Missing details', 'Please fill name, email and phone.');
+      return;
+    }
+    try {
+      const bookingId = await createBooking({
+        eventId: String(event._id || event.id),
+        userId: email.trim().toLowerCase(),
+        ticketCount: qty,
+        totalPrice: total,
+        status: 'Pending',
+        scanned: false,
+        customerDetails: {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+        }
+      });
+      navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event });
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Could not create booking. Please try again.');
+    }
+  }, [event, qty, total, name, email, phone, createBooking, navigation]);
+
+  if (!event) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.notFound}>Event not found</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.title}>{event.title}</Text>
+        <Text style={styles.location}>{event.location}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Quantity</Text>
+        <View style={styles.qtyRow}>
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => Math.max(1, x - 1))}>
+            <Text style={styles.qtyBtnText}>−</Text>
+          </TouchableOpacity>
+          <Text style={styles.qtyVal}>{qty}</Text>
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => x + 1)}>
+            <Text style={styles.qtyBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Contact Information</Text>
+        <Text style={styles.label}>Name</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor="#9ca3af" />
+        <Text style={styles.label}>Email</Text>
+        <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="Email" keyboardType="email-address" placeholderTextColor="#9ca3af" autoCapitalize="none" />
+        <Text style={styles.label}>Phone</Text>
+        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="Phone" keyboardType="phone-pad" placeholderTextColor="#9ca3af" />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Order Summary</Text>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Base amount</Text>
+          <Text style={styles.rowVal}>₹{baseAmount}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Convenience fee</Text>
+          <Text style={styles.rowVal}>₹{convenienceFee.toFixed(0)}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>GST</Text>
+          <Text style={styles.rowVal}>₹{gst.toFixed(0)}</Text>
+        </View>
+        <View style={[styles.row, styles.totalRow]}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalVal}>₹{total.toFixed(0)}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
+        <Text style={styles.confirmBtnText}>Proceed to Payment</Text>
+      </TouchableOpacity>
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc', padding: 20 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  notFound: { fontSize: 16, color: '#6b7280' },
+  sectionHeader: { marginBottom: 24 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '800', color: '#111827' },
+  location: { fontSize: 14, color: '#64748b', marginTop: 4 },
+  label: { fontSize: 13, fontWeight: '700', color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 16,
+    color: '#1e293b',
+  },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  qtyBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  qtyBtnText: { fontSize: 24, fontWeight: '400', color: '#1e293b' },
+  qtyVal: { fontSize: 20, fontWeight: '800', minWidth: 32, textAlign: 'center', color: '#1e293b' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  rowLabel: { fontSize: 14, color: '#64748b', fontWeight: '500' },
+  rowVal: { fontSize: 14, color: '#1e293b', fontWeight: '700' },
+  totalRow: { borderTopWidth: 1, borderTopColor: '#f1f5f9', marginTop: 8, paddingTop: 16 },
+  totalLabel: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  totalVal: { fontSize: 20, fontWeight: '900', color: '#f43f5e' },
+  confirmBtn: { backgroundColor: '#f43f5e', padding: 18, borderRadius: 16, alignItems: 'center', shadowColor: '#f43f5e', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  confirmBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+});
