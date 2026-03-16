@@ -1,10 +1,18 @@
 1:"$Sreact.fragment"
 2:I[47257,["/_next/static/chunks/ff1a16fafef87110.js","/_next/static/chunks/d2be314c3ece3fbe.js"],"ClientPageRoot"]
+<<<<<<< HEAD
 3:I[12410,["/_next/static/chunks/cae8231079cba5d4.js","/_next/static/chunks/e47f88f488241f87.js","/_next/static/chunks/960656d7fad4598e.js","/_next/static/chunks/7003afe2fbbf622f.js","/_next/static/chunks/90853a3e80b4a520.js"],"default"]
 6:I[97367,["/_next/static/chunks/ff1a16fafef87110.js","/_next/static/chunks/d2be314c3ece3fbe.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
 :HL["/_next/static/chunks/f85bf3e7e2230f55.css","style"]
 0:{"buildId":"6r5F535sZ0NTBSJqJ5pQ2","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/f85bf3e7e2230f55.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/90853a3e80b4a520.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+=======
+3:I[12410,["/_next/static/chunks/cae8231079cba5d4.js","/_next/static/chunks/85ba87a4881b7eb3.js","/_next/static/chunks/960656d7fad4598e.js","/_next/static/chunks/7003afe2fbbf622f.js","/_next/static/chunks/90853a3e80b4a520.js"],"default"]
+6:I[97367,["/_next/static/chunks/ff1a16fafef87110.js","/_next/static/chunks/d2be314c3ece3fbe.js"],"OutletBoundary"]
+7:"$Sreact.suspense"
+:HL["/_next/static/chunks/f85bf3e7e2230f55.css","style"]
+0:{"buildId":"dvjBnpzeIXIMZTYisnVx7","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/f85bf3e7e2230f55.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/90853a3e80b4a520.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

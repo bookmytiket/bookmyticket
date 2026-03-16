@@ -71,6 +71,7 @@ export default function Home() {
 
   const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
+<<<<<<< HEAD
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
     return (Array.isArray(newOrgEvents) ? newOrgEvents : [])
@@ -110,6 +111,24 @@ export default function Home() {
 
   const allEventsForFilter = useMemo(() => [
     ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.map(h => ({ ...h, rawDate: h.date, rawTime: h.time })) : []),
+=======
+  const normalizedOrgEvents = useMemo(() => (Array.isArray(newOrgEvents) ? newOrgEvents : []).map((ev, idx) => ({
+    ...ev,
+    id: ev._id || ev.id || `${ev.title?.slice(0, 8)}-${idx}`,
+    title: ev.title || "Event",
+    img: ev.img || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
+    date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
+    location: ev.location || ev.venue || ev.address || "Venue",
+    featured: ev.featured !== false,
+    trending: ev.trending !== false,
+    spotlight: ev.spotlight === true,
+    exclusive: ev.exclusive === true,
+    virtual: ev.virtual === true || ev.type === "Online",
+  })), [newOrgEvents]);
+
+  const allEventsForFilter = useMemo(() => [
+    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []),
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
   ], [normalizedOrgEvents]);
 
@@ -121,7 +140,10 @@ export default function Home() {
     // 0. Filter by Selected City
     if (selectedCity) {
       results = results.filter(ev =>
+<<<<<<< HEAD
         ev.virtual === true ||
+=======
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
         (ev.city && ev.city.toLowerCase() === selectedCity.toLowerCase()) ||
         (ev.district && ev.district.toLowerCase() === selectedCity.toLowerCase()) ||
         (ev.location && ev.location.toLowerCase().includes(selectedCity.toLowerCase()))
@@ -144,6 +166,7 @@ export default function Home() {
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
 
+<<<<<<< HEAD
     // 3. Filter by Expiry
     const parseEventDate = (dateStr, timeStr) => {
       if (!dateStr) return null;
@@ -182,6 +205,8 @@ export default function Home() {
       return eventDate >= now;
     });
 
+=======
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
     return results;
   }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);
 

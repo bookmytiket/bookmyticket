@@ -54,6 +54,7 @@ export default function ComingSoonEvents({ events = [] }) {
     const [isHovered, setIsHovered] = useState(false);
 
     // Filter events that have a targetDate or are marked as featured/special
+<<<<<<< HEAD
     const now = new Date();
     const parseEventDate = (dateStr, timeStr) => {
         if (!dateStr) return null;
@@ -90,6 +91,9 @@ export default function ComingSoonEvents({ events = [] }) {
         if (!eventDate) return false;
         return (e.featured || e.trending) && eventDate >= now;
     }).slice(0, 5);
+=======
+    const COMING_SOON_EVENTS = (events || []).filter(e => e.featured || e.trending).slice(0, 5);
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
     const event = COMING_SOON_EVENTS[idx] || {};
     const timeLeft = useCountdown(event.date);

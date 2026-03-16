@@ -14,6 +14,7 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             const list = raw ? JSON.parse(raw) : [];
+<<<<<<< HEAD
             const now = new Date();
             const filtered = (Array.isArray(list) ? list : []).filter(ev => {
                 if (!ev.date) return true;
@@ -25,6 +26,9 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                 }
             });
             setEvents(filtered.slice(0, MAX_ITEMS));
+=======
+            setEvents(Array.isArray(list) ? list.slice(0, MAX_ITEMS) : []);
+>>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
         } catch (_) {
             setEvents([]);
         }
