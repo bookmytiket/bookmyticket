@@ -1,0 +1,91 @@
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import HomeScreen from '../screens/HomeScreen';
+import EventsScreen from '../screens/EventsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import OrganiserScannerScreen from '../screens/OrganiserScannerScreen';
+import ManagementScreen from '../screens/ManagementScreen';
+import { useAuth } from '../context/AuthContext';
+
+import { Colors } from '../theme/Theme';
+import WebHeader from './WebHeader';
+
+const Tab = createBottomTabNavigator();
+
+function TabIcon({ name, focused, color }) {
+  return <Ionicons name={name} size={24} color={color} />;
+}
+
+export default function TabNavigator() {
+  const { user } = useAuth();
+  const isOrganiserOrStaff = user?.role === 'organiser' || user?.role === 'staff';
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        header: () => <WebHeader />,
+        tabBarStyle: {
+          backgroundColor: Colors.white,
+          borderTopColor: Colors.border,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 64,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+        },
+        tabBarActiveTintColor: Colors.secondary,
+        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+      }}
+    >
+      {user?.role !== 'staff' && (
+        <>
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'home' : 'home-outline', focused, color }),
+            }}
+          />
+          <Tab.Screen
+            name="Events"
+            component={EventsScreen}
+            options={{
+              tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'calendar' : 'calendar-outline', focused, color }),
+            }}
+          />
+        </>
+      )}
+      {isOrganiserOrStaff && (
+        <Tab.Screen
+          name="Scan"
+          component={OrganiserScannerScreen}
+          options={{
+            tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'qr-code' : 'qr-code-outline', focused, color }),
+          }}
+        />
+      )}
+      {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'staff') && (
+        <Tab.Screen
+          name="Dashboard"
+          component={ManagementScreen}
+          options={{
+            tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'grid' : 'grid-outline', focused, color }),
+          }}
+        />
+      )}
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'person' : 'person-outline', focused, color }),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}

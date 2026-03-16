@@ -114,7 +114,7 @@ export default function Spotlight({ events = [] }) {
                       <p style={{ fontSize: "12px", fontWeight: 700, color: "#6b7280", margin: "0 0 10px" }}>Event starts in</p>
                       <Countdown targetDate={targetDate} />
                       <Link
-                        href={`/events/${ev.id}`}
+                        href={`/events/detail?id=${ev.id}`}
                         style={{
                           display: "inline-block",
                           marginTop: "20px",

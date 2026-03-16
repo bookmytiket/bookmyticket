@@ -127,7 +127,7 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                     {events.map((event) => (
                         <Link
                             key={event.id}
-                            href={`/events/${event.id}`}
+                            href={`/events/detail?id=${event.id}`}
                             style={{ textDecoration: "none", color: "inherit", display: "block" }}
                         >
                             <div

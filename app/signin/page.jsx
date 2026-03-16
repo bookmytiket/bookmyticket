@@ -171,7 +171,7 @@ export default function SignInPage() {
     return (
         <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter','Roboto',sans-serif", background: "#f8fafc" }}>
 
-            {/* ══ LEFT PANEL — Hero Banner ══ */}
+            {/* ══ LEFT PANEL — Hero Banner (Hidden on Mobile) ══ */}
             <div style={{ flex: 1.1, position: "relative", overflow: "hidden", padding: "24px" }} className="hide-on-mobile signin-left-banner">
                 <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "20px", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -180,25 +180,25 @@ export default function SignInPage() {
                 </div>
             </div>
 
-            {/* ══ RIGHT PANEL — Auth Form ══ */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", position: "relative" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", position: "relative", background: "#fff" }}>
+                
+                {/* Mobile-only Hero Banner at the very top */}
+                <div className="show-on-mobile" style={{ width: "100%", marginBottom: "0" }}>
+                    <HeroBanner slides={displaySlides} showDetails={false} showPromo={false} />
+                </div>
 
-                <div style={{ width: "100%", maxWidth: "420px" }}>
+                <div style={{ width: "100%", maxWidth: "420px", padding: "40px 24px" }}>
 
                     {/* ══ SIGN IN ══ */}
                     {mode === "signin" && (
                         <>
-                            <div style={{ textAlign: "center", marginBottom: "28px" }}>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>Welcome to</span>
-                                    <Link href="/"><img src="/logo.png" alt="BookMyTicket" style={{ height: "80px", width: "auto", display: "block" }} /></Link>
+                            <div style={{ textAlign: "center", marginBottom: "32px" }}>
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                                    <Link href="/">
+                                        <img src="/logo.png" alt="BookMyTicket" style={{ height: "60px", width: "auto" }} />
+                                    </Link>
+                                    <p style={{ fontSize: "16px", fontWeight: 600, color: "#64748b", margin: 0 }}>Welcome to bookmyticket</p>
                                 </div>
-                                <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
-                                    Don&apos;t have an account?{" "}
-                                    <button style={linkBtn} onClick={() => { setMode("signup"); setLoginError(""); }}>
-                                        Create one now
-                                    </button>
-                                </p>
                             </div>
 
 

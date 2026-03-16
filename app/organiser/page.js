@@ -2495,10 +2495,10 @@ function OrganiserPanel() {
                                                                 borderRadius: "100px",
                                                                 fontSize: "11px",
                                                                 fontWeight: 800,
-                                                                backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
-                                                                color: b.status === "Confirmed" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
+                                                                backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Scanned" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
+                                                                color: b.status === "Confirmed" ? "#22c55e" : b.status === "Scanned" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
                                                             }}>
-                                                                {b.status.toUpperCase()}
+                                                                {b.status === "Scanned" ? "CHECKED IN" : b.status.toUpperCase()}
                                                             </span>
                                                         </td>
                                                     </tr>

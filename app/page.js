@@ -239,7 +239,7 @@ export default function Home() {
                 gap: '24px'
               }}>
                 {filteredEvents.map(ev => (
-                  <div key={ev.id} onClick={() => router.push(`/events/${ev.id}`)} style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                  <div key={ev.id} onClick={() => router.push(`/events/detail?id=${ev.id}`)} style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
                     <TicketCard event={ev} />
                   </div>
                 ))}

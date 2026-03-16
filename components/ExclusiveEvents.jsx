@@ -9,7 +9,7 @@ function ExclusiveCard({ event }) {
     const [wished, setWished] = useState(false);
     return (
         <Link
-            href={`/events/${event.id}`}
+            href={`/events/detail?id=${event.id}`}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
             <article

@@ -130,7 +130,7 @@ export default function VenueEventCard({ event }) {
                         <p style={{ margin: 0, fontSize: "10px", color: "#94a3b8", fontWeight: 700 }}>STARTING FROM</p>
                         <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>{event.time || "Join Now"}</p>
                     </div>
-                    <Link href={`/events/${event.id}`} style={{ textDecoration: "none" }}>
+                    <Link href={`/events/detail?id=${event.id}`} style={{ textDecoration: "none" }}>
                         <button
                             style={{
                                 padding: "10px 18px",

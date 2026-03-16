@@ -9,7 +9,7 @@ function PopularCard({ event }) {
     const [wished, setWished] = useState(false);
     return (
         <Link
-            href={`/events/${event.id}`}
+            href={`/events/detail?id=${event.id}`}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
             <article
@@ -104,15 +104,15 @@ export default function PopularEvents({ events }) {
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
 
                 {/* Header */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "30px" }}>
                     <div>
                         <h2 id="popular-events-heading" style={{
-                            fontSize: "28px",
+                            fontSize: "32px",
                             fontWeight: 900,
                             color: "#111827",
                             margin: 0,
-                            letterSpacing: "-0.04em",
-                            lineHeight: 1.1,
+                            letterSpacing: "-0.05em",
+                            lineHeight: 1,
                             fontFamily: "var(--font-heading)"
                         }}>
                             Explore Popular <span style={{
@@ -122,35 +122,48 @@ export default function PopularEvents({ events }) {
                                 display: 'inline-block'
                             }}>Events</span>
                         </h2>
-                        <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
+                        <p style={{ fontSize: "14px", color: "#6b7280", margin: "6px 0 0", fontWeight: 500 }}>
                             Discover what everyone is talking about
                         </p>
                     </div>
-                    <a href="/events" style={{
-                        fontSize: "13px", fontWeight: 700, color: "#f97316",
-                        textDecoration: "none", display: "flex", alignItems: "center", gap: "4px",
-                        padding: "8px 16px", border: "1.5px solid #f97316", borderRadius: "8px",
-                        transition: "all 0.2s",
-                    }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#f97316"; e.currentTarget.style.color = "#fff"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f97316"; }}
-                    >
-                        View All
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                    </a>
                 </div>
 
-                {/* 4-column grid */}
-                <div
-                    aria-labelledby="popular-events-heading"
-                    style={{
-                        display: list.length > 0 ? "grid" : "block",
-                        gridTemplateColumns: list.length > 0 ? "repeat(4, 1fr)" : "none",
-                        gap: "16px",
-                    }}
-                >
-                    {list.length > 0 ? list.map(event => <PopularCard key={event.id} event={event} />) : (
-                        <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>
+                {/* Grid Container */}
+                <div style={{ display: "flex", flexDirection: "column", gap: list.length > 0 ? "40px" : "0" }}>
+                    {/* Main / Static Events Row */}
+                    <div
+                        aria-labelledby="popular-events-heading"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                            gap: "24px",
+                        }}
+                    >
+                        {list.filter(e => !e._id).map(event => (
+                            <PopularCard key={event.id} event={event} />
+                        ))}
+                    </div>
+
+                    {/* Organiser Events Row (Convex) */}
+                    {list.some(e => e._id) && (
+                        <div style={{ borderTop: "1px solid #eee", paddingTop: "40px" }}>
+                            {/* Title removed per user request */}
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                                    gap: "24px",
+                                }}
+                            >
+                                {list.filter(e => e._id).map(event => (
+                                    <PopularCard key={event.id} event={event} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {list.length === 0 && (
+                        <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af", background: "#fff", borderRadius: "16px", border: "1px dashed #e2e8f0" }}>
                             Popular events will appear here soon.
                         </div>
                     )}

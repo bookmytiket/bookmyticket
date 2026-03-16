@@ -93,7 +93,7 @@ export default function FeaturedEvents({ events }) {
                     {list.length > 0 ? list.map((event) => (
                         <Link
                             key={event.id}
-                            href={`/events/${event.id}`}
+                            href={`/events/detail?id=${event.id}`}
                             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                         >
                             <div

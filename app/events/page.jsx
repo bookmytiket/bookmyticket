@@ -66,7 +66,7 @@ export default function EventsPage() {
                     {/* 5 × 3 GRID */}
                     <div className="event-grid">
                         {EVENTS.map((event) => (
-                            <Link href={`/events/${event.id}`} key={event.id} className="event-card">
+                            <Link href={`/events/detail?id=${event.id}`} key={event.id} className="event-card">
                                 <img src={event.img} alt={event.title} className="event-card-img" />
                                 <div className="event-card-body">
                                     <span className="event-card-tag">{event.category}</span>

@@ -109,6 +109,13 @@ main {
   .hide-on-mobile {
     display: none !important;
   }
+  .show-on-mobile {
+    display: block !important;
+  }
+}
+
+.show-on-mobile {
+  display: none;
 }
 
 /* Main center slide - now full width */
@@ -643,7 +650,7 @@ nextjs-portal {
   padding: 0 25px;
   height: 75px;
   background: #fde047;
-  /* Reverted to Yellow */
+  /* Reverted to Yellow as requested */
   border-radius: 12px;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;

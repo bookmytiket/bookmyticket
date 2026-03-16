@@ -112,10 +112,10 @@ export default function ProfilePage() {
                                                 padding: "4px 10px",
                                                 borderRadius: "20px",
                                                 textTransform: "uppercase",
-                                                background: booking.status === 'Confirmed' || booking.status === 'Paid' ? '#dcfce7' : booking.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
-                                                color: booking.status === 'Confirmed' || booking.status === 'Paid' ? '#166534' : booking.status === 'Cancelled' ? '#991b1b' : '#92400e'
+                                                background: (booking.scanned || booking.status === 'Scanned' || booking.status === 'Confirmed' || booking.status === 'Paid') ? '#dcfce7' : booking.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
+                                                color: (booking.scanned || booking.status === 'Scanned' || booking.status === 'Confirmed' || booking.status === 'Paid') ? '#166534' : booking.status === 'Cancelled' ? '#991b1b' : '#92400e'
                                             }}>
-                                                {booking.status}
+                                                {(booking.scanned || booking.status === 'Scanned') ? 'Checked In' : booking.status}
                                             </span>
                                             {booking.status !== 'Cancelled' && (
                                                 <button onClick={() => setViewTicketModal(booking)} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
@@ -175,21 +175,9 @@ export default function ProfilePage() {
     };
 
     return (
-        <div style={{ minHeight: "100vh", backgroundColor: t.bg, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ minHeight: "100vh", backgroundColor: t.bg, fontFamily: "'Inter', sans-serif", paddingTop: "120px" }}>
 
-            {/* Header / Navbar equivalent strictly for Dashboard to maintain aesthetic */}
-            <header style={{ height: "64px", backgroundColor: t.headerBg, borderBottom: `1px solid ${t.sidebarBorder}`, display: "flex", alignItems: "center", padding: "0 24px", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
-                <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", color: t.textSub, gap: "8px", fontSize: "14px", fontWeight: "500" }}>
-                    <ArrowLeft size={16} /> Back to Home
-                </Link>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: t.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "14px" }}>
-                        {user.name?.[0]?.toUpperCase() || "U"}
-                    </div>
-                </div>
-            </header>
-
-            <div style={{ display: "flex", maxWidth: "1200px", margin: "0 auto", padding: "32px 24px", gap: "32px", alignItems: "flex-start" }}>
+            <div style={{ display: "flex", maxWidth: "1200px", margin: "0 auto", padding: "0 24px", gap: "32px", alignItems: "flex-start" }}>
 
                 {/* Profile Sidebar */}
                 <aside style={{ width: "260px", backgroundColor: t.sidebarBg, borderRadius: "16px", border: `1px solid ${t.sidebarBorder}`, overflow: "hidden", flexShrink: 0 }}>
