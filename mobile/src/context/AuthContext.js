@@ -76,13 +76,31 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+
+  const addToRecentlyViewed = (event) => {
+    if (!event) return;
+    setRecentlyViewed(prev => {
+      const item = { 
+        id: event.id || event._id, 
+        title: event.title, 
+        img: event.img || event.bannerPreview, 
+        date: event.date, 
+        location: event.location || event.venue || event.address,
+        virtual: event.virtual
+      };
+      const filtered = prev.filter(e => String(e.id) !== String(item.id));
+      return [item, ...filtered].slice(0, 10);
+    });
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity, recentlyViewed, addToRecentlyViewed }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from 'convex/react';
@@ -146,18 +146,27 @@ export default function ProfileScreen() {
             <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
             <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?._id}</Text>
             
-            <View style={styles.modalInfoRow}>
-              <View>
-                <Text style={styles.modalInfoLabel}>Quantity</Text>
-                <Text style={styles.modalInfoValue}>{selectedTicket?.ticketCount} Ticket(s)</Text>
-              </View>
-              <View>
-                <Text style={styles.modalInfoLabel}>Entry Status</Text>
-                <Text style={[styles.modalInfoValue, { color: selectedTicket?.scanned ? '#10b981' : Colors.text }]}>
-                  {selectedTicket?.scanned ? "Checked In" : "Pending Entry"}
-                </Text>
-              </View>
-            </View>
+            {(selectedTicket?.meetingUrl || selectedTicket?.eventType === "Online") && (
+              <TouchableOpacity 
+                style={[styles.joinBtn, { marginTop: 20 }]} 
+                onPress={() => {
+                  const url = selectedTicket.meetingUrl || "";
+                  if (url) {
+                    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+                  }
+                }}
+              >
+                <LinearGradient
+                  colors={['#059669', '#10b981']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.btnGradient}
+                >
+                  <Ionicons name="videocam" size={20} color="#fff" />
+                  <Text style={styles.joinBtnText}>Join Now</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -324,5 +333,22 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
   btn: { padding: 18, borderRadius: 14, width: '100%', alignItems: 'center' },
   btnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  joinBtn: {
+    width: '100%',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  btnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 10,
+  },
+  joinBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 });
 

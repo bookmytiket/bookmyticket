@@ -77,7 +77,7 @@ export default function BecomeOrganiserScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Become an Organiser</Text>
+        <Text style={styles.title}>Become a Partner</Text>
         <View style={{ width: 40 }} />
       </View>
 

@@ -395,7 +395,7 @@ export default function Navbar() {
               onClick={() => setOrgOpen(true)}
               style={{ height: '45px', padding: '0 20px', fontSize: '0.75rem' }}
             >
-              Become an Organiser
+              Become a Partner
             </button>
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -512,7 +512,7 @@ export default function Navbar() {
               </button>
 
               <button className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }} onClick={() => { setOrgOpen(true); setMenuOpen(false); }}>
-                Become an Organiser
+                Become a Partner
               </button>
 
               <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginTop: "1rem", marginBottom: "0.5rem" }}>Categories</p>
@@ -706,7 +706,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <div className="org-modal-head">
-                    <h2 className="org-modal-title">Request to Become an Organiser</h2>
+                    <h2 className="org-modal-title">Request to Become a Partner</h2>
                     <p className="org-modal-sub">Fill in your details — our team will reach out to you within 24 hours.</p>
                   </div>
 

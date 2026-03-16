@@ -110,6 +110,8 @@ function AdminHomePage() {
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     // Payment gateways: which config modal is open + saved configs per gateway
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingOrg, setEditingOrg] = useState(null);
     const [activeTemplate, setActiveTemplate] = useState(null);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [categories, setCategories] = useState([]);
@@ -649,6 +651,10 @@ function AdminHomePage() {
         }
     };
 
+    const ACCENT_PINK = "#ec4899";
+    const ACCENT_PURPLE = "#a855f7";
+    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
+
     const t = colors[theme];
 
     const addSlide = () => {
@@ -784,7 +790,7 @@ function AdminHomePage() {
                     font-weight: bold;
                 }
                 .badge-blue {
-                    background-color: #3b82f6;
+                    background: ${ACCENT_GRADIENT};
                     color: white;
                     padding: 2px 6px;
                     border-radius: 4px;
@@ -1081,7 +1087,7 @@ function AdminHomePage() {
                         <span style={{ fontSize: "14px", fontWeight: 600, color: t.textSub }}>Event Categories</span>
                         <button
                             onClick={() => setCategoryModal("add")}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}
                         >
                             <Plus size={18} /> Create a Category
                         </button>
@@ -1111,7 +1117,7 @@ function AdminHomePage() {
                                 { id: "meta_management", label: "SEO & Ads", icon: Globe },
                             ]).map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="tab-btn"
-                                    style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: activeTab === tab.id ? (theme === 'light' ? "#eff6ff" : "#1e293b") : "transparent", color: activeTab === tab.id ? "#3b82f6" : t.textSub, whiteSpace: "nowrap" }}>
+                                    style={{ flex: 1, padding: "10px", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: activeTab === tab.id ? (theme === 'light' ? "#fdf2f8" : "#1e293b") : "transparent", color: activeTab === tab.id ? ACCENT_PINK : t.textSub, whiteSpace: "nowrap" }}>
                                     <tab.icon size={18} /> <span>{tab.label}</span>
                                 </button>
                             ))}
@@ -1320,7 +1326,7 @@ function AdminHomePage() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>All Events (Homepage + Organisers)</h3>
                                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px", textDecoration: "none" }}><Plus size={18} /> Create event</a>
+                                    <a href="/organiser" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}><Plus size={18} /> Create event</a>
                                     <input
                                         type="text"
                                         placeholder="Search events..."
@@ -1459,7 +1465,7 @@ function AdminHomePage() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Coupon codes & BOGO</h3>
-                                <button onClick={handleCreatePromotion} style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><Plus size={18} /> Create promotion</button>
+                                <button onClick={handleCreatePromotion} style={{ padding: "8px 16px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.14)" }}><Plus size={18} /> Create promotion</button>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                                 <div style={{ padding: "16px", border: `1px solid ${t.border}`, borderRadius: "10px" }}>
@@ -1520,7 +1526,7 @@ function AdminHomePage() {
                             <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Export CSV or PDF for accounting and reconciliation.</p>
                             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                                 <button onClick={() => { const csv = "Date,Event,Order ID,Amount,Status\n" + (bookings.length ? bookings.map(b => `${new Date().toISOString().split("T")[0]},${b.eventName || ""},${b.id},${b.amount || "0"},${b.status || "Confirmed"}`).join("\n") : "No data"); const a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "financials-report.csv"; a.click(); }} style={{ padding: "12px 24px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><FileText size={18} /> Export CSV</button>
-                                <button onClick={() => window.print()} style={{ padding: "12px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><FileText size={18} /> Export PDF (print)</button>
+                                <button onClick={() => window.print()} style={{ padding: "12px 24px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.14)" }}><FileText size={18} /> Export PDF (print)</button>
                             </div>
                             <div style={{ marginTop: "24px", padding: "20px", border: `1px solid ${t.border}`, borderRadius: "10px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a" }}>
                                 <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>Summary</h4>
@@ -1624,7 +1630,7 @@ function AdminHomePage() {
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Hero Banner Management</h3>
-                                <button onClick={addSlide} className="tab-btn" style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
+                                <button onClick={addSlide} className="tab-btn" style={{ padding: "8px 16px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 800, boxShadow: "0 10px 24px rgba(236,72,153,0.12)" }}>
                                     <Plus size={18} /> Add New Slide
                                 </button>
                             </div>
@@ -1707,7 +1713,7 @@ function AdminHomePage() {
                                     </div>
                                     <button
                                         onClick={() => setEventPartners([...eventPartners, { id: Date.now(), name: "New Partner", logo: "", eventCount: 0 }])}
-                                        style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                        style={{ padding: "8px 16px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.12)" }}>
                                         <Plus size={18} /> Add Partner
                                     </button>
                                 </div>
@@ -2142,7 +2148,7 @@ function AdminHomePage() {
                                         {/* Manual creation removed as per new workflow request */}
                                     </div>
                                 </div>
-                                <div className="table-container" style={{ position: "relative" }}>
+                                <div className="table-container" style={{ position: "relative", paddingBottom: "160px" }}>
                                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                         <thead>
                                             <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
@@ -2160,8 +2166,8 @@ function AdminHomePage() {
                                                 if (activeTab === "banned_org") return org.status === "Banned";
                                                 if (activeTab === "kyc_pending") return ["KYC Pending", "Pending", "Submitted"].includes(org.status);
                                                 if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
-                                                if (activeTab === "email_unverified") return org.id % 2 === 0;
-                                                if (activeTab === "mobile_unverified") return org.id % 3 === 0;
+                                                if (activeTab === "email_unverified") return String(org.id).length % 2 === 0; // Fixed temporary logic
+                                                if (activeTab === "mobile_unverified") return String(org.id).length % 3 === 0; // Fixed temporary logic
                                                 if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active"].includes(org.status);
                                                 return true;
                                             }).map((org) => (
@@ -2193,16 +2199,17 @@ function AdminHomePage() {
                                                         </button>
                                                         {openActionDropdown === org.id && (
                                                             <div style={{ position: "absolute", right: "20px", top: "45px", backgroundColor: theme === 'light' ? '#fff' : '#1e293b', border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", zIndex: 100, width: "160px", overflow: "hidden" }}>
-                                                                <button style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                    <Save size={16} /> Edit Profile
-                                                                </button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setEditingOrg(org); setIsEditModalOpen(true); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <Save size={16} /> Edit Profile
+                                                                    </button>
                                                                 {(org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted' || org.status === 'Start Onboarding') && (
                                                                     <>
                                                                         <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#3b82f6", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                             <FileText size={16} /> View KYC
                                                                         </button>
 
-                                                                        <button onClick={() => {
+                                                                        <button onClick={(e) => {
+                                                                            e.stopPropagation();
                                                                             patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
                                                                             setOpenActionDropdown(null);
                                                                         }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
@@ -2211,20 +2218,20 @@ function AdminHomePage() {
                                                                     </>
                                                                 )}
                                                                 {org.status === 'Active' && (
-                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <Bell size={16} /> Ban User
                                                                     </button>
                                                                 )}
                                                                 {org.status === 'Banned' && (
-                                                                    <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <CheckCircle size={16} /> Unban User
                                                                     </button>
                                                                 )}
-                                                                <button onClick={() => { patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <X size={16} /> Reject User
                                                                 </button>
                                                                 <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
-                                                                <button onClick={() => { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("Are you sure you want to delete this organiser?")) { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); } }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <Trash2 size={16} /> Delete User
                                                                 </button>
                                                             </div>
@@ -3819,6 +3826,64 @@ function AdminHomePage() {
                                         }}
                                         style={{ flex: 2, padding: "14px", borderRadius: "8px", backgroundColor: "#22c55e", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                         <CheckCircle size={18} /> Approve KYC
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Edit Organizer Modal */}
+                    {isEditModalOpen && editingOrg && (
+                        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+                            <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "16px", width: "100%", maxWidth: "500px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: t.textMain }}>Edit Organiser Profile</h3>
+                                    <button onClick={() => setIsEditModalOpen(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={20} /></button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Full Name</label>
+                                        <input
+                                            type="text"
+                                            value={editingOrg.username}
+                                            onChange={(e) => setEditingOrg({ ...editingOrg, username: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Email / User ID</label>
+                                        <input
+                                            type="email"
+                                            value={editingOrg.email}
+                                            disabled
+                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#0f172a', color: t.textSub, cursor: "not-allowed" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Wallet Balance (₹)</label>
+                                        <input
+                                            type="number"
+                                            value={parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''))}
+                                            onChange={(e) => setEditingOrg({ ...editingOrg, balance: `₹${e.target.value}` })}
+                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
+                                    <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                                    <button
+                                        onClick={async () => {
+                                            const balance = parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''));
+                                            await patchOrganizerMutation({
+                                                id: editingOrg.id,
+                                                name: editingOrg.username,
+                                                walletBalance: isNaN(balance) ? 0 : balance
+                                            });
+                                            setIsEditModalOpen(false);
+                                        }}
+                                        style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                                    >
+                                        Save Changes
                                     </button>
                                 </div>
                             </div>

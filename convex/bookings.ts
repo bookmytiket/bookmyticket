@@ -22,6 +22,8 @@ export const getBookings = query({
                 return {
                     ...booking,
                     eventName: event && event.title ? event.title : "Static Event",
+                    eventType: event && event.type ? event.type : "Physical",
+                    meetingUrl: event && event.meetingUrl ? event.meetingUrl : null,
                     customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
                     userName: userName || "Guest User",
                 };
@@ -51,6 +53,8 @@ export const getBookingById = query({
         return {
             ...booking,
             eventName: event && "title" in event ? event.title : "Static Event",
+            eventType: event && "type" in event ? event.type : "Physical",
+            meetingUrl: event && "meetingUrl" in event ? event.meetingUrl : null,
             location: event && "location" in event ? event.location : "TBA",
             userName: userName || "Guest User",
         };

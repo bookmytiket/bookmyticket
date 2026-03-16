@@ -256,71 +256,25 @@ export default function Home() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
-            {homeSectionsOrder.map((section, idx) => {
-              switch (section) {
-                case "Hero Banner":
-                  return <div key={idx} style={{ width: '100%', paddingTop: '44px' }}><VideoHeroBanner /></div>;
-                case "Sub Navigation":
-                  return <div key={idx} style={{ width: '100%' }}><RecentlyViewedEvents /></div>;
-                case "Featured Events":
-                  return <div key={idx} style={{ width: '100%' }}><FeaturedEvents events={featuredEventsList} /></div>;
-                case "Spotlight":
-                  return <div key={idx} style={{ width: '100%' }}><Spotlight events={spotlightEventsList} /></div>;
-                case "Coming Soon":
-                  return <div key={idx} style={{ width: '100%' }}><ComingSoonEvents events={normalizedOrgEvents} /></div>;
-                case "Top Hand-picked":
-                  return <div key={idx} style={{ width: '100%' }}><PopularEvents events={popularEventsList} /></div>;
-                case "Venue Events":
-                  return (
-                    <section key={idx} style={{ width: '100%', padding: '60px 0', backgroundColor: '#f8fafc' }}>
-                      <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <h2 style={{
-                            fontSize: "28px",
-                            fontWeight: 900,
-                            color: '#1e293b',
-                            margin: 0,
-                            letterSpacing: "-0.04em",
-                            lineHeight: 1.1,
-                            fontFamily: "var(--font-heading)"
-                          }}>
-                            Discover Venue <span style={{
-                              background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              display: 'inline-block'
-                            }}>Events</span>
-                          </h2>
-                        </div>
-                        <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '32px' }}>Experience the best in-person events at top venues near you</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
-                          {venueEventsList.map(ev => (
-                            <div key={ev.id}>
-                              <VenueEventCard event={ev} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  );
-                default:
-                  return null;
-              }
-            })}
+            {/* 1) Recently Viewed */}
+            <RecentlyViewedEvents />
 
-            {/* Other sections that might not be in the reorderable list yet */}
-            <div style={{ width: '100%' }}>
-              <TrendingEvents events={trendingEventsList} />
-            </div>
-            <div style={{ width: '100%' }}>
-              <ExclusiveEvents events={exclusiveEventsList} />
-            </div>
-            <div style={{ width: '100%' }}>
-              <VirtualEvents events={normalizedOrgEvents} />
-            </div>
-            <div style={{ width: '100%' }}>
-              <RecentMemories memories={MEMORIES} />
-            </div>
+            {/* 2) Featured Events */}
+            <FeaturedEvents events={featuredEventsList} />
+
+            {/* 3) Coming Soon */}
+            <ComingSoonEvents events={normalizedOrgEvents} />
+
+            {/* 4) Explore Popular Events */}
+            <PopularEvents events={popularEventsList} />
+
+            {/* 5) Exclusive Events */}
+            <ExclusiveEvents events={exclusiveEventsList} />
+
+            {/* 6) Virtual Events */}
+            <VirtualEvents events={normalizedOrgEvents} />
+
+            {/* Branding & Others */}
             <div style={{ width: '100%' }}>
               <FeaturedOrganisers organisers={eventPartners} />
             </div>

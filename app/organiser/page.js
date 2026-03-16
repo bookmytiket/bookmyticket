@@ -157,7 +157,7 @@ function LocationPickerModal({
                         </div>
                         {geoError && <p style={{ fontSize: "11px", color: "#f97316", margin: 0 }}>{geoError}</p>}
                         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <button type="button" disabled={isGeoLoading} onClick={handleUseLocation} style={{ padding: "9px 14px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", opacity: isGeoLoading ? 0.8 : 1 }}>
+                            <button type="button" disabled={isGeoLoading} onClick={handleUseLocation} style={{ padding: "9px 14px", borderRadius: "8px", border: "none", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", opacity: isGeoLoading ? 0.8 : 1 }}>
                                 {isGeoLoading ? "Applying…" : "Use This Location & Autofill"}
                             </button>
                             <button type="button" onClick={handleSetOnlyLatLng} style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
@@ -334,6 +334,9 @@ function OrganiserPanel() {
     const draftDebounceRef = useRef(null);
     const skipInitialDraftWriteRef = useRef(true);
 
+    // Editing state must be declared before effects that reference it
+    const [editingEvent, setEditingEvent] = useState(null);
+
     // Multiple write operation: queue of { key, value }; process one at a time to avoid concurrent writes
     const scheduleWrite = useCallback((key, value) => {
         if (typeof window === "undefined") return;
@@ -364,10 +367,13 @@ function OrganiserPanel() {
         return () => { if (eventsDebounceRef.current) clearTimeout(eventsDebounceRef.current); };
     }, [events, scheduleWrite]);
 
-    // When opening Add Event tab, show type selection (Online / Venue) first
+    // When opening Add Event tab, show type selection (Online / Venue) first.
+    // If we're editing an existing event, keep the form open.
     useEffect(() => {
-        if (activeTab === "post_event") setAddEventStep("select_type");
-    }, [activeTab]);
+        if (activeTab !== "post_event") return;
+        if (editingEvent) return;
+        setAddEventStep("select_type");
+    }, [activeTab, editingEvent]);
 
     // Tab navigation: single state update per key (Arrow Up/Down), no repeat; ignore when focus is in input/textarea/select
     const TAB_IDS = ["dashboard", "post_event", "manage_events", "venue_events", "online_events", "seat_map", "event_bookings", "withdraw", "transactions", "pwa_scanner", "support_tickets", "edit_profile", "change_password"];
@@ -498,7 +504,7 @@ function OrganiserPanel() {
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
-        eventStatus: "Active", isFeature: "Yes",
+        eventStatus: "Active", isFeature: "Yes", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
         meetingUrl: "", earlyBirdDiscount: "disable",
@@ -694,7 +700,7 @@ function OrganiserPanel() {
 
         const imgUrl = (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:"))
             ? postEvent.bannerPreview
-            : "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
+            : postEvent.img || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
 
         // Build payload with ONLY fields accepted by Convex
         if (!isOnline) {
@@ -726,6 +732,7 @@ function OrganiserPanel() {
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
             meetingUrl: isOnline ? (postEvent.meetingUrl || undefined) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
+            exclusive: postEvent.isExclusive === "Yes" ? true : false,
             description: postEvent.description || undefined,
             rows: isSeating ? categories.reduce((sum, c) => sum + (Number(c.rows) || 0), 0) : undefined,
             cols: isSeating ? (Number(postEvent.cols) || 10) : undefined,
@@ -745,17 +752,36 @@ function OrganiserPanel() {
         // Remove undefined keys (Convex may reject them in some versions)
         Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
-        createEventMutation(payload)
-            .then(() => {
-                setPostEvent(getInitialPostEvent());
-                setAddEventStep("select_type");
-                try { localStorage.removeItem("organiser_draft"); } catch (_) { }
-                setActiveTab("manage_events");
-            })
-            .catch(err => {
-                console.error("Error publishing event:", err);
-                setPublishError("Failed to publish: " + (err?.message || "Unknown error"));
-            });
+        if (editingEvent) {
+            // `events.updateEvent` does not accept organiserId (it shouldn't be mutated).
+            // Remove it from the update payload to satisfy Convex validation.
+            // eslint-disable-next-line no-unused-vars
+            const { organiserId, ...updatePayload } = payload;
+            updateEventMutation({ id: editingEvent.id, ...updatePayload })
+                .then(() => {
+                    setPostEvent(getInitialPostEvent());
+                    setEditingEvent(null);
+                    setAddEventStep("select_type");
+                    try { localStorage.removeItem("organiser_draft"); } catch (_) { }
+                    setActiveTab("manage_events");
+                })
+                .catch(err => {
+                    console.error("Error updating event:", err);
+                    setPublishError("Failed to update: " + (err?.message || "Unknown error"));
+                });
+        } else {
+            createEventMutation(payload)
+                .then(() => {
+                    setPostEvent(getInitialPostEvent());
+                    setAddEventStep("select_type");
+                    try { localStorage.removeItem("organiser_draft"); } catch (_) { }
+                    setActiveTab("manage_events");
+                })
+                .catch(err => {
+                    console.error("Error publishing event:", err);
+                    setPublishError("Failed to publish: " + (err?.message || "Unknown error"));
+                });
+        }
     };
 
     const addDateSlot = () => {
@@ -793,6 +819,10 @@ function OrganiserPanel() {
             sidebarBorder: "#1f2937"
         }
     };
+
+    const ACCENT_PINK = "#ec4899";
+    const ACCENT_PURPLE = "#a855f7";
+    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
 
     const t = colors[theme] || colors.dark;
     const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
@@ -845,7 +875,7 @@ function OrganiserPanel() {
                 height: 44px;
                 border-radius: 50%;
                 object-fit: cover;
-                border: 2px solid #3b82f6;
+                border: 2px solid ${ACCENT_PINK};
             }
             .sidebar-profile-info {
                 flex: 1;
@@ -881,7 +911,7 @@ function OrganiserPanel() {
                 transition: border-color 0.2s;
             }
             .sidebar-search-input:focus {
-                border-color: #3b82f6;
+                border-color: ${ACCENT_PINK};
             }
             .main-content {
                 margin-left: 250px;
@@ -923,7 +953,7 @@ function OrganiserPanel() {
                 color: ${t.textMain};
             }
             .sidebar-item.active {
-                background-color: #3b82f6!important;
+                background: ${ACCENT_GRADIENT}!important;
                 color: #fff!important;
                 font-weight: 600;
             }
@@ -953,12 +983,12 @@ function OrganiserPanel() {
                 transform: translateY(-50%);
             }
             .sidebar-dropdown-item:hover {
-                color: #3b82f6;
+                color: ${ACCENT_PINK};
             }
             .sidebar-dropdown-item.active {
-                color: #3b82f6;
+                color: ${ACCENT_PINK};
                 font-weight: 600;
-                background-color: ${theme === 'light' ? '#f0f7ff' : '#1e293b'};
+                background-color: ${theme === 'light' ? '#fdf2f8' : '#1e293b'};
             }
             .stat-card {
                 background-color: ${t.cardBg};
@@ -1092,7 +1122,7 @@ function OrganiserPanel() {
                 <input type="text" placeholder="Enter 6-digit MFA Code" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, textAlign: "center", letterSpacing: "4px", fontWeight: "bold" }} />
                 <button
                     onClick={() => setCurrentStage("kyc_start")}
-                    style={{ width: "100%", padding: "14px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                    style={{ width: "100%", padding: "14px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                 >
                     Verify & Continue <ArrowRight size={18} />
                 </button>
@@ -1183,7 +1213,7 @@ function OrganiserPanel() {
                                     fontSize: "14px",
                                     marginTop: "2px",
                                     backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#fff" : "#fff"),
-                                    backgroundImage: isActive ? "linear-gradient(135deg, #f43f5e, #f97316)" : "none",
+                                    backgroundImage: isActive ? ACCENT_GRADIENT : "none",
                                     color: isActive ? "#fff" : (isCompleted ? "#fff" : "#94a3b8"),
                                     border: isCompleted ? "none" : (isActive ? "none" : `2px solid #e2e8f0`),
                                     boxShadow: isActive ? "0 4px 12px rgba(244, 63, 94, 0.3)" : "none"
@@ -1196,7 +1226,7 @@ function OrganiserPanel() {
                     })}
 
                     <div style={{ position: "absolute", left: "18px", top: "20px", bottom: "20px", width: "2px", backgroundColor: "#e2e8f0", zIndex: 0 }}></div>
-                    <div style={{ position: "absolute", left: "18px", top: "20px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: "#f43f5e", zIndex: 1, transition: "height 0.3s ease" }}></div>
+                    <div style={{ position: "absolute", left: "18px", top: "20px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: ACCENT_PINK, zIndex: 1, transition: "height 0.3s ease" }}></div>
                 </div>
             </div>
 
@@ -1380,7 +1410,7 @@ function OrganiserPanel() {
                                 setKycStep(kycStep + 1);
                             }
                         }}
-                        style={{ padding: "12px 32px", borderRadius: "100px", background: "linear-gradient(135deg, #f43f5e, #f97316)", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease", boxShadow: "0 4px 12px rgba(244, 63, 94, 0.2)" }}
+                        style={{ padding: "12px 32px", borderRadius: "100px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease", boxShadow: "0 14px 28px rgba(236,72,153,0.18)" }}
                     >
                         {kycStep === 3 ? "Submit" : "Next"} <ArrowRight size={16} />
                     </button>
@@ -1397,7 +1427,7 @@ function OrganiserPanel() {
     const renderPendingView = () => (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, marginBottom: "8px", display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ padding: "4px", backgroundColor: "#f43f5e", borderRadius: "4px", color: "#fff", display: "flex" }}>
+                <div style={{ padding: "4px", backgroundColor: ACCENT_PINK, borderRadius: "4px", color: "#fff", display: "flex" }}>
                     <ArrowRight size={16} style={{ transform: "rotate(180deg)" }} />
                 </div>
                 Organizer KYC
@@ -1417,7 +1447,7 @@ function OrganiserPanel() {
                     <div style={{ flex: 1, height: "2px", backgroundColor: t.border, margin: "0 24px" }}></div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#fff", border: "4px solid #f97316", background: "linear-gradient(135deg, #f97316, #f43f5e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#fff", border: `4px solid ${ACCENT_PURPLE}`, background: ACCENT_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
                             <Clock size={20} />
                         </div>
                         <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>Verification Pending</span>
@@ -1427,7 +1457,7 @@ function OrganiserPanel() {
                 {/* Profile Contact Summary */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", borderRadius: "12px", backgroundColor: theme === 'light' ? "#f8fafc" : "#0f172a", marginBottom: "20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                        <div style={{ width: "50px", height: "50px", borderRadius: "8px", backgroundColor: "#f43f5e15", display: "flex", alignItems: "center", justifyContent: "center", color: "#f43f5e" }}>
+                        <div style={{ width: "50px", height: "50px", borderRadius: "8px", backgroundColor: "#fdf2f8", display: "flex", alignItems: "center", justifyContent: "center", color: ACCENT_PINK }}>
                             <Building size={24} />
                         </div>
                         <div>
@@ -1801,7 +1831,15 @@ function OrganiserPanel() {
                             <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Active Events</h3>
-                                    <button onClick={() => setActiveTab("post_event")} style={{ padding: "12px 24px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", transition: "0.2s" }}>
+                                    <button
+                                        onClick={() => {
+                                            setEditingEvent(null);
+                                            setPostEvent(getInitialPostEvent());
+                                            setAddEventStep("select_type");
+                                            setActiveTab("post_event");
+                                        }}
+                                        style={{ padding: "12px 24px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontWeight: 800, display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", transition: "0.2s", boxShadow: "0 10px 24px rgba(236,72,153,0.25)" }}
+                                    >
                                         <Plus size={18} /> Post New Event
                                     </button>
                                 </div>
@@ -1854,6 +1892,25 @@ function OrganiserPanel() {
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
+                                                            <button onClick={() => {
+                                                                setEditingEvent(ev);
+                                                                setPostEvent({
+                                                                    ...getInitialPostEvent(),
+                                                                    ...ev,
+                                                                    isFeature: ev.featured ? "Yes" : "No",
+                                                                    isExclusive: ev.exclusive ? "Yes" : "No",
+                                                                    eventStatus: ev.status || "Active",
+                                                                    dateType: ev.dateSlots ? "multiple" : "single",
+                                                                    startDate: ev.date,
+                                                                    startTime: ev.time,
+                                                                    bannerPreview: ev.bannerPreview || ev.img,
+                                                                    categories: ev.seatCategories || getInitialPostEvent().categories,
+                                                                });
+                                                                setAddEventStep("form");
+                                                                setActiveTab("post_event");
+                                                            }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                <Settings size={16} />
+                                                            </button>
                                                             {ev.seatingEnabled !== false && (
                                                                 <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
                                                                     <Grid size={14} /> Map
@@ -1944,11 +2001,12 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
                                     {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                                     {renderToggle("Countdown*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
                                     {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
                                     {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                    {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                 </div>
 
                                 {postEvent.dateType === "single" && (
@@ -1986,9 +2044,21 @@ function OrganiserPanel() {
                                     <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
                                 </div>
 
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <div style={{ flex: 1, marginRight: "16px" }}>{renderInput("Refund Policy*", "refundPolicy", "text", "Policy Details")}</div>
-                                    <button onClick={publishSeatEvent} style={{ padding: "12px 40px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", height: "42px", marginTop: "4px" }}>Submit Online Event</button>
+                                {renderInput("Refund Policy*", "refundPolicy", "text", "Policy Details")}
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                                    {editingEvent && (
+                                        <button onClick={() => {
+                                            setEditingEvent(null);
+                                            setPostEvent(getInitialPostEvent());
+                                            setAddEventStep("select_type");
+                                            setActiveTab("manage_events");
+                                        }} style={{ padding: "12px 24px", backgroundColor: "transparent", color: t.textMain, border: `1px solid ${t.border}`, borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+                                            Cancel Edit
+                                        </button>
+                                    )}
+                                    <button onClick={publishSeatEvent} style={{ padding: "12px 40px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                        {editingEvent ? "Update Online Event" : "Post Online Event"}
+                                    </button>
                                 </div>
                             </div>
                         );
@@ -2015,10 +2085,15 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
                                 {/* Basic Info */}
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                    {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                    {renderSelect("Visibility*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
-                                    {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                        {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
+                                        {renderSelect("Visibility*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                    </div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                        {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                        {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                    </div>
                                     {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
                                 </div>
                             </div>
@@ -2165,7 +2240,7 @@ function OrganiserPanel() {
                                         ⚠️ {publishError}
                                     </div>
                                 )}
-                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>Publish Event</button>
+                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 900, cursor: "pointer", boxShadow: "0 14px 28px rgba(236,72,153,0.22)" }}>Publish Event</button>
                             </div>
                         </div>
                     );

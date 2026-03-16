@@ -19,10 +19,6 @@ export default function EventCard({ event, onPress, compact }) {
     <TouchableOpacity style={cardStyle} onPress={() => onPress(event)} activeOpacity={0.9}>
       <Image source={{ uri: img }} style={styles.image} resizeMode="cover" />
       <View style={styles.content}>
-        <View style={styles.typeRow}>
-          <Text style={styles.type}>{type}</Text>
-          <View style={styles.typeLine} />
-        </View>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={2}>{title}</Text>
           {event?.verified && (
@@ -38,9 +34,13 @@ export default function EventCard({ event, onPress, compact }) {
              <Ionicons name="calendar-outline" size={14} color={Colors.success} style={{ marginRight: 4 }} />
              <Text style={styles.date}>{date}</Text>
           </View>
-          {price != null && (
-            <Text style={styles.price}>₹ {Number(price)}</Text>
-          )}
+          
+          <View style={styles.typeBadgeContainer}>
+            <Text style={styles.typeText}>
+              { (event.virtual ? "Online" : "Venue") } • { (Number(price) === 0) ? "Free" : "Paid" }
+            </Text>
+            <View style={styles.redUnderline} />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -77,20 +77,21 @@ const styles = StyleSheet.create({
   content: {
     padding: 14,
   },
-  typeRow: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
+  typeBadgeContainer: {
+    alignSelf: 'flex-end',
+    alignItems: 'center',
   },
-  type: {
+  typeText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.text,
   },
-  typeLine: {
+  redUnderline: {
     height: 2,
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#ef4444',
     width: '100%',
-    marginTop: -2,
+    marginTop: 2,
+    borderRadius: 2,
   },
   titleRow: {
     flexDirection: 'row',
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 'auto',
+    marginTop: 12,
   },
   dateRow: {
     flexDirection: 'row',

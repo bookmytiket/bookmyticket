@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from '../data/homeEvents';
 import { Colors } from '../theme/Theme';
+import PromotionBanner from '../components/PromotionBanner';
+import ComingSoonSection from '../components/ComingSoonSection';
 
 const { width } = Dimensions.get('window');
 
@@ -47,7 +49,7 @@ export default function HomeScreen() {
   
   const [bannerIndex, setBannerIndex] = useState(0);
 
-  const { selectedCity, loading } = useAuth();
+  const { selectedCity, loading, recentlyViewed } = useAuth();
 
   useEffect(() => {
     if (!loading && !selectedCity) {
@@ -76,9 +78,8 @@ export default function HomeScreen() {
       id: ev._id || ev.id || `convex-${idx}`,
       title: ev.title || "Event",
       img: ev.img || ev.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
-      date: ev.date || "TBA",
+      date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
       location: ev.location || ev.venue || ev.address || "Venue",
-      // Web Sync: Default featured/trending to true if not specifically false
       featured: ev.featured !== false,
       trending: ev.trending !== false,
       spotlight: ev.spotlight === true,
@@ -98,6 +99,7 @@ export default function HomeScreen() {
     if (!selectedCity) return merged;
 
     return merged.filter(e =>
+      e.virtual === true ||
       (e.city && e.city.toLowerCase() === selectedCity.toLowerCase()) ||
       (e.district && e.district.toLowerCase() === selectedCity.toLowerCase()) ||
       (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase()))
@@ -105,10 +107,9 @@ export default function HomeScreen() {
   }, [displayEvents, selectedCity]);
 
   const featured = useMemo(() => filteredEvents.filter((e) => e.featured).slice(0, 10), [filteredEvents]);
-  const trending = useMemo(() => filteredEvents.filter((e) => e.trending).slice(0, 10), [filteredEvents]);
-  const spotlight = useMemo(() => filteredEvents.filter((e) => e.spotlight).slice(0, 10), [filteredEvents]);
-  const venues = useMemo(() => filteredEvents.filter((e) => (e.venue || e.location) && e.type !== 'Online').slice(0, 10), [filteredEvents]);
-  const all = useMemo(() => filteredEvents.slice(0, 20), [filteredEvents]);
+  const popular = useMemo(() => filteredEvents.filter((e) => e.trending).slice(0, 10), [filteredEvents]);
+  const exclusive = useMemo(() => filteredEvents.filter((e) => e.exclusive).slice(0, 10), [filteredEvents]);
+  const virtual = useMemo(() => filteredEvents.filter((e) => e.virtual).slice(0, 10), [filteredEvents]);
 
   const handleEventPress = (event) => {
     navigation.navigate('EventDetail', { eventId: String(event._id || event.id), event });
@@ -118,6 +119,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <PromotionBanner />
       <View style={styles.hero}>
         {currentBanner ? (
           <>
@@ -157,11 +159,12 @@ export default function HomeScreen() {
 
       {filteredEvents.length > 0 ? (
         <>
+          <FeaturedSection title="Recently Viewed" events={recentlyViewed} onEventPress={handleEventPress} />
           <FeaturedSection title="Featured Events" events={featured} onEventPress={handleEventPress} />
-          <FeaturedSection title="Trending Now" events={trending} onEventPress={handleEventPress} />
-          <FeaturedSection title="Discover Venue Events" events={venues} onEventPress={handleEventPress} />
-          <FeaturedSection title="Spotlight Events" events={spotlight} onEventPress={handleEventPress} />
-          <FeaturedSection title="All Events" events={all} onEventPress={handleEventPress} />
+          <ComingSoonSection events={filteredEvents} onEventPress={handleEventPress} />
+          <FeaturedSection title="Explore Popular Events" events={popular} onEventPress={handleEventPress} />
+          <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
+          <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
         </>
       ) : (
         <View style={styles.emptyContainer}>
@@ -185,7 +188,7 @@ const styles = StyleSheet.create({
     height: 240,
     width,
     position: 'relative',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#0f172a',
   },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
@@ -211,7 +214,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#0f172a',
   },
   section: { marginTop: 40, paddingHorizontal: 0 },
   sectionHeader: { 
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: Colors.text,
+    color: '#111827',
     letterSpacing: -0.8,
   },
   horizontalList: { gap: 16, paddingLeft: 24, paddingRight: 24 },
@@ -240,7 +243,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#111827',
   },
   emptyContainer: {
     padding: 40,
@@ -250,19 +253,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.text,
+    color: '#111827',
     textAlign: 'center',
     marginBottom: 12,
   },
   emptySub: {
     fontSize: 15,
-    color: Colors.textMuted,
+    color: '#64748b',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   changeLocationBtn: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#F43F5E',
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
@@ -273,4 +276,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

@@ -89,7 +89,7 @@ export default function WebHeader() {
               }}
             >
               <Ionicons name="business-outline" size={20} color={Colors.text} />
-              <Text style={styles.menuItemText}>Become an Organiser</Text>
+              <Text style={styles.menuItemText}>Become a Partner</Text>
             </TouchableOpacity>
           )}
         </View>

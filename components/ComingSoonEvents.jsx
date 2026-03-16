@@ -8,7 +8,11 @@ function useCountdown(targetDate) {
     useEffect(() => {
         if (!targetDate) return;
         const calc = () => {
-            const diff = new Date(targetDate) - new Date();
+            // Normalize "YYYY-MM-DD HH:mm" to "YYYY-MM-DDTHH:mm" for cross-browser consistency
+            const normalized = String(targetDate).includes(' ') && !String(targetDate).includes('T') 
+                ? String(targetDate).replace(' ', 'T') 
+                : targetDate;
+            const diff = new Date(normalized) - new Date();
             if (diff <= 0) return setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 });
             setTimeLeft({
                 days: Math.floor(diff / 86400000),
@@ -50,10 +54,9 @@ export default function ComingSoonEvents({ events = [] }) {
     const [isHovered, setIsHovered] = useState(false);
 
     // Filter events that have a targetDate or are marked as featured/special
-    // For now, let's just use the first few events if they have dates
-    const COMING_SOON_EVENTS = events.filter(e => e.featured || e.trending).slice(0, 5);
+    const COMING_SOON_EVENTS = (events || []).filter(e => e.featured || e.trending).slice(0, 5);
 
-    const event = COMING_SOON_EVENTS[0] || {};
+    const event = COMING_SOON_EVENTS[idx] || {};
     const timeLeft = useCountdown(event.date);
 
     const prev = () => setIdx((i) => (i - 1 + COMING_SOON_EVENTS.length) % COMING_SOON_EVENTS.length);

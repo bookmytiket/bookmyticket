@@ -117,9 +117,30 @@ export default function ProfilePage() {
                                             }}>
                                                 {(booking.scanned || booking.status === 'Scanned') ? 'Checked In' : booking.status}
                                             </span>
-                                            {booking.status !== 'Cancelled' && (
-                                                <button onClick={() => setViewTicketModal(booking)} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
-                                            )}
+                                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                                {booking.status !== 'Cancelled' && (
+                                                    <button onClick={() => setViewTicketModal(booking)} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
+                                                )}
+                                                {booking.status !== 'Cancelled' && (booking.meetingUrl || booking.eventType === "Online") && (
+                                                    <a 
+                                                        href={booking.meetingUrl || "#"} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{ 
+                                                            padding: "6px 14px", 
+                                                            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
+                                                            color: "#fff", 
+                                                            borderRadius: "8px", 
+                                                            fontSize: "12px", 
+                                                            fontWeight: "700", 
+                                                            textDecoration: "none",
+                                                            boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)"
+                                                        }}
+                                                    >
+                                                        Join Now
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -248,6 +269,28 @@ export default function ProfilePage() {
                                 <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.status}</p>
                             </div>
                         </div>
+                        {(viewTicketModal.meetingUrl || viewTicketModal.eventType === "Online") && (
+                            <a 
+                                href={viewTicketModal.meetingUrl || "#"} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ 
+                                    display: "block",
+                                    marginTop: "20px",
+                                    padding: "14px", 
+                                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
+                                    color: "#fff", 
+                                    borderRadius: "12px", 
+                                    fontSize: "14px", 
+                                    fontWeight: "800", 
+                                    textDecoration: "none",
+                                    boxShadow: "0 10px 20px rgba(16, 185, 129, 0.2)",
+                                    textAlign: "center"
+                                }}
+                            >
+                                🎥 Join Meeting Now
+                            </a>
+                        )}
                     </div>
                 </div>
             )}

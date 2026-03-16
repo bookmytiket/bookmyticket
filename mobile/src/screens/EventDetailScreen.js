@@ -35,7 +35,7 @@ function getEventById(id, convexEvents) {
 export default function EventDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, addToRecentlyViewed } = useAuth();
   const { eventId, event: routeEvent } = route.params || {};
   const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
 
@@ -45,20 +45,10 @@ export default function EventDetailScreen() {
   }, [eventId, routeEvent, convexEvents]);
 
   React.useEffect(() => {
-    if (!event) return;
-    const saveRecent = async () => {
-      try {
-        const key = 'recently_viewed_events';
-        const raw = await AsyncStorage.getItem(key);
-        const list = raw ? JSON.parse(raw) : [];
-        const item = { id: event.id, title: event.title, img: event.img, date: event.date, location: event.location, type: event.type || 'Paid' };
-        const filtered = list.filter((e) => String(e.id) !== String(event.id));
-        const next = [item, ...filtered].slice(0, 12);
-        await AsyncStorage.setItem(key, JSON.stringify(next));
-      } catch (_) {}
-    };
-    saveRecent();
-  }, [event]);
+    if (event) {
+      addToRecentlyViewed(event);
+    }
+  }, [event, addToRecentlyViewed]);
 
   if (!event) {
     return (
