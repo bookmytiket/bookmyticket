@@ -1,9 +1,12 @@
-import AdminRedirect from "./components/AdminRedirect";
+"use client";
 
-export function generateStaticParams() {
-  return [{ slug: ["index"] }];
-}
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Page() {
-  return <AdminRedirect />;
+export default function AdminCatchAll() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/admin");
+  }, [router]);
+  return null;
 }
