@@ -43,8 +43,6 @@ function FeaturedSection({ title, events, onEventPress }) {
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-<<<<<<< HEAD
-
   const parseEventDate = (dateStr, timeStr) => {
     if (!dateStr) return null;
     try {
@@ -74,8 +72,6 @@ export default function HomeScreen() {
       return isNaN(eventDate.getTime()) ? null : eventDate;
     } catch (_) { return null; }
   };
-=======
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
   const convexEvents = useQuery(api.events.getActiveEvents);
   const convexCategories = useQuery(api.homeSettings.getCategories);
   const convexBanners = useQuery(api.homeSettings.getBannerSlides);
@@ -105,7 +101,6 @@ export default function HomeScreen() {
     }
   }, [displayBanners]);
 
-<<<<<<< HEAD
   const activeEvents = useMemo(() => {
     const fromConvex = (displayEvents || []).map((ev, idx) => {
       const loc = ev.location || ev.venue || ev.address || "Venue";
@@ -154,54 +149,17 @@ export default function HomeScreen() {
   const filteredEvents = useMemo(() => {
     if (!selectedCity) return activeEvents;
     return activeEvents.filter(e =>
-=======
-  const filteredEvents = useMemo(() => {
-    const fromConvex = (displayEvents || []).map((ev, idx) => ({
-      ...ev,
-      id: ev._id || ev.id || `convex-${idx}`,
-      title: ev.title || "Event",
-      img: ev.img || ev.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
-      date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
-      location: ev.location || ev.venue || ev.address || "Venue",
-      featured: ev.featured !== false,
-      trending: ev.trending !== false,
-      spotlight: ev.spotlight === true,
-      exclusive: ev.exclusive === true,
-      virtual: ev.virtual === true || ev.type === "Online",
-    }));
-
-    const fromHome = (HOME_EVENTS || []).map(h => ({ ...h, id: String(h.id) }));
-    
-    const eventMap = new Map();
-    fromConvex.forEach(e => eventMap.set(String(e.id), e));
-    fromHome.forEach(h => {
-      if (!eventMap.has(String(h.id))) eventMap.set(String(h.id), h);
-    });
-
-    const merged = Array.from(eventMap.values());
-    if (!selectedCity) return merged;
-
-    return merged.filter(e =>
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
       e.virtual === true ||
       (e.city && e.city.toLowerCase() === selectedCity.toLowerCase()) ||
       (e.district && e.district.toLowerCase() === selectedCity.toLowerCase()) ||
       (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase()))
     );
-<<<<<<< HEAD
   }, [activeEvents, selectedCity]);
-=======
-  }, [displayEvents, selectedCity]);
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
   const featured = useMemo(() => filteredEvents.filter((e) => e.featured).slice(0, 10), [filteredEvents]);
   const popular = useMemo(() => filteredEvents.filter((e) => e.trending).slice(0, 10), [filteredEvents]);
   const exclusive = useMemo(() => filteredEvents.filter((e) => e.exclusive).slice(0, 10), [filteredEvents]);
-<<<<<<< HEAD
   const virtual = useMemo(() => activeEvents.filter((e) => e.virtual).slice(0, 10), [activeEvents]);
-=======
-  const virtual = useMemo(() => filteredEvents.filter((e) => e.virtual).slice(0, 10), [filteredEvents]);
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
   const handleEventPress = (event) => {
     navigation.navigate('EventDetail', { eventId: String(event._id || event.id), event });
@@ -209,7 +167,6 @@ export default function HomeScreen() {
 
   const currentBanner = displayBanners[bannerIndex % displayBanners.length];
 
-<<<<<<< HEAD
   if (!convexEvents && loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -217,24 +174,13 @@ export default function HomeScreen() {
       </View>
     );
   }
-
-=======
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <PromotionBanner />
       <View style={styles.hero}>
         {currentBanner ? (
           <>
-<<<<<<< HEAD
             <Image source={{ uri: currentBanner.img }} style={styles.heroImage} resizeMode="cover" />
-=======
-            <Image
-              source={{ uri: currentBanner.img }}
-              style={styles.heroImage}
-              resizeMode="cover"
-            />
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
             <View style={styles.heroOverlay} />
             <View style={styles.heroContent}>
               <Text style={styles.heroTitle} numberOfLines={2}>{currentBanner.title || "Live Events & Experiences"}</Text>
@@ -242,40 +188,22 @@ export default function HomeScreen() {
             </View>
           </>
         ) : (
-<<<<<<< HEAD
           <View style={styles.bannerPlaceholder}><ActivityIndicator color="#fff" /></View>
         )}
       </View>
-
-=======
-          <View style={styles.bannerPlaceholder}>
-            <ActivityIndicator color="#fff" />
-          </View>
-        )}
-      </View>
-
-      {/* Categories Row */}
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
       <View style={styles.categoriesSection}>
         <FlatList
           horizontal
           data={displayCategories}
           keyExtractor={(item, idx) => String(item._id || idx)}
           renderItem={({ item }) => (
-<<<<<<< HEAD
             <TouchableOpacity style={styles.categoryBadge}><Text style={styles.categoryText}>{item.name}</Text></TouchableOpacity>
-=======
-            <TouchableOpacity style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.name}</Text>
-            </TouchableOpacity>
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
           )}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
         />
       </View>
 
-<<<<<<< HEAD
       <FeaturedSection title="Recently Viewed" events={(recentlyViewed || []).filter(ev => {
         const eventDate = parseEventDate(ev.date, ev.time);
         if (!eventDate) return true;
@@ -288,32 +216,6 @@ export default function HomeScreen() {
       <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
       <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
 
-      {filteredEvents.length === 0 && virtual.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
-          <Text style={styles.emptySub}>We couldn't find any events matching your current location. Try switching cities or check back later!</Text>
-          <TouchableOpacity style={styles.changeLocationBtn} onPress={() => navigation.navigate('Location')}>
-=======
-      {filteredEvents.length > 0 ? (
-        <>
-          <FeaturedSection title="Recently Viewed" events={recentlyViewed} onEventPress={handleEventPress} />
-          <FeaturedSection title="Featured Events" events={featured} onEventPress={handleEventPress} />
-          <ComingSoonSection events={filteredEvents} onEventPress={handleEventPress} />
-          <FeaturedSection title="Explore Popular Events" events={popular} onEventPress={handleEventPress} />
-          <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
-          <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
-        </>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
-          <Text style={styles.emptySub}>We couldn't find any events matching your current location. Try switching cities or check back later!</Text>
-          <TouchableOpacity 
-            style={styles.changeLocationBtn}
-            onPress={() => navigation.navigate('Location')}
-          >
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
-            <Text style={styles.changeLocationText}>Change Location</Text>
-          </TouchableOpacity>
         </View>
       )}
     </ScrollView>

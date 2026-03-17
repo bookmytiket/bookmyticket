@@ -15,16 +15,12 @@ export default function EventCard({ event, onPress, compact }) {
 
   const cardStyle = compact ? [styles.card, styles.cardCompact] : styles.card;
 
-<<<<<<< HEAD
   const isVirtual = event.virtual || 
                    String(event.type || '').toLowerCase().includes("online") || 
                    String(event.type || '').toLowerCase().includes("virtual") ||
                    String(event.location || '').toLowerCase().includes("online") ||
                    String(event.location || '').toLowerCase().includes("virtual") ||
                    String(event.title || '').toLowerCase().includes("online meeting");
-
-=======
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
   return (
     <TouchableOpacity style={cardStyle} onPress={() => onPress(event)} activeOpacity={0.9}>
       <Image source={{ uri: img }} style={styles.image} resizeMode="cover" />
@@ -47,11 +43,7 @@ export default function EventCard({ event, onPress, compact }) {
           
           <View style={styles.typeBadgeContainer}>
             <Text style={styles.typeText}>
-<<<<<<< HEAD
               { (isVirtual ? "Online" : "Venue") } • { (Number(price) === 0) ? "Free" : "Paid" }
-=======
-              { (event.virtual ? "Online" : "Venue") } • { (Number(price) === 0) ? "Free" : "Paid" }
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
             </Text>
             <View style={styles.redUnderline} />
           </View>

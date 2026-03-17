@@ -1,13 +1,9 @@
-"use client";
+import OrganiserRedirect from "./components/OrganiserRedirect";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function OrganiserCatchAllRedirect() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/organiser");
-  }, [router]);
-  return null;
+export function generateStaticParams() {
+  return [{ slug: ["index"] }];
 }
 
+export default function Page() {
+  return <OrganiserRedirect />;
+}

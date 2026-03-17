@@ -1,28 +1,20 @@
 import React, { useState, useMemo } from 'react';
-<<<<<<< HEAD
 import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-=======
-import { View, Text, FlatList, TextInput, StyleSheet } from 'react-native';
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
 import { HOME_EVENTS } from '../data/homeEvents';
-<<<<<<< HEAD
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 
 const CATEGORIES = ["All", "Concert", "Sports", "Comedy", "Theatre", "Music", "Workshop"];
-=======
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
 export default function EventsScreen() {
   const navigation = useNavigation();
   const { selectedCity } = useAuth();
   const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
-<<<<<<< HEAD
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -128,34 +120,11 @@ export default function EventsScreen() {
 
     return filteredResults;
   }, [convexEvents, selectedCity, searchQuery, selectedCategory]);
-=======
-
-  const events = useMemo(() => {
-    const fromConvex = (convexEvents || []).map((e) => ({
-      ...e,
-      id: e._id,
-      location: e.location || e.venue || e.address,
-    }));
-    const fromHome = HOME_EVENTS || [];
-    const merged = [...fromConvex];
-    fromHome.forEach((h) => {
-      if (!merged.some((m) => String(m._id || m.id) === String(h.id))) merged.push(h);
-    });
-
-    if (!selectedCity) return merged;
-
-    return merged.filter(e => 
-      e.city?.toLowerCase() === selectedCity.toLowerCase() ||
-      e.location?.toLowerCase().includes(selectedCity.toLowerCase())
-    );
-  }, [convexEvents, selectedCity]);
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
   const handleEventPress = (event) => {
     navigation.navigate('EventDetail', { eventId: String(event._id || event.id), event });
   };
 
-<<<<<<< HEAD
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('All');
@@ -214,25 +183,12 @@ export default function EventsScreen() {
             )}
           </View>
         }
-=======
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={events}
-        keyExtractor={(item) => String(item._id || item.id)}
-        renderItem={({ item }) => <EventCard event={item} onPress={handleEventPress} compact />}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No events found</Text>}
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
   container: { flex: 1, backgroundColor: '#ffffff' },
   header: { padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   searchBar: {
@@ -264,10 +220,4 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 18, color: '#94a3b8', fontWeight: '700', marginTop: 16 },
   clearBtn: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: '#f1f5f9' },
   clearBtnText: { color: Colors.secondary, fontWeight: '800' },
-=======
-  container: { flex: 1, backgroundColor: '#f8fafc', padding: 16 },
-  row: { justifyContent: 'space-between', marginBottom: 12, gap: 12 },
-  list: { paddingBottom: 24 },
-  empty: { textAlign: 'center', color: '#6b7280', marginTop: 40, fontSize: 16 },
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 });

@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-=======
-import React, { createContext, useContext, useState, useEffect } from 'react';
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -35,21 +31,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-<<<<<<< HEAD
   const updateCity = useCallback(async (city) => {
     setSelectedCity(city);
     await AsyncStorage.setItem('selectedCity', city);
   }, []);
 
   const login = useCallback(async (identifier, password, manualRole, userData = null) => {
-=======
-  const updateCity = async (city) => {
-    setSelectedCity(city);
-    await AsyncStorage.setItem('selectedCity', city);
-  };
-
-  const login = async (identifier, password, manualRole, userData = null) => {
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
     // 1. Admin login remains local/hardcoded for now
     if (manualRole === 'admin') {
       if (identifier === 'bookmyticket-admin' && password === 'D0n+$h@rE2k26') {
@@ -87,19 +74,11 @@ export function AuthProvider({ children }) {
       console.error('Unified login error:', err);
       return { success: false, error: 'Network error or server unavailable' };
     }
-<<<<<<< HEAD
   }, [convex]);
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   const addToRecentlyViewed = useCallback((event) => {
-=======
-  };
-
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
-
-  const addToRecentlyViewed = (event) => {
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
     if (!event) return;
     setRecentlyViewed(prev => {
       const item = { 
@@ -113,7 +92,6 @@ export function AuthProvider({ children }) {
       const filtered = prev.filter(e => String(e.id) !== String(item.id));
       return [item, ...filtered].slice(0, 10);
     });
-<<<<<<< HEAD
   }, []);
 
   const logout = useCallback(async () => {
@@ -134,17 +112,6 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-=======
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem('user');
-    setUser(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity, recentlyViewed, addToRecentlyViewed }}>
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
       {children}
     </AuthContext.Provider>
   );

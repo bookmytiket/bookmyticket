@@ -42,7 +42,6 @@ function TimerBox({ value, label }) {
 
 export default function ComingSoonSection({ events = [], onEventPress }) {
     const [idx, setIdx] = useState(0);
-<<<<<<< HEAD
     const now = new Date();
     const COMING_SOON_EVENTS = events.filter(e => {
         if (!e.date) return false;
@@ -52,9 +51,6 @@ export default function ComingSoonSection({ events = [], onEventPress }) {
         const diff = new Date(normalized + (e.time ? `T${e.time}` : 'T23:59')) - now;
         return (e.featured || e.trending) && diff > 0;
     }).slice(0, 5);
-=======
-    const COMING_SOON_EVENTS = events.filter(e => e.featured || e.trending).slice(0, 5);
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
     useEffect(() => {
         if (COMING_SOON_EVENTS.length <= 1) return;

@@ -5,17 +5,8 @@ import { api } from "@/convex/_generated/api";
 import { Tag, Zap, Gift } from "lucide-react";
 
 export default function PromotionBanner() {
-<<<<<<< HEAD
     const promotions = useQuery(api.promotions.list) || [];
     const activePromos = promotions.filter(p => p.active);
-=======
-    const promotions = useQuery(api.systemConfig.getConfig, { key: "admin_promotions" }) || [];
-
-    if (!Array.isArray(promotions) || promotions.length === 0) return null;
-
-    // Filter valid promotions (could add date check here if needed)
-    const activePromos = promotions;
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
     return (
         <div style={{

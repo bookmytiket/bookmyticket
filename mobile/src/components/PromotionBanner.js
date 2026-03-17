@@ -4,12 +4,8 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 export default function PromotionBanner() {
-<<<<<<< HEAD
     const promotions = useQuery(api.promotions.list) || [];
     const activePromos = promotions.filter(p => p.active);
-=======
-    const promotions = useQuery(api.systemConfig.getConfig, { key: "admin_promotions" }) || [];
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
@@ -29,15 +25,9 @@ export default function PromotionBanner() {
         ).start();
     }, [fadeAnim]);
 
-<<<<<<< HEAD
     if (!Array.isArray(activePromos) || activePromos.length === 0) return null;
 
     const promo = activePromos[0];
-=======
-    if (!Array.isArray(promotions) || promotions.length === 0) return null;
-
-    const promo = promotions[0];
->>>>>>> 4384b9835959a3132c79eaea5f3e68846bb91775
 
     return (
         <View style={styles.outerContainer}>
