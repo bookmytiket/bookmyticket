@@ -66,7 +66,17 @@ export default function EventDetailScreen() {
       navigation.navigate('SignIn');
       return;
     }
-    navigation.navigate('Checkout', { eventId: String(event.id), event });
+    
+    const isSeating = event.seatingEnabled !== false && 
+                     Array.isArray(event.seatCategories) && 
+                     event.seatCategories.length > 0 && 
+                     Number(event.cols) > 0;
+
+    if (isSeating) {
+      navigation.navigate('Seating', { eventId: String(event.id), event });
+    } else {
+      navigation.navigate('Checkout', { eventId: String(event.id), event });
+    }
   };
 
   return (

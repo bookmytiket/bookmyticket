@@ -72,6 +72,9 @@ export default function EventBookClient({ id }) {
 
     const feeSettings = useQuery(api.feeSettings.get) || DEFAULT_FEE_SETTINGS;
     const [selectedSeats, setSelectedSeats] = useState([]);
+    const bookedSeats = useQuery(api.bookings.getBookedSeatsByEvent, { eventId: String(id) }) || [];
+
+    const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
 
     const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
 
@@ -92,6 +95,7 @@ export default function EventBookClient({ id }) {
     const layout = event?.layoutType || 'stage';
 
     const toggleSeat = (seatId, cat) => {
+        if (isSeatBooked(seatId)) return; // Prevent toggling booked seats
         setSelectedSeats(prev => {
             const idx = prev.findIndex(s => s.id === seatId);
             if (idx >= 0) return prev.filter(s => s.id !== seatId);
@@ -169,6 +173,10 @@ export default function EventBookClient({ id }) {
                                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#f84464' }} />
                                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#4b5563' }}>Selected</span>
                                         </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#d1d5db' }} />
+                                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textDecoration: 'line-through' }}>Booked</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -199,20 +207,40 @@ export default function EventBookClient({ id }) {
                                                     {[...Array(cols)].map((_, cIdx) => {
                                                         const seatId = `${rowLabel}${cIdx + 1}`;
                                                         const isSelected = selectedSeats.some(s => s.id === seatId);
+                                                        const isBooked = isSeatBooked(seatId);
+
+                                                        let bgColor = `${color}18`;
+                                                        let borderColor = color;
+                                                        let textColor = color;
+                                                        let cursor = 'pointer';
+
+                                                        if (isBooked) {
+                                                            bgColor = '#e5e7eb'; // light gray
+                                                            borderColor = '#d1d5db'; // gray
+                                                            textColor = '#9ca3af';
+                                                            cursor = 'not-allowed';
+                                                        } else if (isSelected) {
+                                                            bgColor = '#f84464';
+                                                            borderColor = '#f84464';
+                                                            textColor = '#fff';
+                                                        }
+
                                                         return (
                                                             <button
                                                                 key={cIdx}
                                                                 type="button"
-                                                                onClick={() => cat && toggleSeat(seatId, cat)}
+                                                                onClick={() => !isBooked && cat && toggleSeat(seatId, cat)}
+                                                                disabled={isBooked}
                                                                 style={{
                                                                     width: '26px', height: '26px',
                                                                     borderRadius: '5px',
-                                                                    backgroundColor: isSelected ? '#f84464' : `${color}18`,
-                                                                    border: `2px solid ${isSelected ? '#f84464' : color}`,
-                                                                    cursor: 'pointer',
+                                                                    backgroundColor: bgColor,
+                                                                    border: `2px solid ${borderColor}`,
+                                                                    cursor: cursor,
                                                                     fontSize: '7px', fontWeight: 800,
-                                                                    color: isSelected ? '#fff' : color,
-                                                                    transition: 'all 0.15s ease'
+                                                                    color: textColor,
+                                                                    transition: 'all 0.15s ease',
+                                                                    opacity: isBooked ? 0.6 : 1
                                                                 }}
                                                             >
                                                                 {cIdx + 1}

@@ -27,11 +27,12 @@ function getEventById(id, convexEvents) {
 export default function CheckoutScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { eventId, event: routeEvent } = route.params || {};
+  const { eventId, event: routeEvent, selectedSeats = [] } = route.params || {};
   const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
   const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: 'admin_fee_settings' });
 
-  const [qty, setQty] = useState(1);
+  const isSeating = selectedSeats.length > 0;
+  const [qty, setQty] = useState(isSeating ? selectedSeats.length : 1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -51,8 +52,9 @@ export default function CheckoutScreen() {
     return getEventById(eventId, convexEvents);
   }, [eventId, routeEvent, convexEvents]);
 
+  const totalSeatPrice = selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : seat.price), 0);
   const ticketPrice = event?.price ?? 499;
-  const baseAmount = ticketPrice * Math.max(1, qty);
+  const baseAmount = isSeating ? totalSeatPrice : ticketPrice * Math.max(1, qty);
   const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, feeSettings), [baseAmount, feeSettings]);
 
   const createBooking = useMutation(api.bookings.createBooking);
@@ -64,10 +66,10 @@ export default function CheckoutScreen() {
       return;
     }
     try {
-      const bookingId = await createBooking({
+      const bookingData = {
         eventId: String(event._id || event.id),
         userId: email.trim().toLowerCase(),
-        ticketCount: qty,
+        ticketCount: isSeating ? selectedSeats.length : qty,
         totalPrice: total,
         status: 'Pending',
         scanned: false,
@@ -76,13 +78,19 @@ export default function CheckoutScreen() {
           email: email.trim().toLowerCase(),
           phone: phone.trim(),
         }
-      });
+      };
+
+      if (isSeating) {
+        bookingData.selectedSeats = selectedSeats;
+      }
+
+      const bookingId = await createBooking(bookingData);
       navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event });
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Could not create booking. Please try again.');
     }
-  }, [event, qty, total, name, email, phone, createBooking, navigation]);
+  }, [event, qty, total, name, email, phone, createBooking, navigation, isSeating, selectedSeats]);
 
   if (!event) {
     return (
@@ -99,18 +107,32 @@ export default function CheckoutScreen() {
         <Text style={styles.location}>{event.location}</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Quantity</Text>
-        <View style={styles.qtyRow}>
-          <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => Math.max(1, x - 1))}>
-            <Text style={styles.qtyBtnText}>−</Text>
-          </TouchableOpacity>
-          <Text style={styles.qtyVal}>{qty}</Text>
-          <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => x + 1)}>
-            <Text style={styles.qtyBtnText}>+</Text>
-          </TouchableOpacity>
+      {!isSeating && (
+        <View style={styles.card}>
+          <Text style={styles.label}>Quantity</Text>
+          <View style={styles.qtyRow}>
+            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => Math.max(1, x - 1))}>
+              <Text style={styles.qtyBtnText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.qtyVal}>{qty}</Text>
+            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty((x) => x + 1)}>
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
+
+      {isSeating && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Selected Seats</Text>
+          {selectedSeats.map(seat => (
+            <View key={seat.id} style={styles.seatSummaryRow}>
+              <Text style={styles.seatInfo}>Seat {seat.id} ({seat.catName})</Text>
+              <Text style={styles.seatPrice}>{seat.isFree ? 'Free' : `₹${seat.price}`}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
@@ -126,7 +148,7 @@ export default function CheckoutScreen() {
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Base amount</Text>
-          <Text style={styles.rowVal}>₹{baseAmount}</Text>
+          <Text style={styles.rowVal}>₹{baseAmount.toFixed(0)}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Convenience fee</Text>
@@ -194,4 +216,7 @@ const styles = StyleSheet.create({
   totalVal: { fontSize: 20, fontWeight: '900', color: '#f43f5e' },
   confirmBtn: { backgroundColor: '#f43f5e', padding: 18, borderRadius: 16, alignItems: 'center', shadowColor: '#f43f5e', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   confirmBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  seatSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingVertical: 4 },
+  seatInfo: { fontSize: 14, color: '#4b5563', fontWeight: '500' },
+  seatPrice: { fontSize: 14, color: '#111827', fontWeight: '700' },
 });

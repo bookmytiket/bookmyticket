@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
 import { HOME_EVENTS } from '../data/homeEvents';
@@ -13,46 +13,57 @@ const CATEGORIES = ["All", "Concert", "Sports", "Comedy", "Theatre", "Music", "W
 
 export default function EventsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { selectedCity } = useAuth();
   const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
+  const convexCategories = useQuery(api.homeSettings.getCategories) ?? [];
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(route.params?.category || 'All');
+
+  const displayCategories = useMemo(() => {
+    return ["All", ...convexCategories.map(c => c.name)];
+  }, [convexCategories]);
+
+  useEffect(() => {
+    if (route.params?.category) {
+      setSelectedCategory(route.params.category);
+    }
+  }, [route.params?.category]);
 
   const events = useMemo(() => {
     // 1. Normalization Sync with HomeScreen
-    const fromConvex = (convexEvents || []).map((ev, idx) => {
-      const loc = ev.location || ev.venue || ev.address || "Venue";
-      const isVirtual = ev.virtual === true || 
-               String(ev.type || '').toLowerCase().includes("online") || 
-               String(ev.type || '').toLowerCase().includes("virtual") ||
+    const fromConvex = (convexEvents || []).filter(Boolean).map((ev, idx) => {
+      const loc = ev?.location || ev?.venue || ev?.address || "Venue";
+      const isVirtual = ev?.virtual === true || 
+               String(ev?.type || '').toLowerCase().includes("online") || 
+               String(ev?.type || '').toLowerCase().includes("virtual") ||
                loc.toLowerCase().includes("online") ||
                loc.toLowerCase().includes("virtual") ||
-               String(ev.title || '').toLowerCase().includes("online meeting");
+               String(ev?.title || '').toLowerCase().includes("online meeting");
       return {
         ...ev,
-        id: ev._id || ev.id || `convex-list-${idx}`,
-        title: ev.title || "Event",
-        img: ev.img || ev.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
-        rawDate: ev.date,
-        rawTime: ev.time,
-        date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
+        id: ev?._id || ev?.id || `convex-list-${idx}`,
+        title: ev?.title || "Event",
+        img: ev?.img || ev?.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
+        rawDate: ev?.date,
+        rawTime: ev?.time,
+        date: [ev?.date, ev?.time].filter(Boolean).join(" ") || "TBA",
         location: loc,
         virtual: isVirtual,
       };
     });
 
-    const fromHome = (HOME_EVENTS || []).map(h => ({ 
+    const fromHome = (HOME_EVENTS || []).filter(Boolean).map(h => ({ 
       ...h, 
       id: String(h.id),
       rawDate: h.date,
       rawTime: h.time
     }));
     const eventMap = new Map();
-    fromConvex.forEach(e => eventMap.set(String(e.id), e));
-    fromHome.forEach(h => { if (!eventMap.has(String(h.id))) eventMap.set(String(h.id), h); });
+    fromConvex.forEach(e => { if (e?.id) eventMap.set(String(e.id), e); });
+    fromHome.forEach(h => { if (h?.id && !eventMap.has(String(h.id))) eventMap.set(String(h.id), h); });
 
     const merged = Array.from(eventMap.values());
-
     // 2. Expiry Filter Sync
     const parseEventDate = (dateStr, timeStr) => {
       if (!dateStr) return null;
@@ -86,6 +97,7 @@ export default function EventsScreen() {
 
     const now = new Date();
     const active = merged.filter(ev => {
+      if (!ev) return false;
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
       if (!eventDate) return true;
       return eventDate >= now;
@@ -149,7 +161,7 @@ export default function EventsScreen() {
           )}
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryList}>
-          {CATEGORIES.map(cat => (
+          {displayCategories.map(cat => (
             <TouchableOpacity 
               key={cat} 
               style={[styles.categoryBtn, selectedCategory === cat && styles.activeCategoryBtn]}

@@ -63,8 +63,12 @@ export default function ComingSoonEvents({ events = [] }) {
                 const parts = dt.split(/[-/]/);
                 dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
-            const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
             
+            if (dt.includes('T') || dt.includes(' ')) {
+                const d = new Date(dt.replace(' ', 'T'));
+                return isNaN(d.getTime()) ? null : d;
+            }
+
             let normalizedTime = "23:59";
             if (timeStr) {
                 let t = String(timeStr).trim().toUpperCase();
@@ -80,13 +84,13 @@ export default function ComingSoonEvents({ events = [] }) {
                 }
             }
             
-            const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+            const eventDate = new Date(`${dt}T${normalizedTime}`);
             return isNaN(eventDate.getTime()) ? null : eventDate;
         } catch (_) { return null; }
     };
 
     const COMING_SOON_EVENTS = (events || []).filter(e => {
-        const eventDate = parseEventDate(e.date, e.time);
+        const eventDate = parseEventDate(e.date || e.rawDate, e.time || e.rawTime);
         if (!eventDate) return false;
         return (e.featured || e.trending) && eventDate >= now;
     }).slice(0, 5);

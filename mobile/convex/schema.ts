@@ -62,6 +62,12 @@ export default defineSchema({
         paymentIntentId: v.optional(v.string()),
         scanned: v.optional(v.boolean()),
         scannedAt: v.optional(v.number()),
+        selectedSeats: v.optional(v.array(v.object({
+            id: v.string(),
+            catName: v.string(),
+            price: v.number(),
+            isFree: v.boolean(),
+        }))),
     }).index("by_eventId", ["eventId"]).index("by_userId", ["userId"]),
 
     pwaScans: defineTable({

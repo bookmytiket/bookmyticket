@@ -72,9 +72,8 @@ main {
 /* ════════════ HERO BANNER (Full-Width High-Res — 4727x2000 Aspect) ════════════ */
 .bms-banner-wrap {
   width: 100%;
-  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0;
   background: transparent;
   overflow: hidden;
 }
@@ -83,8 +82,8 @@ main {
   position: relative;
   width: 100%;
   aspect-ratio: 4500 / 1200;
-  max-height: 340px;
-  border-radius: 20px;
+  max-height: 480px; /* Increased height for full-width impact */
+  border-radius: 0;
   overflow: hidden;
   user-select: none;
 }

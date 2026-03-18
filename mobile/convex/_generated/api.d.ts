@@ -29,6 +29,7 @@ import type * as paymentGateways from "../paymentGateways.js";
 import type * as policies from "../policies.js";
 import type * as promotions from "../promotions.js";
 import type * as pwaScans from "../pwaScans.js";
+import type * as seed from "../seed.js";
 import type * as seoSettings from "../seoSettings.js";
 import type * as siteBranding from "../siteBranding.js";
 import type * as ssoSettings from "../ssoSettings.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   policies: typeof policies;
   promotions: typeof promotions;
   pwaScans: typeof pwaScans;
+  seed: typeof seed;
   seoSettings: typeof seoSettings;
   siteBranding: typeof siteBranding;
   ssoSettings: typeof ssoSettings;

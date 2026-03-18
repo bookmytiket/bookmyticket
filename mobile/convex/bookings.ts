@@ -9,10 +9,23 @@ export const getBookings = query({
             bookings.map(async (booking) => {
                 const validEventId = ctx.db.normalizeId("events", booking.eventId);
                 const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+
+                let userName = booking.customerDetails?.name;
+                if (!userName && booking.userId) {
+                    const user = await ctx.db
+                        .query("users")
+                        .withIndex("by_email", (q) => q.eq("email", booking.userId))
+                        .unique();
+                    if (user) userName = user.name;
+                }
+
                 return {
                     ...booking,
                     eventName: event && event.title ? event.title : "Static Event",
+                    eventType: event && event.type ? event.type : "Physical",
+                    meetingUrl: event && event.meetingUrl ? event.meetingUrl : null,
                     customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
+                    userName: userName || "Guest User",
                 };
             })
         );
@@ -28,11 +41,50 @@ export const getBookingById = query({
         const validEventId = ctx.db.normalizeId("events", booking.eventId);
         const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
 
+        let userName = booking.customerDetails?.name;
+        if (!userName && booking.userId) {
+            const user = await ctx.db
+                .query("users")
+                .withIndex("by_email", (q) => q.eq("email", booking.userId))
+                .unique();
+            if (user) userName = user.name;
+        }
+
         return {
             ...booking,
             eventName: event && "title" in event ? event.title : "Static Event",
+            eventType: event && "type" in event ? event.type : "Physical",
+            meetingUrl: event && "meetingUrl" in event ? event.meetingUrl : null,
             location: event && "location" in event ? event.location : "TBA",
+            userName: userName || "Guest User",
         };
+    },
+});
+
+export const getBookedSeatsByEvent = query({
+    args: { eventId: v.string() },
+    handler: async (ctx, args) => {
+        const bookings = await ctx.db
+            .query("bookings")
+            .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+            .collect();
+
+        // Include Confirmed and Pending bookings, ignore Failed/Cancelled
+        const validStatuses = ["Confirmed", "Pending", "Scanned"];
+        const validBookings = bookings.filter((b) => validStatuses.includes(b.status));
+
+        const bookedSeatIds = new Set<string>();
+        for (const booking of validBookings) {
+            if (booking.selectedSeats && Array.isArray(booking.selectedSeats)) {
+                for (const seat of booking.selectedSeats) {
+                    if (seat && seat.id) {
+                        bookedSeatIds.add(seat.id);
+                    }
+                }
+            }
+        }
+
+        return Array.from(bookedSeatIds);
     },
 });
 
@@ -49,6 +101,12 @@ export const createBooking = mutation({
             email: v.string(),
             phone: v.string(),
         })),
+        selectedSeats: v.optional(v.array(v.object({
+            id: v.string(),
+            catName: v.string(),
+            price: v.number(),
+            isFree: v.boolean(),
+        }))),
     },
     handler: async (ctx, args) => {
         const bookingId = await ctx.db.insert("bookings", args);
@@ -108,6 +166,10 @@ export const confirmBooking = mutation({
 export const updateBooking = mutation({
     args: { id: v.id("bookings"), scanned: v.boolean() },
     handler: async (ctx, { id, scanned }) => {
-        await ctx.db.patch(id, { scanned });
+        const patch: any = { scanned };
+        if (scanned) {
+            patch.status = "Scanned";
+        }
+        await ctx.db.patch(id, patch);
     },
 });

@@ -10,10 +10,20 @@ export const getScans = query({
                 const booking = (await ctx.db.get(scan.bookingId)) as any;
                 const validEventId = ctx.db.normalizeId("events", scan.eventId);
                 const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+                let userName = booking?.customerDetails?.name;
+                if (!userName && booking?.userId) {
+                    const user = await ctx.db
+                        .query("users")
+                        .withIndex("by_email", (q) => q.eq("email", booking.userId))
+                        .unique();
+                    if (user) userName = user.name;
+                }
+
                 return {
                     ...scan,
                     eventName: event && event.title ? event.title : "Static Event",
                     customerEmail: booking ? booking.userId : "Unknown",
+                    userName: userName || "Guest User",
                     ticketCount: booking ? booking.ticketCount : 0,
                 };
             })
@@ -33,11 +43,20 @@ export const getScansByOrganiser = query({
                 const booking = (await ctx.db.get(scan.bookingId)) as any;
                 const validEventId = ctx.db.normalizeId("events", scan.eventId);
                 const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+                let userName = booking?.customerDetails?.name;
+                if (!userName && booking?.userId) {
+                    const user = await ctx.db
+                        .query("users")
+                        .withIndex("by_email", (q) => q.eq("email", booking.userId))
+                        .unique();
+                    if (user) userName = user.name;
+                }
+
                 return {
                     ...scan,
                     eventName: event && event.title ? event.title : "Static Event",
                     customerEmail: booking ? booking.userId : "Unknown",
-                    userName: booking?.customerDetails?.name || "Guest User",
+                    userName: userName || "Guest User",
                     ticketCount: booking ? booking.ticketCount : 0,
                 };
             })
@@ -84,7 +103,11 @@ export const validateAndLogScan = mutation({
             return { success: false, message: "Ticket already used" };
         }
 
-        await ctx.db.patch(args.bookingId, { scanned: true, scannedAt: Date.now() });
+        await ctx.db.patch(args.bookingId, { 
+            scanned: true, 
+            scannedAt: Date.now(),
+            status: "Scanned" // Sync status so it shows on Web/Mobile dashboards
+        });
         await ctx.db.insert("pwaScans", { ...args, status: "valid", scannedAt: Date.now() });
 
         return { success: true, message: "Ticket validated successfully! Checked in." };

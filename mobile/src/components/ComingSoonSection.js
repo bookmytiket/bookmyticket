@@ -43,13 +43,40 @@ function TimerBox({ value, label }) {
 export default function ComingSoonSection({ events = [], onEventPress }) {
     const [idx, setIdx] = useState(0);
     const now = new Date();
+    const parseEventDate = (dateStr, timeStr) => {
+        if (!dateStr) return null;
+        try {
+            let dt = String(dateStr).trim();
+            if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+                const parts = dt.split(/[-/]/);
+                dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
+            
+            let normalizedTime = "23:59";
+            if (timeStr) {
+                let t = String(timeStr).trim().toUpperCase();
+                const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
+                if (ampmMatch) {
+                    let [_, hours, mins = "00", ampm] = ampmMatch;
+                    hours = parseInt(hours);
+                    if (ampm === "PM" && hours < 12) hours += 12;
+                    if (ampm === "AM" && hours === 12) hours = 0;
+                    normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
+                } else {
+                    normalizedTime = t.includes(':') ? t : `${t}:00`;
+                }
+            }
+            
+            const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+            return isNaN(eventDate.getTime()) ? null : eventDate;
+        } catch (_) { return null; }
+    };
+
     const COMING_SOON_EVENTS = events.filter(e => {
-        if (!e.date) return false;
-        const normalized = String(e.date).includes(' ') && !String(e.date).includes('T') 
-            ? String(e.date).replace(' ', 'T') 
-            : e.date;
-        const diff = new Date(normalized + (e.time ? `T${e.time}` : 'T23:59')) - now;
-        return (e.featured || e.trending) && diff > 0;
+        const eventDate = parseEventDate(e.rawDate || e.date, e.rawTime || e.time);
+        if (!eventDate) return false;
+        return (e.featured || e.trending) && eventDate >= now;
     }).slice(0, 5);
 
     useEffect(() => {
@@ -60,10 +87,10 @@ export default function ComingSoonSection({ events = [], onEventPress }) {
         return () => clearInterval(timer);
     }, [COMING_SOON_EVENTS.length]);
 
-    if (COMING_SOON_EVENTS.length === 0) return null;
-
-    const event = COMING_SOON_EVENTS[idx];
+    const event = COMING_SOON_EVENTS[idx % COMING_SOON_EVENTS.length] || {};
     const timeLeft = useCountdown(event.date);
+
+    if (COMING_SOON_EVENTS.length === 0) return null;
 
     const prev = () => setIdx((i) => (i - 1 + COMING_SOON_EVENTS.length) % COMING_SOON_EVENTS.length);
     const next = () => setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);

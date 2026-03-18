@@ -112,7 +112,43 @@ function VirtualCard({ event }) {
 }
 
 export default function VirtualEvents({ events = [] }) {
-    const VIRTUAL_EVENTS = events.filter((e) => e.virtual || e.type === "Online");
+    const parseEventDate = (dateStr, timeStr) => {
+        if (!dateStr) return null;
+        try {
+            let dt = String(dateStr).trim();
+            if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+                const parts = dt.split(/[-/]/);
+                dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
+            
+            let normalizedTime = "23:59";
+            if (timeStr) {
+                let t = String(timeStr).trim().toUpperCase();
+                const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
+                if (ampmMatch) {
+                    let [_, hours, mins = "00", ampm] = ampmMatch;
+                    hours = parseInt(hours);
+                    if (ampm === "PM" && hours < 12) hours += 12;
+                    if (ampm === "AM" && hours === 12) hours = 0;
+                    normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
+                } else {
+                    normalizedTime = t.includes(':') ? t : `${t}:00`;
+                }
+            }
+            
+            const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+            return isNaN(eventDate.getTime()) ? null : eventDate;
+        } catch (_) { return null; }
+    };
+
+    const now = new Date();
+    const VIRTUAL_EVENTS = events.filter((e) => {
+        if (!e.virtual && e.type !== "Online") return false;
+        const eventDate = parseEventDate(e.rawDate || e.date, e.rawTime || e.time);
+        if (!eventDate) return true;
+        return eventDate >= now;
+    });
     const scrollRef = useRef(null);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });

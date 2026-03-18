@@ -9,6 +9,36 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
     const [events, setEvents] = useState(Array.isArray(propEvents) ? propEvents : []);
     const scrollRef = useRef(null);
 
+    const parseEventDate = (dateStr, timeStr) => {
+        if (!dateStr) return null;
+        try {
+            let dt = String(dateStr).trim();
+            if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+                const parts = dt.split(/[-/]/);
+                dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
+            
+            let normalizedTime = "23:59";
+            if (timeStr) {
+                let t = String(timeStr).trim().toUpperCase();
+                const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
+                if (ampmMatch) {
+                    let [_, hours, mins = "00", ampm] = ampmMatch;
+                    hours = parseInt(hours);
+                    if (ampm === "PM" && hours < 12) hours += 12;
+                    if (ampm === "AM" && hours === 12) hours = 0;
+                    normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
+                } else {
+                    normalizedTime = t.includes(':') ? t : `${t}:00`;
+                }
+            }
+            
+            const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+            return isNaN(eventDate.getTime()) ? null : eventDate;
+        } catch (_) { return null; }
+    };
+
     const loadFromStorage = useCallback(() => {
         if (typeof window === "undefined") return;
         try {
@@ -16,13 +46,9 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
             const list = raw ? JSON.parse(raw) : [];
             const now = new Date();
             const filtered = (Array.isArray(list) ? list : []).filter(ev => {
-                if (!ev.date) return true;
-                try {
-                    const eventDateTime = new Date(`${ev.date}T${ev.time || "23:59"}:00`);
-                    return eventDateTime >= now;
-                } catch (_) {
-                    return true;
-                }
+                const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
+                if (!eventDate) return true;
+                return eventDate >= now;
             });
             setEvents(filtered.slice(0, MAX_ITEMS));
         } catch (_) {

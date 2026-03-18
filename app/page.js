@@ -16,6 +16,7 @@ import RecentMemories from '@/components/RecentMemories';
 import VenueEventCard from '@/components/VenueEventCard';
 import Sponsors from '@/components/Sponsors';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
+import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
@@ -71,17 +72,49 @@ export default function Home() {
 
   const convexEvents = useQuery(api.events.getActiveEvents) || [];
 
+  const parseEventDate = (dateStr, timeStr) => {
+    if (!dateStr) return null;
+    try {
+      let dt = String(dateStr).trim();
+      // Handle DD/MM/YYYY or DD-MM-YYYY
+      if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+        const parts = dt.split(/[-/]/);
+        dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      
+      // If dt already has T or a space + time, don't append default time
+      if (dt.includes('T') || dt.includes(' ')) {
+        const d = new Date(dt.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      let normalizedTime = "23:59";
+      if (timeStr) {
+        let t = String(timeStr).trim().toUpperCase();
+        const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
+        if (ampmMatch) {
+          let [_, hours, mins = "00", ampm] = ampmMatch;
+          hours = parseInt(hours);
+          if (ampm === "PM" && hours < 12) hours += 12;
+          if (ampm === "AM" && hours === 12) hours = 0;
+          normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
+        } else {
+          normalizedTime = t.includes(':') ? t : `${t}:00`;
+        }
+      }
+      
+      const eventDate = new Date(`${dt}T${normalizedTime}`);
+      return isNaN(eventDate.getTime()) ? null : eventDate;
+    } catch (_) { return null; }
+  };
+
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
     return (Array.isArray(newOrgEvents) ? newOrgEvents : [])
       .filter(ev => {
-        if (!ev.date) return true;
-        try {
-          const eventDateTime = new Date(`${ev.date}T${ev.time || "23:59"}:00`);
-          return eventDateTime >= now;
-        } catch (_) {
-          return true;
-        }
+        const eventDate = parseEventDate(ev.date, ev.time);
+        if (!eventDate) return true;
+        return eventDate >= now;
       })
       .map((ev, idx) => {
         const loc = ev.location || ev.venue || ev.address || "Venue";
@@ -143,37 +176,6 @@ export default function Home() {
       const cat = { name: activeCat, slug: activeCat.toLowerCase().trim().replace(/\s+/g, '-') };
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
-
-    // 3. Filter by Expiry
-    const parseEventDate = (dateStr, timeStr) => {
-      if (!dateStr) return null;
-      try {
-        let dt = String(dateStr).trim();
-        if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
-          const parts = dt.split(/[-/]/);
-          dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
-        
-        let normalizedTime = "23:59";
-        if (timeStr) {
-          let t = String(timeStr).trim().toUpperCase();
-          const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
-          if (ampmMatch) {
-            let [_, hours, mins = "00", ampm] = ampmMatch;
-            hours = parseInt(hours);
-            if (ampm === "PM" && hours < 12) hours += 12;
-            if (ampm === "AM" && hours === 12) hours = 0;
-            normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
-          } else {
-            normalizedTime = t.includes(':') ? t : `${t}:00`;
-          }
-        }
-        
-        const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
-        return isNaN(eventDate.getTime()) ? null : eventDate;
-      } catch (_) { return null; }
-    };
 
     const now = new Date();
     results = results.filter(ev => {
@@ -242,9 +244,11 @@ export default function Home() {
         `}</style>
 
         {/* 0) Hero Banner (Carousel) — uses Admin Home Page > Hero Banner slides when set */}
-        <div style={{ width: '100%', paddingTop: '44px' }}>
+        <div style={{ width: '100%', paddingTop: '20px' }}>
           <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
         </div>
+
+        <SubnavMarquee />
 
 
         {/* Search & Category Filter Results Section */}
@@ -324,7 +328,7 @@ export default function Home() {
             <FeaturedEvents events={featuredEventsList} />
 
             {/* 3) Coming Soon */}
-            <ComingSoonEvents events={normalizedOrgEvents} />
+            <ComingSoonEvents events={filteredEvents} />
 
             {/* 4) Explore Popular Events */}
             <PopularEvents events={popularEventsList} />

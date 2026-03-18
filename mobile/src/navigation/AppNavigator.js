@@ -12,6 +12,7 @@ import OrganiserScannerScreen from '../screens/OrganiserScannerScreen';
 import ManagementScreen from '../screens/ManagementScreen';
 import LocationScreen from '../screens/LocationScreen';
 import BecomeOrganiserScreen from '../screens/BecomeOrganiserScreen';
+import SeatingScreen from '../screens/SeatingScreen';
 
 import { Colors } from '../theme/Theme';
 import WebHeader from './WebHeader';
@@ -53,6 +54,11 @@ export default function AppNavigator() {
           name="Checkout"
           component={CheckoutScreen}
           options={{ title: 'Checkout' }}
+        />
+        <Stack.Screen
+          name="Seating"
+          component={SeatingScreen}
+          options={{ title: 'Select Seats' }}
         />
         <Stack.Screen
           name="Payment"

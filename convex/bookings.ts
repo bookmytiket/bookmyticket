@@ -61,6 +61,33 @@ export const getBookingById = query({
     },
 });
 
+export const getBookedSeatsByEvent = query({
+    args: { eventId: v.string() },
+    handler: async (ctx, args) => {
+        const bookings = await ctx.db
+            .query("bookings")
+            .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+            .collect();
+
+        // Include Confirmed and Pending bookings, ignore Failed/Cancelled
+        const validStatuses = ["Confirmed", "Pending", "Scanned"];
+        const validBookings = bookings.filter((b) => validStatuses.includes(b.status));
+
+        const bookedSeatIds = new Set<string>();
+        for (const booking of validBookings) {
+            if (booking.selectedSeats && Array.isArray(booking.selectedSeats)) {
+                for (const seat of booking.selectedSeats) {
+                    if (seat && seat.id) {
+                        bookedSeatIds.add(seat.id);
+                    }
+                }
+            }
+        }
+
+        return Array.from(bookedSeatIds);
+    },
+});
+
 export const createBooking = mutation({
     args: {
         eventId: v.string(), // changed to string to allow static events
@@ -74,6 +101,12 @@ export const createBooking = mutation({
             email: v.string(),
             phone: v.string(),
         })),
+        selectedSeats: v.optional(v.array(v.object({
+            id: v.string(),
+            catName: v.string(),
+            price: v.number(),
+            isFree: v.boolean(),
+        }))),
     },
     handler: async (ctx, args) => {
         const bookingId = await ctx.db.insert("bookings", args);

@@ -102,44 +102,45 @@ export default function HomeScreen() {
   }, [displayBanners]);
 
   const activeEvents = useMemo(() => {
-    const fromConvex = (displayEvents || []).map((ev, idx) => {
-      const loc = ev.location || ev.venue || ev.address || "Venue";
-      const isVirtual = ev.virtual === true || 
-               String(ev.type || '').toLowerCase().includes("online") || 
-               String(ev.type || '').toLowerCase().includes("virtual") ||
+    const fromConvex = (displayEvents || []).filter(Boolean).map((ev, idx) => {
+      const loc = ev?.location || ev?.venue || ev?.address || "Venue";
+      const isVirtual = ev?.virtual === true || 
+               String(ev?.type || '').toLowerCase().includes("online") || 
+               String(ev?.type || '').toLowerCase().includes("virtual") ||
                loc.toLowerCase().includes("online") ||
                loc.toLowerCase().includes("virtual") ||
-               String(ev.title || '').toLowerCase().includes("online meeting");
+               String(ev?.title || '').toLowerCase().includes("online meeting");
       return {
         ...ev,
-        id: ev._id || ev.id || `convex-${idx}`,
-        title: ev.title || "Event",
-        img: ev.img || ev.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
-        rawDate: ev.date,
-        rawTime: ev.time,
-        date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
+        id: ev?._id || ev?.id || `convex-${idx}`,
+        title: ev?.title || "Event",
+        img: ev?.img || ev?.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
+        rawDate: ev?.date,
+        rawTime: ev?.time,
+        date: [ev?.date, ev?.time].filter(Boolean).join(" ") || "TBA",
         location: loc,
-        featured: ev.featured !== false,
-        trending: ev.trending !== false,
-        spotlight: ev.spotlight === true,
-        exclusive: ev.exclusive === true,
+        featured: ev?.featured !== false,
+        trending: ev?.trending !== false,
+        spotlight: ev?.spotlight === true,
+        exclusive: ev?.exclusive === true,
         virtual: isVirtual,
       };
     });
 
-    const fromHome = (HOME_EVENTS || []).map(h => ({ 
+    const fromHome = (HOME_EVENTS || []).filter(Boolean).map(h => ({ 
       ...h, 
       id: String(h.id),
       rawDate: h.date,
       rawTime: h.time
     }));
     const eventMap = new Map();
-    fromConvex.forEach(e => eventMap.set(String(e.id), e));
-    fromHome.forEach(h => { if (!eventMap.has(String(h.id))) eventMap.set(String(h.id), h); });
+    fromConvex.forEach(e => { if (e?.id) eventMap.set(String(e.id), e); });
+    fromHome.forEach(h => { if (h?.id && !eventMap.has(String(h.id))) eventMap.set(String(h.id), h); });
 
     const merged = Array.from(eventMap.values());
     const now = new Date();
     return merged.filter(ev => {
+      if (!ev) return false;
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
       if (!eventDate) return true; // Keep if invalid parse to avoid hiding valid events
       return eventDate >= now;
@@ -192,19 +193,25 @@ export default function HomeScreen() {
         )}
       </View>
       <View style={styles.categoriesSection}>
-        <FlatList
-          horizontal
-          data={displayCategories}
-          keyExtractor={(item, idx) => String(item._id || idx)}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.categoryBadge}><Text style={styles.categoryText}>{item.name}</Text></TouchableOpacity>
-          )}
-          showsHorizontalScrollIndicator={false}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
           contentContainerStyle={styles.categoriesList}
-        />
+        >
+          {displayCategories.map((item, idx) => (
+            <TouchableOpacity 
+              key={item._id || idx} 
+              style={styles.categoryBadge}
+              onPress={() => navigation.navigate('Events', { category: item.name })}
+            >
+              <Text style={styles.categoryText}>{item.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FeaturedSection title="Recently Viewed" events={(recentlyViewed || []).filter(ev => {
+        if (!ev) return false;
         const eventDate = parseEventDate(ev.date, ev.time);
         if (!eventDate) return true;
         return eventDate >= new Date();
@@ -215,7 +222,13 @@ export default function HomeScreen() {
       <FeaturedSection title="Explore Popular Events" events={popular} onEventPress={handleEventPress} />
       <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
       <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
-
+      {filteredEvents.length === 0 && virtual.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
+          <Text style={styles.emptySub}>We couldn't find any events matching your current location. Try switching cities or check back later!</Text>
+          <TouchableOpacity style={styles.changeLocationBtn} onPress={() => navigation.navigate('Location')}>
+            <Text style={styles.changeLocationText}>Change Location</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
