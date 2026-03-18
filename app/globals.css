@@ -511,6 +511,11 @@ nextjs-portal {
   color: #ffffff !important;
   border: 1px solid #fde047 !important;
   box-shadow: none !important;
+  height: 42px;
+  justify-content: center;
+  line-height: 1;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .header-scrolled .nav-action-organiser:hover,
@@ -915,10 +920,13 @@ nextjs-portal {
 .nav-action-organiser,
 .nav-action-advertise,
 .nav-action-signin {
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center;
+  height: 42px;
+  line-height: 1;
   gap: 0.35rem;
-  padding: 0.5rem 1.2rem;
+  padding: 0 1.2rem;
   border-radius: 50px;
   background: var(--accent-gradient);
   border: none !important;

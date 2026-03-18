@@ -390,13 +390,14 @@ export default function Navbar() {
           </button>
 
           <div className="header-actions-area">
+            <Link href="/advertise" className="nav-action-advertise hide-mobile">Elevate Your Brand</Link>
             <button
-              className="nav-cta-btn hide-mobile"
+              className="nav-action-organiser hide-mobile"
               onClick={() => setOrgOpen(true)}
-              style={{ height: '45px', padding: '0 20px', fontSize: '0.75rem' }}
             >
               Become a Partner
             </button>
+
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem', textTransform: 'uppercase' }}>
@@ -422,7 +423,7 @@ export default function Navbar() {
                 </div>
               </div>
             ) : (
-              <Link href="/signin" className="nav-cta-btn" style={{ height: '45px', padding: '0 30px' }}>Sign In</Link>
+              <Link href="/signin" className="nav-action-signin">Book Now</Link>
             )}
 
             <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '8px' }}>
@@ -530,7 +531,7 @@ export default function Navbar() {
                 {user ? (
                   <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center" }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
                 ) : (
-                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMenuOpen(false)}>Sign In</Link>
+                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMenuOpen(false)}>Book Now</Link>
                 )}
               </div>
             </div>
