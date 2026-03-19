@@ -8,108 +8,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
 import { HERO_BANNER_SLIDES } from '../data/homeEvents';
+import { hashPassword } from '../utils/hashPassword';
 
 const { width } = Dimensions.get('window');
 
-/**
- * SHA-256 implementation in pure JavaScript for React Native compatibility.
- */
-function sha256(ascii) {
-  function rightRotate(value, amount) {
-    return (value >>> amount) | (value << (32 - amount));
-  }
-
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let i, j;
-  let result = '';
-
-  const words = [];
-  const asciiBitLength = ascii.length * 8;
-
-  // Initial hash values: first 32 bits of the fractional parts of the square roots of the first 8 primes
-  let hash = [
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-  ];
-
-  // Constants: first 32 bits of the fractional parts of the cube roots of the first 64 primes
-  const k = sha256.k = sha256.k || [];
-  if (!k.length) {
-    let primeCounter = 0;
-    const isCompound = {};
-    for (let candidate = 2; primeCounter < 64; candidate++) {
-      if (!isCompound[candidate]) {
-        for (i = 0; i < 313; i += candidate) {
-          isCompound[i] = candidate;
-        }
-        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
-      }
-    }
-  }
-
-  ascii += '\x80';
-  while (ascii.length % 64 - 56) ascii += '\x00';
-  for (i = 0; i < ascii.length; i++) {
-    j = ascii.charCodeAt(i);
-    if (j >> 8) return;
-    words[i >> 2] |= j << ((3 - i) % 4) * 8;
-  }
-  words[words.length] = (asciiBitLength / maxWord) | 0;
-  words[words.length] = asciiBitLength;
-
-  for (j = 0; j < words.length; ) {
-    const w = words.slice(j, (j += 16));
-    const oldHash = [...hash];
-
-    for (i = 0; i < 64; i++) {
-      const w15 = w[i - 15],
-        w2 = w[i - 2];
-      const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);
-      const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);
-      const ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);
-      const maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);
-      const t1 =
-        (hash[7] +
-        (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) +
-        ch +
-        k[i] +
-        (w[i] = i < 16 ? (w[i] || 0) : (w[i - 16] + s0 + w[i - 7] + s1) | 0)) | 0;
-      const t2 = ((rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj) | 0;
-
-      hash[7] = hash[6];
-      hash[6] = hash[5];
-      hash[5] = hash[4];
-      hash[4] = (hash[3] + t1) | 0;
-      hash[3] = hash[2];
-      hash[2] = hash[1];
-      hash[1] = hash[0];
-      hash[0] = (t1 + t2) | 0;
-    }
-
-    for (i = 0; i < 8; i++) {
-      hash[i] = (hash[i] + oldHash[i]) | 0;
-    }
-  }
-
-  for (i = 0; i < 8; i++) {
-    for (j = 3; j + 1; j--) {
-      const b = (hash[i] >> (j * 8)) & 255;
-      result += (b < 16 ? '0' : '') + b.toString(16);
-    }
-  }
-  return result;
-}
-
-async function hashPassword(password) {
-  return sha256(password);
-}
 
 export default function SignInScreen() {
-  const { login, selectedCity } = useAuth();
+  console.log('!!!!!!! [CRITICAL] SIGN IN SCREEN LOADED - VERSION 8 !!!!!!!');
+  const { login, verifyLoginOTP, selectedCity } = useAuth();
   const convex = useConvex();
   const navigation = useNavigation();
-  const createUser = useMutation(api.users.create);
+
+  // Mutations
+  const sendOTPMutation = useMutation(api.auth.sendOTP);
+  const verifyOTPOnlyMutation = useMutation(api.auth.verifyOTPOnly);
+  const verifyOTPAndCreateAccountMutation = useMutation(api.auth.verifyOTPAndCreateAccount);
 
   const [mode, setMode] = useState('signin');
   const [identifier, setIdentifier] = useState('');
@@ -135,8 +48,13 @@ export default function SignInScreen() {
   const currentBanner = displayBanners[bannerIndex % displayBanners.length];
 
   const [signupName, setSignupName] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPass, setSignupPass] = useState('');
+  const [signupStep, setSignupStep] = useState(1); // 1: Email, 2: OTP, 3: Details
+  const [otpCode, setOtpCode] = useState('');
+  const [loginStep, setLoginStep] = useState(1); // 1: Password, 2: OTP
+  const [loginEmail, setLoginEmail] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleLogin = async () => {
@@ -163,6 +81,12 @@ export default function SignInScreen() {
       const res = await login(id, hashed);
       
       if (res.success) {
+        if (res.needsOtp) {
+          setLoginEmail(res.email);
+          setLoginStep(2);
+          return;
+        }
+
         if (res.role === 'staff') {
           navigation.reset({
             index: 0,
@@ -184,9 +108,73 @@ export default function SignInScreen() {
     }
   };
 
-  const handleSignUp = async () => {
+  const handleLoginOTP = async () => {
     setError('');
-    if (!signupName.trim() || !signupEmail.trim() || !signupPass.trim()) {
+    if (otpCode.length !== 8) {
+      setError('Please enter the 8-digit code.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await verifyLoginOTP(loginEmail, otpCode);
+      if (res.success) {
+        if (!selectedCity) {
+          navigation.navigate('Location');
+        } else {
+          navigation.goBack();
+        }
+        return;
+      }
+      setError(res.error || 'Invalid code.');
+    } catch (err) {
+      setError('Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOTP = async () => {
+    setError('');
+    const email = signupEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendOTPMutation({ email, purpose: 'signup' });
+      setSignupStep(2);
+    } catch (err) {
+      setError(err?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    setError('');
+    if (otpCode.length !== 8) {
+      setError('Please enter the 8-digit code sent to your email.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await verifyOTPOnlyMutation({ 
+        email: signupEmail.trim().toLowerCase(), 
+        code: otpCode, 
+        purpose: 'signup' 
+      });
+      setSignupStep(3);
+    } catch (err) {
+      setError('Invalid or expired code. Please check and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinalSignUp = async () => {
+    setError('');
+    if (!signupName.trim() || !signupUsername.trim() || !signupPass.trim()) {
       setError('Please fill all fields.');
       return;
     }
@@ -197,16 +185,16 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       const hashed = await hashPassword(signupPass);
-      await createUser({
-        name: signupName.trim(),
+      await verifyOTPAndCreateAccountMutation({
         email: signupEmail.trim().toLowerCase(),
+        code: otpCode,
+        fullName: signupName.trim(),
+        username: signupUsername.trim().toLowerCase(),
         password: hashed,
-        role: 'user',
-        createdAt: new Date().toISOString(),
       });
       setSignupSuccess(true);
     } catch (err) {
-      setError(err?.message || 'Sign up failed. Email may already exist.');
+      setError(err?.message || 'Sign up failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -241,48 +229,73 @@ export default function SignInScreen() {
         <View style={styles.header}>
           <Image
             style={styles.logoImage}
-            source={require('../../assets/logo.png')}
+            source={{ uri: 'https://bookmysticket-nu.vercel.app/logo.png' }}
+            resizeMode="contain"
           />
-          <Text style={styles.tagline}>Welcome to bookmyticket</Text>
+          <Text style={styles.tagline}>Premium Event Experience</Text>
         </View>
 
         {mode === 'signin' ? (
           <View style={styles.form}>
             <Text style={styles.title}>Sign In</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#9ca3af"
-              value={identifier}
-              onChangeText={setIdentifier}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <View style={styles.passWrap}>
-              <TextInput
-                style={[styles.input, styles.passInput]}
-                placeholder="Password"
-                placeholderTextColor="#9ca3af"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPass}
-              />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(!showPass)}>
-                <Ionicons name={showPass ? 'eye-off' : 'eye'} size={22} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <TouchableOpacity onPress={handleLogin} disabled={loading}>
-              <LinearGradient
-                colors={Colors.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.btn}
-              >
-                <Text style={styles.btnText}>{loading ? 'Signing in…' : 'Log in'}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setMode('signup'); setError(''); setSignupSuccess(false); }}>
+            
+            {loginStep === 1 ? (
+              <>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor="#9ca3af"
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <View style={styles.passWrap}>
+                  <TextInput
+                    style={[styles.input, styles.passInput]}
+                    placeholder="Password"
+                    placeholderTextColor="#9ca3af"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPass}
+                  />
+                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(!showPass)}>
+                    <Ionicons name={showPass ? 'eye-off' : 'eye'} size={22} color={Colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                {error ? <Text style={styles.error}>{error} <Text onPress={() => setLoginStep(1)} style={{color: Colors.primary}}></Text></Text> : null}
+                <TouchableOpacity onPress={handleLogin} disabled={loading}>
+                  <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                    <Text style={styles.btnText}>{loading ? 'Checking…' : 'Log in'}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.stepTitle}>Security Verification</Text>
+                <Text style={styles.infoText}>Enter the 8-digit code sent to {loginEmail}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="8-digit code"
+                  placeholderTextColor="#9ca3af"
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  keyboardType="number-pad"
+                  maxLength={8}
+                />
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <TouchableOpacity onPress={handleLoginOTP} disabled={loading}>
+                  <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                    <Text style={styles.btnText}>{loading ? 'Verifying…' : 'Verify & Sign In'}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setLoginStep(1); setError(''); }}>
+                  <Text style={styles.link}>Back to password</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity onPress={() => { setMode('signup'); setError(''); setSignupSuccess(false); setSignupStep(1); setLoginStep(1); }}>
               <Text style={styles.link}>Don't have an account? Create one now</Text>
             </TouchableOpacity>
           </View>
@@ -292,40 +305,92 @@ export default function SignInScreen() {
             {signupSuccess ? (
               <>
                 <Text style={styles.success}>Account created! You can now sign in.</Text>
-                <TouchableOpacity style={styles.btn} onPress={() => { setMode('signin'); setSignupSuccess(false); }}>
+                <TouchableOpacity style={[styles.btn, { backgroundColor: Colors.primary }]} onPress={() => { setMode('signin'); setSignupSuccess(false); setSignupStep(1); }}>
                   <Text style={styles.btnText}>Go to Sign In</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Name"
-                  placeholderTextColor="#9ca3af"
-                  value={signupName}
-                  onChangeText={setSignupName}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  placeholderTextColor="#9ca3af"
-                  value={signupEmail}
-                  onChangeText={setSignupEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password (min 6 chars)"
-                  placeholderTextColor="#9ca3af"
-                  value={signupPass}
-                  onChangeText={setSignupPass}
-                  secureTextEntry
-                />
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                <TouchableOpacity style={styles.btn} onPress={handleSignUp} disabled={loading}>
-                  <Text style={styles.btnText}>{loading ? 'Creating…' : 'Create Account'}</Text>
-                </TouchableOpacity>
+                {signupStep === 1 && (
+                  <>
+                    <Text style={styles.stepTitle}>Step 1: Enter your email</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email Address"
+                      placeholderTextColor="#9ca3af"
+                      value={signupEmail}
+                      onChangeText={setSignupEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                    <TouchableOpacity onPress={handleSendOTP} disabled={loading}>
+                      <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                        <Text style={styles.btnText}>{loading ? 'Sending Code…' : 'Send Verification Code'}</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {signupStep === 2 && (
+                  <>
+                    <Text style={styles.stepTitle}>Step 2: Verify your email</Text>
+                    <Text style={styles.infoText}>Enter the 8-digit code sent to {signupEmail}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="8-digit code"
+                      placeholderTextColor="#9ca3af"
+                      value={otpCode}
+                      onChangeText={setOtpCode}
+                      keyboardType="number-pad"
+                      maxLength={8}
+                    />
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                    <TouchableOpacity onPress={handleVerifyOTP} disabled={loading}>
+                      <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                        <Text style={styles.btnText}>{loading ? 'Verifying…' : 'Verify Code'}</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setSignupStep(1)}>
+                      <Text style={styles.link}>Change Email</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {signupStep === 3 && (
+                  <>
+                    <Text style={styles.stepTitle}>Step 3: Complete your profile</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Full Name"
+                      placeholderTextColor="#9ca3af"
+                      value={signupName}
+                      onChangeText={setSignupName}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Username"
+                      placeholderTextColor="#9ca3af"
+                      value={signupUsername}
+                      onChangeText={setSignupUsername}
+                      autoCapitalize="none"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password (min 6 chars)"
+                      placeholderTextColor="#9ca3af"
+                      value={signupPass}
+                      onChangeText={setSignupPass}
+                      secureTextEntry
+                    />
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+                    <TouchableOpacity onPress={handleFinalSignUp} disabled={loading}>
+                      <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                        <Text style={styles.btnText}>{loading ? 'Creating Account…' : 'Finish Sign Up'}</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </>
+                )}
               </>
             )}
             <TouchableOpacity onPress={() => { setMode('signin'); setError(''); }}>
@@ -368,8 +433,8 @@ const styles = StyleSheet.create({
   heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
   bannerPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { marginBottom: 32, alignItems: 'center', paddingHorizontal: 24 },
-  logoImage: { width: 180, height: 50, resizeMode: 'contain' },
-  tagline: { fontSize: 15, color: '#64748b', marginTop: 8, textAlign: 'center', fontWeight: '600' },
+  logoImage: { width: 220, height: 60 },
+  tagline: { fontSize: 16, color: '#64748b', marginTop: 10, textAlign: 'center', fontWeight: '600' },
   form: { backgroundColor: '#fff', borderRadius: 24, padding: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
   title: { fontSize: 24, fontWeight: '800', color: Colors.text, marginBottom: 24, textAlign: 'center' },
   input: {
@@ -390,4 +455,6 @@ const styles = StyleSheet.create({
   btn: { padding: 18, borderRadius: 14, alignItems: 'center', marginBottom: 20 },
   btnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
   link: { color: Colors.secondary, fontSize: 15, textAlign: 'center', fontWeight: '600' },
+  stepTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
+  infoText: { fontSize: 14, color: '#64748b', marginBottom: 20, textAlign: 'center' },
 });

@@ -4,6 +4,7 @@ import { useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 const AuthContext = createContext();
+console.log('!!!!!!! [CRITICAL] AUTH CONTEXT LOADED - VERSION 8 !!!!!!!');
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -48,31 +49,75 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Invalid admin credentials' };
     }
 
-    // 2. All other roles use the unified backend query
+    // 2. All other roles use the unified backend mutation
     try {
-      const result = await convex.query(api.auth.login, { identifier, password });
+      console.log('[DEBUG] Attempting login for:', identifier);
+      const result = await convex.mutation(api.auth.login, { identifier, password });
+      console.log('[DEBUG] Login result object:', JSON.stringify(result));
       
-      if (result.success) {
-        let authUser = { 
-          identifier, 
-          role: result.role, 
-          name: result.data.name, 
-          id: result.data._id 
+      if (result && result.success) {
+        if (result.needsOtp) {
+          console.log('[DEBUG] OTP required for login');
+          return { success: true, needsOtp: true, email: result.email };
+        }
+
+        // Extremely safe extraction of user data
+        const userData = result.data || {};
+        const authUser = { 
+          identifier: identifier, 
+          role: result.role || 'user', 
+          name: userData.name || userData.fullName || 'User', 
+          id: userData._id || 'unknown'
         };
         
-        if (result.role === 'staff') {
-          authUser.organiserId = result.data.organiserId;
+        console.log('[DEBUG] Constructed authUser:', JSON.stringify(authUser));
+
+        if (result.role === 'staff' && userData.organiserId) {
+          authUser.organiserId = userData.organiserId;
         }
 
         setUser(authUser);
         await AsyncStorage.setItem('user', JSON.stringify(authUser));
-        return { success: true, role: result.role };
+        return { success: true, role: authUser.role };
       }
       
-      return { success: false, error: result.error };
+      const errorMsg = result?.error || 'Invalid credentials';
+      console.log('[DEBUG] Login failed:', errorMsg);
+      return { success: false, error: errorMsg };
     } catch (err) {
-      console.error('Unified login error:', err);
-      return { success: false, error: 'Network error or server unavailable' };
+      console.error('[DEBUG] Unified login CRITICAL error:', err);
+      return { success: false, error: 'Network error or system failure' };
+    }
+  }, [convex]);
+
+  const verifyLoginOTP = useCallback(async (email, code) => {
+    try {
+      console.log('[DEBUG] Verifying OTP for:', email);
+      const result = await convex.mutation(api.auth.verifyLoginOTP, { email, code });
+      console.log('[DEBUG] OTP Verification result:', JSON.stringify(result));
+      
+      if (result && result.success) {
+        // Safe extraction of user data
+        const userData = result.data || {};
+        const authUser = { 
+          identifier: email, 
+          role: result.role || 'user', 
+          name: userData.name || userData.fullName || 'User', 
+          id: userData._id || 'unknown'
+        };
+        
+        console.log('[DEBUG] OTP AuthUser created:', JSON.stringify(authUser));
+
+        setUser(authUser);
+        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+        return { success: true, role: authUser.role };
+      }
+      const errorMsg = result?.error || 'Verification failed';
+      console.log('[DEBUG] OTP Verification failed:', errorMsg);
+      return { success: false, error: errorMsg };
+    } catch (err) {
+      console.error('[DEBUG] OTP verification CRITICAL error:', err);
+      return { success: false, error: 'Network error or invalid code' };
     }
   }, [convex]);
 
@@ -102,13 +147,14 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     login,
+    verifyLoginOTP,
     logout,
     loading,
     selectedCity,
     updateCity,
     recentlyViewed,
     addToRecentlyViewed
-  }), [user, login, logout, loading, selectedCity, updateCity, recentlyViewed, addToRecentlyViewed]);
+  }), [user, login, verifyLoginOTP, logout, loading, selectedCity, updateCity, recentlyViewed, addToRecentlyViewed]);
 
   return (
     <AuthContext.Provider value={value}>
