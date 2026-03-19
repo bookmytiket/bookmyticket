@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 export const getBookings = query({
     args: {},
@@ -114,21 +115,45 @@ export const createBooking = mutation({
         // Update Organiser Wallet ONLY if status is 'Confirmed'
         if (args.status === 'Confirmed') {
             const validEventId = ctx.db.normalizeId("events", args.eventId);
+            let eventName = "Event";
             if (validEventId !== null) {
                 const event = (await ctx.db.get(validEventId)) as any;
-                if (event && event.organiserId) {
-                    const organiser = (await ctx.db
-                        .query("organisers")
-                        .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                        .unique()) as any;
-
-                    if (organiser) {
-                        await ctx.db.patch(organiser._id, {
-                            walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
-                        });
+                if (event) {
+                    eventName = event.title || "Event";
+                    if (event.organiserId) {
+                        const organiser = (await ctx.db
+                            .query("organisers")
+                            .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                            .unique()) as any;
+    
+                        if (organiser) {
+                            await ctx.db.patch(organiser._id, {
+                                walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
+                            });
+                        }
                     }
                 }
             }
+
+            const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
+            const brandNameDisplay = "BookMyTicket";
+
+            // Send Email Confirmation
+            const targetEmail = args.customerDetails?.email || args.userId;
+            await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                to: targetEmail,
+                subject: `Booking Confirmed: ${eventName}`,
+                html: `
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+                        <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
+                        <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
+                        <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${args.ticketCount}</strong> ticket(s) for:</p>
+                        <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
+                        <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${args.totalPrice}</strong></p>
+                        <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
+                    </div>
+                `,
+            });
         }
 
         return bookingId;
@@ -145,21 +170,45 @@ export const confirmBooking = mutation({
 
         // Update Organiser Wallet
         const validEventId = ctx.db.normalizeId("events", booking.eventId);
+        let eventName = "Event";
         if (validEventId !== null) {
             const event = (await ctx.db.get(validEventId)) as any;
-            if (event && event.organiserId) {
-                const organiser = (await ctx.db
-                    .query("organisers")
-                    .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                    .unique()) as any;
-
-                if (organiser) {
-                    await ctx.db.patch(organiser._id, {
-                        walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
-                    });
+            if (event) {
+                eventName = event.title || "Event";
+                if (event.organiserId) {
+                    const organiser = (await ctx.db
+                        .query("organisers")
+                        .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                        .unique()) as any;
+    
+                        if (organiser) {
+                            await ctx.db.patch(organiser._id, {
+                                walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
+                            });
+                        }
                 }
             }
         }
+
+        const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
+        const brandNameDisplay = "BookMyTicket";
+
+        // Send Email Confirmation
+        const targetEmail = booking.customerDetails?.email || booking.userId;
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: targetEmail,
+            subject: `Booking Confirmed: ${eventName}`,
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px;">
+                    <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
+                    <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${booking.ticketCount}</strong> ticket(s) for:</p>
+                    <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
+                    <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${booking.totalPrice}</strong></p>
+                    <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
+                </div>
+            `,
+        });
     },
 });
 

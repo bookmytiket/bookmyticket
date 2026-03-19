@@ -144,12 +144,15 @@ export default defineSchema({
     }),
 
     users: defineTable({
-        name: v.string(),
+        fullName: v.optional(v.string()), // Compatibility with old 'name'
+        name: v.optional(v.string()),     // Compatibility with old 'name'
         email: v.string(),
         username: v.optional(v.string()),
         password: v.string(),
         role: v.string(), // 'user'
-        createdAt: v.string(),
+        status: v.optional(v.string()),
+        lastLogin: v.optional(v.number()),
+        createdAt: v.union(v.number(), v.string()),
     }).index("by_email", ["email"]).index("by_username", ["username"]),
 
     passwordResetTokens: defineTable({
@@ -207,6 +210,9 @@ export default defineSchema({
         user: v.string(),
         pass: v.string(), // store as string, handle encryption/security if needed
         from: v.string(),
+        fromName: v.optional(v.string()),
+        encryption: v.optional(v.string()), // "TLS", "SSL", "None"
+        authMethod: v.optional(v.string()), // "App Password", "Basic Authentication", "None"
         updatedAt: v.number(),
     }),
 
@@ -347,4 +353,22 @@ export default defineSchema({
         organiserId: v.string(), // ID or email of the organiser who created this staff
         createdAt: v.number(),
     }).index("by_email", ["email"]).index("by_organiserId", ["organiserId"]),
+
+    admins: defineTable({
+        fullName: v.string(),
+        username: v.string(),
+        password: v.string(), // store hashed
+        email: v.string(),
+        role: v.string(), // "Admin", "Developer", "Tester", "Support"
+        status: v.string(), // "Active", "Inactive"
+        lastLogin: v.optional(v.number()),
+        createdAt: v.number(),
+    }).index("by_username", ["username"]).index("by_email", ["email"]),
+
+    otps: defineTable({
+        email: v.string(),
+        code: v.string(),
+        expires: v.number(),
+        purpose: v.string(), // "signup" | "login"
+    }).index("by_email", ["email"]),
 });

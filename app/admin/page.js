@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
 import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
+import { hashPassword } from "@/app/utils/hashPassword";
 
 const useConvexConfig = (key, initialValue, allConfig) => {
     const setConfigMutation = useMutation(api.systemConfig.setConfig);
@@ -171,6 +172,8 @@ function AdminHomePage() {
     const convexSsoSettings = useQuery(api.ssoSettings.get);
     const updateSsoSettingsMutation = useMutation(api.ssoSettings.update);
 
+    const sendEmailAction = useAction(api.emailActions.sendEmail);
+
     const convexCategories = useQuery(api.homeSettings.getCategories) || [];
 
     // Pages management
@@ -294,7 +297,10 @@ function AdminHomePage() {
                 port: 2525,
                 user: "api",
                 pass: "",
-                from: "noreply@bookmyticket.com"
+                from: "noreply@bookmyticket.com",
+                fromName: "Ticketing Tool",
+                encryption: "None",
+                authMethod: "Basic Authentication"
             });
         }
 
@@ -368,7 +374,11 @@ function AdminHomePage() {
         host: "smtp.mailtrap.io",
         port: 2525,
         user: "api",
-        from: "noreply@bookmyticket.com"
+        pass: "",
+        from: "noreply@bookmyticket.com",
+        fromName: "Ticketing Tool",
+        encryption: "None",
+        authMethod: "Basic Authentication"
     }, [convexEmailSettings]);
 
     // Site Branding
@@ -560,10 +570,17 @@ function AdminHomePage() {
     const convexBookings = useQuery(api.bookings.getBookings) || [];
     const convexUsers = useQuery(api.users.list) || [];
     const dashboardStats = useQuery(api.analytics.getDashboardStats);
+    const admins = useQuery(api.admins.list) || [];
 
     const deleteEventMutation = useMutation(api.events.deleteEvent);
     const updateEventMutation = useMutation(api.events.updateEvent);
     const setConfigMutation = useMutation(api.systemConfig.setConfig);
+    const createAdminMutation = useMutation(api.admins.create);
+    const updateAdminStatusMutation = useMutation(api.admins.updateStatus);
+    const deleteAdminMutation = useMutation(api.admins.remove);
+
+    const [adminModal, setAdminModal] = useState(null);
+    const [newAdmin, setNewAdmin] = useState({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
 
     useEffect(() => {
         const tab = searchParams.get("tab");
@@ -620,7 +637,33 @@ function AdminHomePage() {
             ];
             defaults.forEach(d => createApiKeyMutation(d));
         }
-    }, [convexApiKeys, createApiKeyMutation, allConfig]);
+    }, [rawApiKeys, createApiKeyMutation, allConfig]);
+    const [localEmailSettings, setLocalEmailSettings] = useState({
+        host: "",
+        port: 0,
+        user: "",
+        pass: "",
+        from: "",
+        fromName: "",
+        encryption: "None",
+        authMethod: "Basic Authentication"
+    });
+
+    useEffect(() => {
+        if (convexEmailSettings) {
+            setLocalEmailSettings({
+                ...convexEmailSettings,
+                host: convexEmailSettings.host || "",
+                port: convexEmailSettings.port || 0,
+                user: convexEmailSettings.user || "",
+                pass: convexEmailSettings.pass || "",
+                from: convexEmailSettings.from || "",
+                fromName: convexEmailSettings.fromName || "",
+                encryption: convexEmailSettings.encryption || "None",
+                authMethod: convexEmailSettings.authMethod || "Basic Authentication"
+            });
+        }
+    }, [convexEmailSettings]);
 
 
 
@@ -979,6 +1022,12 @@ function AdminHomePage() {
                         <FileText size={20} /> Pages
                     </button>
 
+                    {/* Administration */}
+                    <p className="section-header">Administration</p>
+                    <button onClick={() => setActiveTab("admin_management")} className={`sidebar-item ${activeTab === "admin_management" ? "active" : ""}`}>
+                        <Shield size={20} /> Team Management
+                    </button>
+
                     {/* System */}
                     <p className="section-header">System</p>
                     <div style={{ marginBottom: "4px" }}>
@@ -1247,6 +1296,96 @@ function AdminHomePage() {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Admin Creation Modal */}
+                    {adminModal === "add" && (
+                        <div className="modal-backdrop" onClick={() => setAdminModal(null)}>
+                            <div className="org-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "500px", padding: "32px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h2 style={{ fontSize: "24px", fontWeight: 800, margin: 0 }}>Create Admin Account</h2>
+                                    <button onClick={() => setAdminModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub }}><X size={24} /></button>
+                                </div>
+                                
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Full Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={newAdmin.fullName}
+                                            onChange={(e) => setNewAdmin({...newAdmin, fullName: e.target.value})}
+                                            placeholder="John Doe" 
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} 
+                                        />
+                                    </div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Username</label>
+                                            <input 
+                                                type="text" 
+                                                value={newAdmin.username}
+                                                onChange={(e) => setNewAdmin({...newAdmin, username: e.target.value})}
+                                                placeholder="admin123" 
+                                                style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Role</label>
+                                            <select 
+                                                value={newAdmin.role}
+                                                onChange={(e) => setNewAdmin({...newAdmin, role: e.target.value})}
+                                                style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
+                                            >
+                                                <option value="Admin">Admin</option>
+                                                <option value="Developer">Developer</option>
+                                                <option value="Tester">Tester</option>
+                                                <option value="Support">Support</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            value={newAdmin.email}
+                                            onChange={(e) => setNewAdmin({...newAdmin, email: e.target.value})}
+                                            placeholder="admin@example.com" 
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Password</label>
+                                        <input 
+                                            type="password" 
+                                            value={newAdmin.password}
+                                            onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
+                                            placeholder="••••••••" 
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} 
+                                        />
+                                    </div>
+                                    
+                                    <button
+                                        onClick={async () => {
+                                            if(!newAdmin.fullName || !newAdmin.username || !newAdmin.email || !newAdmin.password) {
+                                                alert("Please fill in all fields.");
+                                                return;
+                                            }
+                                            try {
+                                                await createAdminMutation(newAdmin);
+                                                alert("Admin account created successfully!");
+                                                setAdminModal(null);
+                                                setNewAdmin({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
+                                            } catch (err) {
+                                                alert("Error creating admin: " + err.message);
+                                            }
+                                        }}
+                                        style={{ marginTop: "12px", padding: "12px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "16px", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}
+                                    >
+                                        Create Account
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2773,8 +2912,8 @@ function AdminHomePage() {
                                             <Globe size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
                                             <input
                                                 type="text"
-                                                value={emailSettings.smtpHost || ""}
-                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpHost: e.target.value })}
+                                                value={localEmailSettings.host}
+                                                onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, host: e.target.value })}
                                                 placeholder="smtp.office365.com"
                                                 style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                             />
@@ -2784,8 +2923,8 @@ function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>SMTP Port <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <input
                                             type="text"
-                                            value={emailSettings.smtpPort || ""}
-                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpPort: e.target.value })}
+                                            value={localEmailSettings.port}
+                                            onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, port: e.target.value })}
                                             placeholder="587"
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                         />
@@ -2793,19 +2932,27 @@ function AdminHomePage() {
 
                                     <div style={{ gridColumn: "span 2" }}>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>Encryption <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <select style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none", cursor: "pointer" }}>
-                                            <option>TLS (Required for Office365)</option>
-                                            <option>SSL</option>
-                                            <option>None</option>
+                                        <select
+                                            value={localEmailSettings.encryption}
+                                            onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, encryption: e.target.value })}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none", cursor: "pointer" }}
+                                        >
+                                            <option value="TLS">TLS (Required for Office365)</option>
+                                            <option value="SSL">SSL</option>
+                                            <option value="None">None</option>
                                         </select>
                                     </div>
 
                                     <div style={{ gridColumn: "span 2" }}>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>Authentication Method</label>
-                                        <select style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none", cursor: "pointer" }}>
-                                            <option>App Password</option>
-                                            <option>Basic Authentication</option>
-                                            <option>None</option>
+                                        <select
+                                            value={localEmailSettings.authMethod}
+                                            onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, authMethod: e.target.value })}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none", cursor: "pointer" }}
+                                        >
+                                            <option value="App Password">App Password</option>
+                                            <option value="Basic Authentication">Basic Authentication</option>
+                                            <option value="None">None</option>
                                         </select>
                                     </div>
 
@@ -2815,8 +2962,8 @@ function AdminHomePage() {
                                             <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
                                             <input
                                                 type="text"
-                                                value={emailSettings.smtpUser || ""}
-                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpUser: e.target.value })}
+                                                value={localEmailSettings.user}
+                                                onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, user: e.target.value })}
                                                 placeholder="your-email@example.com"
                                                 style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                             />
@@ -2828,8 +2975,8 @@ function AdminHomePage() {
                                             <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, opacity: 0.7 }} />
                                             <input
                                                 type="password"
-                                                value={emailSettings.smtpPass || ""}
-                                                onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, smtpPass: e.target.value })}
+                                                value={localEmailSettings.pass}
+                                                onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, pass: e.target.value })}
                                                 placeholder="••••••••"
                                                 style={{ width: "100%", padding: "10px 10px 10px 36px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                             />
@@ -2840,8 +2987,8 @@ function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>From Email <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <input
                                             type="text"
-                                            value={emailSettings.fromEmail || ""}
-                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, fromEmail: e.target.value })}
+                                            value={localEmailSettings.from}
+                                            onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, from: e.target.value })}
                                             placeholder="noreply@example.com"
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                         />
@@ -2850,23 +2997,54 @@ function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>From Name <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
                                         <input
                                             type="text"
-                                            value={emailSettings.fromName || ""}
-                                            onChange={(e) => updateEmailSettingsMutation({ ...emailSettings, fromName: e.target.value })}
+                                            value={localEmailSettings.fromName}
+                                            onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, fromName: e.target.value })}
                                             placeholder="Ticketing Tool"
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px", outline: "none" }}
                                         />
                                     </div>
 
                                     <div style={{ gridColumn: "span 2", marginTop: "12px", display: "flex", gap: "12px" }}>
-                                        <button style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { _id, _creationTime, updatedAt, ...rest } = localEmailSettings;
+                                                    await updateEmailSettingsMutation({
+                                                        ...rest,
+                                                        id: _id,
+                                                        port: parseInt(localEmailSettings.port) || 0
+                                                    });
+                                                    alert("Settings saved successfully!");
+                                                } catch (err) {
+                                                    alert("Error saving settings: " + err.message);
+                                                }
+                                            }}
+                                            style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
                                             Save Email Settings
                                         </button>
                                         <button
-                                            onClick={() => alert("Verification mail sent! Please check your inbox.")}
-                                            style={{ backgroundColor: "transparent", color: "#3b82f6", border: "1px solid #3b82f6", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}
-                                            onMouseOver={(e) => e.target.style.backgroundColor = "#3b82f610"}
-                                            onMouseOut={(e) => e.target.style.backgroundColor = "transparent"}
-                                        >
+                                            onClick={async () => {
+                                                if (!localEmailSettings.user) {
+                                                    alert("Please set a recipient/username first.");
+                                                    return;
+                                                }
+                                                const { _id, _creationTime, updatedAt, ...rest } = localEmailSettings;
+                                                const result = await sendEmailAction({
+                                                    to: localEmailSettings.user,
+                                                    subject: "Test Email from BookMyTicket Admin",
+                                                    html: "<h1>SMTP Configuration Test</h1><p>If you are reading this, your SMTP settings are working correctly! 🎉</p>",
+                                                    settings: {
+                                                        ...rest,
+                                                        port: parseInt(localEmailSettings.port) || 0
+                                                    }
+                                                });
+                                                if (result.success) {
+                                                    alert("Test email sent successfully! Please check your inbox.");
+                                                } else {
+                                                    alert("Error sending test email: " + result.error);
+                                                }
+                                            }}
+                                            style={{ backgroundColor: "#fff", color: "#3b82f6", border: "1px solid #3b82f6", padding: "10px 22px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}>
                                             Send Test Mail
                                         </button>
                                     </div>
@@ -3560,7 +3738,68 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video"].includes(activeTab)) && (
+                    {activeTab === "admin_management" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Team Management</h3>
+                                <button 
+                                    onClick={() => {
+                                        setNewAdmin({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
+                                        setAdminModal({ mode: "create" });
+                                    }}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}
+                                >
+                                    <Plus size={18} /> Add New Admin
+                                </button>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Full Name</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Username</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Role</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Last Login</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(Array.isArray(admins) ? admins : []).map((adm) => (
+                                            <tr key={adm._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{adm.fullName}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{adm.username}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{adm.email}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6", fontWeight: 600 }}>{adm.role.toUpperCase()}</span>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <button 
+                                                        onClick={() => updateAdminStatusMutation({ id: adm._id, status: adm.status === "Active" ? "Inactive" : "Active" })}
+                                                        style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: adm.status === "Active" ? "#22c55e15" : "#f1f5f9", color: adm.status === "Active" ? "#22c55e" : "#64748b", border: "none", cursor: "pointer", fontWeight: 600 }}
+                                                    >
+                                                        {adm.status?.toUpperCase() || "ACTIVE"}
+                                                    </button>
+                                                </td>
+                                                <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>
+                                                    {adm.lastLogin ? new Date(adm.lastLogin).toLocaleString() : "Never logged in"}
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <button onClick={() => { if(confirm("Delete this admin account?")) deleteAdminMutation({ id: adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {admins.length === 0 && (
+                                            <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No administrative accounts found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management"].includes(activeTab)) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
@@ -3570,6 +3809,64 @@ function AdminHomePage() {
                     )}
 
 
+                    {/* Admin Creation Modal */}
+                    {adminModal && (
+                        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4000, padding: "20px" }}>
+                            <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "480px", borderRadius: "24px", border: `1px solid ${t.border}`, padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h2 style={{ fontSize: "22px", fontWeight: 800 }}>Add Team Member</h2>
+                                    <button onClick={() => setAdminModal(null)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Full Name</label>
+                                        <input type="text" value={newAdmin.fullName} onChange={e=>setNewAdmin({...newAdmin, fullName: e.target.value})} placeholder="e.g. John Developer" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }} />
+                                    </div>
+                                    <div style={{ display: "flex", gap: "16px" }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Username</label>
+                                            <input type="text" value={newAdmin.username} onChange={e=>setNewAdmin({...newAdmin, username: e.target.value})} placeholder="john_dev" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Role</label>
+                                            <select value={newAdmin.role} onChange={e=>setNewAdmin({...newAdmin, role: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}>
+                                                <option value="Admin">Admin</option>
+                                                <option value="Developer">Developer</option>
+                                                <option value="Tester">Tester</option>
+                                                <option value="Support">Support</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Email Address</label>
+                                        <input type="email" value={newAdmin.email} onChange={e=>setNewAdmin({...newAdmin, email: e.target.value})} placeholder="john@example.com" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Login Password</label>
+                                        <input type="password" value={newAdmin.password} onChange={e=>setNewAdmin({...newAdmin, password: e.target.value})} placeholder="••••••••" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }} />
+                                    </div>
+                                    <button 
+                                        onClick={async () => {
+                                            if (!newAdmin.fullName || !newAdmin.username || !newAdmin.password) {
+                                                return;
+                                            }
+                                            try {
+                                                const hashed = await hashPassword(newAdmin.password);
+                                                await createAdminMutation({ ...newAdmin, password: hashed });
+                                                setAdminModal(null);
+                                                setNewAdmin({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
+                                            } catch (e) {
+                                                console.error("Create admin error:", e.message);
+                                            }
+                                        }}
+                                        style={{ width: "100%", padding: "14px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", marginTop: "12px" }}
+                                    >
+                                        Create Admin Account
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {/* Organiser Approval Modal */}
                     {showApprovalModal && selectedRequestForApproval && (
                         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: "20px" }}>

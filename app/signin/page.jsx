@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import HeroBanner from "@/components/HeroBanner";
 import { useAuth } from "@/components/AuthContext";
 import { useQuery, useMutation, useConvex } from "convex/react";
@@ -23,20 +23,6 @@ export default function SignInPage() {
     const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
     const convex = useConvex();
 
-    // Fetch Active Banners for the left panel
-    const activeBanners = useQuery(api.banners.getActiveBanners);
-    const [displaySlides, setDisplaySlides] = useState(FALLBACK_BANNER_SLIDES);
-
-    useEffect(() => {
-        if (activeBanners && activeBanners.length > 0) {
-            const mapped = activeBanners.map(b => ({
-                image: b.imageUrl,
-                title: "",
-                subtitle: ""
-            }));
-            setDisplaySlides(mapped);
-        }
-    }, [activeBanners]);
 
     // Sign In
     const [identifier, setIdentifier] = useState("");
@@ -45,7 +31,6 @@ export default function SignInPage() {
     const [isStaff, setIsStaff] = useState(false);
     const [loginError, setLoginError] = useState("");
 
-    // Sign Up
     const [signupName, setSignupName] = useState("");
     const [signupEmail, setSignupEmail] = useState("");
     const [signupPass, setSignupPass] = useState("");
@@ -53,26 +38,42 @@ export default function SignInPage() {
     const [signupConfirm, setSignupConfirm] = useState("");
     const [signupError, setSignupError] = useState("");
     const [signupSuccess, setSignupSuccess] = useState(false);
+    const [signupStep, setSignupStep] = useState(1); // 1=email, 2=otp, 3=details
+    const [signupOtpCode, setSignupOtpCode] = useState("");
+    const [signupOtpVerified, setSignupOtpVerified] = useState(false);
+    const [signupOtpSending, setSignupOtpSending] = useState(false);
+    const [signupOtpVerifying, setSignupOtpVerifying] = useState(false);
 
     // Forgot Password
     const [forgotEmail, setForgotEmail] = useState("");
     const [forgotSuccess, setForgotSuccess] = useState(false);
     const [forgotError, setForgotError] = useState("");
 
-    const createUser = useMutation(api.users.create);
-    const forgotPassMutation = useMutation(api.auth.forgotPassword);
+    // OTP Verification
+    const [otpCode, setOtpCode] = useState("");
+    const [otpEmail, setOtpEmail] = useState("");
+    const [otpPurpose, setOtpPurpose] = useState(""); // "login" | "signup"
+    const [otpError, setOtpError] = useState("");
+    const [pendingSignupData, setPendingSignupData] = useState(null);
 
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false, facebookConfig: {}, googleConfig: {} });
+    const createUser = useMutation(api.users.create);
+    const sendOTPMutation = useMutation(api.auth.sendOTP);
+    const verifySignupOTP = useMutation(api.auth.verifyOTPAndCreateAccount);
+    const verifyLoginOTPMutation = useMutation(api.auth.verifyLoginOTP);
+    const loginMutation = useMutation(api.auth.login);
+    const forgotPassMutation = useMutation(api.auth.forgotPassword);
+    const verifyOTPOnlyMutation = useMutation(api.auth.verifyOTPOnly);
+
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
     const convexSsoSettings = useQuery(api.ssoSettings.get);
     useEffect(() => {
-        if (convexSsoSettings) {
-            setSsoConfigs({
-                facebook: convexSsoSettings.facebookEnabled || false,
-                google: convexSsoSettings.googleEnabled || false,
-                facebookConfig: convexSsoSettings.facebookConfig || {},
-                googleConfig: convexSsoSettings.googleConfig || {},
-            });
-        }
+        if (!convexSsoSettings) return;
+        const fb = convexSsoSettings.facebookEnabled || false;
+        const goog = convexSsoSettings.googleEnabled || false;
+        setSsoConfigs(prev => {
+            if (prev.facebook === fb && prev.google === goog) return prev;
+            return { facebook: fb, google: goog };
+        });
     }, [convexSsoSettings]);
 
     const handleLogin = async (e) => {
@@ -83,7 +84,7 @@ export default function SignInPage() {
         const id = rawId.toLowerCase();
         const hashed = await hashPassword(password);
 
-        // 1. Admin login check (Raw ID and Raw Password)
+        // 1. Admin login check
         if (rawId === "bookmyticket-admin") {
             const ok = await login(rawId, password, "admin", null, redirectPath);
             if (ok) return;
@@ -91,31 +92,65 @@ export default function SignInPage() {
             return;
         }
 
-        // 2. Public User check (Lowercased ID, Hashed Password)
+        // 2. Public User / Staff / Organiser check via auth.login mutation
         try {
-            const user = await convex.query(api.users.getByIdentifier, { identifier: id });
-            if (user) {
-                if (user.password === hashed) {
-                    await login(id, hashed, "user", user, redirectPath);
-                    return;
-                } else {
-                    setLoginError("Invalid password. Please try again.");
+            const res = await loginMutation({ identifier: id, password: hashed });
+            if (res.success) {
+                if (res.needsOtp) {
+                    setOtpEmail(res.email);
+                    setOtpPurpose("login");
+                    setMode("verify-otp");
                     return;
                 }
+                // Handle Staff/Organiser immediate login
+                await login(id, hashed, res.role, res.data, redirectPath);
+                return;
+            } else {
+                setLoginError(res.error || "Invalid username / email or password.");
             }
         } catch (err) {
-            console.error("User login error:", err);
+            console.error("Login error:", err);
+            setLoginError(err.message || "An error occurred during login.");
         }
+    };
 
-        // 3. Staff check (Lowercased ID, Hashed Password)
-        const staffOk = await login(id, hashed, "staff", null, redirectPath);
-        if (staffOk) return;
+    const handleSignupSendOTP = async (e) => {
+        e.preventDefault();
+        setSignupError("");
+        if (!signupEmail) { setSignupError("Please enter your email."); return; }
+        setSignupOtpSending(true);
+        try {
+            await sendOTPMutation({ email: signupEmail, purpose: "signup" });
+            setSignupStep(2);
+            setSignupOtpCode("");
+        } catch (err) {
+            setSignupError(err.message || "Could not send verification code.");
+        } finally {
+            setSignupOtpSending(false);
+        }
+    };
 
-        // 4. Organiser check fallback (Lowercased ID, Hashed Password)
-        const orgOk = await login(id, hashed, "organiser", null, redirectPath);
-        if (orgOk) return;
-
-        setLoginError("Invalid username / email or password. Please try again.");
+    const handleSignupVerifyOTP = async (e) => {
+        e.preventDefault();
+        setSignupError("");
+        if (signupOtpCode.length !== 8) { setSignupError("Please enter the 8-digit code."); return; }
+        setSignupOtpVerifying(true);
+        try {
+            // Strictly verify the OTP against the backend before proceeding
+            await verifyOTPOnlyMutation({
+                email: signupEmail,
+                code: signupOtpCode,
+                purpose: "signup"
+            });
+            
+            setSignupOtpVerified(true);
+            setSignupStep(3);
+            setSignupError("");
+        } catch (err) {
+            setSignupError("Invalid or expired code. Please check and try again.");
+        } finally {
+            setSignupOtpVerifying(false);
+        }
     };
 
     const handleSignup = async (e) => {
@@ -126,23 +161,49 @@ export default function SignInPage() {
 
         try {
             const hashed = await hashPassword(signupPass);
-            await createUser({
-                name: signupName,
+            // verifyOTPAndCreateAccount does final OTP validation + account creation
+            await verifySignupOTP({
+                fullName: signupName,
                 email: signupEmail,
                 password: hashed,
-                role: "user",
-                createdAt: new Date().toISOString()
+                username: signupEmail.split("@")[0] + Math.floor(Math.random() * 1000),
+                code: signupOtpCode,
             });
             setSignupSuccess(true);
         } catch (err) {
-            const msg = err.message || "";
-            if (msg.includes("ACCOUNT_EXISTS")) {
-                setSignupError("An account with this email already exists. Please Sign In instead.");
-            } else {
-                // Strip raw Convex error prefix if present
-                const cleanMsg = msg.replace(/^\[CONVEX M\(.*\)\] \[Request ID: .*\] Server Error Uncaught Error: /, "");
-                setSignupError(cleanMsg || "An error occurred during signup. Please try again.");
+            setSignupError(err.message?.includes("OTP") ? "Invalid or expired code." : "Could not create account. Please try again.");
+            // If OTP expired, go back to step 2
+            if (err.message?.includes("OTP") || err.message?.includes("expired")) {
+                setSignupStep(2);
+                setSignupOtpCode("");
             }
+        }
+    };
+
+
+    const handleVerifyOTP = async (e) => {
+        e.preventDefault();
+        setOtpError("");
+        if (otpCode.length !== 8) { setOtpError("Please enter a valid 8-digit code."); return; }
+
+        try {
+            if (otpPurpose === "signup") {
+                const userId = await verifySignupOTP({
+                    ...pendingSignupData,
+                    code: otpCode,
+                });
+                if (userId) {
+                    setSignupSuccess(true);
+                    setMode("signup");
+                }
+            } else {
+                const res = await verifyLoginOTPMutation({ email: otpEmail, code: otpCode });
+                if (res.success) {
+                    await login(otpEmail, "", "user", res.data, redirectPath);
+                }
+            }
+        } catch (err) {
+            setOtpError("Invalid or expired code. Please check and try again.");
         }
     };
 
@@ -175,7 +236,7 @@ export default function SignInPage() {
             <div style={{ flex: 1.1, position: "relative", overflow: "hidden", padding: "24px" }} className="hide-on-mobile signin-left-banner">
                 <div style={{ width: "100%", height: "100%", position: "relative", borderRadius: "20px", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-                        <HeroBanner slides={displaySlides} showDetails={false} showPromo={false} />
+                        <HeroBanner slides={FALLBACK_BANNER_SLIDES} showDetails={false} showPromo={false} />
                     </div>
                 </div>
             </div>
@@ -184,7 +245,7 @@ export default function SignInPage() {
                 
                 {/* Mobile-only Hero Banner at the very top */}
                 <div className="show-on-mobile" style={{ width: "100%", marginBottom: "0" }}>
-                    <HeroBanner slides={displaySlides} showDetails={false} showPromo={false} />
+                    <HeroBanner slides={FALLBACK_BANNER_SLIDES} showDetails={false} showPromo={false} />
                 </div>
 
                 <div style={{ width: "100%", maxWidth: "420px", padding: "40px 24px" }}>
@@ -241,7 +302,7 @@ export default function SignInPage() {
                                 </button>
                             </form>
 
-                            {(ssoConfigs.google || ssoConfigs.facebook) && (
+                            {(ssoConfigs?.google || ssoConfigs?.facebook) && (
                                 <>
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "0 0 16px", color: "#94a3b8", fontSize: "12px" }}>
                                         <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
@@ -266,6 +327,11 @@ export default function SignInPage() {
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
                             </p>
+
+                            <p style={{ textAlign: "center", marginTop: "24px", fontSize: "14px", color: "#64748b" }}>
+                                Don&apos;t have an account?{" "}
+                                <button onClick={() => setMode("signup")} style={linkBtn}>Create one now</button>
+                            </p>
                         </>
                     )}
 
@@ -276,57 +342,116 @@ export default function SignInPage() {
                                 <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", marginBottom: "10px" }}>Create an account</h2>
                                 <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
                                     Already have an account?{" "}
-                                    <button style={linkBtn} onClick={() => { setMode("signin"); setSignupError(""); setSignupSuccess(false); }}>
+                                    <button style={linkBtn} onClick={() => { setMode("signin"); setSignupError(""); setSignupSuccess(false); setSignupStep(1); setSignupOtpCode(""); setSignupEmail(""); }}>
                                         Sign in
                                     </button>
                                 </p>
                             </div>
 
-                            {signupSuccess ? (
-                                <div style={{ textAlign: "center", padding: "32px 16px", background: "#f0fdf4", borderRadius: "16px", border: "1.5px solid #bbf7d0" }}>
-                                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>🎉</div>
-                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#16a34a", marginBottom: "8px" }}>Account Created!</h3>
-                                    <p style={{ fontSize: "14px", color: "#15803d", marginBottom: "20px" }}>
-                                        Welcome, <strong>{signupName}</strong>! You can now explore and book events.
-                                    </p>
-                                    <button onClick={() => { setMode("signin"); setSignupSuccess(false); }}
-                                        style={{ padding: "12px 28px", borderRadius: "50px", border: "none", background: "#FCE15D", color: "#000", fontWeight: 800, fontSize: "14px", cursor: "pointer", boxShadow: "0 4px 15px rgba(252,225,93,0.3)" }}>
-                                        Go to Sign In
-                                    </button>
-                                </div>
-                            ) : (
-                                <form onSubmit={handleSignup}>
-                                    <label style={lbl}>Full Name</label>
-                                    <input type="text" required placeholder="John Doe" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
-
+                            {/* ── Step 1: Enter email + Send OTP ── */}
+                            {!signupSuccess && signupStep === 1 && (
+                                <form onSubmit={handleSignupSendOTP}>
                                     <label style={lbl}>Email Address</label>
-                                    <input type="email" required placeholder="you@example.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
-
-                                    <label style={lbl}>Password</label>
-                                    <div style={{ position: "relative" }}>
-                                        <input type={showSignupPass ? "text" : "password"} required placeholder="Min. 6 characters" value={signupPass} onChange={e => setSignupPass(e.target.value)} style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg} />
-                                        <button type="button" onClick={() => setShowSignupPass(p => !p)}
-                                            style={{ position: "absolute", right: "14px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
-                                            {showSignupPass ? <Eye size={18} /> : <EyeOff size={18} />}
-                                        </button>
-                                    </div>
-
-                                    <label style={lbl}>Confirm Password</label>
-                                    <input type="password" required placeholder="Re-enter password" value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
-
-                                    {signupError && (
-                                        <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>
-                                    )}
-
-                                    <button type="submit" style={submitBtn}
+                                    <input
+                                        type="email" required
+                                        placeholder="you@example.com"
+                                        value={signupEmail}
+                                        onChange={e => setSignupEmail(e.target.value)}
+                                        style={inp} onFocus={fr} onBlur={bg}
+                                    />
+                                    {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+                                    <button type="submit" disabled={signupOtpSending} style={submitBtn}
                                         onMouseOver={e => e.currentTarget.style.opacity = ".88"}
                                         onMouseOut={e => e.currentTarget.style.opacity = "1"}>
-                                        Create Account
+                                        {signupOtpSending ? "Sending OTP..." : "Send OTP →"}
                                     </button>
                                 </form>
                             )}
 
-                            <p style={{ marginTop: "8px", fontSize: "11px", color: "#94a3b8", textAlign: "center" }}>
+                            {/* ── Step 2: Verify OTP ── */}
+                            {!signupSuccess && signupStep === 2 && (
+                                <>
+                                    <div style={{ textAlign: "center", padding: "16px", background: "#fdf2f8", borderRadius: "12px", marginBottom: "24px", border: "1.5px solid #f0abfc" }}>
+                                        <p style={{ margin: 0, fontSize: "13px", color: "#86198f" }}>✉ OTP sent to <strong>{signupEmail}</strong></p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#a21caf" }}>Valid for 10 minutes — check your inbox/spam</p>
+                                    </div>
+                                    <form onSubmit={handleSignupVerifyOTP}>
+                                        <label style={lbl}>Enter 8-Digit OTP</label>
+                                        <input
+                                            type="text" required
+                                            placeholder="00000000"
+                                            maxLength={8}
+                                            value={signupOtpCode}
+                                            onChange={e => setSignupOtpCode(e.target.value.replace(/\D/g, ""))}
+                                            style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
+                                            onFocus={fr} onBlur={bg}
+                                        />
+                                        {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+                                        <button type="submit" disabled={signupOtpVerifying} style={submitBtn}
+                                            onMouseOver={e => e.currentTarget.style.opacity = ".88"}
+                                            onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+                                            {signupOtpVerifying ? "Verifying..." : "Verify OTP →"}
+                                        </button>
+                                    </form>
+                                    <p style={{ textAlign: "center", fontSize: "13px", color: "#64748b", marginTop: "8px" }}>
+                                        Didn&apos;t receive it?{" "}
+                                        <button type="button" onClick={() => handleSignupSendOTP({ preventDefault: () => {} })} style={{ ...linkBtn, color: "#c026d3", fontSize: "13px" }}>Resend OTP</button>
+                                        {" · "}
+                                        <button type="button" onClick={() => { setSignupStep(1); setSignupError(""); }} style={{ ...linkBtn, fontSize: "13px", color: "#64748b" }}>Change Email</button>
+                                    </p>
+                                </>
+                            )}
+
+                            {/* ── Step 3: Name + Password ── */}
+                            {!signupSuccess && signupStep === 3 && (
+                                <>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "#f0fdf4", borderRadius: "10px", marginBottom: "20px", border: "1.5px solid #bbf7d0" }}>
+                                        <span style={{ fontSize: "18px" }}>✅</span>
+                                        <p style={{ margin: 0, fontSize: "13px", color: "#15803d", fontWeight: 600 }}>Email verified: {signupEmail}</p>
+                                    </div>
+                                    <form onSubmit={handleSignup}>
+                                        <label style={lbl}>Full Name</label>
+                                        <input type="text" required placeholder="John Doe" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                        <label style={lbl}>Password</label>
+                                        <div style={{ position: "relative" }}>
+                                            <input type={showSignupPass ? "text" : "password"} required placeholder="Min. 6 characters" value={signupPass} onChange={e => setSignupPass(e.target.value)} style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg} />
+                                            <button type="button" onClick={() => setShowSignupPass(p => !p)}
+                                                style={{ position: "absolute", right: "14px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                                {showSignupPass ? <Eye size={18} /> : <EyeOff size={18} />}
+                                            </button>
+                                        </div>
+
+                                        <label style={lbl}>Confirm Password</label>
+                                        <input type="password" required placeholder="Re-enter password" value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+
+                                        {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+
+                                        <button type="submit" style={submitBtn}
+                                            onMouseOver={e => e.currentTarget.style.opacity = ".88"}
+                                            onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+                                            Create Account
+                                        </button>
+                                    </form>
+                                </>
+                            )}
+
+                            {/* ── Success ── */}
+                            {signupSuccess && (
+                                <div style={{ textAlign: "center", padding: "32px 16px", background: "#f0fdf4", borderRadius: "16px", border: "1.5px solid #bbf7d0" }}>
+                                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>🎉</div>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#16a34a", marginBottom: "8px" }}>Account Created!</h3>
+                                    <p style={{ fontSize: "14px", color: "#15803d", marginBottom: "20px" }}>
+                                        Welcome, <strong>{signupName}</strong>! You can now log in.
+                                    </p>
+                                    <button onClick={() => { setMode("signin"); setSignupSuccess(false); setSignupStep(1); }}
+                                        style={{ padding: "12px 28px", borderRadius: "50px", border: "none", background: "linear-gradient(135deg, #f84464, #c026d3)", color: "#fff", fontWeight: 800, fontSize: "14px", cursor: "pointer" }}>
+                                        Go to Sign In
+                                    </button>
+                                </div>
+                            )}
+
+                            <p style={{ marginTop: "16px", fontSize: "11px", color: "#94a3b8", textAlign: "center" }}>
                                 By signing up you agree to our{" "}
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp;{" "}
                                 <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy Policy</a>
@@ -375,6 +500,63 @@ export default function SignInPage() {
                                     </button>
                                 </form>
                             )}
+                        </>
+                    )}
+
+                    {/* ══ VERIFY OTP ══ */}
+                    {mode === "verify-otp" && (
+                        <>
+                            <div style={{ textAlign: "center", marginBottom: "32px" }}>
+                                <div style={{ width: "64px", height: "64px", background: "#fdf2f8", borderRadius: "20px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                                    <Mail size={32} color="#ff007f" />
+                                </div>
+                                <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", marginBottom: "10px" }}>Check your mail</h2>
+                                <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
+                                    We&apos;ve sent an 8-digit verification code to<br />
+                                    <strong style={{ color: "#0f172a" }}>{otpEmail}</strong>
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleVerifyOTP}>
+                                <label style={lbl}>8-Digit Code</label>
+                                <input
+                                    type="text" required
+                                    placeholder="00000000"
+                                    maxLength={8}
+                                    value={otpCode}
+                                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                                    style={{ ...inp, letterSpacing: "4px", fontSize: "24px", textAlign: "center", fontWeight: 700 }}
+                                    onFocus={fr} onBlur={bg}
+                                />
+
+                                {otpError && (
+                                    <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {otpError}</p>
+                                )}
+
+                                <button type="submit" style={submitBtn}>
+                                    Verify Code
+                                </button>
+                            </form>
+
+                            <p style={{ textAlign: "center", fontSize: "14px", color: "#64748b" }}>
+                                Didn&apos;t receive it?{" "}
+                                <button type="button" 
+                                    onClick={async () => {
+                                        try {
+                                            await sendOTPMutation({ email: otpEmail, purpose: otpPurpose });
+                                        } catch (e) {
+                                            setOtpError("Failed to resend code.");
+                                        }
+                                    }}
+                                    style={{ ...linkBtn, color: "#ff007f", textDecoration: "none" }}>
+                                    Resend Code
+                                </button>
+                            </p>
+
+                            <button onClick={() => setMode(otpPurpose === "signup" ? "signup" : "signin")} 
+                                style={{ ...linkBtn, width: "100%", marginTop: "24px", textDecoration: "none", color: "#64748b", fontWeight: 500 }}>
+                                ← Back to {otpPurpose === "signup" ? "Sign Up" : "Log In"}
+                            </button>
                         </>
                     )}
 

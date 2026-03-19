@@ -88,7 +88,7 @@ export function AuthProvider({ children }) {
 
         // Public User (passed from signin page after convex check)
         if (role === "user" && userData) {
-            const authUser = { identifier, role: "user", name: userData.name, id: userData._id };
+            const authUser = { identifier, role: "user", name: userData.fullName || userData.name, id: userData._id };
             setUser(authUser);
             localStorage.setItem("user", JSON.stringify(authUser));
             router.push(redirectPath || "/");
@@ -147,6 +147,21 @@ export function AuthProvider({ children }) {
             }
         }
 
+
+        // Team Members (Admins, Developers, Testers)
+        if (role === "admin_team" && userData) {
+            const authUser = { 
+                identifier, 
+                role: "admin", // They act as admins in the UI
+                teamRole: userData.role, // "Admin", "Developer", "Tester"
+                name: userData.fullName, 
+                id: userData._id 
+            };
+            setUser(authUser);
+            localStorage.setItem("user", JSON.stringify(authUser));
+            router.push(redirectPath || "/admin");
+            return true;
+        }
 
         return false;
     };

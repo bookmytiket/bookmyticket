@@ -15,6 +15,9 @@ export const update = mutation({
         user: v.string(),
         pass: v.string(),
         from: v.string(),
+        fromName: v.optional(v.string()),
+        encryption: v.optional(v.string()),
+        authMethod: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...settings } = args;

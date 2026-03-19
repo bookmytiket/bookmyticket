@@ -58,17 +58,6 @@ function ResetPasswordForm() {
         );
     }
 
-    if (verifyToken === false) {
-        return (
-            <div style={cardStyle}>
-                <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
-                <h2 style={titleStyle}>Link Expired</h2>
-                <p style={subStyle}>This password reset link has expired or is invalid.</p>
-                <Link href="/signin" style={buttonStyle}>Go to Sign In</Link>
-            </div>
-        );
-    }
-
     if (status === "success") {
         return (
             <div style={cardStyle}>
@@ -76,6 +65,17 @@ function ResetPasswordForm() {
                 <h2 style={titleStyle}>Password Reset!</h2>
                 <p style={subStyle}>Your password has been updated successfully.</p>
                 <Link href="/signin" style={buttonStyle}>Go to Sign In</Link>
+            </div>
+        );
+    }
+
+    if (verifyToken === false) {
+        return (
+            <div style={cardStyle}>
+                <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
+                <h2 style={titleStyle}>Link Expired</h2>
+                <p style={subStyle}>This password reset link has expired (valid for 30 minutes) or has already been used. Please request a new link.</p>
+                <Link href="/signin" style={buttonStyle}>Back to Sign In</Link>
             </div>
         );
     }
