@@ -21,6 +21,8 @@ import Footer from '@/components/Footer';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
+import { Ticket, X } from 'lucide-react';
+import TicketBookingDemo from '@/components/TicketBookingDemo';
 
 function TicketCard({ event }) {
   return (
@@ -243,9 +245,13 @@ export default function Home() {
           }
         `}</style>
 
-        {/* 0) Hero Banner (Carousel) — uses Admin Home Page > Hero Banner slides when set */}
+        {/* 0) Hero Banners */}
         <div style={{ width: '100%', paddingTop: '20px' }}>
           <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
+        </div>
+        
+        <div style={{ width: '100%', paddingTop: '40px' }}>
+          <VideoHeroBanner />
         </div>
 
         <SubnavMarquee />
@@ -352,9 +358,91 @@ export default function Home() {
           </div>
         )}
       </main>
-
-      {/* ── Footer ── */}
       <Footer />
+      <DemoToggle demoVisible={true} />
     </>
+  );
+}
+
+function DemoToggle() {
+  const [minimized, setMinimized] = useState(false);
+  const router = useRouter();
+
+  if (minimized) {
+    return (
+      <div 
+        onClick={() => setMinimized(false)}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 1000,
+          background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+          color: '#fff',
+          padding: '8px 16px',
+          borderRadius: '18px',
+          boxShadow: '0 10px 30px rgba(248, 68, 100, 0.4)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: 700,
+          fontSize: '13px',
+          animation: 'slideUp 0.5s ease-out'
+        }}
+      >
+        <Ticket size={16} />
+        Live Demo
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        bottom: '30px',
+        right: '40px',
+        zIndex: 1000,
+        width: '204px', // 340 * 0.6
+        height: '420px', // 700 * 0.6
+        animation: 'slideUp 0.8s ease-out',
+        transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+      }}
+    >
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+      
+      {/* Minimize Button */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); setMinimized(true); }}
+        style={{
+          position: 'absolute',
+          top: '-10px',
+          right: '-10px',
+          width: '32px',
+          height: '32px',
+          borderRadius: '16px',
+          background: '#fff',
+          border: '2px solid #f84464',
+          color: '#f84464',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 1100,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}
+      >
+        <X size={16} strokeWidth={3} />
+      </button>
+
+      {/* Scaled Phone Demo */}
+      <TicketBookingDemo scale={0.6} />
+    </div>
   );
 }
