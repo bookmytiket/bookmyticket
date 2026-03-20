@@ -571,6 +571,8 @@ function AdminHomePage() {
     const convexUsers = useQuery(api.users.list) || [];
     const dashboardStats = useQuery(api.analytics.getDashboardStats);
     const admins = useQuery(api.admins.list) || [];
+    const allBrandingKYC = useQuery(api.branding.listAllKYC) || [];
+    const verifyKYCMutation = useMutation(api.branding.verifyKYC);
 
     const deleteEventMutation = useMutation(api.events.deleteEvent);
     const updateEventMutation = useMutation(api.events.updateEvent);
@@ -1018,6 +1020,9 @@ function AdminHomePage() {
                     <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
                         <MessageCircle size={20} /> Support Tickets
                     </button>
+                    <button onClick={() => setActiveTab("branding_partners")} className={`sidebar-item ${activeTab === "branding_partners" ? "active" : ""}`}>
+                        <Shield size={20} /> Branding Partners
+                    </button>
                     <button onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
                         <FileText size={20} /> Pages
                     </button>
@@ -1078,7 +1083,7 @@ function AdminHomePage() {
                                 {[
                                     { label: "Hero Banner (Slides)", id: "hero" },
                                     { label: "Video Banner & Content", id: "video_banner" },
-                                    { label: "Branding", id: "branding" },
+                                    { label: "Site Branding", id: "site_branding" },
                                     { label: "Featured Events", id: "events_settings" },
                                     { label: "Event Partners", id: "event_partners" },
                                     { label: "Recent Memories", id: "memories" },
@@ -1115,10 +1120,10 @@ function AdminHomePage() {
                 <header className="top-header">
                     <div>
                         <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
-                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "categories" ? "Event Categories" : activeTab === "video_banner" ? "Video Banner & Content" : activeTab === "copyright" ? "Copyright & Footer" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "branding_partners" ? "Branding Partners KYC" : activeTab === "categories" ? "Event Categories" : activeTab === "video_banner" ? "Video Banner & Content" : activeTab === "site_branding" ? "Site Branding" : activeTab === "copyright" ? "Copyright & Footer" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                         </h1>
                         <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>
-                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "support_tickets" ? "View and manage organiser support tickets; status changes notify organiser by email" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "ticket_settings" ? "Ticket format, logo, send workflow (SMS, Email, WhatsApp PDF)" : activeTab === "categories" ? "Manage event categories" : ""}
+                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "support_tickets" ? "View and manage organiser support tickets; status changes notify organiser by email" : activeTab === "branding_partners" ? "Review and verify branding partner KYC requests" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "ticket_settings" ? "Ticket format, logo, send workflow (SMS, Email, WhatsApp PDF)" : activeTab === "categories" ? "Manage event categories" : ""}
                         </p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -1144,7 +1149,7 @@ function AdminHomePage() {
                 )}
 
                 <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "video_banner" || activeTab === "copyright" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
+                    {(activeTab === "hero" || activeTab === "video" || activeTab === "video_banner" || activeTab === "copyright" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "site_branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
                         <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
                             {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings", "ticket_settings"].includes(activeTab) ? [
                                 { id: "email_settings", label: "Email SMTP", icon: Mail },
@@ -1157,7 +1162,7 @@ function AdminHomePage() {
                             ] : [
                                 { id: "hero", label: "Hero Slides", icon: ImageIcon },
                                 { id: "video_banner", label: "Video Banner", icon: Video },
-                                { id: "branding", label: "Branding", icon: Sparkles },
+                                { id: "site_branding", label: "Branding", icon: Sparkles },
                                 { id: "events_settings", label: "Featured Events", icon: Ticket },
                                 { id: "event_partners", label: "Event Partners", icon: Users },
                                 { id: "memories", label: "Recent Memories", icon: ImageIcon },
@@ -1330,7 +1335,7 @@ function AdminHomePage() {
                                                 onChange={(e) => setNewAdmin({...newAdmin, username: e.target.value})}
                                                 placeholder="admin123" 
                                                 style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }} 
-                                            />
+                                        />
                                         </div>
                                         <div>
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "6px" }}>Role</label>
@@ -2204,7 +2209,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "branding" && (
+                    {activeTab === "site_branding" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "24px" }}>Site Branding & Logo</h3>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
@@ -2264,6 +2269,79 @@ function AdminHomePage() {
                                     </div>
                                     <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>Logo images with transparent backgrounds work best.</p>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "branding_partners" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Branding Partners KYC</h3>
+                                <p style={{ fontSize: "13px", color: t.textSub }}>{allBrandingKYC.length} total applications</p>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Org Name</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Location</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Tax IDs</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allBrandingKYC.length > 0 ? allBrandingKYC.map((kyc) => (
+                                            <tr key={kyc._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div style={{ fontWeight: 700 }}>{kyc.orgName}</div>
+                                                    <div style={{ fontSize: "11px", color: t.textSub }}>ID: {kyc.brandId.slice(-8)}</div>
+                                                </td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>
+                                                    {kyc.city}, {kyc.state}
+                                                </td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>
+                                                    <div>GST: {kyc.gstNumber}</div>
+                                                    <div>PAN: {kyc.panNumber}</div>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ 
+                                                        fontSize: "11px", 
+                                                        padding: "4px 10px", 
+                                                        borderRadius: "20px", 
+                                                        fontWeight: 700,
+                                                        backgroundColor: kyc.status === "Verified" ? "#22c55e22" : kyc.status === "Rejected" ? "#ef444422" : "#f59e0b22",
+                                                        color: kyc.status === "Verified" ? "#22c55e" : kyc.status === "Rejected" ? "#ef4444" : "#f59e0b"
+                                                    }}>
+                                                        {kyc.status}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    {kyc.status === "Pending Review" || kyc.status === "Verification Pending" ? (
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            <button 
+                                                                onClick={() => verifyKYCMutation({ brandId: kyc.brandId, status: "Verified" })}
+                                                                style={{ padding: "6px 12px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => verifyKYCMutation({ brandId: kyc.brandId, status: "Rejected" })}
+                                                                style={{ padding: "6px 12px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: "12px", color: t.textSub }}>Processed</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No Branding Partner KYC requests found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}

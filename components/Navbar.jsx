@@ -390,7 +390,6 @@ export default function Navbar() {
           </button>
 
           <div className="header-actions-area">
-            <Link href="/advertise" className="nav-action-advertise hide-mobile">Elevate Your Brand</Link>
             <button
               className="nav-action-organiser hide-mobile"
               onClick={() => setOrgOpen(true)}
@@ -400,8 +399,11 @@ export default function Navbar() {
 
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+                <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem' }}>
                   Dashboard
+                </Link>
+                <Link href="/branding" className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', fontWeight: '700', fontSize: '0.9rem', background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', color: '#fff', padding: '10px 20px', borderRadius: '50px', boxShadow: '0 4px 15px rgba(248,68,100,0.3)' }}>
+                  Branding
                 </Link>
                 <div style={{ position: "relative" }}>
                   <div
@@ -423,7 +425,12 @@ export default function Navbar() {
                 </div>
               </div>
             ) : (
-              <Link href="/signin" className="nav-action-signin">Book Now</Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Link href="/branding" className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem', padding: '10px 20px' }}>
+                  Branding
+                </Link>
+                <Link href="/signin" className="nav-action-signin">Book Now</Link>
+              </div>
             )}
 
             <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '8px' }}>

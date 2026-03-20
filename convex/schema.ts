@@ -284,7 +284,7 @@ export default defineSchema({
         url: v.optional(v.string()),
         order: v.number(),
         updatedAt: v.number(),
-    }),
+    }).index("by_order", ["order"]),
 
     subnavItems: defineTable({
         label: v.string(),
@@ -371,4 +371,77 @@ export default defineSchema({
         expires: v.number(),
         purpose: v.string(), // "signup" | "login"
     }).index("by_email", ["email"]),
+
+    brandJourneySteps: defineTable({
+        id: v.string(), // e.g., "setup"
+        number: v.string(), // e.g., "STEP 1"
+        title: v.string(),
+        subtitle: v.string(),
+        description: v.string(),
+        icon: v.string(), // Lucide icon name string
+        bgColor: v.string(),
+        tabColor: v.string(),
+        borderColor: v.string(),
+        image: v.string(), // Emoji or storage ID
+        features: v.array(v.object({
+            name: v.string(),
+            icon: v.string(),
+            desc: v.string(),
+        })),
+        order: v.number(),
+    }).index("by_order", ["order"]),
+
+    brandingPageConfig: defineTable({
+        key: v.string(), // e.g., "hero_title"
+        value: v.any(),
+    }).index("by_key", ["key"]),
+
+    coupons: defineTable({
+        brandId: v.string(),
+        title: v.string(),
+        description: v.string(),
+        redemptionMethod: v.string(), // "In-Store", "Online"
+        discountType: v.string(), // "Percentage", "Flat"
+        discountValue: v.number(),
+        bannerUrl: v.optional(v.string()),
+        logoUrl: v.optional(v.string()),
+        startDate: v.number(),
+        endDate: v.number(),
+        usageLimit: v.optional(v.number()),
+        status: v.string(), // "Active", "Draft", "Paused"
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandStores: defineTable({
+        brandId: v.string(),
+        name: v.string(),
+        address: v.string(),
+        city: v.string(),
+        state: v.string(),
+        zip: v.string(),
+        staffEmails: v.optional(v.array(v.string())),
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandKYC: defineTable({
+        brandId: v.string(),
+        orgName: v.string(),
+        address: v.string(),
+        city: v.string(),
+        state: v.string(),
+        zip: v.string(),
+        gstNumber: v.string(),
+        panNumber: v.string(),
+        orgLogoUrl: v.optional(v.string()),
+        status: v.string(), // "Pending", "Verified", "Rejected"
+        updatedAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandAnalytics: defineTable({
+        brandId: v.string(),
+        couponId: v.optional(v.id("coupons")),
+        action: v.string(), // "View", "Scan", "Redeem"
+        timestamp: v.number(),
+        metadata: v.optional(v.any()), // e.g., user agent, location
+    }).index("by_brandId", ["brandId"]).index("by_couponId", ["couponId"]),
 });

@@ -15,16 +15,6 @@ export function AuthProvider({ children }) {
     const convex = useConvex();
 
     useEffect(() => {
-        try {
-            const storedUser = localStorage.getItem("user");
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        } catch (err) {
-            console.error("Error parsing stored user:", err);
-            localStorage.removeItem("user");
-        }
-
         const storedCity = localStorage.getItem("selectedCity");
         if (storedCity) {
             setSelectedCity(storedCity);
@@ -42,20 +32,12 @@ export function AuthProvider({ children }) {
         
         setLoading(false);
 
-        // Cross-tab logout/login synchronization
+        // Cross-tab logout synchronization
         const handleStorageChange = (e) => {
             if (e.key === "user") {
                 if (!e.newValue) {
-                    // Logout detected
                     setUser(null);
                     router.push("/signin");
-                } else {
-                    // Login detected
-                    try {
-                        setUser(JSON.parse(e.newValue));
-                    } catch (err) {
-                        console.error("Error parsing storage change user:", err);
-                    }
                 }
             }
         };
@@ -79,7 +61,6 @@ export function AuthProvider({ children }) {
             if (identifier === "bookmyticket-admin" && password === "D0n+$h@rE2k26") {
                 const mockUser = { identifier, role, name: "Master Admin" };
                 setUser(mockUser);
-                localStorage.setItem("user", JSON.stringify(mockUser));
                 router.push(redirectPath || "/admin");
                 return true;
             }
@@ -90,7 +71,6 @@ export function AuthProvider({ children }) {
         if (role === "user" && userData) {
             const authUser = { identifier, role: "user", name: userData.fullName || userData.name, id: userData._id };
             setUser(authUser);
-            localStorage.setItem("user", JSON.stringify(authUser));
             router.push(redirectPath || "/");
             return true;
         }
@@ -107,7 +87,6 @@ export function AuthProvider({ children }) {
                     const org = result.organiser;
                     const authUser = { identifier, role: "organiser", name: org.name, id: org._id };
                     setUser(authUser);
-                    localStorage.setItem("user", JSON.stringify(authUser));
                     router.push(redirectPath || "/organiser");
                     return true;
                 }
@@ -117,7 +96,6 @@ export function AuthProvider({ children }) {
                 if (identifier === "organiser@bookmyticket.com" && (password === "organiser123" || password === "985a539a667140f6b3cfc2398a69e900995c58a5da359740a12e52b2b115eb3d")) {
                     const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
                     setUser(mockUser);
-                    localStorage.setItem("user", JSON.stringify(mockUser));
                     router.push(redirectPath || "/organiser");
                     return true;
                 }
@@ -138,7 +116,6 @@ export function AuthProvider({ children }) {
                     const staff = result.staff;
                     const authUser = { identifier, role: "staff", name: staff.name, id: staff._id, organiserId: staff.organiserId };
                     setUser(authUser);
-                    localStorage.setItem("user", JSON.stringify(authUser));
                     router.push(redirectPath || "/organiser?tab=pwa_scanner");
                     return true;
                 }
@@ -158,8 +135,20 @@ export function AuthProvider({ children }) {
                 id: userData._id 
             };
             setUser(authUser);
-            localStorage.setItem("user", JSON.stringify(authUser));
             router.push(redirectPath || "/admin");
+            return true;
+        }
+
+        // Validate Branding Partner against Convex Database
+        if (role === "branding_partner" && userData) {
+            const authUser = { 
+                identifier, 
+                role: "branding_partner", 
+                id: userData._id, 
+                name: userData.fullName || userData.name 
+            };
+            setUser(authUser);
+            router.push(redirectPath || "/branding/dashboard");
             return true;
         }
 
