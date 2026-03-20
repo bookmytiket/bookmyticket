@@ -198,7 +198,7 @@ export default function BrandingSignIn() {
         .signin-btn-primary {
           width: 100%;
           padding: 13px;
-          background: #202548;
+          background: #1e1b4b;
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -208,7 +208,7 @@ export default function BrandingSignIn() {
           transition: background 0.2s;
           font-family: 'Inter', sans-serif;
         }
-        .signin-btn-primary:hover { background: #2d3178; }
+        .signin-btn-primary:hover { background: #2d2a5d; }
         .signin-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .signin-label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
         .slide-dot { width: 8px; height: 8px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s; }
@@ -227,7 +227,9 @@ export default function BrandingSignIn() {
       }}>
         {/* Logo */}
         <Link href="/branding" style={{ textDecoration: "none", display: "inline-block", marginBottom: 40 }}>
-          <img src="/logo.png" alt="BookMyTicket" style={{ height: 80, filter: "brightness(0) invert(1)" }} />
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+             ticket<span style={{ color: '#ff5862' }}>9</span>
+          </div>
         </Link>
 
         {/* Illustration */}
@@ -274,7 +276,9 @@ export default function BrandingSignIn() {
       }}>
         {/* Logo top of right panel */}
         <Link href="/branding" style={{ position: "absolute", top: 32, left: 48, textDecoration: "none", display: "inline-block" }}>
-          <img src="/logo.png" alt="BookMyTicket" style={{ height: 72 }} />
+          <div style={{ fontSize: 28, fontWeight: 900, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 6 }}>
+             ticket<span style={{ color: '#ff5862' }}>9</span>
+          </div>
         </Link>
 
         <div style={{ width: "100%", maxWidth: 400, marginTop: 40 }}>

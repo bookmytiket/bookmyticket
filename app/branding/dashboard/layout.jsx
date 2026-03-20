@@ -1,0 +1,151 @@
+"use client";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import {
+  LayoutDashboard, Ticket, Store, BarChart3, FileCheck,
+  Settings, HelpCircle, QrCode, LogOut, Lock, Ghost
+} from 'lucide-react';
+import { useAuth } from '@/components/AuthContext';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+
+/* ── Light theme tokens ── */
+const C = {
+  bg: '#f4f5f7',
+  sidebar: '#f9fafb',
+  sidebarBorder: '#e5e7eb',
+  accent: '#ff5862',
+  accentActive: '#82111b',
+  accentGrad: '#ff5862',
+  text: '#1e1b4b',
+  muted: '#6b7280',
+  subtext: '#9ca3af',
+  card: '#ffffff',
+  border: '#e5e7eb',
+  activeText: '#ffffff',
+};
+
+const SidebarItem = ({ icon: Icon, label, active, disabled, onClick }) => (
+  <button
+    onClick={!disabled ? onClick : undefined}
+    style={{
+      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px 14px', borderRadius: 12, border: 'none',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      background: active ? C.accentActive : 'transparent',
+      color: active ? C.activeText : disabled ? '#d1d5db' : C.muted,
+      fontWeight: 600, fontSize: 13, transition: 'all 0.18s',
+      marginBottom: 4, textAlign: 'left',
+    }}
+    onMouseEnter={e => { if (!active && !disabled) e.currentTarget.style.background = '#f3f4f6'; }}
+    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+  >
+    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Icon size={17} />
+      {label}
+    </span>
+    {disabled && <Lock size={12} style={{ color: '#d1d5db' }} />}
+  </button>
+);
+
+export default function DashboardLayout({ children }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+
+  const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
+  const kycStatus = kycData?.status || 'Verification Pending';
+  const isVerified = kycStatus === 'Verified';
+
+  useEffect(() => {
+    if (!user || user.role !== 'branding_partner') {
+      router.push('/branding/signin');
+    }
+  }, [user, router]);
+
+  if (!user) return null;
+
+  const handleLogout = () => { logout(); router.push('/branding/signin'); };
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, display: 'flex', fontFamily: "'Inter','Segoe UI',sans-serif", fontSize: 14 }}>
+
+      {/* ── Sidebar ── */}
+      <aside style={{ width: 260, background: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}`, display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, padding: '24px 16px' }}>
+        
+        {/* Logo */}
+        <div style={{ padding: '4px 4px 24px' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: 24, fontWeight: 900, color: '#1e1b4b', gap: 4 }}>
+             ticket<span style={{ color: '#ff5862' }}>9</span>
+          </Link>
+        </div>
+
+        {/* Dashboard label */}
+        <div style={{ padding: '0 4px 8px', fontSize: 11, fontWeight: 700, color: C.subtext, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          Dashboard
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto' }}>
+          <SidebarItem icon={LayoutDashboard} label="Dashboard"   active={pathname === '/branding/dashboard' && !pathname.includes('coupon-creation')} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={Ticket}          label="Coupons"     active={pathname.includes('/coupons') || pathname.includes('coupon-creation')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={Store}           label="Stores"      active={pathname.includes('/stores')}    disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={BarChart3}       label="Reports"     active={pathname.includes('/reports')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={FileCheck}       label="KYC"         active={pathname.includes('/kyc')}       onClick={() => router.push('/branding/kyc')} />
+          <SidebarItem icon={Settings}        label="Settings"    active={pathname.includes('/settings')}  onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={HelpCircle}      label="Help"        active={pathname.includes('/help')}      onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={QrCode}          label="QR Scanner"  active={pathname.includes('/scanner')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+        </nav>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+            borderRadius: 10, border: 'none', background: 'transparent',
+            color: C.muted, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+            width: '100%', transition: 'all 0.18s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#ef4444'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.muted; }}
+        >
+          <LogOut size={16} />
+          Logout
+        </button>
+      </aside>
+
+      {/* ── Main ── */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <header style={{
+          height: 64, background: '#ffffff', borderBottom: `1px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 28px', position: 'sticky', top: 0, zIndex: 10,
+        }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 4 }}>
+             ticket<span style={{ color: '#ff5862' }}>9</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button 
+              style={{ 
+                background: '#fff', color: '#1e1b4b', border: '1px solid #e5e7eb', 
+                padding: '8px 24px', borderRadius: 24, fontWeight: 700, 
+                fontSize: 13, cursor: 'pointer' 
+              }}
+            >
+              Signup
+            </button>
+          </div>
+        </header>
+
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
