@@ -86,6 +86,8 @@ export default function BrandingDashboard() {
   const isVerified = kycStatus === 'Verified';
   const isPending = kycStatus === 'Verification Pending';
 
+  const myCoupons = useQuery(api.branding.getBrandCoupons, user ? { brandId: user.id } : "skip") || [];
+
   if (!isMounted || !user) return null;
 
   const handlePayment = async (planType) => {
@@ -203,11 +205,37 @@ export default function BrandingDashboard() {
               Create Coupon
             </button>
           </div>
-          <div style={{ background: C.card, borderRadius: 16, padding: 40, textAlign: 'center', border: `1px solid ${C.border}` }}>
-            <Ticket size={48} style={{ color: C.subtext, marginBottom: 16 }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>No coupons created yet</h3>
-            <p style={{ color: C.muted, fontSize: 14 }}>Once you create a coupon, it will appear here for management and tracking.</p>
-          </div>
+          {myCoupons && myCoupons.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+              {myCoupons.map(coupon => (
+                <div key={coupon._id} style={{ background: '#fff', borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ height: 120, background: coupon.bannerUrl ? `url(${coupon.bannerUrl}) center/cover` : '#f3f4f6', position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: 12, right: 12, background: coupon.status === 'Active' ? '#10b981' : '#f59e0b', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>
+                      {coupon.status}
+                    </div>
+                  </div>
+                  <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      {coupon.logoUrl && <img src={coupon.logoUrl} style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 4 }} />}
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{coupon.brandName}</span>
+                    </div>
+                    <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.3 }}>{coupon.title}</h3>
+                    <p style={{ margin: '0 0 16px', fontSize: 13, color: C.muted, flex: 1 }}>{coupon.description?.substring(0, 80)}...</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Code: <strong style={{ color: C.text }}>{coupon.couponCode}</strong></div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: C.accent }}>{coupon.discountType === 'Percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} OFF</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: C.card, borderRadius: 16, padding: 40, textAlign: 'center', border: `1px solid ${C.border}` }}>
+              <Ticket size={48} style={{ color: C.subtext, marginBottom: 16 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>No coupons created yet</h3>
+              <p style={{ color: C.muted, fontSize: 14 }}>Once you create a coupon, it will appear here for management and tracking.</p>
+            </div>
+          )}
         </>
       )}
 

@@ -7,8 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from '../data/homeEvents';
 import { Colors } from '../theme/Theme';
-import PromotionBanner from '../components/PromotionBanner';
 import ComingSoonSection from '../components/ComingSoonSection';
+import CouponCard from '../components/CouponCard';
+import CouponOverlay from '../components/CouponOverlay';
 
 const { width } = Dimensions.get('window');
 
@@ -75,8 +76,10 @@ export default function HomeScreen() {
   const convexEvents = useQuery(api.events.getActiveEvents);
   const convexCategories = useQuery(api.homeSettings.getCategories);
   const convexBanners = useQuery(api.homeSettings.getBannerSlides);
+  const convexCoupons = useQuery(api.branding.getHomeCoupons) || [];
   
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
 
   const { selectedCity, loading, recentlyViewed } = useAuth();
 
@@ -176,28 +179,46 @@ export default function HomeScreen() {
     );
   }
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <PromotionBanner />
-      <View style={styles.hero}>
-        {currentBanner ? (
-          <>
-            <Image source={{ uri: currentBanner.img }} style={styles.heroImage} resizeMode="cover" />
-            <View style={styles.heroOverlay} />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroTitle} numberOfLines={2}>{currentBanner.title || "Live Events & Experiences"}</Text>
-              <Text style={styles.heroSub} numberOfLines={1}>{currentBanner.sub || "Book tickets for concerts, sports & more"}</Text>
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          {currentBanner ? (
+            <>
+              <Image source={{ uri: currentBanner.img }} style={styles.heroImage} resizeMode="cover" />
+              <View style={styles.heroOverlay} />
+              <View style={styles.heroContent}>
+                <Text style={styles.heroTitle} numberOfLines={2}>{currentBanner.title || "Live Events & Experiences"}</Text>
+                <Text style={styles.heroSub} numberOfLines={1}>{currentBanner.sub || "Book tickets for concerts, sports & more"}</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.bannerPlaceholder}><ActivityIndicator color="#fff" /></View>
+          )}
+        </View>
+
+        {convexCoupons.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Exclusive </Text>
+              <Text style={[styles.sectionTitle, { color: Colors.primary }]}>Brand Offers</Text>
             </View>
-          </>
-        ) : (
-          <View style={styles.bannerPlaceholder}><ActivityIndicator color="#fff" /></View>
+            <FlatList
+              horizontal
+              data={convexCoupons}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => <CouponCard coupon={item} onPress={() => setSelectedCoupon(item)} />}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            />
+          </View>
         )}
-      </View>
-      <View style={styles.categoriesSection}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.categoriesList}
-        >
+
+        <View style={styles.categoriesSection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.categoriesList}
+          >
           {displayCategories.map((item, idx) => (
             <TouchableOpacity 
               key={item._id || idx} 
@@ -231,7 +252,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+
+      <CouponOverlay 
+        visible={!!selectedCoupon} 
+        coupon={selectedCoupon} 
+        onClose={() => setSelectedCoupon(null)} 
+      />
+    </>
   );
 }
 

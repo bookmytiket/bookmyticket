@@ -1,7 +1,10 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, QrCode, Monitor, Gift, ArrowRight, X, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/components/AuthContext';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 const C = {
   bg: '#f4f5f7',
@@ -13,17 +16,29 @@ const C = {
   primary: '#4f46e5',
 };
 
-const LOGO_IMG = "/branding/nykaa_logo.png";
-const BANNER_IMG = "/branding/beauty_banner.png";
+const BASE_URL = "https://bookmyticket-nu.vercel.app";
+const LOGO_IMG = `${BASE_URL}/branding/nykaa_logo.png`;
+const BANNER_IMG = `${BASE_URL}/branding/beauty_banner.png`;
 
 export default function CouponCreationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const type = searchParams.get('type') || 'website';
+  const { user } = useAuth();
+  const createCoupon = useMutation(api.branding.createCoupon);
+  const generateUploadUrl = useMutation(api.branding.generateUploadUrl);
+  
+  const bannerInputRef = React.useRef(null);
+  const logoInputRef = React.useRef(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [bannerFile, setBannerFile] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
 
   const [form, setForm] = useState({
     redemptionMethod: 'In-Store Only',
-    discountType: 'percentage',
+    discountType: 'Flat',
     discountValue: '250',
     brandName: 'Nykaa',
     couponTitle: 'Get ₹250 Off on Nykaa Beauty Products!',
@@ -59,9 +74,90 @@ export default function CouponCreationPage() {
     setForm({...form, howToRedeem: newSteps});
   };
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleSave = async () => {
+    alert("Save button click attached and running!");
+    console.log("SAVE BUTTON TRIGGERED!");
+    if (!user) {
+      console.warn("User is null or undefined");
+      alert("You must be logged in to create a coupon.");
+      return;
+    }
+    if (!form.couponTitle || !form.discountValue) {
+      console.warn("Missing required fields");
+      alert("Please fill in required fields: Coupon Title and Discount Value");
+      return;
+    }
+
+    console.log("Starting save sequence. form state:", form);
+    setIsSaving(true);
+    try {
+      let bannerStorageId = null;
+      let logoStorageId = null;
+
+      // Upload banner if selected
+      if (bannerFile) {
+        const postUrl = await generateUploadUrl();
+        const res = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": bannerFile.type },
+          body: bannerFile,
+        });
+        const { storageId } = await res.json();
+        bannerStorageId = storageId;
+      }
+
+      // Upload logo if selected
+      if (logoFile) {
+        const postUrl = await generateUploadUrl();
+        const res = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": logoFile.type },
+          body: logoFile,
+        });
+        const { storageId } = await res.json();
+        logoStorageId = storageId;
+      }
+
+      await createCoupon({
+        brandId: user.id || 'default_brand',
+        title: form.couponTitle,
+        description: form.description,
+        redemptionMethod: form.redemptionMethod === 'In-Store Only' ? 'In-Store' : (form.redemptionMethod === 'Online Only' ? 'Online' : 'Both'),
+        discountType: form.discountType === 'percentage' ? 'Percentage' : 'Flat',
+        discountValue: Number(form.discountValue) || 0,
+        couponCode: form.couponCode,
+        redirectUrl: form.redirectUrl,
+        howToRedeem: form.howToRedeem.join('\n'),
+        termsAndConditions: form.terms,
+        bannerUrl: bannerStorageId ? undefined : form.couponImage, // fallback
+        logoUrl: logoStorageId ? undefined : form.brandLogo, // fallback
+        bannerStorageId: bannerStorageId || undefined,
+        logoStorageId: logoStorageId || undefined,
+        brandName: form.brandName,
+        startDate: form.startDate ? new Date(form.startDate).getTime() : Date.now(),
+        endDate: form.endDate ? new Date(form.endDate).getTime() : Date.now() + 30 * 24 * 60 * 60 * 1000,
+        usageLimit: Number(form.usageLimit) || 1000,
+      });
+
+      alert("Coupon created successfully! It will now appear on the home page.");
+      router.push('/branding/dashboard');
+    } catch (e) {
+      console.error("Save Coupon Error Details:", e);
+      alert("Error creating coupon: " + String(e.message || e));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const removeStep = (index) => {
     setForm({...form, howToRedeem: form.howToRedeem.filter((_, i) => i !== index)});
   };
+
+  if (!isMounted) return null;
 
   return (
     <div style={{ padding: '28px 40px' }}>
@@ -201,20 +297,42 @@ export default function CouponCreationPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>Coupon Image (1200x600) <span style={{ color: C.accent }}>*</span></label>
-                <div style={{ position: 'relative', width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-                  <img src={BANNER_IMG} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', top: 8, right: 8, background: '#fff', borderRadius: 8, padding: 6, cursor: 'pointer', border: `1px solid ${C.border}`, color: C.accent }}>
-                    <X size={14} />
-                  </div>
+                <div 
+                  onClick={() => bannerInputRef.current?.click()}
+                  style={{ position: 'relative', width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, display: 'block', cursor: 'pointer', background: '#f9fafb' }}>
+                  <input type="file" accept="image/*" ref={bannerInputRef} onChange={e => { if (e.target.files[0]) setBannerFile(e.target.files[0]) }} style={{ display: 'none' }} />
+                  {(bannerFile || form.couponImage) ? (
+                    <>
+                      <img src={bannerFile ? URL.createObjectURL(bannerFile) : form.couponImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setBannerFile(null); setForm({...form, couponImage: ''}); }} style={{ position: 'absolute', top: 8, right: 8, background: '#fff', borderRadius: 8, padding: 6, cursor: 'pointer', border: `1px solid ${C.border}`, color: C.accent, zIndex: 10 }}>
+                        <X size={14} />
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                      <span style={{ fontSize: 12, color: C.primary, fontWeight: 600 }}>+ Upload Image</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>Brand Logo (300x300) <span style={{ color: C.accent }}>*</span></label>
-                <div style={{ position: 'relative', width: 120, height: 120, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src={LOGO_IMG} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                  <div style={{ position: 'absolute', top: 8, right: 8, background: '#fff', borderRadius: 8, padding: 6, cursor: 'pointer', border: `1px solid ${C.border}`, color: C.accent }}>
-                    <X size={14} />
-                  </div>
+                <div 
+                  onClick={() => logoInputRef.current?.click()}
+                  style={{ position: 'relative', width: 120, height: 120, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', cursor: 'pointer' }}>
+                  <input type="file" accept="image/*" ref={logoInputRef} onChange={e => { if (e.target.files[0]) setLogoFile(e.target.files[0]) }} style={{ display: 'none' }} />
+                  {(logoFile || form.brandLogo) ? (
+                    <>
+                      <img src={logoFile ? URL.createObjectURL(logoFile) : form.brandLogo} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLogoFile(null); setForm({...form, brandLogo: ''}); }} style={{ position: 'absolute', top: 8, right: 8, background: '#fff', borderRadius: 8, padding: 6, cursor: 'pointer', border: `1px solid ${C.border}`, color: C.accent, zIndex: 10 }}>
+                        <X size={14} />
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                      <span style={{ fontSize: 12, color: C.primary, fontWeight: 600 }}>+ Logo</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -338,8 +456,11 @@ export default function CouponCreationPage() {
             </div>
           </div>
 
-          <button style={{ width: '100%', background: C.primary, color: '#fff', border: 'none', padding: '14px', borderRadius: 10, fontWeight: 800, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)' }}>
-            Save Coupon
+          <button 
+            onClick={handleSave} 
+            disabled={isSaving}
+            style={{ width: '100%', background: C.primary, color: '#fff', border: 'none', padding: '14px', borderRadius: 10, fontWeight: 800, fontSize: 15, cursor: isSaving ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)', opacity: isSaving ? 0.7 : 1 }}>
+            {isSaving ? "Saving..." : "Save Coupon"}
           </button>
         </div>
 

@@ -23,6 +23,7 @@ import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
+import BrandCouponsSection from '@/components/BrandCouponsSection';
 
 function TicketCard({ event }) {
   return (
@@ -213,11 +214,18 @@ export default function Home() {
   const heroSlidesConfig = useQuery(api.systemConfig.getConfig, { key: "admin_hero_slides" });
   const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
   const activeBanners = useQuery(api.branding.getActiveBanners) || [];
+  const homeCoupons = useQuery(api.branding.getHomeCoupons) || [];
+
+
+  // Stable key from activeBanners to prevent infinite re-renders
+  const activeBannersKey = activeBanners.map(b => b._id).join(',');
 
   useEffect(() => {
     const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
     let slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
     
+    let mappedSlides = [];
+
     // Prepend active brand Premium Banners
     if (activeBanners.length > 0) {
       const brandSlides = activeBanners.map((b) => ({
@@ -228,12 +236,29 @@ export default function Home() {
         alt: "Sponsored Brand",
         url: b.redirectUrl || "#"
       }));
-      // Put premium banners first
-      slides = [...brandSlides, ...slides];
+      mappedSlides = [...mappedSlides, ...brandSlides];
     }
     
+    // Inject active Home Coupons as advert banners
+    if (homeCoupons.length > 0) {
+      const couponSlides = homeCoupons.filter(c => c.bannerUrl).map((c) => ({
+        id: c._id,
+        img: c.bannerUrl,
+        title: c.title,
+        sub: c.discountType === "Percentage" ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`,
+        alt: c.brandName || "Coupon Offer",
+        url: c.redirectUrl || "#"
+      }));
+      mappedSlides = [...mappedSlides, ...couponSlides];
+    }
+    
+    if (mappedSlides.length > 0) {
+        slides = [...mappedSlides, ...slides];
+    }
+
     setHeroSlides(slides);
-  }, [heroSlidesConfig, activeBanners]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroSlidesConfig, activeBannersKey, homeCoupons]);
 
   useEffect(() => {
     const parsed = eventPartnersConfig != null ? parseConfig(eventPartnersConfig) : null;
@@ -352,6 +377,13 @@ export default function Home() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
+            {/* Cloned Brand Coupons Section (Top Trending Offers) - Placed under Hero Banner */}
+            <BrandCouponsSection 
+               coupons={homeCoupons} 
+               title="Top Trending Offers" 
+               subtitle="Grab these limited time deals before they expire!" 
+            />
+
             {/* 1) Recently Viewed */}
             <RecentlyViewedEvents />
 
@@ -379,6 +411,7 @@ export default function Home() {
             </div>
 
             {/* Subscription Banner before Footer */}
+            <BrandCouponsSection coupons={homeCoupons} />
             <SubscriptionBanner />
           </div>
         )}

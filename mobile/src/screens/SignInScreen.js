@@ -23,6 +23,7 @@ export default function SignInScreen() {
   const sendOTPMutation = useMutation(api.auth.sendOTP);
   const verifyOTPOnlyMutation = useMutation(api.auth.verifyOTPOnly);
   const verifyOTPAndCreateAccountMutation = useMutation(api.auth.verifyOTPAndCreateAccount);
+  const forgotPasswordMutation = useMutation(api.auth.forgotPassword);
 
   const [mode, setMode] = useState('signin');
   const [identifier, setIdentifier] = useState('');
@@ -56,6 +57,26 @@ export default function SignInScreen() {
   const [loginStep, setLoginStep] = useState(1); // 1: Password, 2: OTP
   const [loginEmail, setLoginEmail] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  const handleForgotPassword = async () => {
+    setError('');
+    const email = forgotEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await forgotPasswordMutation({ email });
+      setForgotSuccess(true);
+    } catch (err) {
+      setError('Failed to send reset email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     setError('');
@@ -263,7 +284,12 @@ export default function SignInScreen() {
                     <Ionicons name={showPass ? 'eye-off' : 'eye'} size={22} color={Colors.textMuted} />
                   </TouchableOpacity>
                 </View>
-                {error ? <Text style={styles.error}>{error} <Text onPress={() => setLoginStep(1)} style={{color: Colors.primary}}></Text></Text> : null}
+                
+                <TouchableOpacity onPress={() => { setMode('forgot'); setError(''); setForgotSuccess(false); }} style={{ alignSelf: 'flex-end', marginBottom: 16 }}>
+                  <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 13 }}>Forgot Password?</Text>
+                </TouchableOpacity>
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
                 <TouchableOpacity onPress={handleLogin} disabled={loading}>
                   <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
                     <Text style={styles.btnText}>{loading ? 'Checking…' : 'Log in'}</Text>
@@ -298,6 +324,40 @@ export default function SignInScreen() {
             <TouchableOpacity onPress={() => { setMode('signup'); setError(''); setSignupSuccess(false); setSignupStep(1); setLoginStep(1); }}>
               <Text style={styles.link}>Don't have an account? Create one now</Text>
             </TouchableOpacity>
+          </View>
+        ) : mode === 'forgot' ? (
+          <View style={styles.form}>
+            <Text style={styles.title}>Reset Password</Text>
+            {forgotSuccess ? (
+              <>
+                <Text style={styles.success}>Reset link sent! Please check your email inbox to reset your password.</Text>
+                <TouchableOpacity style={[styles.btn, { backgroundColor: Colors.primary }]} onPress={() => { setMode('signin'); setForgotSuccess(false); setForgotEmail(''); }}>
+                  <Text style={styles.btnText}>Return to Sign In</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.stepTitle}>Enter your registered email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor="#9ca3af"
+                  value={forgotEmail}
+                  onChangeText={setForgotEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+                  <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+                    <Text style={styles.btnText}>{loading ? 'Sending Link…' : 'Send Reset Link'}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setMode('signin'); setError(''); }}>
+                  <Text style={styles.link}>I remember my password. Go back</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         ) : (
           <View style={styles.form}>

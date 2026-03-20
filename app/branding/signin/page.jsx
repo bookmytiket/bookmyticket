@@ -371,7 +371,7 @@ export default function BrandingSignIn() {
             <>
               <h2 style={{ fontSize: 26, fontWeight: 900, marginBottom: 6, color: "#111827", textAlign: "center" }}>Check Your Email 📬</h2>
               <p style={{ fontSize: 14, color: "#6b7280", textAlign: "center", marginBottom: 32 }}>
-                We sent a 6-digit verification code to <strong>{email}</strong>
+                We sent an 8-digit verification code to <strong>{email}</strong>
               </p>
               <form onSubmit={handleVerifyOTP}>
                 <div style={{ marginBottom: 24 }}>

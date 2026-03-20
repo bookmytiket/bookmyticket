@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 
 // --- Queries ---
 
@@ -230,15 +230,34 @@ export const createCoupon = mutation({
     redemptionMethod: v.string(),
     discountType: v.string(),
     discountValue: v.number(),
-    bannerUrl: v.optional(v.string()),
-    logoUrl: v.optional(v.string()),
+    couponCode: v.optional(v.string()),
+    redirectUrl: v.optional(v.string()),
+    howToRedeem: v.optional(v.string()),
+    termsAndConditions: v.optional(v.string()),
+    bannerUrl: v.optional(v.string()), // string fallback
+    logoUrl: v.optional(v.string()), // string fallback
+    bannerStorageId: v.optional(v.id("_storage")), // new real-file
+    logoStorageId: v.optional(v.id("_storage")), // new real-file
+    brandName: v.optional(v.string()),
     startDate: v.number(),
     endDate: v.number(),
     usageLimit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { bannerStorageId, logoStorageId, ...rest } = args;
+    
+    const finalBannerUrl = bannerStorageId 
+        ? await ctx.storage.getUrl(bannerStorageId) 
+        : args.bannerUrl;
+        
+    const finalLogoUrl = logoStorageId 
+        ? await ctx.storage.getUrl(logoStorageId) 
+        : args.logoUrl;
+
     return await ctx.db.insert("coupons", {
-      ...args,
+      ...rest,
+      bannerUrl: finalBannerUrl ?? undefined,
+      logoUrl: finalLogoUrl ?? undefined,
       status: "Active",
       createdAt: Date.now(),
     });
@@ -541,9 +560,25 @@ export const getActiveBanners = query({
     },
 });
 
-import { internalMutation } from "./_generated/server";
+export const getHomeCoupons = query({
+    args: {},
+    handler: async (ctx) => {
+        const now = Date.now();
+        const all = await ctx.db.query("coupons").collect();
+        return all.filter((c) => c.status === "Active" && c.endDate >= now);
+    },
+});
 
-export const expireSubscriptions = internalMutation({
+export const getBrandCoupons = query({
+    args: { brandId: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("coupons")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .order("desc")
+            .collect();
+    },
+});export const expireSubscriptions = internalMutation({
     args: {},
     handler: async (ctx) => {
         const now = Date.now();

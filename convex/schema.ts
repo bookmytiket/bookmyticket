@@ -403,8 +403,13 @@ export default defineSchema({
         redemptionMethod: v.string(), // "In-Store", "Online"
         discountType: v.string(), // "Percentage", "Flat"
         discountValue: v.number(),
+        couponCode: v.optional(v.string()), // e.g. "PAYTMHOTEL10"
+        redirectUrl: v.optional(v.string()), // Where user goes after "Redeem Now"
+        howToRedeem: v.optional(v.string()),
+        termsAndConditions: v.optional(v.string()),
         bannerUrl: v.optional(v.string()),
         logoUrl: v.optional(v.string()),
+        brandName: v.optional(v.string()),
         startDate: v.number(),
         endDate: v.number(),
         usageLimit: v.optional(v.number()),
