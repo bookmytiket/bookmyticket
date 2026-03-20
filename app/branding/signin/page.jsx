@@ -225,12 +225,7 @@ export default function BrandingSignIn() {
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Logo */}
-        <Link href="/branding" style={{ textDecoration: "none", display: "inline-block", marginBottom: 40 }}>
-          <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
-             ticket<span style={{ color: '#ff5862' }}>9</span>
-          </div>
-        </Link>
+        {/* Logo removed */}
 
         {/* Illustration */}
         <LeftIllustration />
@@ -274,14 +269,14 @@ export default function BrandingSignIn() {
         padding: "60px 48px",
         position: "relative",
       }}>
-        {/* Logo top of right panel */}
-        <Link href="/branding" style={{ position: "absolute", top: 32, left: 48, textDecoration: "none", display: "inline-block" }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 6 }}>
-             ticket<span style={{ color: '#ff5862' }}>9</span>
-          </div>
-        </Link>
-
         <div style={{ width: "100%", maxWidth: 400, marginTop: 40 }}>
+          {/* Logo moved centrally above text */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+            <Link href="/branding" style={{ textDecoration: "none", display: "inline-block" }}>
+              <img src="/logo.png" alt="bookmyticket" style={{ height: 60, width: "auto", objectFit: "contain" }} />
+            </Link>
+          </div>
+
           {/* Step 1: Email + Password (signin) or Email (signup) */}
           {step === 1 && (
             <>

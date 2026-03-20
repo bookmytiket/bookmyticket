@@ -444,4 +444,21 @@ export default defineSchema({
         timestamp: v.number(),
         metadata: v.optional(v.any()), // e.g., user agent, location
     }).index("by_brandId", ["brandId"]).index("by_couponId", ["couponId"]),
+
+    brandSubscriptions: defineTable({
+        brandId: v.string(),
+        planType: v.string(), // "Monthly" | "Yearly"
+        amountPaid: v.number(),
+        startDate: v.number(),
+        endDate: v.number(),
+        status: v.string(), // "active" | "expired"
+    }).index("by_brandId", ["brandId"]).index("by_status", ["status"]),
+
+    brandBanners: defineTable({
+        brandId: v.string(),
+        imageUrl: v.string(),
+        redirectUrl: v.string(),
+        isActive: v.boolean(),
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]).index("by_isActive", ["isActive"]),
 });

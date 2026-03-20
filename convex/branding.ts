@@ -365,3 +365,203 @@ export const listAllKYC = query({
     return await ctx.db.query("brandKYC").collect();
   },
 });
+
+// --- Premium Banners Queries & Mutations ---
+
+export const getConfigPrices = query({
+    args: {},
+    handler: async (ctx) => {
+        const monthlyDoc = await ctx.db
+            .query("systemConfig")
+            .withIndex("by_key", (q) => q.eq("key", "brand_banner_monthly_price"))
+            .first();
+        const yearlyDoc = await ctx.db
+            .query("systemConfig")
+            .withIndex("by_key", (q) => q.eq("key", "brand_banner_yearly_price"))
+            .first();
+
+        const monthlyPrice = monthlyDoc ? Number(monthlyDoc.value) : 999;
+        const yearlyPrice = yearlyDoc ? Number(yearlyDoc.value) : 9999;
+
+        return { monthlyPrice, yearlyPrice };
+    },
+});
+
+export const updatePricing = mutation({
+    args: {
+        monthlyPrice: v.number(),
+        yearlyPrice: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const setConfig = async (key: string, value: any) => {
+            const existing = await ctx.db
+                .query("systemConfig")
+                .withIndex("by_key", (q) => q.eq("key", key))
+                .first();
+            if (existing) {
+                await ctx.db.patch(existing._id, { value });
+            } else {
+                await ctx.db.insert("systemConfig", { key, value });
+            }
+        };
+
+        await setConfig("brand_banner_monthly_price", args.monthlyPrice);
+        await setConfig("brand_banner_yearly_price", args.yearlyPrice);
+        return { success: true };
+    },
+});
+
+export const getSubscription = query({
+    args: { brandId: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("brandSubscriptions")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .filter((q) => q.eq(q.field("status"), "active"))
+            .first();
+    },
+});
+
+export const getBanner = query({
+    args: { brandId: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("brandBanners")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .first();
+    },
+});
+
+export const processPayment = mutation({
+    args: {
+        brandId: v.string(),
+        planType: v.string(), // "Monthly" or "Yearly"
+        amountPaid: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const now = Date.now();
+        const days = args.planType === "Yearly" ? 365 : 30;
+        const endDate = now + (days * 24 * 60 * 60 * 1000);
+
+        const existing = await ctx.db
+            .query("brandSubscriptions")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .filter((q) => q.eq(q.field("status"), "active"))
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, {
+                endDate: Math.max(existing.endDate, now) + (days * 24 * 60 * 60 * 1000),
+                amountPaid: existing.amountPaid + args.amountPaid,
+            });
+            return existing._id;
+        }
+
+        return await ctx.db.insert("brandSubscriptions", {
+            brandId: args.brandId,
+            planType: args.planType,
+            amountPaid: args.amountPaid,
+            startDate: now,
+            endDate,
+            status: "active",
+        });
+    },
+});
+
+export const generateUploadUrl = mutation({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.storage.generateUploadUrl();
+    },
+});
+
+export const uploadBanner = mutation({
+    args: {
+        brandId: v.string(),
+        storageId: v.string(),
+        redirectUrl: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const activeSub = await ctx.db
+            .query("brandSubscriptions")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .filter((q) => q.eq(q.field("status"), "active"))
+            .first();
+
+        if (!activeSub) throw new Error("No active premium subscription");
+
+        const imageUrl = await ctx.storage.getUrl(args.storageId);
+        if (!imageUrl) throw new Error("Failed to get image URL");
+
+        const existing = await ctx.db
+             .query("brandBanners")
+             .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+             .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, {
+                imageUrl,
+                redirectUrl: args.redirectUrl,
+                isActive: true
+            });
+            return existing._id;
+        } else {
+            return await ctx.db.insert("brandBanners", {
+                brandId: args.brandId,
+                imageUrl,
+                redirectUrl: args.redirectUrl,
+                isActive: true,
+                createdAt: Date.now()
+            });
+        }
+    },
+});
+
+export const removeBanner = mutation({
+    args: { brandId: v.string() },
+    handler: async (ctx, args) => {
+        const existing = await ctx.db
+            .query("brandBanners")
+            .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, { isActive: false });
+        }
+    }
+});
+
+export const getActiveBanners = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db
+            .query("brandBanners")
+            .withIndex("by_isActive", (q) => q.eq("isActive", true))
+            .collect();
+    },
+});
+
+import { internalMutation } from "./_generated/server";
+
+export const expireSubscriptions = internalMutation({
+    args: {},
+    handler: async (ctx) => {
+        const now = Date.now();
+        const expiredSubs = await ctx.db
+            .query("brandSubscriptions")
+            .withIndex("by_status", (q) => q.eq("status", "active"))
+            .filter((q) => q.lt(q.field("endDate"), now))
+            .collect();
+
+        for (const sub of expiredSubs) {
+            await ctx.db.patch(sub._id, { status: "expired" });
+            const banner = await ctx.db
+                 .query("brandBanners")
+                 .withIndex("by_brandId", (q) => q.eq("brandId", sub.brandId))
+                 .first();
+            if (banner) {
+                await ctx.db.patch(banner._id, { isActive: false });
+            }
+        }
+    },
+});

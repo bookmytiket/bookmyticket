@@ -15,6 +15,7 @@ import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
 import type * as bookings from "../bookings.js";
 import type * as branding from "../branding.js";
+import type * as crons from "../crons.js";
 import type * as emailActions from "../emailActions.js";
 import type * as emailSettings from "../emailSettings.js";
 import type * as emailTemplates from "../emailTemplates.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   banners: typeof banners;
   bookings: typeof bookings;
   branding: typeof branding;
+  crons: typeof crons;
   emailActions: typeof emailActions;
   emailSettings: typeof emailSettings;
   emailTemplates: typeof emailTemplates;

@@ -584,6 +584,24 @@ function AdminHomePage() {
     const [adminModal, setAdminModal] = useState(null);
     const [newAdmin, setNewAdmin] = useState({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
 
+    // Premium Branding Banners Pricing
+    const convexBrandingPrices = useQuery(api.branding.getConfigPrices);
+    const updateBrandingPricingMutation = useMutation(api.branding.updatePricing);
+    const [brandingPricing, setBrandingPricing] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
+
+    useEffect(() => {
+        if (convexBrandingPrices) setBrandingPricing(convexBrandingPrices);
+    }, [convexBrandingPrices]);
+
+    const handleSaveBrandingPricing = async () => {
+        try {
+            await updateBrandingPricingMutation(brandingPricing);
+            alert("Premium Banner Pricing updated successfully!");
+        } catch (e) {
+            alert("Error updating pricing");
+        }
+    };
+
     useEffect(() => {
         const tab = searchParams.get("tab");
         if (tab === "categories") setActiveTab("categories");
@@ -2270,6 +2288,46 @@ function AdminHomePage() {
                                     <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>Logo images with transparent backgrounds work best.</p>
                                 </div>
                             </div>
+
+                            <hr style={{ margin: "40px 0", borderColor: t.border }} />
+
+                            <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "24px" }}>Brand Premium Banner Pricing</h3>
+                            <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Configure the Monthly and Yearly price for brands to upload Hero Banners on the Home Page.</p>
+                            
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", marginBottom: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Monthly Price (₹)</label>
+                                    <input
+                                        type="number"
+                                        value={brandingPricing.monthlyPrice}
+                                        onChange={(e) => setBrandingPricing({ ...brandingPricing, monthlyPrice: Number(e.target.value) })}
+                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Yearly Price (₹)</label>
+                                    <input
+                                        type="number"
+                                        value={brandingPricing.yearlyPrice}
+                                        onChange={(e) => setBrandingPricing({ ...brandingPricing, yearlyPrice: Number(e.target.value) })}
+                                        style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleSaveBrandingPricing}
+                                style={{
+                                    padding: "10px 24px",
+                                    borderRadius: "8px",
+                                    background: ACCENT_GRADIENT,
+                                    color: "#fff",
+                                    fontWeight: 600,
+                                    border: "none",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Save Pricing
+                            </button>
                         </div>
                     )}
 

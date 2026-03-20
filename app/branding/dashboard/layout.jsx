@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Ticket, Store, BarChart3, FileCheck,
-  Settings, HelpCircle, QrCode, LogOut, Lock, Ghost
+  Settings, HelpCircle, QrCode, LogOut, Lock, Ghost, Image as ImageIcon
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -51,8 +52,11 @@ const SidebarItem = ({ icon: Icon, label, active, disabled, onClick }) => (
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  
+  const tab = searchParams?.get('tab') || 'dashboard';
 
   const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
   const kycStatus = kycData?.status || 'Verification Pending';
@@ -88,14 +92,15 @@ export default function DashboardLayout({ children }) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard"   active={pathname === '/branding/dashboard' && !pathname.includes('coupon-creation')} onClick={() => router.push('/branding/dashboard')} />
-          <SidebarItem icon={Ticket}          label="Coupons"     active={pathname.includes('/coupons') || pathname.includes('coupon-creation')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
-          <SidebarItem icon={Store}           label="Stores"      active={pathname.includes('/stores')}    disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
-          <SidebarItem icon={BarChart3}       label="Reports"     active={pathname.includes('/reports')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={LayoutDashboard} label="Dashboard"   active={tab === 'dashboard' && pathname === '/branding/dashboard'} onClick={() => router.push('/branding/dashboard?tab=dashboard')} />
+          <SidebarItem icon={ImageIcon}       label="Banners"     active={tab === 'banners'}       disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=banners')} />
+          <SidebarItem icon={Ticket}          label="Coupons"     active={tab === 'coupons' || pathname.includes('coupon-creation')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=coupons')} />
+          <SidebarItem icon={Store}           label="Stores"      active={tab === 'stores'}        disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=stores')} />
+          <SidebarItem icon={BarChart3}       label="Reports"     active={tab === 'reports'}       disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=reports')} />
           <SidebarItem icon={FileCheck}       label="KYC"         active={pathname.includes('/kyc')}       onClick={() => router.push('/branding/kyc')} />
-          <SidebarItem icon={Settings}        label="Settings"    active={pathname.includes('/settings')}  onClick={() => router.push('/branding/dashboard')} />
-          <SidebarItem icon={HelpCircle}      label="Help"        active={pathname.includes('/help')}      onClick={() => router.push('/branding/dashboard')} />
-          <SidebarItem icon={QrCode}          label="QR Scanner"  active={pathname.includes('/scanner')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard')} />
+          <SidebarItem icon={Settings}        label="Settings"    active={tab === 'settings'}      onClick={() => router.push('/branding/dashboard?tab=settings')} />
+          <SidebarItem icon={HelpCircle}      label="Help"        active={tab === 'help'}          onClick={() => router.push('/branding/dashboard?tab=help')} />
+          <SidebarItem icon={QrCode}          label="QR Scanner"  active={tab === 'scanner'}       disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=scanner')} />
         </nav>
 
         {/* Logout */}

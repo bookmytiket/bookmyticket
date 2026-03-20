@@ -1,27 +1,107 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-  Ticket, Store, BarChart3, CheckCircle2, Rocket, ChevronRight, Clock, AlertCircle 
+  Ticket, Store, BarChart3, CheckCircle2, Rocket, ChevronRight, Clock, AlertCircle, Image as ImageIcon, CreditCard, Upload
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { StatCard } from './StatCard';
 import { DistributeChannelModal } from './DistributeChannelModal';
 
 export default function BrandingDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('coupons');
+  
+  const activeTab = searchParams?.get('tab') || 'dashboard';
   const [showCouponModal, setShowCouponModal] = useState(false);
+
+  // Premium Banners State
+  const convexPrices = useQuery(api.branding.getConfigPrices);
+  const subscription = useQuery(api.branding.getSubscription, { brandId: user?.id || '' });
+  const banner = useQuery(api.branding.getBanner, { brandId: user?.id || '' });
+  const simulatePayment = useMutation(api.branding.processPayment);
+  
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [redirectUrl, setRedirectUrl] = useState(banner?.redirectUrl || '');
+  
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  const generateUploadUrl = useMutation(api.branding.generateUploadUrl);
+  const uploadBannerMutation = useMutation(api.branding.uploadBanner);
+
+  const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
+
+  const handleSaveBanner = async () => {
+    if (!redirectUrl && !banner?.redirectUrl) {
+      alert("Please provide a redirect URL.");
+      return;
+    }
+    
+    setIsUploading(true);
+    try {
+      let storageId = null;
+      if (selectedFile) {
+         const postUrl = await generateUploadUrl();
+         const result = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": selectedFile.type },
+            body: selectedFile,
+         });
+         const { storageId: returnedId } = await result.json();
+         storageId = returnedId;
+      }
+      
+      // If we don't have a new file but have a new URL, we might need a distinct mutation or just fail for now
+      if (!storageId) {
+         alert("Please select a new banner image to upload.");
+         setIsUploading(false);
+         return;
+      }
+
+      await uploadBannerMutation({
+         brandId: user.id,
+         storageId,
+         redirectUrl
+      });
+      alert("Banner updated successfully!");
+      setSelectedFile(null);
+    } catch(e) {
+      alert("Error uploading banner: " + e.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
   const kycStatus = kycData?.status || 'Verification Pending';
   const isVerified = kycStatus === 'Verified';
   const isPending = kycStatus === 'Verification Pending';
 
-  if (!user) return null;
+  if (!isMounted || !user) return null;
+
+  const handlePayment = async (planType) => {
+    setIsProcessing(true);
+    try {
+      // Simulate real payment delay
+      await new Promise(r => setTimeout(r, 1500));
+      const amount = planType === 'Monthly' ? convexPrices?.monthlyPrice : convexPrices?.yearlyPrice;
+      await simulatePayment({ brandId: user.id, planType, amountPaid: amount });
+      alert(`Successfully subscribed to ${planType} Premium Banners!`);
+    } catch (e) {
+      alert("Payment failed or cancelled.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const C = {
     accent: '#ff5862',
@@ -127,6 +207,108 @@ export default function BrandingDashboard() {
             <Ticket size={48} style={{ color: C.subtext, marginBottom: 16 }} />
             <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>No coupons created yet</h3>
             <p style={{ color: C.muted, fontSize: 14 }}>Once you create a coupon, it will appear here for management and tracking.</p>
+          </div>
+        </>
+      )}
+
+      {/* Premium Banners Tab */}
+      {activeTab === 'banners' && (
+        <>
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px', color: C.text }}>Premium Banners</h1>
+            <p style={{ margin: 0, color: C.muted, fontSize: 13 }}>Promote your brand directly on the Home Page Hero Carousel.</p>
+          </div>
+          
+          <div style={{ background: C.card, borderRadius: 16, padding: 40, border: `1px solid ${C.border}` }}>
+            {!subscription ? (
+              // Payment State
+              <div style={{ textAlign: 'center' }}>
+                <ImageIcon size={48} style={{ color: C.subtext, marginBottom: 16 }} />
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Unlock Home Page Visibility</h3>
+                <p style={{ color: C.muted, fontSize: 14, maxWidth: 500, margin: '0 auto 32px' }}>
+                  A premium subscription allows you to upload a branded Hero Banner that appears on the main booking page.
+                </p>
+                <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
+                  <div style={{ border: `2px solid ${C.border}`, borderRadius: 16, padding: 24, width: 260 }}>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>Monthly</h4>
+                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{convexPrices?.monthlyPrice || '999'}</div>
+                    <button 
+                      onClick={() => handlePayment('Monthly')}
+                      disabled={isProcessing}
+                      style={{ width: '100%', padding: '12px', background: '#1e1b4b', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: isProcessing ? 'wait' : 'pointer' }}
+                    >
+                      {isProcessing ? 'Processing...' : 'Subscribe Monthly'}
+                    </button>
+                  </div>
+                  <div style={{ border: `2px solid ${C.accent}`, borderRadius: 16, padding: 24, width: 260, position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: C.accent, color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12 }}>MOST POPULAR</div>
+                    <h4 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>Yearly</h4>
+                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{convexPrices?.yearlyPrice || '9999'}</div>
+                    <button 
+                      onClick={() => handlePayment('Yearly')}
+                      disabled={isProcessing}
+                      style={{ width: '100%', padding: '12px', background: C.accent, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: isProcessing ? 'wait' : 'pointer', boxShadow: '0 4px 12px rgba(255,88,98,0.3)' }}
+                    >
+                      {isProcessing ? 'Processing...' : 'Subscribe Yearly'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Upload State
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, paddingBottom: 24, borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontWeight: 700, marginBottom: 4 }}>
+                      <CheckCircle2 size={18} /> Active {subscription.planType} Subscription
+                    </div>
+                     <p style={{ margin: 0, fontSize: 13, color: C.muted }}>Valid until {new Date(subscription.endDate).toLocaleDateString()}</p>
+                  </div>
+                  <div style={{ background: '#f0fdf4', color: '#059669', padding: '8px 16px', borderRadius: 8, fontWeight: 600, fontSize: 14 }}>
+                    Ads Live
+                  </div>
+                </div>
+                
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>Manage Your Hero Banner</h3>
+                
+                {banner?.imageUrl && (
+                  <div style={{ marginBottom: 24, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+                    <img src={banner.imageUrl} alt="Current Banner" style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 200, objectFit: 'cover' }} />
+                  </div>
+                )}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                   <div>
+                     <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Banner Image URL (Target Dimensions: 1200x500)</label>
+                     <div style={{ display: 'flex', gap: 12 }}>
+                       <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${C.border}`, background: '#f9fafb' }} 
+                       />
+                     </div>
+                   </div>
+                   <div>
+                     <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Redirect Click URL</label>
+                     <input 
+                        type="url" 
+                        value={redirectUrl} 
+                        onChange={(e) => setRedirectUrl(e.target.value)}
+                        placeholder="https://..." 
+                        style={{ width: '100%', padding: 12, borderRadius: 8, border: `1px solid ${C.border}` }} 
+                     />
+                   </div>
+                   <button 
+                      onClick={handleSaveBanner}
+                      disabled={isUploading}
+                      style={{ background: '#1e1b4b', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: isUploading ? 'wait' : 'pointer', alignSelf: 'flex-start' }}
+                   >
+                     {isUploading ? 'Uploading...' : 'Save Changes'}
+                   </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

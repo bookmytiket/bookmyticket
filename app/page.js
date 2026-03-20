@@ -212,12 +212,28 @@ export default function Home() {
 
   const heroSlidesConfig = useQuery(api.systemConfig.getConfig, { key: "admin_hero_slides" });
   const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
+  const activeBanners = useQuery(api.branding.getActiveBanners) || [];
 
   useEffect(() => {
     const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
-    const slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
+    let slides = Array.isArray(parsed) ? parsed : (Array.isArray(HERO_BANNER_SLIDES) ? HERO_BANNER_SLIDES : []);
+    
+    // Prepend active brand Premium Banners
+    if (activeBanners.length > 0) {
+      const brandSlides = activeBanners.map((b) => ({
+        id: b._id,
+        img: b.imageUrl,
+        title: "",
+        sub: "Premium Partner",
+        alt: "Sponsored Brand",
+        url: b.redirectUrl || "#"
+      }));
+      // Put premium banners first
+      slides = [...brandSlides, ...slides];
+    }
+    
     setHeroSlides(slides);
-  }, [heroSlidesConfig]);
+  }, [heroSlidesConfig, activeBanners]);
 
   useEffect(() => {
     const parsed = eventPartnersConfig != null ? parseConfig(eventPartnersConfig) : null;
@@ -228,6 +244,15 @@ export default function Home() {
   // Removed focus event listener since Convex useQuery is reactive
 
 
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null; // Prevent hydration mismatch
+  }
 
   return (
     <>
