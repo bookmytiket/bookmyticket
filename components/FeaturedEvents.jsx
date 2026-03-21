@@ -1,13 +1,21 @@
 "use client";
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { HOME_EVENTS } from "@/app/data/homeEvents";
 
 const DEFAULT_FEATURED = HOME_EVENTS.filter((e) => e.featured);
 
 export default function FeaturedEvents({ events }) {
+    const [isMobile, setIsMobile] = useState(false);
     const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_FEATURED), [events]);
     const scrollRef = useRef(null);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, []);
 
     const scroll = (dir) => {
         if (scrollRef.current) {
@@ -107,7 +115,7 @@ export default function FeaturedEvents({ events }) {
                             >
                                 <div style={{
                                     width: "100%",
-                                    aspectRatio: "2.3 / 3",
+                                    aspectRatio: isMobile ? "1 / 1" : "2.3 / 3",
                                     overflow: "hidden",
                                     position: "relative"
                                 }}>
@@ -121,7 +129,7 @@ export default function FeaturedEvents({ events }) {
                                 <div style={{ padding: "10px", display: "flex", flexDirection: "column", flex: 1 }}>
                                     <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: "6px" }}>
                                         <h3 style={{
-                                            fontSize: "14px",
+                                            fontSize: isMobile ? "15px" : "14px",
                                             fontWeight: 700,
                                             color: "#111827",
                                             margin: 0,

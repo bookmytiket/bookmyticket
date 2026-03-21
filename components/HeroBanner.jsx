@@ -16,45 +16,45 @@ const DEFAULT_BANNER_SLIDES = [];
 const AUTO_PLAY_MS = 3500;
 
 /* ── Small helper: renders the promo banner content ── */
-function PromoSlide() {
+function PromoSlide({ isMobile }) {
     return (
-        <div className="promo-slide">
+        <div className="promo-slide" style={{ padding: isMobile ? "20px" : "40px" }}>
             {/* glow blobs */}
             <div className="promo-glow-1" />
             <div className="promo-glow-2" />
 
             {/* Left: heading */}
-            <div className="promo-heading-wrap">
-                <p style={{ margin: "0 0 4px", fontSize: "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
-                <h2 className="promo-title">
+            <div className="promo-heading-wrap" style={{ flex: isMobile ? "1" : "unset" }}>
+                <p style={{ margin: "0 0 4px", fontSize: isMobile ? "13px" : "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
+                <h2 className="promo-title" style={{ fontSize: isMobile ? "42px" : "clamp(32px, 5vw, 64px)" }}>
                     ROCK<br />Events
                 </h2>
-                <p style={{ margin: "6px 0 0", fontStyle: "italic", fontSize: "16px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
+                <p style={{ margin: "6px 0 0", fontStyle: "italic", fontSize: isMobile ? "18px" : "16px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
             </div>
 
             {/* Divider */}
             <div className="promo-divider hide-mobile" style={{ width: "1px", alignSelf: "stretch", background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
 
             {/* Middle: feature list */}
-            <ul className="promo-features-list">
+            <ul className="promo-features-list" style={{ gap: isMobile ? "8px" : "12px" }}>
                 {FEATURES.map(f => (
                     <li key={f.num} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span style={{ fontWeight: 900, fontSize: "11px", color: "#f84464", minWidth: "22px" }}>{f.num}</span>
+                        <span style={{ fontWeight: 900, fontSize: isMobile ? "13px" : "11px", color: "#f84464", minWidth: "22px" }}>{f.num}</span>
                         <div>
-                            <p style={{ margin: 0, fontWeight: 700, fontSize: "11px", color: "#e2d9f3", letterSpacing: "1px", textTransform: "uppercase", lineHeight: 1 }}>{f.title}</p>
-                            <p style={{ margin: 0, fontSize: "10px", color: "#9d8ec2" }}>{f.sub}</p>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: isMobile ? "12px" : "11px", color: "#e2d9f3", letterSpacing: "1px", textTransform: "uppercase", lineHeight: 1 }}>{f.title}</p>
+                            <p style={{ margin: 0, fontSize: isMobile ? "11px" : "10px", color: "#9d8ec2" }}>{f.sub}</p>
                         </div>
                     </li>
                 ))}
             </ul>
 
             {/* Right: CTA */}
-            <div className="promo-cta-wrap">
+            <div className="promo-cta-wrap" style={{ marginTop: isMobile ? "15px" : "0" }}>
                 <div className="promo-cta-btn" style={{
                     display: "inline-flex", alignItems: "center", gap: "8px",
                     background: "linear-gradient(90deg,#f84464,#c026d3)",
-                    padding: "10px 22px", borderRadius: "50px",
-                    fontSize: "11px", fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#fff",
+                    padding: isMobile ? "12px 28px" : "10px 22px", borderRadius: "50px",
+                    fontSize: isMobile ? "12px" : "11px", fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "#fff",
                     whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(248,68,100,0.4)"
                 }}>
                     🎟 All Events Start Here
@@ -92,6 +92,14 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
     const total = slides.length;
     const timerRef = useRef(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const goTo = useCallback(
         (idx, direction = 1) => {
@@ -129,20 +137,20 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                 {/* Main full-width active slide */}
                 <div className={`bms-slide-main-full ${sliding ? (dir === 1 ? "slide-exit-left" : "slide-exit-right") : "slide-enter"}`}>
                     {slide.custom ? (
-                        <PromoSlide />
+                        <PromoSlide isMobile={isMobile} />
                     ) : (
                         <div
                             onClick={() => slide.url && window.open(slide.url, "_blank")}
                             style={{ width: "100%", height: "100%", cursor: slide.url ? "pointer" : "default", position: "relative" }}
                         >
-                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
                             <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             {showDetails && (
-                                <div style={{ position: "absolute", bottom: "10%", left: "40px", right: "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
-                                    <h2 style={{ fontSize: "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.4)" }}>
+                                <div style={{ position: "absolute", bottom: isMobile ? "15%" : "10%", left: isMobile ? "20px" : "40px", right: isMobile ? "20px" : "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
+                                    <h2 style={{ fontSize: isMobile ? "28px" : "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
                                         {slide.title || "Live Events & Experiences"}
                                     </h2>
-                                    <p style={{ fontSize: "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.9)", fontWeight: 500, margin: 0 }}>
+                                    <p style={{ fontSize: isMobile ? "15px" : "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.95)", fontWeight: 600, margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                                         {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
                                     </p>
                                 </div>

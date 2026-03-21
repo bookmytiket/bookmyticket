@@ -1334,6 +1334,58 @@ nextjs-portal {
   background: #ffffff;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  
+  .loc-modal {
+    width: 100%;
+    max-width: none;
+    border-radius: 24px 24px 0 0 !important;
+    padding: 24px 20px 0 20px;
+    animation: bottomSheetUp 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .mobile-handle {
+    display: block;
+  }
+
+  .loc-close-x {
+    display: none; /* Reference shows a clean top bar for mobile */
+  }
+
+  .loc-title {
+    font-size: 1.1rem;
+    margin-top: 8px;
+    margin-bottom: 20px;
+  }
+}
+
+@keyframes bottomSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes modalScaleUp {
@@ -1341,7 +1393,6 @@ nextjs-portal {
     transform: scale(0.9);
     opacity: 0;
   }
-
   to {
     transform: scale(1);
     opacity: 1;

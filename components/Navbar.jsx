@@ -389,41 +389,107 @@ export default function Navbar() {
             </svg>
           </button>
 
-          <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Mobile Location Selector */}
-            <button
-              className="nav-loc-btn show-mobile"
-              onClick={() => setLocOpen(true)}
+          {/* New Desktop Navigation Buttons */}
+          <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
+            <button 
+              onClick={() => setOrgOpen(true)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: 'none',
-                border: 'none',
+                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                color: '#fff',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '13px',
+                textTransform: 'none',
                 cursor: 'pointer',
-                color: '#1e293b',
-                padding: '4px'
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              <span style={{ fontWeight: 600, fontSize: '13px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {selectedCity || "Select"}
-              </span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ opacity: 0.5 }}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+              Become a Partner
             </button>
+            <Link 
+              href="/branding" 
+              style={{
+                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                color: '#fff',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '13px',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+              }}
+            >
+              Branding
+            </Link>
+            <Link 
+              href="/signin" 
+              style={{
+                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                color: '#fff',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '13px',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+              }}
+            >
+              Book Now
+            </Link>
+          </div>
 
+          <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
               className="show-mobile"
-              onClick={() => router.push('/?search=true')}
-              style={{ background: 'none', border: 'none', padding: '6px', color: '#1e293b' }}
+              onClick={() => setLocOpen(true)}
+              style={{ background: 'none', border: 'none', padding: '6px 2px', color: '#1e293b' }}
             >
-              <Search size={20} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span style={{ fontSize: '13px', fontWeight: 600, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedCity || "Select"}
+                </span>
+              </div>
             </button>
+
+
 
             {user ? (
               <div
@@ -516,31 +582,9 @@ export default function Navbar() {
               </div>
 
 
-              <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "0.5rem" }}>Navigation</p>
-              {SUBNAV_LINKS.map(({ href, label }) => (
-                <Link key={label} href={href} className="mobile-nav-link" onClick={() => { setMenuOpen(false); if (label === "Events") handleEventsClick(); }}>
-                  {label}
-                </Link>
-              ))}
-
-              <button className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }} onClick={() => { setLocOpen(true); setMenuOpen(false); }}>
-                Location: {selectedCity}
-              </button>
-
               <button className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }} onClick={() => { setOrgOpen(true); setMenuOpen(false); }}>
                 Become a Partner
               </button>
-
-              <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px", marginTop: "1rem", marginBottom: "0.5rem" }}>Categories</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {navCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    className={`mobile-nav-cat${activeCat === cat ? " active" : ""}`}
-                    onClick={() => { setActiveCat(cat === activeCat ? "" : cat); setMenuOpen(false); }}
-                  >{cat}</button>
-                ))}
-              </div>
 
               <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
                 {user ? (
@@ -560,6 +604,7 @@ export default function Navbar() {
         locOpen && (
           <div className="modal-backdrop" onClick={() => selectedCity && setLocOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="loc-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
+              <div className="mobile-handle show-mobile"></div>
               {selectedCity && (
                 <button className="loc-close-x" onClick={() => setLocOpen(false)}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

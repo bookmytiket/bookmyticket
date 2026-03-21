@@ -8,6 +8,14 @@ const MAX_ITEMS = 12;
 export default function RecentlyViewedEvents({ events: propEvents }) {
     const [events, setEvents] = useState(Array.isArray(propEvents) ? propEvents : []);
     const scrollRef = useRef(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const parseEventDate = (dateStr, timeStr) => {
         if (!dateStr) return null;
@@ -166,9 +174,9 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                             href={`/events/detail?id=${event.id}`}
                             style={{ textDecoration: "none", color: "inherit", display: "block" }}
                         >
-                            <div
+                        <div
                                 style={{
-                                    width: "231px",
+                                    width: isMobile ? "160px" : "231px",
                                     background: "#fff",
                                     borderRadius: "12px",
                                     overflow: "hidden",
@@ -192,7 +200,7 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                             >
                                 <div style={{
                                     width: "100%",
-                                    aspectRatio: "2.3 / 3",
+                                    aspectRatio: isMobile ? "1 / 1" : "2.3 / 3",
                                     overflow: "hidden",
                                     position: "relative",
                                     flexShrink: 0,
