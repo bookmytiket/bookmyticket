@@ -2,15 +2,15 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 const SUBNAV_LINKS = [
-  { href: "/", label: "Events" },
-  { href: "/#rsvp", label: "RSVP" },
+  { href: "/#explore-popular-events", label: "Events" },
 ];
 
 
@@ -567,6 +567,40 @@ export default function Navbar() {
             </button>
           </div>
         </div>
+
+        {/* Sub-navbar with Animation - Moved Inside Header */}
+        <nav className="header-subnav">
+          <div className="subnav-container">
+            <div className="subnav-links">
+              {SUBNAV_LINKS.map((link) => (
+                <motion.div
+                  key={link.label}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="subnav-item"
+                >
+                  <Link
+                    href={link.href}
+                    className={`subnav-link ${(pathname === link.href || (pathname === '/' && link.label === 'Events')) ? "active" : ""}`}
+                  >
+                    {link.label === "Events" && <Calendar size={14} style={{ marginRight: '6px' }} />}
+                    {link.label === "RSVP" && <TicketIcon size={14} style={{ marginRight: '6px' }} />}
+                    {link.label}
+                  </Link>
+                  {(pathname === link.href || (pathname === '/' && link.label === 'Events')) && (
+                    <motion.div
+                      layoutId="subnav-underline"
+                      className="subnav-underline"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </nav>
       </header>
 
       {/* Mobile Menu Overlay */}

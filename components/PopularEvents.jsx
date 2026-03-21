@@ -81,7 +81,8 @@ export default function PopularEvents({ events }) {
                             margin: 0,
                             letterSpacing: "-0.05em",
                             lineHeight: 1,
-                            fontFamily: "var(--font-heading)"
+                            fontFamily: "var(--font-heading)",
+                            position: "relative"
                         }}>
                             Explore Popular <span style={{
                                 background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
@@ -89,6 +90,16 @@ export default function PopularEvents({ events }) {
                                 WebkitTextFillColor: 'transparent',
                                 display: 'inline-block'
                             }}>Events</span>
+                            {/* Theme Underline */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '-8px',
+                                left: 0,
+                                width: '60px',
+                                height: '4px',
+                                background: '#fde047',
+                                borderRadius: '4px'
+                            }} />
                         </h2>
                         <p style={{ fontSize: "14px", color: "#6b7280", margin: "6px 0 0", fontWeight: 500 }}>
                             Discover what everyone is talking about

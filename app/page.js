@@ -435,7 +435,9 @@ export default function Home() {
             <ComingSoonEvents events={filteredEvents} />
 
             {/* 4) Explore Popular Events */}
-            <PopularEvents events={popularEventsList} />
+            <div id="explore-popular-events">
+              <PopularEvents events={popularEventsList} />
+            </div>
 
             {/* 5) Exclusive Events */}
             <ExclusiveEvents events={exclusiveEventsList} />
