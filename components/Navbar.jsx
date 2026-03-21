@@ -389,52 +389,64 @@ export default function Navbar() {
             </svg>
           </button>
 
-          <div className="header-actions-area">
+          <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Mobile Location Selector */}
             <button
-              className="nav-action-organiser hide-mobile"
-              onClick={() => setOrgOpen(true)}
+              className="nav-loc-btn show-mobile"
+              onClick={() => setLocOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#1e293b',
+                padding: '4px'
+              }}
             >
-              Become a Partner
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span style={{ fontWeight: 600, fontSize: '13px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedCity || "Select"}
+              </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ opacity: 0.5 }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            <button
+              className="show-mobile"
+              onClick={() => router.push('/?search=true')}
+              style={{ background: 'none', border: 'none', padding: '6px', color: '#1e293b' }}
+            >
+              <Search size={20} />
             </button>
 
             {user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Link href={user.role === "admin" ? "/admin" : user.role === "user" ? "/profile" : "/organiser"} className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem' }}>
-                  Dashboard
-                </Link>
-                <Link href="/branding" className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', fontWeight: '700', fontSize: '0.9rem', background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', color: '#fff', padding: '10px 20px', borderRadius: '50px', boxShadow: '0 4px 15px rgba(248,68,100,0.3)' }}>
-                  Branding
-                </Link>
-                <div style={{ position: "relative" }}>
-                  <div
-                    onClick={() => setProfileOpen(!profileOpen)}
-                    style={{ width: "35px", height: "35px", borderRadius: "50%", background: "var(--evente-pink)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", cursor: "pointer", fontSize: "14px" }}
-                  >
-                    {user.name && user.name[0].toUpperCase()}
-                  </div>
-                  {profileOpen && (
-                    <div className="profile-dropdown" style={{
-                      position: "absolute", top: "45px", right: "0", background: "#fff",
-                      borderRadius: "8px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                      border: "1px solid #e2e8f0", width: "160px", zIndex: 100, display: "flex", flexDirection: "column"
-                    }}>
-                      <Link href="/profile" style={{ padding: "10px 15px", textDecoration: "none", color: "#1e293b", fontSize: "14px" }} onClick={() => setProfileOpen(false)}>My Profile</Link>
-                      <button onClick={logout} style={{ padding: "10px 15px", textAlign: "left", background: "none", border: "none", color: "#ef4444", fontWeight: "600", cursor: "pointer" }}>Logout</button>
-                    </div>
-                  )}
-                </div>
+              <div
+                className="show-mobile"
+                onClick={() => setProfileOpen(!profileOpen)}
+                style={{ width: "30px", height: "30px", borderRadius: "50%", background: "var(--evente-pink)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", cursor: "pointer", fontSize: "12px" }}
+              >
+                {user.name && user.name[0].toUpperCase()}
               </div>
             ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Link href="/branding" className="nav-action-signin hide-mobile" style={{ textDecoration: 'none', color: '#000', fontWeight: '700', fontSize: '0.9rem', padding: '10px 20px' }}>
-                  Branding
-                </Link>
-                <Link href="/signin" className="nav-action-signin">Book Now</Link>
-              </div>
+              <button
+                className="show-mobile"
+                onClick={() => setMenuOpen(true)}
+                style={{ background: 'none', border: 'none', padding: '6px', color: '#1e293b' }}
+              >
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1.5px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+              </button>
             )}
 
-            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '8px' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '6px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
           </div>
         </div>
@@ -588,16 +600,29 @@ export default function Navbar() {
                 </button>
               </div>
 
-              <div className="loc-country-tabs" style={{ marginBottom: '20px' }}>
+              <div className="loc-country-tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px', padding: '0 4px' }}>
                 {COUNTRIES.map((c) => (
                   <button
                     key={c.label}
                     className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
                     onClick={() => setActiveCountry(c.label)}
-                    style={{ border: activeCountry === c.label ? '1.5px solid #6366f1' : '1px solid #e2e8f0', color: activeCountry === c.label ? '#6366f1' : '#64748b' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      border: activeCountry === c.label ? '1px solid #6366f1' : '1px solid #e2e8f0',
+                      backgroundColor: activeCountry === c.label ? '#eef2ff' : '#fff',
+                      color: activeCountry === c.label ? '#6366f1' : '#64748b',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <span className="loc-tab-flag">{c.flag}</span>
-                    <span className="loc-tab-label" style={{ fontWeight: activeCountry === c.label ? '700' : '500' }}>{c.label}</span>
+                    <span>{c.flag}</span>
+                    <span>{c.label}</span>
                   </button>
                 ))}
               </div>
@@ -606,38 +631,74 @@ export default function Navbar() {
 
               <p className="loc-section-label">Popular Cities</p>
 
-              <div className="loc-cities-grid">
+              <div className="loc-cities-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(4, 1fr)', 
+                gap: '12px',
+                padding: '0 4px'
+              }}>
                 {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).map((city) => (
                   <button
                     key={city.name}
                     className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
                     onClick={() => { updateCity(city.name); setLocOpen(false); }}
-                    style={{ border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid transparent' }}
+                    style={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '8px 4px',
+                      borderRadius: '12px',
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <div className="loc-city-icon-wrap" style={{ background: '#f8fafc', border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid #f1f5f9' }}>
-                      <span className="loc-city-svg" style={{ color: '#94a3b8' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
+                    <div className="loc-city-icon-wrap" style={{ 
+                      width: '100%',
+                      aspectRatio: '1/1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f8fafc', 
+                      borderRadius: '12px',
+                      border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid #f1f5f9',
+                      padding: '10px'
+                    }}>
+                      <span className="loc-city-svg" style={{ color: selectedCity === city.name ? '#6366f1' : '#94a3b8' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
                     </div>
-                    <span className="loc-city-name" style={{ color: selectedCity === city.name ? "#6366f1" : "#475569", fontWeight: selectedCity === city.name ? "700" : "500", fontSize: '12px' }}>{city.name}</span>
+                    <span className="loc-city-name" style={{ 
+                      color: selectedCity === city.name ? "#6366f1" : "#475569", 
+                      fontWeight: selectedCity === city.name ? "700" : "500", 
+                      fontSize: '11px',
+                      textAlign: 'center',
+                      lineHeight: '1.2'
+                    }}>{city.name}</span>
                   </button>
                 ))}
               </div>
 
               <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginTop: '32px', marginBottom: '24px' }}></div>
 
-              <div className="loc-others-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div className="loc-others-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  padding: '10px 20px',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '14px 24px',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  width: 'fit-content',
-                  cursor: 'pointer'
+                  borderRadius: '12px',
+                  width: '100%',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                 }} onClick={() => setShowOtherCities(!showOtherCities)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#475569' }}>Events in other cities</span>
-                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ transition: 'transform 0.3s' }}><polyline points="6 9 12 15 18 9" /></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>Events in other cities</span>
+                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" style={{ transition: 'transform 0.3s', transform: showOtherCities ? 'rotate(180deg)' : 'rotate(0)' }}><polyline points="6 9 12 15 18 9" /></svg>
                 </div>
 
                 {showOtherCities && (

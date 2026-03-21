@@ -174,7 +174,7 @@ function LocationPickerModal({
 const EMPTY_ARRAY = [];
 
 function OrganiserPanel() {
-    const { user, loading, logout } = useAuth();
+    const { user, loading, logout, selectedCity, locationHierarchy } = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -733,6 +733,7 @@ function OrganiserPanel() {
             meetingUrl: isOnline ? (postEvent.meetingUrl || undefined) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
+            status: postEvent.eventStatus || "Active",
             description: postEvent.description || undefined,
             rows: isSeating ? categories.reduce((sum, c) => sum + (Number(c.rows) || 0), 0) : undefined,
             cols: isSeating ? (Number(postEvent.cols) || 10) : undefined,
@@ -3503,6 +3504,14 @@ function OrganiserPanel() {
                                                 date: firstSlot?.date || "TBA",
                                                 time: firstSlot?.time || "TBA",
                                                 img: "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop",
+                                                city: selectedCity && selectedCity !== "All Cities" ? selectedCity : (locationHierarchy?.city || undefined),
+                                                district: locationHierarchy?.district || undefined,
+                                                state: locationHierarchy?.state || undefined,
+                                                country: locationHierarchy?.country || undefined,
+                                                featured: true,
+                                                trending: true,
+                                                status: "Active",
+                                                virtual: newEvent.type === "Online"
                                             });
                                             setShowCreateEvent(false);
                                             setNewEvent({ title: "", type: "Venue", venue: "", slots: [{ date: "", time: "" }] });

@@ -6,7 +6,6 @@ import { HOME_EVENTS } from "@/app/data/homeEvents";
 const DEFAULT_POPULAR = HOME_EVENTS;
 
 function PopularCard({ event }) {
-    const [wished, setWished] = useState(false);
     return (
         <Link
             href={`/events/detail?id=${event.id}`}
@@ -19,77 +18,46 @@ function PopularCard({ event }) {
                     background: "#fff",
                     overflow: "hidden",
                     cursor: "pointer",
-                    transition: "box-shadow 0.25s ease, border-color 0.25s ease",
-                }}
-                onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,0,0,0.1)";
-                    e.currentTarget.style.borderColor = "#d1d5db";
-                }}
-                onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = "none";
-                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: "box-shadow 0.2s ease"
                 }}
             >
-                {/* Image — 16:9 */}
-                <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", overflow: "hidden" }}>
+                <div style={{ position: "relative", width: "100%", aspectRatio: "2.3/3", overflow: "hidden" }}>
                     <img
                         src={event.img}
                         alt={event.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
-                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
-                    {/* Heart button */}
-                    <button
-                        onClick={e => { e.preventDefault(); e.stopPropagation(); setWished(w => !w); }}
-                        style={{
-                            position: "absolute", top: "8px", right: "8px",
-                            width: "30px", height: "30px", borderRadius: "50%",
-                            background: "rgba(255,255,255,0.9)", border: "none",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                            transition: "transform 0.2s",
-                            zIndex: 10
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
-                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24"
-                            fill={wished ? "#ef4444" : "none"}
-                            stroke={wished ? "#ef4444" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                        </svg>
-                    </button>
                 </div>
-                {/* Card Content */}
-                <div style={{ padding: "12px 14px 14px" }}>
-                    <h3 style={{
-                        fontSize: "15px", fontWeight: 700, color: "#111827",
-                        margin: "0 0 8px", lineHeight: 1.3,
-                        display: "-webkit-box", WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical", overflow: "hidden",
-                    }}>
-                        {event.title}
-                    </h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "6px" }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                <div style={{ padding: "10px", flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: "6px" }}>
+                        <h3 style={{
+                            fontSize: "14px", fontWeight: 700, color: "#111827",
+                            margin: 0, lineHeight: 1.2,
+                            display: "-webkit-box", WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical", overflow: "hidden",
+                            flex: 1
+                        }}>
+                            {event.title}
+                        </h3>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0, marginTop: "2px" }}>
+                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
                         </svg>
-                        <span style={{ fontSize: "12px", color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {event.location}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                        <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {event.location || "Coimbatore"}
                         </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600 }}>{event.date}</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{event.date}</span>
                         </div>
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                            <span style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{event.type}</span>
-                            <span style={{ position: "absolute", bottom: "-2px", left: 0, width: "100%", height: "2px", background: "#ef4444", borderRadius: "2px", display: "block" }} />
-                        </div>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>Paid</span>
                     </div>
                 </div>
             </article>
@@ -131,12 +99,12 @@ export default function PopularEvents({ events }) {
                 {/* Grid Container */}
                 <div style={{ display: "flex", flexDirection: "column", gap: list.length > 0 ? "40px" : "0" }}>
                     {/* Main / Static Events Row */}
-                    <div
+                        <div
                         aria-labelledby="popular-events-heading"
                         style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                            gap: "24px",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                            gap: "12px",
                         }}
                     >
                         {list.filter(e => !e._id).map(event => (
@@ -151,8 +119,8 @@ export default function PopularEvents({ events }) {
                             <div
                                 style={{
                                     display: "grid",
-                                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                                    gap: "24px",
+                                    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                                    gap: "12px",
                                 }}
                             >
                                 {list.filter(e => e._id).map(event => (

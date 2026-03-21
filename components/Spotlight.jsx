@@ -60,154 +60,109 @@ export default function Spotlight({ events = [] }) {
         </div>
         <p style={{ fontSize: "14px", color: "#6b7280", margin: "0 0 24px" }}>Handpicked experiences and standout events you won&apos;t want to miss!</p>
 
-        {/* Image-based banner — same size & style as hero: rounded card, image left 60%, content right 40% */}
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: BANNER_BORDER_RADIUS, boxShadow: "0 10px 40px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0", backgroundColor: "#fff" }}>
-          <div
-            style={{
-              display: "flex",
-              width: "100%",
-              transition: "transform 0.5s ease-out",
-              transform: `translateX(-${index * 100}%)`,
-            }}
-          >
-            {events.map((ev) => {
-              const targetDate = ev.date ? new Date(ev.date) : new Date(Date.now() + 7 * 86400000);
-              targetDate.setHours(8, 0, 0, 0);
-              return (
-                <div
-                  key={ev.id}
-                  style={{
-                    minWidth: "100%",
-                    width: "100%",
-                    display: "grid",
-                    gridTemplateColumns: "60% 40%",
-                    height: BANNER_HEIGHT,
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* Left: image */}
-                  <div style={{ position: "relative", overflow: "hidden", borderRadius: `${BANNER_BORDER_RADIUS}px 0 0 ${BANNER_BORDER_RADIUS}px` }}>
-                    <img
-                      src={ev.img}
-                      alt={ev.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  </div>
-                  {/* Right: event details */}
-                  <div style={{ padding: "28px 32px", display: "flex", flexDirection: "column", justifyContent: "space-between", backgroundColor: "#fff", borderRadius: `0 ${BANNER_BORDER_RADIUS}px ${BANNER_BORDER_RADIUS}px 0` }}>
-                    <div>
-                      <h3 style={{ fontSize: "22px", fontWeight: 700, color: "#111827", margin: "0 0 14px", lineHeight: 1.25 }}>{ev.title}</h3>
-                      <p style={{ fontSize: "14px", color: "#374151", margin: "0 0 8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
-                        {ev.date}
-                      </p>
-                      <p style={{ fontSize: "14px", color: "#374151", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-                        </svg>
-                        {ev.location}
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "12px", fontWeight: 700, color: "#6b7280", margin: "0 0 10px" }}>Event starts in</p>
-                      <Countdown targetDate={targetDate} />
-                      <Link
-                        href={`/events/detail?id=${ev.id}`}
-                        style={{
-                          display: "inline-block",
-                          marginTop: "20px",
-                          padding: "12px 28px",
-                          backgroundColor: "#f84464",
-                          color: "#fff",
-                          borderRadius: "10px",
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          textDecoration: "none",
-                          boxShadow: "0 4px 14px rgba(248,68,100,0.35)",
-                        }}
-                      >
-                        Get Ticket
-                      </Link>
-                    </div>
+        {/* Cards Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: "12px",
+            marginTop: "10px"
+          }}
+        >
+          {events.map((ev) => (
+            <Link
+              key={ev.id}
+              href={`/events/detail?id=${ev.id}`}
+              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+            >
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                  border: "1px solid #e5e7eb",
+                  transition: "all 0.3s ease",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  height: '100%'
+                }}
+              >
+                <div style={{
+                  width: "100%",
+                  aspectRatio: "2.3/3",
+                  overflow: "hidden",
+                  position: "relative"
+                }}>
+                  <img
+                    src={ev.img}
+                    alt={ev.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    backgroundColor: 'rgba(248, 68, 100, 0.9)',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    Spotlight
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          {events.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => go(-1)}
-                aria-label="Previous"
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(0,0,0,0.5)",
-                  color: "#fff",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 2,
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => go(1)}
-                aria-label="Next"
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgba(0,0,0,0.5)",
-                  color: "#fff",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 2,
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
-              </button>
-              <div style={{ position: "absolute", bottom: "16px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px", zIndex: 2 }}>
-                {events.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setIndex(i)}
-                    aria-label={`Slide ${i + 1}`}
-                    style={{
-                      width: i === index ? "24px" : "8px",
-                      height: "8px",
-                      borderRadius: "4px",
-                      border: "none",
-                      background: i === index ? "#f84464" : "rgba(255,255,255,0.6)",
-                      cursor: "pointer",
-                      transition: "all 0.25s ease",
-                    }}
-                  />
-                ))}
+                <div style={{ padding: "10px", display: "flex", flexDirection: "column", flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: "6px" }}>
+                    <h3 style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#111827",
+                      margin: 0,
+                      lineHeight: "1.2",
+                      flex: 1,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden"
+                    }}>
+                      {ev.title}
+                    </h3>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0, marginTop: "2px" }}>
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
+                    </svg>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {ev.location}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                      <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{ev.date}</span>
+                    </div>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>Paid</span>
+                  </div>
+                </div>
               </div>
-            </>
-          )}
+            </Link>
+          ))}
         </div>
       </div>
     </section>
