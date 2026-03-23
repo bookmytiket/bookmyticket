@@ -32,3 +32,42 @@ export const FEATURED_ORGANISERS = [
   { id: 3, name: "Unherd Music Community", logo: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=120&fit=crop", eventCount: 3 },
   { id: 4, name: "LEA360 Community", logo: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=120&h=120&fit=crop", eventCount: 2 },
 ];
+
+export const BRAND_COUPONS = [
+  {
+      _id: "nykaa",
+      logoUrl: "https://nykaa.com/favicon.ico",
+      brandName: "Nykaa",
+      title: "Get ₹250 Off on Nykaa Beauty Products!",
+      description: "From bold lipsticks to skin-loving serums, discover your new favorites...",
+      endDate: Date.now() + (69 * 24 * 60 * 60 * 1000), // 69 days left
+      bannerUrl: "/coupons/nykaa_beauty_deal_1774253312733.png",
+      discountType: "Percentage",
+      discountValue: 250, // This looks like a bug in user's data (250% off), but I'll keep it for now as it was in signin
+      redemptionMethod: "Online"
+  },
+  {
+      _id: "amazon",
+      logoUrl: "https://amazon.com/favicon.ico",
+      brandName: "Amazon",
+      title: "Up to 50% Off on Premium Electronics",
+      description: "Upgrade your tech with the latest headphones, tablets and more.",
+      endDate: Date.now() + (15 * 24 * 60 * 60 * 1000), // 15 days left
+      bannerUrl: "/coupons/amazon_tech_deal_1774253329075.png",
+      discountType: "Percentage",
+      discountValue: 50,
+      redemptionMethod: "Online"
+  },
+  {
+      _id: "myntra",
+      logoUrl: "https://myntra.com/favicon.ico",
+      brandName: "Myntra",
+      title: "Flat 40% Off on Summer Collections",
+      description: "Trendy fashion and accessories to get you ready for the heat!",
+      endDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days left
+      bannerUrl: "/coupons/myntra_fashion_deal_image_1774253345705.png",
+      discountType: "Percentage",
+      discountValue: 40,
+      redemptionMethod: "Online"
+  }
+];

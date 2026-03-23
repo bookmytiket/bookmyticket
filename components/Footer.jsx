@@ -34,6 +34,14 @@ const DEFAULT_COPYRIGHT = {
 export default function Footer() {
     const rawCopyright = useQuery(api.systemConfig.getConfig, { key: "admin_footer_copyright" });
     const dynamicPages = useQuery(api.pages.getPublished) || [];
+    const [isMobile, setIsMobile] = React.useState(false);
+
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const copyright = (() => {
         if (rawCopyright == null) return DEFAULT_COPYRIGHT;
@@ -68,22 +76,29 @@ export default function Footer() {
                 <div style={{
                     position: "relative", zIndex: 1,
                     maxWidth: "1240px", margin: "0 auto",
-                    padding: "60px 20px 40px",
+                    padding: isMobile ? "40px 20px" : "60px 20px 40px",
                     display: "grid",
-                    gridTemplateColumns: "1.4fr 1fr 1.3fr",
-                    gap: "40px",
+                    gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1.3fr",
+                    gap: isMobile ? "30px" : "40px",
+                    textAlign: isMobile ? "center" : "left",
                 }}>
 
                     {/* Col 1 — Brand */}
-                    <div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "center" : "flex-start" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
                             <img src="/logo.png" alt="BookMyTicket" style={{ height: "42px", width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
                         </div>
-                        <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.75, margin: "0 0 24px", maxWidth: "240px" }}>
+                        <p style={{ 
+                            fontSize: "13.5px", 
+                            color: "rgba(255,255,255,0.6)", 
+                            lineHeight: 1.75, 
+                            margin: "0 0 24px", 
+                            maxWidth: isMobile ? "100%" : "240px" 
+                        }}>
                             We are committed to creating a platform where business leaders, innovators, and professionals can come together to exchange ideas and experience unforgettable events.
                         </p>
                         {/* Social Icons */}
-                        <div style={{ display: "flex", gap: "10px" }}>
+                        <div style={{ display: "flex", gap: "10px", justifyContent: isMobile ? "center" : "flex-start" }}>
                             {SOCIALS.map((s, i) => (
                                 <button key={i} style={{
                                     width: "36px", height: "36px", borderRadius: "50%",
@@ -114,7 +129,7 @@ export default function Footer() {
                                     <a href={page.slug === "#" ? "#" : `/p/${page.slug}`} style={{
                                         fontSize: "14px", color: "rgba(255,255,255,0.6)",
                                         textDecoration: "none", transition: "color 0.2s",
-                                        display: "flex", alignItems: "center", gap: "6px",
+                                        display: "flex", alignItems: "center", justifyContent: isMobile ? "center" : "flex-start", gap: "6px",
                                     }}
                                         onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
                                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
@@ -139,13 +154,13 @@ export default function Footer() {
                                 { icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6", text: "hello@bookmyticket.in" },
                                 { icon: "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z", text: "www.bookmyticket.in" },
                             ].map((item, i) => (
-                                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                                <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: isMobile ? "center" : "flex-start", gap: "10px" }}>
                                     <div style={{ flexShrink: 0, marginTop: "2px" }}>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d={item.icon} />
                                         </svg>
                                     </div>
-                                    <span style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{item.text}</span>
+                                    <span style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.65)", lineHeight: 1.5, textAlign: "left" }}>{item.text}</span>
                                 </div>
                             ))}
                         </div>
@@ -162,32 +177,13 @@ export default function Footer() {
                     position: "relative", zIndex: 1,
                     textAlign: "center", padding: "20px",
                     color: "rgba(255,255,255,0.45)", fontSize: "13px",
+                    display: "flex",
+                    flexDirection: isMobile ? "column" : "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: isMobile ? "10px" : "0",
                 }}>
                     {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
-                    {dynamicPages.length > 0 ? (
-                        dynamicPages.map((page, idx) => (
-                            <React.Fragment key={page._id || idx}>
-                                <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                                <a href={`/p/${page.slug}`} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
-                                    onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
-                                >{page.title}</a>
-                            </React.Fragment>
-                        ))
-                    ) : (
-                        <React.Fragment>
-                            <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                            <a href="/p/privacy-policy" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
-                                onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
-                            >Privacy Policy</a>
-                            <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                            <a href="/p/terms-of-service" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
-                                onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
-                            >Terms of Service</a>
-                        </React.Fragment>
-                    )}
                 </div>
             </div>
         </footer>

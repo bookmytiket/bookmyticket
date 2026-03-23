@@ -491,8 +491,14 @@ nextjs-portal {
 }
 
 .header-scrolled .subnav-link,
-.header-scrolled .subnav-cat {
-  color: inherit !important;
+.header-scrolled .subnav-cat,
+.header-scrolled .subnav-action,
+.header-scrolled .subnav-link.active {
+  color: #ffffff !important;
+}
+
+.header-scrolled .subnav-action-icon {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .header-scrolled .subnav-sep {
@@ -500,8 +506,9 @@ nextjs-portal {
 }
 
 .header-scrolled .subnav-link::after,
-.header-scrolled .subnav-cat::after {
-  background: var(--accent);
+.header-scrolled .subnav-cat::after,
+.header-scrolled .subnav-underline {
+  background: #fde047 !important; /* Yellow underline when scrolled */
 }
 
 .header-scrolled .nav-action-organiser,
@@ -996,6 +1003,9 @@ nextjs-portal {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 2rem;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
 }
 
 .subnav-links {
@@ -1023,38 +1033,89 @@ nextjs-portal {
 }
 
 .subnav-link:hover {
-  color: #1a1a1a !important;
+  color: var(--evente-pink) !important;
   transform: translateY(-1px);
 }
 
 .subnav-link.active {
-  color: #000 !important;
+  color: #000000 !important;
 }
 
 .subnav-underline {
   position: absolute;
-  bottom: 6px;
+  bottom: 0;
   left: 0;
   right: 0;
-  height: 3.2px;
-  background: #fde047; /* Bright Yellow as requested */
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  height: 3px;
+  background: var(--evente-pink);
+  border-radius: 2px 2px 0 0;
 }
 
+/* Subnav Actions (Right Side) */
+.subnav-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 24px !important;
+}
+
+.subnav-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #000000 !important;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  position: relative;
+}
+
+.subnav-action::after {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--evente-pink); /* Permanent pink underline at top */
+  transition: all 0.2s;
+  border-radius: 2px 2px 0 0;
+}
+
+.subnav-action:hover::after {
+  background: var(--evente-pink) !important;
+}
+
+.header-scrolled .subnav-action::after {
+  background: #fde047 !important; /* Permanent yellow underline when scrolled */
+}
+
+/* Specific hover for scrolled state to maintain yellow */
+.header-scrolled .subnav-action:hover::after {
+  background: #fde047 !important;
+  height: 4px; /* Slightly thicker on hover? Or just keep it. */
+}
+
+.subnav-action-icon {
+  color: #000000;
+  transition: color 0.2s ease;
+}
+
+.subnav-action:hover .subnav-action-icon {
+  color: #f844a4 !important;
+}
 
 @media (max-width: 768px) {
-  .header-subnav {
-    display: none; /* Sub-nav is hidden on mobile as per previous request */
+  .subnav-actions {
+    display: none !important;
   }
-}
-
-.subnav-link:hover {
-  color: #fff;
-}
-
-.subnav-link:hover::after {
-  transform: scaleX(1);
+  .header-subnav {
+    display: none !important;
+  }
 }
 
 .subnav-sep {

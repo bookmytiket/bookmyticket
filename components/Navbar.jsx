@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon } from "lucide-react";
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
@@ -251,6 +251,14 @@ export default function Navbar() {
     document.body.style.overflow = (locOpen || orgOpen || menuOpen) ? "hidden" : "";
   }, [locOpen, orgOpen, menuOpen]);
 
+  /* Close profile dropdown on outside click */
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handleClose = () => setProfileOpen(false);
+    window.addEventListener("click", handleClose);
+    return () => window.removeEventListener("click", handleClose);
+  }, [profileOpen]);
+
 
 
   const createOrgRequest = useMutation(api.organiserRequests.create);
@@ -391,95 +399,73 @@ export default function Navbar() {
 
           {/* New Desktop Navigation Buttons */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
-            <button 
-              onClick={() => setOrgOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                color: '#fff',
-                padding: '10px 24px',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '13px',
-                textTransform: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                transition: 'all 0.3s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-              }}
-            >
-              Become a Partner
-            </button>
-            <Link 
-              href="/branding" 
-              style={{
-                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                color: '#fff',
-                padding: '10px 24px',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '13px',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                transition: 'all 0.3s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-              }}
-            >
-              Branding
-            </Link>
-            <Link 
-              href="/signin" 
-              style={{
-                background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                color: '#fff',
-                padding: '10px 24px',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '13px',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                transition: 'all 0.3s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-              }}
-            >
-              Book Now
-            </Link>
+            {user?.role === "user" ? (
+              <Link 
+                href="/profile" 
+                style={{
+                  background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                  color: '#fff',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                  transition: 'all 0.3s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link 
+                href="/signin" 
+                style={{
+                  background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                  color: '#fff',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                  transition: 'all 0.3s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                }}
+              >
+                Book Now
+              </Link>
+            )}
           </div>
 
           <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
               className="show-mobile"
               onClick={() => setLocOpen(true)}
-              style={{ background: 'none', border: 'none', padding: '6px 2px', color: '#1e293b' }}
+              style={{ background: 'none', border: 'none', padding: '6px 2px', color: scrolled ? '#fff' : '#1e293b' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={scrolled ? "#fff" : "#ef4444"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
@@ -492,26 +478,144 @@ export default function Navbar() {
 
 
             {user ? (
-              <div
-                className="show-mobile"
-                onClick={() => setProfileOpen(!profileOpen)}
-                style={{ width: "30px", height: "30px", borderRadius: "50%", background: "var(--evente-pink)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", cursor: "pointer", fontSize: "12px" }}
-              >
-                {user.name && user.name[0].toUpperCase()}
+              <div style={{ position: 'relative' }}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProfileOpen(!profileOpen);
+                  }}
+                  style={{ 
+                    width: "36px", 
+                    height: "36px", 
+                    borderRadius: "50%", 
+                    background: "var(--evente-pink)", 
+                    color: "#fff", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    fontWeight: "700", 
+                    cursor: "pointer", 
+                    fontSize: "14px",
+                    boxShadow: '0 4px 12px rgba(248, 68, 100, 0.2)',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {user.name && user.name[0].toUpperCase()}
+                </div>
+                
+                <AnimatePresence>
+                  {profileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 12px)',
+                        right: 0,
+                        width: '240px',
+                        background: '#fff',
+                        borderRadius: '16px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                        border: '1px solid #f1f5f9',
+                        padding: '12px',
+                        zIndex: 1000,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{ padding: '8px 12px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a', marginBottom: '2px' }}>{user.name}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', wordBreak: 'break-all', opacity: 0.8 }}>{user.identifier}</div>
+                      </div>
+                      
+                      <Link 
+                        href="/profile" 
+                        onClick={() => setProfileOpen(false)}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px', 
+                          padding: '12px', 
+                          borderRadius: '10px', 
+                          textDecoration: 'none', 
+                          color: '#475569', 
+                          fontSize: '14px', 
+                          fontWeight: 600,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#f844a4'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                      >
+                        <User size={18} /> My Profile
+                      </Link>
+                      
+                      <Link 
+                        href="/profile?tab=my_booking" 
+                        onClick={() => setProfileOpen(false)}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px', 
+                          padding: '12px', 
+                          borderRadius: '10px', 
+                          textDecoration: 'none', 
+                          color: '#475569', 
+                          fontSize: '14px', 
+                          fontWeight: 600,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#f844a4'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                      >
+                        <TicketIcon size={18} /> My Bookings
+                      </Link>
+
+                      <div style={{ height: '1px', background: '#f1f5f9', margin: '8px 0' }} />
+
+                      <button
+                        onClick={() => { logout(); setProfileOpen(false); }}
+                        style={{ 
+                          width: '100%',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px', 
+                          padding: '12px', 
+                          borderRadius: '10px', 
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#ef4444', 
+                          fontSize: '14px', 
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <LogOut size={18} /> Log Out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
-              <button
-                className="show-mobile"
-                onClick={() => setMenuOpen(true)}
-                style={{ background: 'none', border: 'none', padding: '6px', color: '#1e293b' }}
-              >
-                <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1.5px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-              </button>
+              <>
+                <button
+                  className="show-mobile"
+                  onClick={() => setMenuOpen(true)}
+                  style={{ background: 'none', border: 'none', padding: '6px', color: scrolled ? '#fff' : '#1e293b' }}
+                >
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: `1.5px solid ${scrolled ? '#fff' : '#1e293b'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  </div>
+                </button>
+              </>
             )}
 
-            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '6px' }}>
+            <button className="show-mobile" onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", padding: '6px', color: scrolled ? '#fff' : '#1e293b' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
           </div>
@@ -598,6 +702,17 @@ export default function Navbar() {
                   )}
                 </motion.div>
               ))}
+            </div>
+
+            <div className="subnav-actions hide-mobile">
+              <button onClick={() => setOrgOpen(true)} className="subnav-action">
+                <Handshake size={16} className="subnav-action-icon" />
+                Become a Partner
+              </button>
+              <Link href="/branding" className="subnav-action">
+                <Globe size={16} className="subnav-action-icon" />
+                Branding
+              </Link>
             </div>
           </div>
         </nav>

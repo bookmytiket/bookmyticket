@@ -18,7 +18,7 @@ import Sponsors from '@/components/Sponsors';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
-import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS } from '@/app/data/homeEvents';
+import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS, BRAND_COUPONS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
@@ -256,6 +256,14 @@ export default function Home() {
   const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
   const activeBanners = useQuery(api.branding.getActiveBanners) || [];
   const homeCoupons = useQuery(api.branding.getHomeCoupons) || [];
+  const allCoupons = useMemo(() => {
+    // Merge Convex coupons with Static Partner deals
+    return [...homeCoupons, ...BRAND_COUPONS.map(c => ({
+      ...c,
+      // Normalize dates if needed for BrandCouponsSection
+      endDate: typeof c.endDate === 'number' ? c.endDate : Date.now() + 86400000 * 30
+    }))];
+  }, [homeCoupons]);
 
 
   // Stable key from activeBanners to prevent infinite re-renders
@@ -420,7 +428,7 @@ export default function Home() {
           <div style={{ width: '100%' }}>
             {/* Cloned Brand Coupons Section (Top Trending Offers) - Placed under Hero Banner */}
             <BrandCouponsSection 
-               coupons={homeCoupons} 
+               coupons={allCoupons} 
                title="Top Trending Offers" 
                subtitle="Grab these limited time deals before they expire!" 
             />
@@ -454,7 +462,7 @@ export default function Home() {
             </div>
 
             {/* Subscription Banner before Footer */}
-            <BrandCouponsSection coupons={homeCoupons} />
+            <BrandCouponsSection coupons={allCoupons} />
             <SubscriptionBanner />
           </div>
         )}
