@@ -9,6 +9,7 @@ import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { hashPassword } from "@/app/utils/hashPassword";
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
+import CouponModal from "@/components/CouponModal";
 
 const FALLBACK_BANNER_SLIDES = [
     { image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", subtitle: "Book tickets for concerts, sports & more" },
@@ -64,6 +65,7 @@ export default function SignInPage() {
     const convex = useConvex();
     const [dealIdx, setDealIdx] = useState(0);
     const [currentTime, setCurrentTime] = useState("");
+    const [selectedCoupon, setSelectedCoupon] = useState(null);
 
     useEffect(() => {
         const updateTime = () => {
@@ -299,6 +301,14 @@ export default function SignInPage() {
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             ` }} />
             
+            {/* Render Coupon Modal if selected */}
+            {selectedCoupon && (
+                <CouponModal 
+                    coupon={selectedCoupon} 
+                    onClose={() => setSelectedCoupon(null)} 
+                />
+            )}
+
             {/* ══ LEFT SIDE: AUTO-SCROLLING COUPONS ══ */}
             <div className="hide-on-mobile" style={{ 
                 flex: 1.2, 
@@ -336,7 +346,18 @@ export default function SignInPage() {
                         {/* Current Card with animation */}
                         <div 
                             key={dealIdx} 
-                            onClick={() => router.push(`/coupons/${activeDeal.id}`)}
+                            onClick={() => {
+                                // Map the local deal structure to match what CouponModal expects
+                                setSelectedCoupon({
+                                    ...activeDeal,
+                                    bannerUrl: activeDeal.image,
+                                    brandName: activeDeal.brand,
+                                    logoUrl: activeDeal.logo,
+                                    description: activeDeal.desc,
+                                    discountValue: activeDeal.discount.replace(/[^0-9]/g, '') || "250",
+                                    redirectUrl: activeDeal.url || "https://google.com"
+                                });
+                            }}
                             style={{
                                 animation: "slideInVertical 0.8s ease-out forwards",
                                 background: "#fff",
