@@ -476,7 +476,7 @@ export default function SignInPage() {
                         {/* Header Logo */}
                         <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", marginTop: "5px" }}>
                             <Link href="/">
-                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "40px", width: "auto", display: "block", cursor: "pointer" }} />
+                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "75px", width: "auto", display: "block", cursor: "pointer" }} />
                             </Link>
                         </div>
 
@@ -622,6 +622,9 @@ export default function SignInPage() {
                                                     style={{ position: "absolute", right: "14px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
                                                     {showSignupPass ? <Eye size={18} /> : <EyeOff size={18} />}
                                                 </button>
+                                            </div>
+                                            <div style={{ position: "relative" }}>
+                                                <input type={showSignupPass ? "text" : "password"} required placeholder="Confirm Password" value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)} style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg} />
                                             </div>
 
                                             {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}

@@ -132,6 +132,10 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
 
     await ctx.db.insert("otps", { email, code: otp, expires, purpose });
 
+    console.log("=================================================");
+    console.log(`🎟️ OTP GENERATED: ${otp} (for ${email} : ${purpose})`);
+    console.log("=================================================");
+
     const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
     const brandNameDisplay = "BookMyTicket";
 
