@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -163,16 +164,30 @@ export default function Footer() {
                     color: "rgba(255,255,255,0.45)", fontSize: "13px",
                 }}>
                     {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
-                    <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href="/p/privacy-policy" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
-                        onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
-                    >Privacy Policy</a>
-                    <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
-                    <a href="/p/terms-of-service" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
-                        onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
-                    >Terms of Service</a>
+                    {dynamicPages.length > 0 ? (
+                        dynamicPages.map((page, idx) => (
+                            <React.Fragment key={page._id || idx}>
+                                <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
+                                <a href={`/p/${page.slug}`} style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                                    onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
+                                    onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
+                                >{page.title}</a>
+                            </React.Fragment>
+                        ))
+                    ) : (
+                        <React.Fragment>
+                            <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
+                            <a href="/p/privacy-policy" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
+                            >Privacy Policy</a>
+                            <span style={{ margin: "0 12px", color: "rgba(255,255,255,0.2)" }}>|</span>
+                            <a href="/p/terms-of-service" style={{ color: "rgba(255,255,255,0.45)", textDecoration: "none" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
+                            >Terms of Service</a>
+                        </React.Fragment>
+                    )}
                 </div>
             </div>
         </footer>

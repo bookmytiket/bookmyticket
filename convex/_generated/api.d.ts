@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as adPopups from "../adPopups.js";
 import type * as admins from "../admins.js";
 import type * as analytics from "../analytics.js";
 import type * as apiKeys from "../apiKeys.js";
@@ -33,6 +34,7 @@ import type * as paymentGateways from "../paymentGateways.js";
 import type * as policies from "../policies.js";
 import type * as promotions from "../promotions.js";
 import type * as pwaScans from "../pwaScans.js";
+import type * as removeDuplicatePages from "../removeDuplicatePages.js";
 import type * as seed from "../seed.js";
 import type * as seoSettings from "../seoSettings.js";
 import type * as siteBranding from "../siteBranding.js";
@@ -51,6 +53,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adPopups: typeof adPopups;
   admins: typeof admins;
   analytics: typeof analytics;
   apiKeys: typeof apiKeys;
@@ -76,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   policies: typeof policies;
   promotions: typeof promotions;
   pwaScans: typeof pwaScans;
+  removeDuplicatePages: typeof removeDuplicatePages;
   seed: typeof seed;
   seoSettings: typeof seoSettings;
   siteBranding: typeof siteBranding;

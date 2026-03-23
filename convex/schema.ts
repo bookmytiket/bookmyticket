@@ -466,4 +466,19 @@ export default defineSchema({
         isActive: v.boolean(),
         createdAt: v.number(),
     }).index("by_brandId", ["brandId"]).index("by_isActive", ["isActive"]),
+
+    // Customer Advertisement Popup Notifications
+    adPopups: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        imageStorageId: v.optional(v.id("_storage")),
+        redirectUrl: v.optional(v.string()),
+        ctaText: v.optional(v.string()),       // e.g. "Shop Now", "Book Now"
+        bgColor: v.optional(v.string()),        // fallback gradient color
+        badgeText: v.optional(v.string()),      // e.g. "🔥 Limited Offer"
+        isActive: v.boolean(),
+        showEveryMinutes: v.number(),           // re-show interval (e.g. 30 = every 30 min)
+        createdAt: v.number(),
+    }).index("by_isActive", ["isActive"]),
 });

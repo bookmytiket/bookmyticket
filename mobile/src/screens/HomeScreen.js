@@ -10,6 +10,7 @@ import { Colors } from '../theme/Theme';
 import ComingSoonSection from '../components/ComingSoonSection';
 import CouponCard from '../components/CouponCard';
 import CouponOverlay from '../components/CouponOverlay';
+import CustomerAdPopup from '../components/CustomerAdPopup';
 
 const { width } = Dimensions.get('window');
 
@@ -259,6 +260,7 @@ export default function HomeScreen() {
         coupon={selectedCoupon} 
         onClose={() => setSelectedCoupon(null)} 
       />
+      <CustomerAdPopup />
     </>
   );
 }

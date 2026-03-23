@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
-import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload } from "lucide-react";
+import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -423,26 +423,34 @@ function AdminHomePage() {
     }, [activeTemplate]);
     const [pageForm, setPageForm] = useState({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
     const [pageModal, setPageModal] = useState(null); // 'create' | 'edit'
+    const [pageToDelete, setPageToDelete] = useState(null);
 
     const handleSavePage = async () => {
-        if (pageModal === "create") {
-            await createPageMutation({ ...pageForm, order: convexPages.length });
-        } else if (pageModal === "edit" && pageForm._id) {
-            await updatePageMutation({
-                id: pageForm._id,
-                title: pageForm.title,
-                slug: pageForm.slug,
-                content: pageForm.content,
-                showInFooter: pageForm.showInFooter,
-            });
+        try {
+            if (pageModal === "create") {
+                await createPageMutation({ ...pageForm, order: convexPages.length });
+            } else if (pageModal === "edit" && pageForm._id) {
+                await updatePageMutation({
+                    id: pageForm._id,
+                    title: pageForm.title,
+                    slug: pageForm.slug,
+                    content: pageForm.content,
+                    showInFooter: pageForm.showInFooter,
+                });
+            }
+            setPageModal(null);
+            setPageForm({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
+        } catch (e) {
+            alert("Error saving page: " + e.message);
         }
-        setPageModal(null);
-        setPageForm({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
     };
 
     const handleDeletePage = async (id) => {
-        if (confirm("Are you sure you want to delete this page?")) {
+        try {
             await deletePageMutation({ id });
+            setPageToDelete(null);
+        } catch(e) {
+            alert("Error deleting page: " + e.message);
         }
     };
 
@@ -580,6 +588,73 @@ function AdminHomePage() {
     const createAdminMutation = useMutation(api.admins.create);
     const updateAdminStatusMutation = useMutation(api.admins.updateStatus);
     const deleteAdminMutation = useMutation(api.admins.remove);
+
+    // Ad Popups
+    const allAdPopups = useQuery(api.adPopups.getAllAdPopups) || [];
+    const createAdPopupMutation = useMutation(api.adPopups.createAdPopup);
+    const updateAdPopupMutation = useMutation(api.adPopups.updateAdPopup);
+    const toggleAdPopupMutation = useMutation(api.adPopups.toggleAdPopup);
+    const deleteAdPopupMutation = useMutation(api.adPopups.deleteAdPopup);
+    const generateUploadUrlMutation = useMutation(api.adPopups.generateUploadUrl);
+    
+    const [adPopupForm, setAdPopupForm] = useState({
+        title: "", description: "", imageUrl: "",
+        redirectUrl: "", ctaText: "Book Now",
+        bgColor: "", badgeText: "",
+        isActive: true, showEveryMinutes: 30,
+    });
+    const [adPopupEditingId, setAdPopupEditingId] = useState(null);
+    const [adPopupImageFile, setAdPopupImageFile] = useState(null);
+    const [adPopupSaving, setAdPopupSaving] = useState(false);
+    const [showAdPopupForm, setShowAdPopupForm] = useState(false);
+
+    const handleSaveAdPopup = async () => {
+        if (!adPopupForm.title) { alert("Title is required"); return; }
+        setAdPopupSaving(true);
+        try {
+            let finalImageUrl = adPopupForm.imageUrl;
+            if (adPopupImageFile) {
+                const uploadUrl = await generateUploadUrlMutation();
+                const result = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": adPopupImageFile.type }, body: adPopupImageFile });
+                const { storageId } = await result.json();
+                finalImageUrl = storageId;
+            }
+
+            if (adPopupEditingId) {
+                await updateAdPopupMutation({ id: adPopupEditingId, ...adPopupForm, imageUrl: finalImageUrl });
+            } else {
+                await createAdPopupMutation({ ...adPopupForm, imageUrl: finalImageUrl });
+            }
+            
+            setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30 });
+            setAdPopupEditingId(null);
+            setAdPopupImageFile(null);
+            setShowAdPopupForm(false);
+        } catch(e) { alert("Error saving popup: " + e.message); }
+        finally { setAdPopupSaving(false); }
+    };
+
+    const handleEditAdPopup = (popup) => {
+        setAdPopupForm({
+            title: popup.title || "", description: popup.description || "",
+            imageUrl: popup.storageId || popup.imageUrl || "",
+            redirectUrl: popup.redirectUrl || "", ctaText: popup.ctaText || "",
+            bgColor: popup.bgColor || "", badgeText: popup.badgeText || "",
+            isActive: popup.isActive, showEveryMinutes: popup.showEveryMinutes || 30,
+        });
+        setAdPopupEditingId(popup._id);
+        setAdPopupImageFile(null);
+        setShowAdPopupForm(true);
+    };
+
+    const handleDeleteAdPopup = async (id) => {
+        if (!confirm("Delete this popup?")) return;
+        try {
+            await deleteAdPopupMutation({ id });
+        } catch(e) {
+            alert("Error deleting popup: " + e.message);
+        }
+    };
 
     const [adminModal, setAdminModal] = useState(null);
     const [newAdmin, setNewAdmin] = useState({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
@@ -1043,6 +1118,9 @@ function AdminHomePage() {
                     </button>
                     <button onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
                         <FileText size={20} /> Pages
+                    </button>
+                    <button onClick={() => setActiveTab("ad_popups")} className={`sidebar-item ${activeTab === "ad_popups" ? "active" : ""}`}>
+                        <Megaphone size={20} /> Ad Popups
                     </button>
 
                     {/* Administration */}
@@ -3817,8 +3895,18 @@ function AdminHomePage() {
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
-                                                        <button onClick={() => { setPageForm(page); setPageModal("edit"); }} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer" }}><Save size={14} /></button>
-                                                        <button onClick={() => handleDeletePage(page._id)} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
+                                                        <button onClick={() => {
+                                                            setPageForm({
+                                                                _id: page._id,
+                                                                title: page.title || "",
+                                                                slug: page.slug || "",
+                                                                content: page.content || "",
+                                                                showInFooter: !!page.showInFooter,
+                                                                order: page.order || 0
+                                                            });
+                                                            setPageModal("edit");
+                                                        }} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#3b82f6", cursor: "pointer" }}><Edit size={14} /></button>
+                                                        <button onClick={() => setPageToDelete(page._id)} style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -3871,6 +3959,20 @@ function AdminHomePage() {
                                     </div>
                                 </div>
                             )}
+
+                            {pageToDelete && (
+                                <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1002 }}>
+                                    <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", width: "400px", border: `1px solid ${t.border}` }}>
+                                        <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", color: t.textMain }}>Confirm Deletion</h3>
+                                        <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: t.textSub }}>Are you sure you want to permanently delete this page? This cannot be undone.</p>
+                                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                                            <button onClick={() => setPageToDelete(null)} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: t.border, color: t.textMain, cursor: "pointer", fontWeight: 600 }}>Cancel</button>
+                                            <button onClick={() => handleDeletePage(pageToDelete)} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Delete Page</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     )}
 
@@ -3935,7 +4037,96 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(!["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management"].includes(activeTab)) && (
+                    {activeTab === "ad_popups" && (
+                        <div style={{ maxWidth: "900px" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+                                <div>
+                                    <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Customer Ad Popups</h2>
+                                    <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage cookie-based advertisement popups shown to customers on web and mobile</p>
+                                </div>
+                                <button onClick={() => { setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30 }); setAdPopupEditingId(null); setAdPopupImageFile(null); setShowAdPopupForm(true); }} style={{ background: "linear-gradient(135deg,#ec4899,#a855f7)", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 20px", fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <Plus size={16} /> New Ad Popup
+                                </button>
+                            </div>
+
+                            {showAdPopupForm && (
+                                <div style={{ background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "24px", marginBottom: "24px" }}>
+                                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "20px" }}>{adPopupEditingId ? "Edit Ad Popup" : "Create New Ad Popup"}</h3>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                        {[{k:"title",l:"Title *",ph:"e.g. 🎉 Exclusive Offer"},{k:"description",l:"Description",ph:"Short promo text"},{k:"redirectUrl",l:"Redirect URL",ph:"https://..."},{k:"ctaText",l:"CTA Button Text",ph:"e.g. Book Now"},{k:"badgeText",l:"Badge Label",ph:"e.g. 🔥 Limited Offer"},{k:"bgColor",l:"Background Color",ph:"e.g. #f84464 or gradient CSS"}].map(({k,l,ph}) => (
+                                            <div key={k} style={k==="description" || k==="bgColor" ? { gridColumn: "1 / -1" } : {}}>
+                                                <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>{l}</label>
+                                                <input value={adPopupForm[k]} onChange={e => setAdPopupForm({...adPopupForm, [k]: e.target.value})} placeholder={ph} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
+                                            </div>
+                                        ))}
+
+                                        <div style={{ gridColumn: "1 / -1", background: t.sidebarBorder, padding: "16px", borderRadius: "8px", border: `1px dashed ${t.border}` }}>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Image (URL or Upload)</label>
+                                            <input value={adPopupForm.imageUrl} onChange={e => setAdPopupForm({...adPopupForm, imageUrl: e.target.value})} placeholder="https://... (banner image URL)" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box", marginBottom: "10px" }} />
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <input type="file" accept="image/*" onChange={e => setAdPopupImageFile(e.target.files[0])} style={{ fontSize: "13px", color: t.textSub }} />
+                                                {adPopupImageFile && <span style={{ fontSize: "12px", color: "#10b981", fontWeight: 600 }}>File queued for upload</span>}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Show Every (minutes)</label>
+                                            <input type="number" min="1" value={adPopupForm.showEveryMinutes} onChange={e => setAdPopupForm({...adPopupForm, showEveryMinutes: Number(e.target.value)})} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "22px" }}>
+                                            <input type="checkbox" id="adactive" checked={adPopupForm.isActive} onChange={e => setAdPopupForm({...adPopupForm, isActive: e.target.checked})} />
+                                            <label htmlFor="adactive" style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, cursor: "pointer" }}>Active (show to customers)</label>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                                        <button onClick={handleSaveAdPopup} disabled={adPopupSaving} style={{ background: "linear-gradient(135deg,#ec4899,#a855f7)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 24px", fontWeight: 700, fontSize: "14px", cursor: "pointer", opacity: adPopupSaving ? 0.7 : 1 }}>{adPopupSaving ? "Saving..." : "Save Popup"}</button>
+                                        <button onClick={() => { setShowAdPopupForm(false); setAdPopupEditingId(null); setAdPopupImageFile(null); }} style={{ background: t.border, color: t.textMain, border: "none", borderRadius: "8px", padding: "10px 20px", fontWeight: 600, fontSize: "14px", cursor: "pointer" }}>Cancel</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                {allAdPopups.length === 0 ? (
+                                    <div style={{ background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "12px", padding: "40px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>
+                                        <Megaphone size={32} style={{ opacity: 0.3, marginBottom: "12px" }} />
+                                        <p style={{ margin: 0 }}>No ad popups yet. Create your first one above.</p>
+                                    </div>
+                                ) : allAdPopups.map(popup => (
+                                    <div key={popup._id} style={{ background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "12px", padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
+                                        {popup.imageUrl ? (
+                                            <img src={popup.imageUrl} alt={popup.title} style={{ width: "80px", height: "60px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }} onError={e => { e.target.style.display='none'; }} />
+                                        ) : (
+                                            <div style={{ width: "80px", height: "60px", borderRadius: "8px", background: popup.bgColor || "linear-gradient(135deg,#f84464,#c026d3)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" }}>🎉</div>
+                                        )}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                                                <span style={{ fontSize: "15px", fontWeight: 700, color: t.textMain }}>{popup.title}</span>
+                                                {popup.badgeText && <span style={{ fontSize: "11px", background: "#fef3c7", color: "#92400e", borderRadius: "10px", padding: "2px 8px", fontWeight: 700 }}>{popup.badgeText}</span>}
+                                            </div>
+                                            {popup.description && <p style={{ fontSize: "13px", color: t.textSub, margin: "0 0 6px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{popup.description}</p>}
+                                            <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: t.textSub }}>
+                                                <span>⏱ Every {popup.showEveryMinutes} min</span>
+                                                {popup.ctaText && <span>🔗 {popup.ctaText}</span>}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                                            <button onClick={() => toggleAdPopupMutation({ id: popup._id, isActive: !popup.isActive })} style={{ background: popup.isActive ? "#dcfce7" : "#f1f5f9", color: popup.isActive ? "#16a34a" : t.textSub, border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                                                {popup.isActive ? "✓ Active" : "Inactive"}
+                                            </button>
+                                            <button onClick={() => handleEditAdPopup(popup)} style={{ background: t.activeLink, color: t.activeText, border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                                                <Edit size={14} />
+                                            </button>
+                                            <button onClick={() => handleDeleteAdPopup(popup._id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management", "ad_popups"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

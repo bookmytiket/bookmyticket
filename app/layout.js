@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
+import CustomerAdPopup from '@/components/CustomerAdPopup';
 
 export const metadata = {
   title: 'BookMyTicket — Your Gateway to Amazing Events',
@@ -9,6 +10,7 @@ export const metadata = {
 
 import { AuthProvider } from '@/components/AuthContext';
 import ConvexClientProvider from '@/components/ConvexClientProvider';
+import CookieNotification from '@/components/CookieNotification';
 
 export default function RootLayout({ children }) {
   return (
@@ -26,6 +28,8 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <Suspense fallback={null}>
               <ConditionalNavbar />
+              <CustomerAdPopup />
+              <CookieNotification />
               {children}
             </Suspense>
           </AuthProvider>
