@@ -1,10 +1,11 @@
+/* eslint-disable */
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
-import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search } from "lucide-react";
+import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -389,6 +390,14 @@ function AdminHomePage() {
         name: "book my ticket",
         logoColor: "#111111",
         logoUrl: "/logo.png"
+    }, [convexSiteBranding]);
+
+    const [localBranding, setLocalBranding] = useState({ name: "book my ticket", logoColor: "#111111", logoUrl: "/logo.png" });
+
+    useEffect(() => {
+        if (convexSiteBranding) {
+            setLocalBranding(convexSiteBranding);
+        }
     }, [convexSiteBranding]);
 
     const metaSettings = useMemo(() => ({
@@ -880,6 +889,54 @@ function AdminHomePage() {
                     letter-spacing: 0.05em;
                     color: ${t.textSub}80;
                 }
+                .submenu {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    margin: 4px 16px 12px 32px;
+                }
+                .submenu-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: ${t.textSub};
+                }
+                .submenu-item:hover {
+                    background-color: ${t.activeLink}30;
+                    color: ${t.activeText};
+                }
+                .submenu-item.active-sub {
+                    background-color: transparent;
+                    color: ${t.activeText};
+                    font-weight: 700;
+                }
+                .dot-icon {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background-color: currentColor;
+                    opacity: 0.5;
+                }
+                .submenu-item.active-sub .dot-icon {
+                    opacity: 1;
+                    background-color: ${t.activeText};
+                }
+                .sidebar::-webkit-scrollbar {
+                    width: 5px;
+                }
+                .sidebar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .sidebar::-webkit-scrollbar-thumb {
+                    background-color: ${t.border};
+                    border-radius: 10px;
+                }
                 .main-content {
                     margin-left: 250px;
                     flex: 1;
@@ -979,6 +1036,30 @@ function AdminHomePage() {
                         <Megaphone size={18} /> Banner Ads
                     </div>
 
+                    <div onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} className={`sidebar-item ${isHomeSettingsOpen ? "active" : ""}`} style={{ marginTop: "10px" }}>
+                        <Globe size={18} /> <span>Home Page Setup</span>
+                        <Menu size={14} style={{ marginLeft: "auto", transform: isHomeSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
+                    </div>
+                    {isHomeSettingsOpen && (
+                        <div className="submenu">
+                            {[
+                                { label: "Hero Banner", id: "hero" },
+                                { label: "Video Banner", id: "video_banner" },
+                                { label: "Site Branding", id: "site_branding" },
+                                { label: "Featured Events", id: "events_settings" },
+                                { label: "Event Partners", id: "event_partners" },
+                                { label: "Recent Memories", id: "memories" },
+                                { label: "Sections Order", id: "sections" },
+                                { label: "Copyright Header", id: "copyright" },
+                            ].map((sub) => (
+                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
+                                    <div className="dot-icon"></div>
+                                    <span>{sub.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     <p className="sidebar-group-title">Operations</p>
                     <div onClick={() => setActiveTab("all_events")} className={`sidebar-item ${activeTab === "all_events" ? "active" : ""}`}>
                         <Calendar size={18} /> Events
@@ -1015,19 +1096,41 @@ function AdminHomePage() {
                     )}
 
                     <p className="sidebar-group-title">Growth</p>
-                    <div onClick={() => setActiveTab("promotions")} className={`sidebar-item ${activeTab === "promotions" ? "active" : ""}`}>
-                        <Gift size={18} /> Promotions
+                    <div onClick={() => setIsGrowthOpen(!isGrowthOpen)} className={`sidebar-item ${isGrowthOpen ? "active" : ""}`}>
+                        <Gift size={18} /> <span>Growth</span>
+                        <Menu size={14} style={{ marginLeft: "auto", transform: isGrowthOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
                     </div>
-                    <div onClick={() => setActiveTab("send_notif")} className={`sidebar-item ${activeTab === "send_notif" ? "active" : ""}`}>
-                        <Bell size={18} /> Notifications
-                    </div>
+                    {isGrowthOpen && (
+                        <div className="submenu">
+                            {[
+                                { label: "Promotions", id: "promotions" },
+                                { label: "Push Notifications", id: "send_notif" },
+                            ].map((sub) => (
+                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
+                                    <div className="dot-icon"></div>
+                                    <span>{sub.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
-                    <p className="sidebar-group-title">Utils</p>
+                    <p className="sidebar-group-title">Reports</p>
                     <div onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
-                        <MessageCircle size={18} /> Support
+                        <MessageCircle size={18} /> Support Tickets
+                    </div>
+                    <div onClick={() => setActiveTab("branding_partners")} className={`sidebar-item ${activeTab === "branding_partners" ? "active" : ""}`}>
+                        <Shield size={18} /> Branding Partners
                     </div>
                     <div onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
                         <FileText size={18} /> Pages
+                    </div>
+                    <div onClick={() => setActiveTab("ad_popups")} className={`sidebar-item ${activeTab === "ad_popups" ? "active" : ""}`}>
+                        <Megaphone size={18} /> Ad Popups
+                    </div>
+
+                    <p className="sidebar-group-title">Administration</p>
+                    <div onClick={() => setActiveTab("admin_management")} className={`sidebar-item ${activeTab === "admin_management" ? "active" : ""}`}>
+                        <Shield size={18} /> Team Management
                     </div>
 
                     <p className="sidebar-group-title">System</p>
@@ -1040,8 +1143,12 @@ function AdminHomePage() {
                             {[
                                 { label: "API Keys", id: "api_settings" },
                                 { label: "Payments", id: "payment_settings" },
-                                { label: "Email", id: "email_settings" },
+                                { label: "Emails", id: "email_settings" },
                                 { label: "SEO & Meta", id: "meta_management" },
+                                { label: "Email Templates", id: "email_templates" },
+                                { label: "Disclaimers", id: "disclaimer_settings" },
+                                { label: "SSO Config", id: "sso_settings" },
+                                { label: "Tickets & Notifs", id: "ticket_settings" }
                             ].map((sub) => (
                                 <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
                                     <div className="dot-icon"></div>
@@ -2125,53 +2232,89 @@ function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Site Name</label>
                                         <input
                                             type="text"
-                                            value={siteBranding.name}
-                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, name: e.target.value })}
+                                            value={localBranding.name || ""}
+                                            onChange={(e) => setLocalBranding({ ...localBranding, name: e.target.value })}
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                         />
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Logo URL</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. /logo.png or https://..."
-                                            value={siteBranding.logoUrl}
-                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, logoUrl: e.target.value })}
-                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. /logo.png or https://..."
+                                                value={localBranding.logoUrl || ""}
+                                                onChange={(e) => setLocalBranding({ ...localBranding, logoUrl: e.target.value })}
+                                                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Logomark Color</label>
                                         <input
                                             type="color"
-                                            value={siteBranding.logoColor}
-                                            onChange={(e) => updateSiteBrandingMutation({ ...siteBranding, logoColor: e.target.value })}
+                                            value={localBranding.logoColor || "#111111"}
+                                            onChange={(e) => setLocalBranding({ ...localBranding, logoColor: e.target.value })}
                                             style={{ width: "60px", height: "40px", padding: "2px", borderRadius: "4px", border: "none", cursor: "pointer" }}
                                         />
                                     </div>
+                                    <button 
+                                        onClick={async (e) => {
+                                            const btn = e.target;
+                                            const originalText = btn.innerText;
+                                            btn.innerText = "Saving...";
+                                            try {
+                                                let finalUrl = localBranding.logoUrl || "";
+                                                // Auto-fix the URL if the user typed the server path
+                                                if (finalUrl.includes("public/")) {
+                                                    finalUrl = "/" + finalUrl.split("public/")[1];
+                                                }
+                                                setLocalBranding({ ...localBranding, logoUrl: finalUrl });
+                                                
+                                                await updateSiteBrandingMutation({ name: localBranding.name || "", logoColor: localBranding.logoColor || "#111111", logoUrl: finalUrl });
+                                                
+                                                btn.innerText = "Saved!";
+                                                setTimeout(() => { btn.innerText = originalText; }, 2000);
+                                            } catch(err) {
+                                                alert("Error saving: " + err.message);
+                                                btn.innerText = originalText;
+                                            }
+                                        }}
+                                        style={{ padding: "12px 24px", borderRadius: "8px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", alignSelf: "flex-start", marginTop: "10px", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}
+                                    >
+                                        Save Branding Info
+                                    </button>
                                 </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Logo Preview</label>
-                                    <div style={{ padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b' }}>
+                                    <div style={{ padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', overflow: "hidden" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            {siteBranding.logoUrl ? (
+                                            {localBranding.logoUrl ? (
                                                 <img
-                                                    src={siteBranding.logoUrl}
-                                                    alt="Logo"
+                                                    key={`img-${localBranding.logoUrl}`}
+                                                    src={localBranding.logoUrl}
+                                                    alt="Logo URL missing or invalid"
                                                     style={{
                                                         height: "80px",
                                                         objectFit: "contain",
                                                         filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none'
                                                     }}
+                                                    onLoad={(e) => { 
+                                                        e.target.style.display = 'block'; 
+                                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; 
+                                                    }}
+                                                    onError={(e) => { 
+                                                        e.target.style.display = 'none'; 
+                                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; 
+                                                    }}
                                                 />
-                                            ) : (
-                                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                    <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${siteBranding.logoColor}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
-                                                        <Ticket color="#fff" size={28} />
-                                                    </div>
-                                                    <span style={{ fontSize: "24px", fontWeight: 800, color: "#111" }}>{siteBranding.name}</span>
+                                            ) : null}
+                                            <div key={`fallback-${localBranding.logoUrl}`} style={{ display: localBranding.logoUrl ? "none" : "flex", alignItems: "center", gap: "12px" }}>
+                                                <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${localBranding.logoColor}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
+                                                    <Ticket color="#fff" size={28} />
                                                 </div>
-                                            )}
+                                                <span style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{localBranding.name}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>Logo images with transparent backgrounds work best.</p>

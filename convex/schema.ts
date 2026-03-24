@@ -154,6 +154,7 @@ export default defineSchema({
         fullName: v.optional(v.string()), // Compatibility with old 'name'
         name: v.optional(v.string()),     // Compatibility with old 'name'
         email: v.string(),
+        phone: v.optional(v.string()),    // Added for WhatsApp notifications
         username: v.optional(v.string()),
         password: v.string(),
         role: v.string(), // 'user'
@@ -474,7 +475,23 @@ export default defineSchema({
         createdAt: v.number(),
     }).index("by_brandId", ["brandId"]).index("by_isActive", ["isActive"]),
 
-    // Customer Advertisement Popup Notifications
+    subscribers: defineTable({
+        email: v.string(),
+        phone: v.optional(v.string()),
+        status: v.string(), // "Active" | "Unsubscribed"
+        createdAt: v.number(),
+    }).index("by_email", ["email"]),
+
+    whatsappSettings: defineTable({
+        provider: v.string(), // e.g. "Twilio"
+        accountSid: v.optional(v.string()),
+        authToken: v.optional(v.string()),
+        fromNumber: v.optional(v.string()), // e.g. "whatsapp:+14155238886"
+        apiKey: v.optional(v.string()),     // for other providers
+        isActive: v.boolean(),
+        updatedAt: v.number(),
+    }),
+
     adPopups: defineTable({
         title: v.string(),
         description: v.optional(v.string()),

@@ -26,6 +26,7 @@ import type * as feeSettings from "../feeSettings.js";
 import type * as homeSettings from "../homeSettings.js";
 import type * as memories from "../memories.js";
 import type * as migrations from "../migrations.js";
+import type * as notificationActions from "../notificationActions.js";
 import type * as notifications from "../notifications.js";
 import type * as organiserRequests from "../organiserRequests.js";
 import type * as organisers from "../organisers.js";
@@ -40,11 +41,13 @@ import type * as seoSettings from "../seoSettings.js";
 import type * as siteBranding from "../siteBranding.js";
 import type * as ssoSettings from "../ssoSettings.js";
 import type * as staff from "../staff.js";
+import type * as subscribers from "../subscribers.js";
 import type * as supportTickets from "../supportTickets.js";
 import type * as systemConfig from "../systemConfig.js";
 import type * as test from "../test.js";
 import type * as ticketSettings from "../ticketSettings.js";
 import type * as users from "../users.js";
+import type * as whatsappSettings from "../whatsappSettings.js";
 
 import type {
   ApiFromModules,
@@ -71,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   homeSettings: typeof homeSettings;
   memories: typeof memories;
   migrations: typeof migrations;
+  notificationActions: typeof notificationActions;
   notifications: typeof notifications;
   organiserRequests: typeof organiserRequests;
   organisers: typeof organisers;
@@ -85,11 +89,13 @@ declare const fullApi: ApiFromModules<{
   siteBranding: typeof siteBranding;
   ssoSettings: typeof ssoSettings;
   staff: typeof staff;
+  subscribers: typeof subscribers;
   supportTickets: typeof supportTickets;
   systemConfig: typeof systemConfig;
   test: typeof test;
   ticketSettings: typeof ticketSettings;
   users: typeof users;
+  whatsappSettings: typeof whatsappSettings;
 }>;
 
 /**

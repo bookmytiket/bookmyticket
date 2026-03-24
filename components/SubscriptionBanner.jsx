@@ -1,14 +1,26 @@
 "use client";
 import React, { useState } from "react";
+import { Check, X } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
 
 export default function SubscriptionBanner() {
     const [email, setEmail] = useState("");
+    const [showModal, setShowModal] = useState(false);
 
-    const handleSubscribe = (e) => {
+    const addSubscriber = useMutation(api.subscribers.add);
+
+    const handleSubscribe = async (e) => {
         e.preventDefault();
         if (email) {
-            alert(`Thank you for subscribing with ${email}!`);
-            setEmail("");
+            try {
+                await addSubscriber({ email });
+                setShowModal(true);
+                setEmail("");
+            } catch (err) {
+                console.error("Subscription error:", err);
+                alert("An error occurred. Please try again later.");
+            }
         }
     };
 
@@ -19,6 +31,98 @@ export default function SubscriptionBanner() {
             maxWidth: "1240px",
             margin: "0 auto",
         }}>
+            {/* Custom Subscription Success Modal */}
+            {showModal && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                    backdropFilter: "blur(4px)",
+                }} onClick={() => setShowModal(false)}>
+                    <div style={{
+                        background: "#fff",
+                        borderRadius: "16px",
+                        padding: "40px 30px",
+                        maxWidth: "450px",
+                        width: "90%",
+                        textAlign: "center",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        position: "relative",
+                        animation: "modalFadeIn 0.3s ease-out",
+                    }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{
+                            width: "80px",
+                            height: "80px",
+                            backgroundColor: "#f0fdf4",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 24px",
+                            border: "4px solid #f0fdf4",
+                        }}>
+                            <div style={{
+                                width: "60px",
+                                height: "60px",
+                                backgroundColor: "#fff",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "2px solid #bef264",
+                            }}>
+                                <Check size={36} color="#4ade80" strokeWidth={3} />
+                            </div>
+                        </div>
+
+                        <h3 style={{
+                            fontSize: "18px",
+                            color: "#475569",
+                            fontWeight: 600,
+                            marginBottom: "30px",
+                            lineHeight: "1.5",
+                        }}>
+                            Thank you for subscribing to our newsletter
+                        </h3>
+
+                        <button
+                            onClick={() => setShowModal(false)}
+                            style={{
+                                background: "#7dd3fc",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "12px 30px",
+                                fontSize: "16px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                                width: "100px",
+                                margin: "0 auto",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#38bdf8"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#7dd3fc"}
+                        >
+                            OK
+                        </button>
+
+                        <style>{`
+                            @keyframes modalFadeIn {
+                                from { opacity: 0; transform: translateY(-20px); }
+                                to { opacity: 1; transform: translateY(0); }
+                            }
+                        `}</style>
+                    </div>
+                </div>
+            )}
+
             <div style={{
                 background: "linear-gradient(135deg, #f844a4 0%, #c026d3 100%)",
                 borderRadius: "24px",
