@@ -4383,17 +4383,28 @@ function AdminHomePage() {
 
                                 <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>
                                     {/* Section 1: Org Details */}
-                                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>Organization Details</h4>
+                                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>Organization & Tax Details</h4>
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "32px", backgroundColor: t.cardBg, padding: "20px", borderRadius: "8px", border: `1px solid ${t.border}` }}>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Category</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.category}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Full Name</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.fullName}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>PAN Number</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.panNumber}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>GSTIN</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.gstin || "N/A"}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Mobile Number</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.mobile}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>City</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.city}</p></div>
+                                        <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Address</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.address || "N/A"}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Designation</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.designation}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Has ITR (2 years)?</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.hasITR ? "Yes" : "No"}</p></div>
-                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Has OSTIN?</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.hasOSTIN ? "Yes" : "No"}</p></div>
                                         {selectedKycOrg.kycDetails.websiteLink && <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Website</p><a href={selectedKycOrg.kycDetails.websiteLink} target="_blank" style={{ fontSize: "14px", fontWeight: 600, color: "#3b82f6", margin: 0, textDecoration: "none" }}>{selectedKycOrg.kycDetails.websiteLink}</a></div>}
+                                    </div>
+
+                                    {/* Section: Bank Details */}
+                                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>Bank Account Details</h4>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "32px", backgroundColor: t.cardBg, padding: "20px", borderRadius: "8px", border: `1px solid #3b82f630`, borderLeft: "4px solid #3b82f6" }}>
+                                        <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Beneficiary Name</p><p style={{ fontSize: "14px", fontWeight: 700, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.beneficiaryName || "N/A"}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Bank Name</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.bankName || "N/A"}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Account Type</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.accountType || "N/A"}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Account Number</p><p style={{ fontSize: "14px", fontWeight: 700, color: "#3b82f6", margin: 0, letterSpacing: "1px" }}>{selectedKycOrg.kycDetails.accountNumber || "N/A"}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>IFSC Code</p><p style={{ fontSize: "14px", fontWeight: 700, color: "#3b82f6", margin: 0 }}>{selectedKycOrg.kycDetails.ifscCode || "N/A"}</p></div>
                                     </div>
 
                                     {/* Section 2: Documents */}

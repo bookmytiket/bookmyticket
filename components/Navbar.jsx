@@ -396,9 +396,14 @@ export default function Navbar() {
 
           {/* New Desktop Navigation Buttons */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
-            {user?.role === "user" ? (
+            {user ? (
               <Link 
-                href="/profile" 
+                href={
+                  user.role === "organiser" || user.role === "staff" ? "/organiser" :
+                  user.role === "admin" ? "/admin" :
+                  user.role === "branding_partner" ? "/branding/dashboard" :
+                  "/profile"
+                }
                 style={{
                   background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                   color: '#fff',
@@ -422,7 +427,12 @@ export default function Navbar() {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
                 }}
               >
-                Dashboard
+                {
+                  user.role === "organiser" || user.role === "staff" ? "Organiser Panel" :
+                  user.role === "admin" ? "Admin Panel" :
+                  user.role === "branding_partner" ? "Partner Dashboard" :
+                  "Dashboard"
+                }
               </Link>
             ) : (
               <Link 
@@ -528,26 +538,36 @@ export default function Navbar() {
                         <div style={{ fontSize: '12px', color: '#64748b', wordBreak: 'break-all', opacity: 0.8 }}>{user.identifier}</div>
                       </div>
                       
-                      <Link 
-                        href="/profile" 
-                        onClick={() => setProfileOpen(false)}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '12px', 
-                          padding: '12px', 
-                          borderRadius: '10px', 
-                          textDecoration: 'none', 
-                          color: '#475569', 
-                          fontSize: '14px', 
-                          fontWeight: 600,
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#f844a4'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
-                      >
-                        <User size={18} /> My Profile
-                      </Link>
+                        <Link 
+                          href={
+                            user.role === "organiser" || user.role === "staff" ? "/organiser" :
+                            user.role === "admin" ? "/admin" :
+                            user.role === "branding_partner" ? "/branding/dashboard" :
+                            "/profile"
+                          } 
+                          onClick={() => setProfileOpen(false)}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px', 
+                            padding: '12px', 
+                            borderRadius: '10px', 
+                            textDecoration: 'none', 
+                            color: '#475569', 
+                            fontSize: '14px', 
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#f844a4'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
+                        >
+                          <User size={18} /> {
+                            user.role === "organiser" || user.role === "staff" ? "Organiser Panel" :
+                            user.role === "admin" ? "Admin Panel" :
+                            user.role === "branding_partner" ? "Partner Dashboard" :
+                            "My Profile"
+                          }
+                        </Link>
                       
                       <Link 
                         href="/profile?tab=my_booking" 

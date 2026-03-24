@@ -257,7 +257,7 @@ export default function SignInPage() {
             } else {
                 const res = await verifyLoginOTPMutation({ email: otpEmail, code: otpCode });
                 if (res.success) {
-                    await login(otpEmail, "", "user", res.data, redirectPath);
+                    await login(otpEmail, "", res.role || "user", res.data, redirectPath);
                 }
             }
         } catch (err) {

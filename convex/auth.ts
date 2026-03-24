@@ -321,15 +321,42 @@ export const verifyLoginOTP = mutation({
         // Cleanup OTP
         await ctx.db.delete(otpEntry._id);
 
+        // Check Users table
         const user = await ctx.db
             .query("users")
             .withIndex("by_email", (q) => q.eq("email", args.email))
             .unique();
 
-        if (!user) throw new Error("User not found");
+        if (user) {
+            await ctx.db.patch(user._id, { lastLogin: Date.now() });
+            
+            // Even if found in users, check if they are an active organiser
+            const organiser = await ctx.db
+                .query("organisers")
+                .withIndex("by_userId", (q) => q.eq("userId", args.email))
+                .unique();
+            
+            if (organiser && organiser.kycStatus !== "Banned" && organiser.kycStatus !== "Rejected") {
+                return { success: true, role: "organiser", data: organiser };
+            }
 
-        await ctx.db.patch(user._id, { lastLogin: Date.now() });
-        return { success: true, role: "user", data: user };
+            return { success: true, role: "user", data: user };
+        }
+
+        // If not in users, check Organisers table specifically
+        const organiserOnly = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", args.email))
+            .unique();
+
+        if (organiserOnly) {
+            if (organiserOnly.kycStatus === "Banned" || organiserOnly.kycStatus === "Rejected") {
+                throw new Error("Account is restricted.");
+            }
+            return { success: true, role: "organiser", data: organiserOnly };
+        }
+
+        throw new Error("User not found");
     },
 });
 

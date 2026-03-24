@@ -32,7 +32,8 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy
+    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart
 } from "lucide-react";
 
 function LocationPickerModal({
@@ -233,10 +234,13 @@ function OrganiserPanel() {
     const [kycStep, setKycStep] = useState(1);
     const [kycFormData, setKycFormData] = useState({
         category: "Individual", name: "", panCard: "", website: "", socialLink: "",
-        ostin: "No", itr: "No", fullName: effectiveEmail, email: effectiveEmail,
-        mobile: "", altContact: "", designation: "", city: ""
+        ostin: "No", gstin: "", itr: "No", fullName: effectiveEmail, email: effectiveEmail,
+        mobile: "", altContact: "", designation: "", city: "", address: "",
+        beneficiaryName: "", accountType: "Savings account", bankName: "", accountNumber: "", ifscCode: "",
+        branchName: "", branchAddress: ""
     });
     const [kycFiles, setKycFiles] = useState({ pan: null, cheque: null, aadhar: null });
+    const [kycErrors, setKycErrors] = useState([]);
     const [profile, setProfile] = useState({
         firstName: "",
         lastName: "",
@@ -255,8 +259,45 @@ function OrganiserPanel() {
     });
 
     const equaliser = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+    
+    const INDIAN_BANKS = [
+        "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Punjab National Bank",
+        "Bank of Baroda", "Canara Bank", "Union Bank of India", "Bank of India", "Indian Bank",
+        "Central Bank of India", "Indian Overseas Bank", "UCO Bank", "Bank of Maharashtra",
+        "IDBI Bank", "Kotak Mahindra Bank", "IndusInd Bank", "Federal Bank", "South Indian Bank",
+        "Bandhan Bank", "Standard Chartered Bank", "HSBC Bank", "Citibank", "DBS Bank",
+        "Punjab & Sind Bank", "Yes Bank", "IDFC First Bank", "Karnataka Bank", "Karur Vysya Bank",
+        "RBL Bank", "Tamilnad Mercantile Bank", "City Union Bank", "Paytm Payments Bank",
+        "Airtel Payments Bank", "Jio Payments Bank", "Equitas Small Finance Bank", "AU Small Finance Bank"
+    ].sort();
 
     const organiserData = useQuery(api.organisers.get, { userId: effectiveEmail });
+    const submitKycMutation = useMutation(api.organisers.submitKyc);
+
+    const handleIfscChange = async (ifsc) => {
+        setKycFormData(prev => ({ ...prev, ifscCode: ifsc.toUpperCase() }));
+        if (ifsc.length === 11) {
+            try {
+                const response = await fetch(`https://ifsc.razorpay.com/${ifsc.toUpperCase()}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setKycFormData(prev => ({ 
+                        ...prev, 
+                        bankName: data.BANK,
+                        branchName: data.BRANCH,
+                        branchAddress: data.ADDRESS
+                    }));
+                } else {
+                    setKycFormData(prev => ({ ...prev, bankName: "", branchName: "", branchAddress: "" }));
+                }
+            } catch (error) {
+                console.error("IFSC check failed:", error);
+                setKycFormData(prev => ({ ...prev, bankName: "", branchName: "", branchAddress: "" }));
+            }
+        } else {
+            setKycFormData(prev => ({ ...prev, bankName: "", branchName: "", branchAddress: "" }));
+        }
+    };
 
     useEffect(() => {
         if (organiserData) {
@@ -273,6 +314,38 @@ function OrganiserPanel() {
                 lastName: organiserData.name.split(' ')[1] || "Doe",
             }));
 
+            if (organiserData.kycDetails) {
+                const kd = organiserData.kycDetails;
+                setKycFormData({
+                    category: kd.category || "Individual",
+                    name: organiserData.name || "",
+                    panCard: kd.panNumber || "",
+                    website: kd.websiteLink || "",
+                    socialLink: kd.socialMediaLink || "",
+                    ostin: kd.hasOSTIN ? "Yes" : "No",
+                    gstin: kd.gstin || "",
+                    itr: kd.hasITR ? "Yes" : "No",
+                    fullName: kd.fullName || "",
+                    email: kd.email || "",
+                    mobile: kd.mobile || "",
+                    altContact: kd.alternateNumber || "",
+                    designation: kd.designation || "",
+                    city: kd.city || "",
+                    address: kd.address || "",
+                    beneficiaryName: kd.beneficiaryName || "",
+                    accountType: kd.accountType || "Savings account",
+                    bankName: kd.bankName || "",
+                    accountNumber: kd.accountNumber || "",
+                    ifscCode: kd.ifscCode || ""
+                });
+                setKycFiles({
+                    pan: kd.panFile || null,
+                    cheque: kd.chequeFile || null,
+                    aadhar: kd.aadharFile || null
+                });
+                setAgreedToVendor(kd.agreementAccepted || false);
+            }
+
             if (!organiserData.kycStatus || organiserData.kycStatus === "Pending" || organiserData.kycStatus === "Start Onboarding") {
                 setCurrentStage("kyc_start");
             } else if (organiserData.kycStatus === "KYC Pending" || organiserData.kycStatus === "Submitted") {
@@ -286,7 +359,6 @@ function OrganiserPanel() {
     }, [organiserData]);
 
     const convexSupportTickets = useQuery(api.supportTickets.list) || EMPTY_ARRAY;
-    const submitKycMutation = useMutation(api.organisers.submitKyc);
     const createTicketMutation = useMutation(api.supportTickets.create);
     const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
 
@@ -796,34 +868,35 @@ function OrganiserPanel() {
 
     const colors = {
         light: {
-            bg: "#f0f4f8",
+            bg: "#f3f4f6",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#1e293b",
-            textSub: "#64748b",
+            textMain: "#111827",
+            textSub: "#4b5563",
             cardBg: "#ffffff",
-            border: "#e2e8f0",
-            activeLink: "#e0f2fe",
-            activeText: "#0369a1",
-            sidebarBorder: "#f1f5f9"
+            border: "#e5e7eb",
+            activeLink: "#eff6ff",
+            activeText: "#2563eb",
+            sidebarBorder: "#f3f4f6"
         },
         dark: {
-            bg: "#0f172a",
+            bg: "#0b0f19",
             sidebar: "#111827",
             header: "#111827",
             textMain: "#ffffff",
-            textSub: "#cbd5e1",
-            cardBg: "#1f2937",
-            border: "#374151",
-            activeLink: "#0ea5e920",
-            activeText: "#38bdf8",
-            sidebarBorder: "#1f2937"
+            textSub: "#94a3b8",
+            cardBg: "#111d2c",
+            border: "#1e293b",
+            activeLink: "#3b82f6",
+            activeText: "#ffffff",
+            sidebarBorder: "#1e293b"
         }
     };
 
+    const ACCENT_BLUE = "#3b82f6";
+    const ACCENT_PURPLE = "#8b5cf6";
     const ACCENT_PINK = "#ec4899";
-    const ACCENT_PURPLE = "#a855f7";
-    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
+    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
 
     const t = colors[theme] || colors.dark;
     const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
@@ -855,64 +928,58 @@ function OrganiserPanel() {
                 transition: transform 0.3s ease, background-color 0.3s ease;
             }
             .sidebar-logo {
-                padding: 24px 16px;
+                padding: 24px 20px;
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                border-bottom: 1px solid ${t.sidebarBorder};
             }
-            .sidebar-profile {
-                padding: 16px;
+            .sidebar-category {
+                padding: 24px 20px 8px;
+                font-size: 11px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: ${theme === 'dark' ? '#4b5563' : '#9ca3af'};
+            }
+            .sidebar-item {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                background-color: ${theme === 'light' ? '#f8fafc' : '#1f2937'};
-                margin: 16px;
-                border-radius: 12px;
-                border: 1px solid ${t.border};
-            }
-            .sidebar-profile-img {
-                width: 44px;
-                height: 44px;
-                border-radius: 50%;
-                object-fit: cover;
-                border: 2px solid ${ACCENT_PINK};
-            }
-            .sidebar-profile-info {
-                flex: 1;
-                min-width: 0;
-            }
-            .sidebar-profile-name {
-                margin: 0;
+                justify-content: space-between;
+                padding: 12px 16px;
+                margin: 4px 12px;
+                cursor: pointer;
                 font-size: 14px;
-                font-weight: 700;
-                color: ${t.textMain};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            .sidebar-profile-role {
-                margin: 0;
-                font-size: 12px;
-                color: ${t.textSub};
                 font-weight: 500;
+                color: ${t.textSub};
+                transition: all 0.2s;
+                border: none;
+                background: none;
+                text-align: left;
+                border-radius: 12px;
             }
-            .sidebar-search {
-                padding: 0 16px 16px;
-            }
-            .sidebar-search-input {
-                width: 100%;
-                padding: 10px 12px 10px 36px;
-                border-radius: 8px;
-                border: 1px solid ${t.border};
-                background-color: ${t.bg};
+            .sidebar-item:hover {
+                background-color: ${theme === 'light' ? '#f1f5f9' : 'rgba(255,255,255,0.05)'};
                 color: ${t.textMain};
-                font-size: 13px;
-                outline: none;
-                transition: border-color 0.2s;
             }
-            .sidebar-search-input:focus {
-                border-color: ${ACCENT_PINK};
+            .sidebar-item.active {
+                background-color: #3b82f6!important;
+                color: #fff!important;
+                font-weight: 700;
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            }
+            .sidebar-dropdown-item {
+                display: flex;
+                align-items: center;
+                padding: 10px 16px 10px 48px;
+                font-size: 13px;
+                color: ${t.textSub};
+                transition: all 0.2s;
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                cursor: pointer;
+                position: relative;
             }
             .main-content {
                 margin-left: 250px;
@@ -934,34 +1001,98 @@ function OrganiserPanel() {
                 top: 0;
                 z-index: 50;
             }
-            .sidebar-item {
+            .top-header-search {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
-                padding: 12px 16px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: 500;
-                color: ${t.textSub};
-                transition: all 0.2s;
-                border: none;
+                background-color: ${theme === 'dark' ? '#1f2937' : '#f3f4f6'};
+                border-radius: 8px;
+                padding: 8px 16px;
+                width: 300px;
+                gap: 12px;
+            }
+            .top-header-search input {
                 background: none;
-                width: 100%;
-                text-align: left;
-            }
-            .sidebar-item:hover {
-                background-color: ${theme === 'light' ? '#f1f5f9' : '#1e293b'};
+                border: none;
+                outline: none;
                 color: ${t.textMain};
+                font-size: 14px;
+                width: 100%;
             }
-            .sidebar-item.active {
-                background: ${ACCENT_GRADIENT}!important;
-                color: #fff!important;
-                font-weight: 600;
+            .dashboard-overview-grid {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            @media (max-width: 1400px) {
+                .dashboard-overview-grid { grid-template-columns: repeat(3, 1fr); }
+            }
+            @media (max-width: 768px) {
+                .dashboard-overview-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+            .overview-card {
+                background-color: ${t.cardBg};
+                padding: 24px 16px;
+                border-radius: 16px;
+                border: 1px solid ${t.border};
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .overview-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 12px 24px -10px rgba(0,0,0,0.5);
+                border-color: #3b82f6;
+            }
+            .overview-card-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 16px;
+            }
+            .welcome-banner {
+                background-color: #111d2c;
+                border-radius: 16px;
+                padding: 24px;
+                margin-bottom: 24px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                border: 1px solid #1e293b;
+            }
+            .welcome-avatar {
+                width: 64px;
+                height: 64px;
+                border-radius: 50%;
+                border: 2px solid #3b82f6;
+            }
+            .welcome-text h2 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .welcome-text p {
+                margin: 4px 0 0;
+                font-size: 14px;
+                color: #94a3b8;
+            }
+            .chart-card {
+                background-color: ${t.cardBg};
+                border-radius: 16px;
+                padding: 24px;
+                border: 1px solid ${t.border};
             }
             .sidebar-dropdown-item {
                 display: flex;
                 align-items: center;
-                padding: 10px 16px 10px 48px;
+                padding: 10px 16px 10px 52px;
                 font-size: 13px;
                 color: ${t.textSub};
                 transition: all 0.2s;
@@ -972,34 +1103,12 @@ function OrganiserPanel() {
                 cursor: pointer;
                 position: relative;
             }
-            .sidebar-dropdown-item:before {
-                content: '';
-                position: absolute;
-                left: 32px;
-                top: 50%;
-                width: 4px;
-                height: 4px;
-                background-color: ${t.border};
-                border-radius: 50%;
-                transform: translateY(-50%);
-            }
             .sidebar-dropdown-item:hover {
-                color: ${ACCENT_PINK};
+                color: #3b82f6;
             }
             .sidebar-dropdown-item.active {
-                color: ${ACCENT_PINK};
+                color: #3b82f6;
                 font-weight: 600;
-                background-color: ${theme === 'light' ? '#fdf2f8' : '#1e293b'};
-            }
-            .stat-card {
-                background-color: ${t.cardBg};
-                padding: 24px;
-                border-radius: 12px;
-                border: 1px solid ${t.border};
-                display: flex;
-                flex-direction: column;
-                position: relative;
-                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             }
             .breadcrumb {
                 display: flex;
@@ -1234,87 +1343,228 @@ function OrganiserPanel() {
             {/* Content Area */}
             <div style={{ flex: 1, borderLeft: `1px solid ${t.border}`, paddingLeft: "40px" }}>
                 {kycStep === 1 && (
-                    <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Category <span style={{ color: "#ef4444" }}>*</span></label>
-                            <select value={kycFormData.category} onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }}>
-                                <option value="Company">Company</option>
-                                <option value="Individual">Individual</option>
-                                <option value="Partnership">Partnership</option>
-                                <option value="LLP">LLP</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Name <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" placeholder="As per PAN" value={kycFormData.name} onChange={e => setKycFormData({ ...kycFormData, name: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>PAN <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" placeholder="PAN" value={kycFormData.panCard} onChange={e => setKycFormData({ ...kycFormData, panCard: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Website Link</label>
-                            <input type="text" placeholder="(ex: https://www.abc.com)" value={kycFormData.website} onChange={e => setKycFormData({ ...kycFormData, website: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                            <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "4px" }}>This will help us to verify your KYC soon</div>
-                        </div>
-                        <div style={{ gridColumn: "span 2", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                            <div>
-                                <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Social Media Link</label>
-                                <input type="text" placeholder="(ex: https://www.facebook.com)" value={kycFormData.socialLink} onChange={e => setKycFormData({ ...kycFormData, socialLink: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                                <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "4px" }}>This will help us to verify your KYC soon</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+                        {/* Organisation Details */}
+                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
+                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Organisation Details</h3>
                             </div>
-                            <div style={{ display: "flex", flexDirection: "column" }}>
-                                <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Do you have GSTIN number?</label>
-                                <div style={{ display: "flex", gap: "24px", marginTop: "8px" }}>
-                                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}>
-                                        <input type="radio" name="gstin" checked={kycFormData.ostin === "Yes"} onChange={() => setKycFormData({ ...kycFormData, ostin: "Yes" })} style={{ accentColor: "#f43f5e" }} /> Yes
-                                    </label>
-                                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}>
-                                        <input type="radio" name="gstin" checked={kycFormData.ostin === "No"} onChange={() => {
-                                            setKycFormData({ ...kycFormData, ostin: "No" });
-                                            setShowGstModal(true);
-                                        }} style={{ accentColor: "#f43f5e" }} /> No
-                                    </label>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Individual" 
+                                        value={kycFormData.name} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, name: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'name'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('name') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('name') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Name is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual PAN card number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="ABCDE1234F" 
+                                        value={kycFormData.panCard} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, panCard: e.target.value.toUpperCase() });
+                                            setKycErrors(prev => prev.filter(f => f !== 'panCard'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('panCard') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('panCard') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>PAN Number is required</p>}
+                                </div>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual Address <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <textarea 
+                                        placeholder="Pollachi" 
+                                        value={kycFormData.address} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, address: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'address'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('address') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px", minHeight: "80px", resize: "vertical" }} 
+                                    />
+                                    {kycErrors.includes('address') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Address is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Do you have a GSTIN number?</label>
+                                    <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="gstin_opt" checked={kycFormData.ostin === "Yes"} onChange={() => setKycFormData({ ...kycFormData, ostin: "Yes" })} /> Yes</label>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="gstin_opt" checked={kycFormData.ostin === "No"} onChange={() => setKycFormData({ ...kycFormData, ostin: "No" })} /> No</label>
+                                    </div>
+                                </div>
+                                {kycFormData.ostin === "Yes" && (
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>GSTIN Number <span style={{ color: "#ef4444" }}>*</span></label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter GSTIN" 
+                                            value={kycFormData.gstin} 
+                                            onChange={e => {
+                                                setKycFormData({ ...kycFormData, gstin: e.target.value.toUpperCase() });
+                                                setKycErrors(prev => prev.filter(f => f !== 'gstin'));
+                                            }} 
+                                            style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('gstin') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        />
+                                        {kycErrors.includes('gstin') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>GSTIN is required</p>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Contact Person Details */}
+                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
+                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Contact Person Details</h3>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Full Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.fullName} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, fullName: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'fullName'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('fullName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('fullName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Full Name is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.email} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, email: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'email'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('email') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('email') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Email is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Mobile Number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.mobile} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, mobile: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'mobile'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('mobile') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('mobile') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Mobile is required</p>}
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Have you filled last 2 years ITR return? <span style={{ color: "#ef4444" }}>*</span></label>
-                            <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="itr" checked={kycFormData.itr === "Yes"} onChange={() => setKycFormData({ ...kycFormData, itr: "Yes" })} style={{ accentColor: "#f43f5e" }} /> Yes</label>
-                                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="itr" checked={kycFormData.itr === "No"} onChange={() => setKycFormData({ ...kycFormData, itr: "No" })} style={{ accentColor: "#f43f5e" }} /> No</label>
+                        {/* Bank Details */}
+                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
+                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Bank details</h3>
                             </div>
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Full Name <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" value={kycFormData.fullName} onChange={e => setKycFormData({ ...kycFormData, fullName: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Mobile number <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" value={kycFormData.mobile} onChange={e => setKycFormData({ ...kycFormData, mobile: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Alternate number <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" value={kycFormData.altContact} onChange={e => setKycFormData({ ...kycFormData, altContact: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>City <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" placeholder="Enter your City" value={kycFormData.city} onChange={e => setKycFormData({ ...kycFormData, city: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" disabled value={kycFormData.email} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#94a3b8", backgroundColor: "#f1f5f9", outline: "none", fontSize: "14px", cursor: "not-allowed" }} />
-                        </div>
-
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Designation (min 3 letters) <span style={{ color: "#ef4444" }}>*</span></label>
-                            <input type="text" placeholder="Enter your designation" value={kycFormData.designation} onChange={e => setKycFormData({ ...kycFormData, designation: e.target.value })} style={{ width: "100%", padding: "12px", borderRadius: "6px", border: `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px" }} />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Beneficiary Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.beneficiaryName} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, beneficiaryName: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'beneficiaryName'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('beneficiaryName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('beneficiaryName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Beneficiary Name is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Account Type <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <select 
+                                        value={kycFormData.accountType} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, accountType: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'accountType'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('accountType') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }}
+                                    >
+                                        <option value="Savings account">Savings account</option>
+                                        <option value="Current account">Current account</option>
+                                        <option value="Salary account">Salary account</option>
+                                        <option value="NRI account">NRI account</option>
+                                    </select>
+                                    {kycErrors.includes('accountType') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Account Type is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Bank IFSC <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="SBIN0001763" 
+                                        value={kycFormData.ifscCode} 
+                                        onChange={e => {
+                                            handleIfscChange(e.target.value);
+                                            setKycErrors(prev => prev.filter(f => f !== 'ifscCode'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('ifscCode') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycFormData.bankName && (
+                                        <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "8px", padding: "10px", backgroundColor: "#f0fdf4", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+                                            <div style={{ fontWeight: 800 }}>✓ {kycFormData.bankName} Verified</div>
+                                            {kycFormData.branchName && (
+                                                <div style={{ marginTop: "4px", color: "#166534" }}>
+                                                    <strong>Branch:</strong> {kycFormData.branchName}
+                                                </div>
+                                            )}
+                                            {kycFormData.branchAddress && (
+                                                <div style={{ marginTop: "2px", color: "#166534", fontSize: "10px", lineHeight: "1.4" }}>
+                                                    <strong>Address:</strong> {kycFormData.branchAddress}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {kycErrors.includes('ifscCode') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>IFSC Code is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Bank Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <select 
+                                        value={kycFormData.bankName} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, bankName: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'bankName'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('bankName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }}
+                                    >
+                                        <option value="">Select Bank</option>
+                                        {INDIAN_BANKS.map(bank => (
+                                            <option key={bank} value={bank}>{bank}</option>
+                                        ))}
+                                        {kycFormData.bankName && !INDIAN_BANKS.includes(kycFormData.bankName) && (
+                                            <option value={kycFormData.bankName}>{kycFormData.bankName}</option>
+                                        )}
+                                    </select>
+                                    {kycErrors.includes('bankName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Bank Name is required</p>}
+                                    <p style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>Note: Automatically updated on valid IFSC, or select manually.</p>
+                                </div>
+                                <div style={{ gridColumn: "span 2" }}>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Account Number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.accountNumber} 
+                                        onChange={e => {
+                                            setKycFormData({ ...kycFormData, accountNumber: e.target.value });
+                                            setKycErrors(prev => prev.filter(f => f !== 'accountNumber'));
+                                        }} 
+                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('accountNumber') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                    />
+                                    {kycErrors.includes('accountNumber') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Account Number is required</p>}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1378,36 +1628,59 @@ function OrganiserPanel() {
                         onClick={() => {
                             if (kycStep === 3) {
                                 if (!agreedToVendor) { alert("Please agree to the vendor agreement first."); return; }
-                                if (!organiserData?._id) { alert("Organiser account not found. Please try again later."); return; }
-
-                                submitKycMutation({
-                                    id: organiserData._id,
-                                    kycDetails: {
-                                        category: kycFormData.category,
-                                        panNumber: kycFormData.panCard,
-                                        socialMediaLink: kycFormData.socialLink,
-                                        hasITR: kycFormData.itr === "Yes",
-                                        fullName: kycFormData.fullName,
-                                        email: kycFormData.email,
-                                        mobile: kycFormData.mobile,
-                                        alternateNumber: kycFormData.altContact,
-                                        designation: kycFormData.designation,
-                                        city: kycFormData.city,
-                                        websiteLink: kycFormData.website,
-                                        hasOSTIN: kycFormData.ostin === "Yes",
-                                        panFile: kycFiles.pan || "",
-                                        chequeFile: kycFiles.cheque || "",
-                                        aadharFile: kycFiles.aadhar || "",
-                                        agreementAccepted: agreedToVendor
-                                    }
-                                }).then(() => {
-                                    setCurrentStage("pending");
-                                    setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
-                                }).catch(err => {
-                                    console.error("KYC Submission error:", err);
-                                    alert("Submission failed: " + (err.message || "Unknown error"));
-                                });
+                                if (organiserData?._id) {
+                                    submitKycMutation({
+                                        id: organiserData._id,
+                                        kycDetails: {
+                                            category: kycFormData.category,
+                                            panNumber: kycFormData.panCard,
+                                            socialMediaLink: kycFormData.socialLink,
+                                            hasITR: kycFormData.itr === "Yes",
+                                            fullName: kycFormData.fullName,
+                                            email: kycFormData.email,
+                                            mobile: kycFormData.mobile,
+                                            alternateNumber: kycFormData.altContact,
+                                            designation: kycFormData.designation,
+                                            city: kycFormData.city,
+                                            address: kycFormData.address,
+                                            websiteLink: kycFormData.website,
+                                            hasOSTIN: kycFormData.ostin === "Yes",
+                                            gstin: kycFormData.gstin,
+                                            panFile: kycFiles.pan || "",
+                                            chequeFile: kycFiles.cheque || "",
+                                            aadharFile: kycFiles.aadhar || "",
+                                            beneficiaryName: kycFormData.beneficiaryName,
+                                            accountType: kycFormData.accountType,
+                                            bankName: kycFormData.bankName,
+                                            accountNumber: kycFormData.accountNumber,
+                                            ifscCode: kycFormData.ifscCode,
+                                            agreementAccepted: agreedToVendor
+                                        }
+                                    }).then(() => {
+                                        setCurrentStage("pending");
+                                        setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
+                                    }).catch(err => {
+                                        console.error("KYC Submission error:", err);
+                                        alert("Submission failed: " + (err.message || "Unknown error"));
+                                    });
+                                } else {
+                                    alert("Organiser account not found. Please try again later.");
+                                }
                             } else {
+                                if (kycStep === 1) {
+                                    const required = ['name', 'panCard', 'address', 'fullName', 'email', 'mobile', 'beneficiaryName', 'bankName', 'accountNumber', 'ifscCode'];
+                                    const missing = required.filter(f => !kycFormData[f]);
+                                    if (missing.length > 0) {
+                                        setKycErrors(missing);
+                                        // Scroll to first error? For now just visual hint.
+                                        return;
+                                    }
+                                    if (kycFormData.ostin === "Yes" && !kycFormData.gstin) {
+                                        setKycErrors(['gstin']);
+                                        return;
+                                    }
+                                    setKycErrors([]);
+                                }
                                 setKycStep(kycStep + 1);
                             }
                         }}
@@ -1740,75 +2013,147 @@ function OrganiserPanel() {
                 case "dashboard":
                     return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-                                <div style={{ backgroundColor: "#3b82f6", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Wallet size={24} /></div>
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>My Balance</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{wallet.currency}{Number(wallet.balance).toLocaleString()}</p>
-                                    </div>
+                            {/* Welcome Banner */}
+                            <div className="welcome-banner" style={{ 
+                                background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                                position: "relative",
+                                overflow: "hidden"
+                            }}>
+                                <div style={{ position: "absolute", right: "-20px", top: "-20px", width: "150px", height: "150px", background: "rgba(59, 130, 246, 0.05)", borderRadius: "50%" }} />
+                                <img
+                                    src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
+                                    alt="Avatar"
+                                    className="welcome-avatar"
+                                    style={{ border: "3px solid #3b82f6", boxShadow: "0 0 20px rgba(59, 130, 246, 0.2)" }}
+                                />
+                                <div className="welcome-text">
+                                    <h2 style={{ fontSize: "24px", fontWeight: 800 }}>Welcome back! {profile.firstName || 'Organizer'} 👋</h2>
+                                    <p style={{ fontSize: "15px", opacity: 0.8 }}>Check your latest reports and performance metrics here.</p>
                                 </div>
-                                <div style={{ backgroundColor: "#22c55e", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={24} /></div>
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Events</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>{events.length}</p>
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: "#ef4444", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Monitor size={24} /></div>
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Event Bookings</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>
-                                            {(() => {
-                                                const myEventIds = new Set(events.map(e => String(e.id)));
-                                                return convexBookings.filter(b => myEventIds.has(String(b.eventId))).length;
-                                            })()}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: "#8b5cf6", color: "#fff", padding: "20px", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px" }}>
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}><ArrowLeftRight size={24} /></div>
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: "12px", opacity: 0.9 }}>Total Transactions</p>
-                                        <p style={{ margin: 0, fontSize: "22px", fontWeight: 800 }}>
-                                            {(() => {
-                                                const myEventIds = new Set(events.map(e => String(e.id)));
-                                                return convexBookings.filter(b => myEventIds.has(String(b.eventId))).length;
-                                            })()}
-                                        </p>
+                                <div style={{ marginLeft: "auto", display: "flex", gap: "10px" }} className="hide-mobile">
+                                    <div style={{ padding: "12px 20px", borderRadius: "12px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 700, fontSize: "14px" }}>
+                                        KYC Status: {profile.kycStatus === "Active" ? "Verified" : profile.kycStatus}
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Event Booking Monthly Income (2026)</p>
-                                    <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
-                                        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
-                                            <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                                                <div style={{ width: "100%", height: "60px", backgroundColor: "#3b82f620", borderRadius: "4px", border: "1px solid #3b82f640" }} />
-                                                <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
-                                            </div>
-                                        ))}
+
+                            {/* Stats Grid */}
+                            <div className="dashboard-overview-grid">
+                                <div className="overview-card" style={{ borderTop: "4px solid #3b82f6" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", width: "56px", height: "56px" }}>
+                                        <Users size={28} />
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                                        <div style={{ width: "12px", height: "12px", backgroundColor: "#3b82f6", borderRadius: "2px" }} />
-                                        <span style={{ fontSize: "12px", color: t.textSub }}>Monthly Income</span>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length + events.length * 5).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Employees</p>
+                                </div>
+                                <div className="overview-card" style={{ borderTop: "4px solid #8b5cf6" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6", width: "56px", height: "56px" }}>
+                                        <UserCheck size={28} />
+                                    </div>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Clients</p>
+                                </div>
+                                <div className="overview-card" style={{ borderTop: "4px solid #10b981" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10b981", width: "56px", height: "56px" }}>
+                                        <Briefcase size={28} />
+                                    </div>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{events.length}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>Projects</p>
+                                </div>
+                                <div className="overview-card" style={{ borderTop: "4px solid #f59e0b" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", width: "56px", height: "56px" }}>
+                                        <Calendar size={28} />
+                                    </div>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{events.filter(e => e.status === "Published").length}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Events</p>
+                                </div>
+                                <div className="overview-card" style={{ borderTop: "4px solid #ef4444" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", color: "#ef4444", width: "56px", height: "56px" }}>
+                                        <DollarSign size={28} />
+                                    </div>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>₹{Number(wallet.balance).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.5px" }}>Payroll</p>
+                                </div>
+                                <div className="overview-card" style={{ borderTop: "4px solid #06b6d4" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(6, 182, 212, 0.1)", color: "#06b6d4", width: "56px", height: "56px" }}>
+                                        <FileText size={28} />
+                                    </div>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{(events.length * 1.5).toFixed(0)}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.5px" }}>Reports</p>
+                                </div>
+                            </div>
+
+                            {/* Charts Section */}
+                            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px" }}>
+                                <div className="chart-card" style={{ padding: "32px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain }}>Revenue updates</h3>
+                                            <p style={{ margin: "4px 0 0", fontSize: "13px", color: t.textSub }}>Overview of Profit</p>
+                                        </div>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub }}>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} /> Earnings
+                                            </div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub }}>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#8b5cf6" }} /> Expense
+                                            </div>
+                                        </div>
+                                        <select style={{ backgroundColor: "rgba(255,255,255,0.05)", border: `1px solid ${t.border}`, borderRadius: "8px", color: t.textSub, fontSize: "12px", padding: "6px 12px" }}>
+                                            <option>Year 2025</option>
+                                            <option>Year 2024</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ height: "300px", position: "relative" }}>
+                                        <svg width="100%" height="100%" viewBox="0 0 600 300" preserveAspectRatio="none">
+                                            <defs>
+                                                <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                    <stop offset="0%" style={{ stopColor: "#3b82f6", stopOpacity: 0.2 }} />
+                                                    <stop offset="100%" style={{ stopColor: "#3b82f6", stopOpacity: 0 }} />
+                                                </linearGradient>
+                                            </defs>
+                                            <path d="M0,250 Q100,200 200,220 T400,100 T600,80 L600,300 L0,300 Z" fill="url(#grad1)" />
+                                            <path d="M0,250 Q100,200 200,220 T400,100 T600,80" fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" />
+                                            <path d="M0,280 Q100,240 200,260 T400,180 T600,160" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
+                                            {[0, 1, 2, 3, 4, 5].map(i => (
+                                                <line key={i} x1="0" y1={i * 50 + 50} x2="600" y2={i * 50 + 50} stroke={t.border} strokeWidth="1" strokeDasharray="4" opacity="0.5" />
+                                            ))}
+                                        </svg>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", padding: "0 10px" }}>
+                                            {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"].map(d => <span key={d} style={{ fontSize: "12px", color: t.textSub, fontWeight: 500 }}>{d}</span>)}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ backgroundColor: t.cardBg, padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Monthly Event Bookings (2026)</p>
-                                    <div style={{ height: "200px", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "4px", paddingBottom: "24px" }}>
-                                        {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m) => (
-                                            <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                                                <div style={{ width: "100%", height: "60px", backgroundColor: "#8b5cf620", borderRadius: "4px", border: "1px solid #8b5cf640" }} />
-                                                <span style={{ fontSize: "10px", color: t.textSub }}>{m}</span>
+                                <div className="chart-card" style={{ padding: "32px" }}>
+                                    <h3 style={{ margin: "0 0 32px", fontSize: "18px", fontWeight: 800, color: t.textMain }}>Yearly Backup</h3>
+                                    <div style={{ height: "300px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                                        <div style={{ position: "relative", width: "180px", height: "180px" }}>
+                                            <svg width="180" height="180" viewBox="0 0 42 42">
+                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="4"></circle>
+                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray="65 35" strokeDashoffset="25" strokeLinecap="round"></circle>
+                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#8b5cf6" strokeWidth="4" strokeDasharray="20 80" strokeDashoffset="60" strokeLinecap="round"></circle>
+                                            </svg>
+                                            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
+                                                <div style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>₹36,358</div>
+                                                <div style={{ fontSize: "11px", color: "#10b981", fontWeight: 700, marginTop: "4px" }}>+9% last year</div>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                                        <div style={{ width: "12px", height: "12px", backgroundColor: "#8b5cf6", borderRadius: "2px" }} />
-                                        <span style={{ fontSize: "12px", color: t.textSub }}>Monthly Event Bookings</span>
+                                        </div>
+                                        <div style={{ marginTop: "40px", width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                    <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#3b82f6" }}></div>
+                                                    <span style={{ color: t.textSub, fontWeight: 500 }}>Events</span>
+                                                </div>
+                                                <span style={{ color: t.textMain, fontWeight: 800 }}>65%</span>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                    <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#8b5cf6" }}></div>
+                                                    <span style={{ color: t.textSub, fontWeight: 500 }}>Tickets</span>
+                                                </div>
+                                                <span style={{ color: t.textMain, fontWeight: 800 }}>20%</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2325,8 +2670,8 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                         <div style={{ padding: "10px", backgroundColor: t.bg, borderRadius: "8px" }}><Building size={20} /></div>
                                         <div>
-                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>HDFC Bank Ltd</p>
-                                            <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>**** 4421</p>
+                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>{organiserData?.kycDetails?.bankName || "No Bank Linked"}</p>
+                                            <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>{organiserData?.kycDetails?.accountNumber ? `**** ${organiserData.kycDetails.accountNumber.slice(-4)}` : "Verify KYC to link"}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -3633,179 +3978,144 @@ function OrganiserPanel() {
                 )}
 
                 {/* Sidebar — image format: Search + dropdown sections + sub-sidebar */}
+                {/* Sidebar — "Tailwindadmin" style */}
                 <aside className="sidebar">
                     <div className="sidebar-logo">
-                        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px" }}>
-                            <img src="/logo.png" alt="Logo" style={{ height: "48px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }} />
-                        </Link>
-                    </div>
-
-                    <div className="sidebar-profile">
-                        <img
-                            src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
-                            alt="Profile"
-                            className="sidebar-profile-img"
-                        />
-                        <div className="sidebar-profile-info">
-                            <p className="sidebar-profile-name">{profile.firstName || 'Organizer'} {profile.lastName}</p>
-                            <p className="sidebar-profile-role">{user?.role === "staff" ? "Event Staff" : "Organizer"}</p>
+                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Ticket size={18} color="#fff" />
                         </div>
+                        <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>
+                            Tailwind<span style={{ color: t.textSub, fontWeight: 500 }}>admin</span>
+                        </span>
                     </div>
 
-                    <div className="sidebar-search">
-                        <div style={{ position: "relative" }}>
-                            <Menu size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
-                            <input
-                                type="text"
-                                placeholder="Search Menu Here..."
-                                className="sidebar-search-input"
-                                value={menuSearch}
-                                onChange={e => setMenuSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
+                    <div style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
+                        <div className="sidebar-category">Home</div>
+                        <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <LayoutDashboard size={18} />
+                                <span>Modern</span>
+                            </div>
+                        </button>
 
-                    <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
+                        <div className="sidebar-category">Events</div>
                         {!isStaff && (
                             <>
                                 <button
-                                    onClick={() => setActiveTab("dashboard")}
-                                    className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
+                                    onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
+                                    className="sidebar-item"
+                                    style={{ color: (activeTab === "post_event" || activeTab === "manage_events") ? t.textMain : t.textSub }}
                                 >
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <LayoutDashboard size={20} />
-                                        <span>Dashboard</span>
+                                        <Grid size={18} />
+                                        <span>Management</span>
                                     </div>
+                                    {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                 </button>
-
-                                <div>
-                                    <button
-                                        onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
-                                        className="sidebar-item"
-                                        style={{ color: (activeTab === "post_event" || activeTab === "manage_events" || activeTab === "venue_events" || activeTab === "online_events") ? t.textMain : t.textSub }}
-                                    >
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <Grid size={20} />
-                                            <span>Event Management</span>
-                                        </div>
-                                        {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </button>
-                                    {sidebarOpen.eventManagement && (
-                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                            <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
-                                            <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
-                                            <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
-                                            <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <button
-                                        onClick={() => setSidebarOpen(prev => ({ ...prev, eventBookings: !prev.eventBookings }))}
-                                        className="sidebar-item"
-                                        style={{ color: (activeTab === "all_bookings" || activeTab === "completed_bookings" || activeTab === "pending_bookings" || activeTab === "rejected_bookings" || activeTab === "booking_report") ? t.textMain : t.textSub }}
-                                    >
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <Users size={20} />
-                                            <span>Event Bookings</span>
-                                        </div>
-                                        {sidebarOpen.eventBookings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </button>
-                                    {sidebarOpen.eventBookings && (
-                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                            <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
-                                            <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed Bookings</button>
-                                            <button onClick={() => setActiveTab("pending_bookings")} className={`sidebar-dropdown-item ${activeTab === "pending_bookings" ? "active" : ""}`}>Pending Bookings</button>
-                                            <button onClick={() => setActiveTab("rejected_bookings")} className={`sidebar-dropdown-item ${activeTab === "rejected_bookings" ? "active" : ""}`}>Rejected Bookings</button>
-                                            <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <Wallet size={20} />
-                                        <span>Withdraw</span>
+                                {sidebarOpen.eventManagement && (
+                                    <div style={{ marginBottom: "8px" }}>
+                                        <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
+                                        <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
+                                        <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
+                                        <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
                                     </div>
-                                </button>
-
-                                <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <ArrowLeftRight size={20} />
-                                        <span>Transactions</span>
-                                    </div>
-                                </button>
+                                )}
                             </>
                         )}
 
+                        <div className="sidebar-category">Bookings</div>
+                        {!isStaff && (
+                            <>
+                                <button
+                                    onClick={() => setSidebarOpen(prev => ({ ...prev, eventBookings: !prev.eventBookings }))}
+                                    className="sidebar-item"
+                                    style={{ color: (activeTab === "all_bookings" || activeTab === "completed_bookings") ? t.textMain : t.textSub }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Users size={18} />
+                                        <span>Sales</span>
+                                    </div>
+                                    {sidebarOpen.eventBookings ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </button>
+                                {sidebarOpen.eventBookings && (
+                                    <div style={{ marginBottom: "8px" }}>
+                                        <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
+                                        <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed</button>
+                                        <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        <div className="sidebar-category">Finance</div>
+                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Wallet size={18} />
+                                <span>Withdraw</span>
+                            </div>
+                        </button>
+                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <ArrowLeftRight size={18} />
+                                <span>Transactions</span>
+                            </div>
+                        </button>
+
+                        <div className="sidebar-category">Tools</div>
                         <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Monitor size={20} />
+                                <Monitor size={18} />
                                 <span>Pwa Scanner</span>
                             </div>
                         </button>
-
                         {!isStaff && (
-                            <>
-                                <button onClick={() => setActiveTab("staff_accounts")} className={`sidebar-item ${activeTab === "staff_accounts" ? "active" : ""}`}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <Users size={20} />
-                                        <span>Staff Accounts</span>
-                                    </div>
-                                </button>
-
-                                <div>
-                                    <button
-                                        onClick={() => setSidebarOpen(prev => ({ ...prev, supportTickets: !prev.supportTickets }))}
-                                        className="sidebar-item"
-                                        style={{ color: activeTab === "support_tickets" ? t.textMain : t.textSub }}
-                                    >
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            <FileText size={20} />
-                                            <span>Support Tickets</span>
-                                        </div>
-                                        {sidebarOpen.supportTickets ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </button>
-                                    {sidebarOpen.supportTickets && (
-                                        <div style={{ backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.02)' }}>
-                                            <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("all_tickets"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "all_tickets" ? "active" : ""}`}>All Tickets</button>
-                                            <button onClick={() => { setActiveTab("support_tickets"); setSupportTab("add_ticket"); }} className={`sidebar-dropdown-item ${activeTab === "support_tickets" && supportTab === "add_ticket" ? "active" : ""}`}>Add Ticket</button>
-                                        </div>
-                                    )}
+                            <button onClick={() => setActiveTab("staff_accounts")} className={`sidebar-item ${activeTab === "staff_accounts" ? "active" : ""}`}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <Users size={18} />
+                                    <span>Staff</span>
                                 </div>
-
-                                <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <Users size={20} />
-                                        <span>Edit Profile</span>
-                                    </div>
-                                </button>
-                            </>
+                            </button>
                         )}
 
-                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
+                        <div className="sidebar-category">Support</div>
+                        <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Lock size={20} />
-                                <span>Change Password</span>
+                                <FileText size={18} />
+                                <span>Tickets</span>
                             </div>
                         </button>
 
-                        <button
-                            onClick={(e) => {
-                                e.preventDefault();
-                                router.push('/signin');
-                                setTimeout(() => logout(), 100);
-                            }}
-                            className="sidebar-item"
-                            style={{ color: "#ef4444" }}
-                        >
+                        <div className="sidebar-category">Settings</div>
+                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <LogOut size={20} />
-                                <span>Logout</span>
+                                <Users size={18} />
+                                <span>Profile</span>
                             </div>
                         </button>
-                    </nav>
+                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Lock size={18} />
+                                <span>Security</span>
+                            </div>
+                        </button>
+                        
+                        <div style={{ padding: "12px 12px 0" }}>
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push('/signin');
+                                    setTimeout(() => logout(), 100);
+                                }}
+                                className="sidebar-item"
+                                style={{ color: "#ef4444", marginBottom: 0 }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <LogOut size={18} />
+                                    <span>Logout</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </aside>
 
                 {/* Main Content */}
@@ -3827,15 +4137,25 @@ function OrganiserPanel() {
                         </div>
                     )}
                     <header className="top-header">
-                        <div>
-                            <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>{activeTab.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
-                            <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>Welcome back, {profile.firstName || "Organiser"}! Here's what's happening today.</p>
+                        <div className="top-header-search">
+                            <Search size={18} color={t.textSub} />
+                            <input type="text" placeholder="Search..." />
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <button style={{ color: t.activeText, background: t.activeLink, border: `1px solid ${t.activeText}40`, padding: "8px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", position: "relative" }}>
-                                <Bell size={16} />
-                                <div style={{ position: "absolute", top: "6px", right: "6px", width: "7px", height: "7px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                            <button onClick={toggleTheme} style={{ color: t.textMain, background: "none", border: "none", cursor: "pointer", padding: "8px" }}>
+                                {theme === 'light' ? <Clock size={20} /> : <Sparkles size={20} />}
                             </button>
+                            <button style={{ color: t.textMain, background: "none", border: "none", cursor: "pointer", padding: "8px", position: "relative" }}>
+                                <Bell size={20} />
+                                <div style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
+                            </button>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", paddingLeft: "12px", borderLeft: `1px solid ${t.border}` }}>
+                                <img
+                                    src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
+                                    alt="User"
+                                    style={{ width: "36px", height: "36px", borderRadius: "50%", border: `2px solid ${ACCENT_BLUE}` }}
+                                />
+                            </div>
                         </div>
                     </header>
                     <main style={{ padding: "24px", display: "flex", flexDirection: "column", minHeight: "calc(100vh - 64px)" }}>
@@ -3880,59 +4200,47 @@ function OrganiserPanel() {
         <div className="admin-container">
             {styles}
             <aside className="sidebar">
-                <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <Link href="/" style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-start",
-                        gap: "10px",
-                        padding: '10px 4px',
-                        textDecoration: "none",
-                        transition: 'all 0.3s ease'
-                    }}>
-                        <img
-                            src="/logo.png"
-                            alt="Logo"
-                            style={{
-                                height: "56px",
-                                objectFit: "contain",
-                                maxWidth: "100%",
-                                filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',
-                                transition: 'filter 0.3s ease'
-                            }}
-                        />
-                    </Link>
+                <div className="sidebar-logo">
+                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Ticket size={18} color="#fff" />
+                    </div>
+                    <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>
+                        Tailwind<span style={{ color: t.textSub, fontWeight: 500 }}>admin</span>
+                    </span>
                 </div>
 
                 <nav style={{ flex: 1, paddingBottom: "24px", opacity: 0.5 }}>
-                    <div className="sidebar-item"><LayoutDashboard size={20} /> Dashboard (Locked)</div>
-                    <div className="sidebar-item"><Calendar size={20} /> Events (Locked)</div>
-                    <div className="sidebar-item"><Wallet size={20} /> Wallet (Locked)</div>
-                    <div className="sidebar-item"><Users size={20} /> Profile (Locked)</div>
+                    <div className="sidebar-category">Home</div>
+                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><LayoutDashboard size={18} /> Modern (Locked)</div></div>
+                    
+                    <div className="sidebar-category">Events</div>
+                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><Grid size={18} /> Management (Locked)</div></div>
                 </nav>
 
-                <button
-                    onClick={(e) => {
-                        e.preventDefault();
-                        router.push('/signin');
-                        setTimeout(() => logout(), 100);
-                    }}
-                    className="sidebar-item"
-                    style={{ color: "#ef4444", borderTop: `1px solid ${t.border}`, marginTop: "8px" }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <LogOut size={20} />
-                        <span>Logout</span>
-                    </div>
-                </button>
-
-                <div style={{ marginTop: "auto", padding: "16px", opacity: 0.8 }}>
-                    <div style={{ padding: "16px", backgroundColor: theme === 'light' ? "#f1f5f9" : "#0f172a", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                <div style={{ padding: "12px" }}>
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            router.push('/signin');
+                            setTimeout(() => logout(), 100);
+                        }}
+                        className="sidebar-item"
+                        style={{ color: "#ef4444", borderTop: `1px solid ${t.border}`, paddingTop: "12px", marginBottom: 0 }}
+                    >
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#f97316" }}></div>
-                            <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>Safety Mode</span>
+                            <LogOut size={18} />
+                            <span>Logout</span>
                         </div>
-                        <p style={{ fontSize: "11px", color: t.textSub, marginTop: "8px", margin: 0 }}>Verification required</p>
+                    </button>
+                </div>
+
+                <div style={{ padding: "16px", marginTop: "auto" }}>
+                    <div style={{ padding: "16px", backgroundColor: theme === 'light' ? "#f1f5f9" : "#1e293b", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f97316" }}></div>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMain }}>Safety Mode</span>
+                        </div>
+                        <p style={{ fontSize: "10px", color: t.textSub, marginTop: "4px", margin: 0 }}>Verification required</p>
                     </div>
                 </div>
             </aside>

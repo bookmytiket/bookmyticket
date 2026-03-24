@@ -27,17 +27,12 @@ export default function ProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "my_booking");
-    const [bookingFilter, setBookingFilter] = useState("all"); // "all" | "booked" | "cancelled"
-    const [viewTicketModal, setViewTicketModal] = useState(null);
 
-    // Bookings fetched from Convex DB (filtered by user ID)
-    const bookings = useQuery(api.bookings?.getBookings || (() => []));
-    const userBookings = bookings?.filter(b => b.userId === user?.identifier) || [];
-
-    // Derived lists
-    const bookedTickets = userBookings.filter(b => b.status === "Confirmed" || b.status === "Booked");
-    const cancelledTickets = userBookings.filter(b => b.status === "Cancelled");
-    const paidTickets = userBookings.filter(b => b.status === "Confirmed" || b.status === "Paid");
+    useEffect(() => {
+        if (user && (user.role === "organiser" || user.role === "staff")) {
+            router.replace("/organiser");
+        }
+    }, [user, router]);
 
     // Fallback UI rendering for when user is not loaded
     if (!user) {

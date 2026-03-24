@@ -29,6 +29,17 @@ export function AuthProvider({ children }) {
             console.error("Error parsing stored hierarchy:", err);
             localStorage.removeItem("locationHierarchy");
         }
+
+        // Load user from localStorage
+        try {
+            const storedUser = localStorage.getItem("user");
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+        } catch (err) {
+            console.error("Error parsing stored user:", err);
+            localStorage.removeItem("user");
+        }
         
         setLoading(false);
 
@@ -38,6 +49,10 @@ export function AuthProvider({ children }) {
                 if (!e.newValue) {
                     setUser(null);
                     router.push("/signin");
+                } else {
+                    try {
+                        setUser(JSON.parse(e.newValue));
+                    } catch (_) {}
                 }
             }
         };
@@ -60,6 +75,7 @@ export function AuthProvider({ children }) {
         if (role === "admin") {
             if (identifier === "bookmyticket-admin" && password === "D0n+$h@rE2k26") {
                 const mockUser = { identifier, role, name: "Master Admin" };
+                localStorage.setItem("user", JSON.stringify(mockUser));
                 setUser(mockUser);
                 router.push(redirectPath || "/admin");
                 return true;
@@ -70,6 +86,7 @@ export function AuthProvider({ children }) {
         // Public User (passed from signin page after convex check)
         if (role === "user" && userData) {
             const authUser = { identifier, role: "user", name: userData.fullName || userData.name, id: userData._id };
+            localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
             router.push(redirectPath || "/");
             return true;
@@ -77,6 +94,15 @@ export function AuthProvider({ children }) {
 
         // Validate Organiser against Convex Database
         if (role === "organiser") {
+            // If userData is already provided (from signin page), use it immediately
+            if (userData) {
+                const authUser = { identifier, role: "organiser", name: userData.name, id: userData._id };
+                localStorage.setItem("user", JSON.stringify(authUser));
+                setUser(authUser);
+                router.push(redirectPath || "/organiser");
+                return true;
+            }
+
             try {
                 const result = await convex.query(api.organisers.verifyCredentials, {
                     identifier,
@@ -86,15 +112,16 @@ export function AuthProvider({ children }) {
                 if (result.success) {
                     const org = result.organiser;
                     const authUser = { identifier, role: "organiser", name: org.name, id: org._id };
+                    localStorage.setItem("user", JSON.stringify(authUser));
                     setUser(authUser);
                     router.push(redirectPath || "/organiser");
                     return true;
                 }
 
-                // Fallback for default demo organiser (keep plain check for now if it's strictly for demo)
-                // Note: password here is hashed if called from SignInPage
+                // Fallback for default demo organiser
                 if (identifier === "organiser@bookmyticket.com" && (password === "organiser123" || password === "985a539a667140f6b3cfc2398a69e900995c58a5da359740a12e52b2b115eb3d")) {
                     const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
+                    localStorage.setItem("user", JSON.stringify(mockUser));
                     setUser(mockUser);
                     router.push(redirectPath || "/organiser");
                     return true;
@@ -115,6 +142,7 @@ export function AuthProvider({ children }) {
                 if (result.success) {
                     const staff = result.staff;
                     const authUser = { identifier, role: "staff", name: staff.name, id: staff._id, organiserId: staff.organiserId };
+                    localStorage.setItem("user", JSON.stringify(authUser));
                     setUser(authUser);
                     router.push(redirectPath || "/organiser?tab=pwa_scanner");
                     return true;
@@ -134,6 +162,7 @@ export function AuthProvider({ children }) {
                 name: userData.fullName, 
                 id: userData._id 
             };
+            localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
             router.push(redirectPath || "/admin");
             return true;
@@ -147,6 +176,7 @@ export function AuthProvider({ children }) {
                 id: userData._id, 
                 name: userData.fullName || userData.name 
             };
+            localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
             router.push(redirectPath || "/branding/dashboard");
             return true;
