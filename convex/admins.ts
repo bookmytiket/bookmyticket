@@ -46,3 +46,30 @@ export const remove = mutation({
         await ctx.db.delete(args.id);
     },
 });
+
+export const seedInitialAdmin = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const username = "bookmyticket-admin";
+        const password = "D0n+$h@rE2k26"; // In a real app, this should be pre-hashed or set via secure env
+        
+        const existing = await ctx.db
+            .query("admins")
+            .withIndex("by_username", (q) => q.eq("username", username))
+            .unique();
+            
+        if (!existing) {
+            await ctx.db.insert("admins", {
+                fullName: "Master Admin",
+                username: username,
+                password: password,
+                email: "admin@bookmyticket.com",
+                role: "Admin",
+                status: "Active",
+                createdAt: Date.now(),
+            });
+            return "Master admin seeded successfully";
+        }
+        return "Master admin already exists";
+    },
+});

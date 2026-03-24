@@ -141,16 +141,7 @@ export default function SignInPage() {
         const rawId = identifier.trim();
         const id = rawId.toLowerCase();
         const hashed = await hashPassword(password);
-
-        // 1. Admin login check
-        if (rawId === "bookmyticket-admin") {
-            const ok = await login(rawId, password, "admin", null, redirectPath);
-            if (ok) return;
-            setLoginError("Invalid admin credentials.");
-            return;
-        }
-
-        // 2. Public User / Staff / Organiser check via auth.login mutation
+        // 1. Unified login check via auth.login mutation for all roles (User, Admin, Staff, Organiser)
         try {
             const res = await loginMutation({ identifier: id, password: hashed });
             if (res.success) {
@@ -160,7 +151,7 @@ export default function SignInPage() {
                     setMode("verify-otp");
                     return;
                 }
-                // Handle Staff/Organiser immediate login
+                // Handle all roles (Admin, Staff, Organiser) immediate login
                 await login(id, hashed, res.role, res.data, redirectPath);
                 return;
             } else {

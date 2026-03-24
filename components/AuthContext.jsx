@@ -71,16 +71,19 @@ export function AuthProvider({ children }) {
     };
 
     const login = async (identifier, password, role, userData = null, redirectPath = null) => {
-        // Master Admin remains hardcoded
-        if (role === "admin") {
-            if (identifier === "bookmyticket-admin" && password === "D0n+$h@rE2k26") {
-                const mockUser = { identifier, role, name: "Master Admin" };
-                localStorage.setItem("user", JSON.stringify(mockUser));
-                setUser(mockUser);
-                router.push(redirectPath || "/admin");
-                return true;
-            }
-            return false;
+        // Master Admin and Admin Team are now handled via Convex auth.login
+        if ((role === "admin" || role === "admin_team") && userData) {
+            const authUser = { 
+                identifier, 
+                role: "admin", // All team members act as admins in the UI
+                teamRole: userData.role || "Admin", 
+                name: userData.fullName || userData.name, 
+                id: userData._id 
+            };
+            localStorage.setItem("user", JSON.stringify(authUser));
+            setUser(authUser);
+            router.push(redirectPath || "/admin");
+            return true;
         }
 
         // Public User (passed from signin page after convex check)
@@ -152,21 +155,6 @@ export function AuthProvider({ children }) {
             }
         }
 
-
-        // Team Members (Admins, Developers, Testers)
-        if (role === "admin_team" && userData) {
-            const authUser = { 
-                identifier, 
-                role: "admin", // They act as admins in the UI
-                teamRole: userData.role, // "Admin", "Developer", "Tester"
-                name: userData.fullName, 
-                id: userData._id 
-            };
-            localStorage.setItem("user", JSON.stringify(authUser));
-            setUser(authUser);
-            router.push(redirectPath || "/admin");
-            return true;
-        }
 
         // Validate Branding Partner against Convex Database
         if (role === "branding_partner" && userData) {

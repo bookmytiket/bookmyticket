@@ -105,6 +105,7 @@ export const createEvent = mutation({
             organiserName: organiser?.name || "An Organiser",
             date: args.date,
             location: args.location,
+            imageUrl: args.img || args.bannerPreview,
         });
 
         return eventId;

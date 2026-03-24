@@ -145,7 +145,7 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
     console.log("=================================================");
 
     const branding = await ctx.db.query("siteBranding").first();
-    const siteUrl = branding?.siteUrl || "http://localhost:3000";
+    const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
     let brandLogo = branding?.logoUrl || "/logo.png";
     if (brandLogo.startsWith("/")) {
         brandLogo = `${siteUrl}${brandLogo}`;
@@ -230,7 +230,7 @@ export const verifyOTPAndCreateAccount = mutation({
         if (existing) throw new Error("Email already registered");
 
         // Create User
-        return await ctx.db.insert("users", {
+        const userId = await ctx.db.insert("users", {
             fullName: args.fullName,
             username: args.username,
             email: args.email,
@@ -239,6 +239,13 @@ export const verifyOTPAndCreateAccount = mutation({
             status: "Active",
             createdAt: Date.now(),
         });
+
+        await ctx.scheduler.runAfter(0, api.notificationActions.sendSignupGreeting, {
+            email: args.email,
+            fullName: args.fullName,
+        });
+
+        return userId;
     },
 });
 
@@ -284,7 +291,9 @@ export const login = mutation({
                 throw new Error("Account is inactive.");
             }
             await ctx.db.patch(teamMember._id, { lastLogin: Date.now() });
-            return { success: true, role: "admin_team", data: teamMember };
+            // Return 'admin' role if the database role is 'Admin', otherwise 'admin_team'
+            const activeRole = teamMember.role === "Admin" ? "admin" : "admin_team";
+            return { success: true, role: activeRole, data: teamMember };
         }
 
         // 3. Check Staff table

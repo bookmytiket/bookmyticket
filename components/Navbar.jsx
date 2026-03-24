@@ -438,7 +438,7 @@ export default function Navbar() {
               <Link 
                 href="/signin" 
                 style={{
-                  background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                  background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)',
                   color: '#fff',
                   padding: '10px 24px',
                   borderRadius: '8px',
@@ -754,9 +754,9 @@ export default function Navbar() {
 
               <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
                 {user ? (
-                  <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center" }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
+                  <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
                 ) : (
-                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMenuOpen(false)}>Book Now</Link>
+                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
                 )}
               </div>
             </div>

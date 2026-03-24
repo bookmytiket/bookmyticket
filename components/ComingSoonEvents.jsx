@@ -174,11 +174,11 @@ export default function ComingSoonEvents({ events = [] }) {
                                 <span style={{ fontSize: "12px", color: "#374151" }}>{event.date}</span>
                                 <span style={{ fontSize: "12px", color: "#374151" }}>{event.location}</span>
                             </div>
-                            <Link href={`/events/detail?id=${event.id}`}>
-                                <button style={{ background: "#f97316", color: "#fff", border: "none", borderRadius: "10px", padding: "12px 28px", fontWeight: 700, cursor: "pointer" }}>
-                                    Book Now
-                                </button>
-                            </Link>
+                                <Link href={`/events/detail?id=${event.id}`}>
+                                    <button style={{ background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", color: "#fff", border: "none", borderRadius: "10px", padding: "12px 28px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(248, 68, 164, 0.2)" }}>
+                                        Book Now
+                                    </button>
+                                </Link>
                         </div>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                             <button onClick={prev} style={{ padding: "8px", borderRadius: "50%", border: "1px solid #e5e7eb" }}>←</button>

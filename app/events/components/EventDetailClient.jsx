@@ -36,7 +36,7 @@ const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed
 export default function EventDetailClient({ id }) {
     const { user } = useAuth();
     const router = useRouter();
-    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const convexEvents = useQuery(api.events.getActiveEvents);
     const [storageLoaded, setStorageLoaded] = useState(false);
 
     useEffect(() => {
@@ -44,6 +44,7 @@ export default function EventDetailClient({ id }) {
     }, []);
 
     const event = useMemo(() => {
+        if (!convexEvents) return null;
         const sid = String(id);
         const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
         const fromConvex = convexEvents.find(e => String(e._id) === sid || String(e.id) === sid);
@@ -87,11 +88,11 @@ export default function EventDetailClient({ id }) {
     }, [event]);
 
     if (!event) {
-        if (!storageLoaded) {
+        if (convexEvents === undefined || !storageLoaded) {
             return (
                 <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '150px', textAlign: 'center' }}>
                     <div className="container">
-                        <p style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading event…</p>
+                        <p style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading event details…</p>
                     </div>
                 </main>
             );
@@ -114,7 +115,12 @@ export default function EventDetailClient({ id }) {
     return (
         <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)' }}>
             <section style={{ position: 'relative', width: '100%', minHeight: '420px', maxHeight: '55vh', backgroundColor: '#0f172a' }}>
-                <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', minHeight: '420px', maxHeight: '55vh', objectFit: 'cover', display: 'block' }} />
+                <img 
+                    src={event.img} 
+                    alt={event.title} 
+                    style={{ width: '100%', height: '100%', minHeight: '420px', maxHeight: '55vh', objectFit: 'cover', display: 'block' }}
+                    onError={(e) => { e.currentTarget.src = DEFAULT_IMG; }}
+                />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 0 40px', pointerEvents: 'auto' }}>
                     <div className="container">
@@ -122,7 +128,9 @@ export default function EventDetailClient({ id }) {
                         <h1 style={{ color: '#fff', fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, margin: '0 0 12px 0', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>{event.title}</h1>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px', color: 'rgba(255,255,255,0.95)', fontSize: '15px' }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={18} /> {event.date}{event.time ? `, ${event.time}` : ''}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={18} /> {event.location}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <MapPin size={18} /> {event.venue}{event.city ? `, ${event.city}` : ''}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -173,7 +181,7 @@ export default function EventDetailClient({ id }) {
                                     if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
                                     else router.push(bookUrl);
                                 }}
-                                style={{ width: '100%', padding: '16px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(244, 63, 94, 0.3)' }}
+                                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(248, 68, 164, 0.3)' }}
                             >Book Now</button>
                         </div>
                     </div>

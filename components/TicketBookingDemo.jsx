@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowRight, 
   CheckCircle, 
@@ -12,10 +12,14 @@ import {
   Phone,
   Ticket
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { useAuth } from './AuthContext';
 
 const C = {
   bg: '#f8fafc',
-  primary: '#f84464', 
+  primary: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', 
+  primarySolid: '#f844a4',
   text: '#0f172a',
   muted: '#64748b',
   border: '#e2e8f0',
@@ -23,12 +27,39 @@ const C = {
   success: '#22c55e'
 };
 
-const EVENTS = [
+const DEFAULT_EVENTS = [
   { id: 1, title: 'Sunburn Arena ft. Alan Walker', date: 'Sat, 28 Sep', loc: 'DY Patil Stadium, Mumbai', img: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&h=300&fit=crop', price: '₹1,500' },
   { id: 2, title: 'Zomaland by Zomato', date: 'Sun, 15 Oct', loc: 'JLN Stadium, Delhi', img: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=500&h=300&fit=crop', price: '₹799' }
 ];
 
 export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
+  const { selectedCity } = useAuth();
+  const convexEvents = useQuery(api.events.getActiveEvents);
+  
+  const events = useMemo(() => {
+    if (!convexEvents) return DEFAULT_EVENTS;
+    
+    let filtered = convexEvents;
+    if (selectedCity && selectedCity !== "All Cities") {
+      filtered = convexEvents.filter(ev => 
+        ev.virtual || 
+        (ev.city && ev.city.toLowerCase() === selectedCity.toLowerCase()) ||
+        (ev.location && ev.location.toLowerCase().includes(selectedCity.toLowerCase()))
+      );
+    }
+    
+    if (filtered.length === 0) return DEFAULT_EVENTS;
+
+    return filtered.slice(0, 2).map(ev => ({
+        id: ev._id,
+        title: ev.title,
+        date: ev.date,
+        loc: ev.location || ev.venue || ev.city,
+        img: ev.img || ev.bannerPreview || DEFAULT_EVENTS[0].img,
+        price: '₹' + (ev.price || '999')
+    }));
+  }, [convexEvents, selectedCity]);
+
   const [step, setStep] = useState(0);
   const [cursorPos, setCursorPos] = useState({ x: 100, y: 100 });
   const [isClicking, setIsClicking] = useState(false);
@@ -110,8 +141,8 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
       <div style={{ flex: 1, overflowY: 'auto', background: C.bg }}>
         {step === 0 && (
           <div style={{ padding: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>Recommended</div>
-            {EVENTS.map(ev => (
+            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>Recommended in {selectedCity || "Global"}</div>
+            {events.map(ev => (
               <div key={ev.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, marginBottom: 12 }}>
                 <img src={ev.img} style={{ width: '100%', height: 80, objectFit: 'cover' }} />
                 <div style={{ padding: 8 }}>
@@ -124,14 +155,14 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
         )}
         {step === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <img src={EVENTS[0].img} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+            <img src={events[0].img} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
             <div style={{ padding: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 8 }}>{EVENTS[0].title}</div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}><Calendar size={12} /> {EVENTS[0].date}</div>
-              <div style={{ fontSize: 12, color: C.muted }}><MapPin size={12} /> {EVENTS[0].loc}</div>
+              <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 8 }}>{events[0].title}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}><Calendar size={12} /> {events[0].date}</div>
+              <div style={{ fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{events[0].loc}</span></div>
             </div>
             <div style={{ marginTop: 'auto', padding: 16, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div style={{ fontSize: 16, fontWeight: 900, color: C.primary }}>{EVENTS[0].price}</div>
+               <div style={{ fontSize: 16, fontWeight: 900, color: C.primarySolid }}>{events[0].price}</div>
                <button style={{ background: C.primary, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 800, fontSize: 12 }}>Book Now</button>
             </div>
           </div>
@@ -150,11 +181,11 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
         {step === 3 && (
           <div style={{ padding: 20 }}>
             <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 20 }}>Payment</div>
-            <div style={{ padding: 12, borderRadius: 12, border: `1.5px solid ${C.primary}`, background: '#fff5f7', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Smartphone color={C.primary} size={18} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>UPI (GPay / PhonePe)</div>
+            <div style={{ padding: 12, borderRadius: 12, border: `1.5px solid ${C.primarySolid}`, background: '#fff5f7', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Smartphone color={C.primarySolid} size={18} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.primarySolid }}>UPI (GPay / PhonePe)</div>
             </div>
-            <button style={{ width: '100%', background: C.primary, color: '#fff', border: 'none', padding: 14, borderRadius: 12, fontWeight: 800, marginTop: 40, fontSize: 12 }}>Pay {EVENTS[0].price}</button>
+            <button style={{ width: '100%', background: C.primary, color: '#fff', border: 'none', padding: 14, borderRadius: 12, fontWeight: 800, marginTop: 40, fontSize: 12 }}>Pay {events[0].price}</button>
           </div>
         )}
         {step === 4 && (
@@ -163,7 +194,7 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>Confirmed!</div>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>BMT-6429-XT</div>
             <div style={{ width: '100%', aspectRatio: '1', background: '#f8fafc', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}` }}>
-              <Ticket size={60} color={C.primary} strokeWidth={1} />
+              <Ticket size={60} color={C.primarySolid} strokeWidth={1} />
             </div>
           </div>
         )}
