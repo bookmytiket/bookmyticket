@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
-import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit } from "lucide-react";
+import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -764,36 +764,37 @@ function AdminHomePage() {
 
     const colors = {
         light: {
-            bg: "#f0f4f8",
+            bg: "#f3f4f6",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#1e293b",
-            textSub: "#64748b",
+            textMain: "#111827",
+            textSub: "#4b5563",
             cardBg: "#ffffff",
-            border: "#e2e8f0",
-            activeLink: "#e0f2fe",
-            activeText: "#0369a1",
-            sidebarBorder: "#f1f5f9"
+            border: "#e5e7eb",
+            activeLink: "#eff6ff",
+            activeText: "#2563eb",
+            sidebarBorder: "#f3f4f6"
         },
         dark: {
-            bg: "#0f172a",
+            bg: "#0b0f19",
             sidebar: "#111827",
             header: "#111827",
             textMain: "#ffffff",
-            textSub: "#cbd5e1", // Improved clarity from #94a3b8
-            cardBg: "#1f2937",
-            border: "#374151",
-            activeLink: "#0ea5e920",
-            activeText: "#38bdf8",
-            sidebarBorder: "#1f2937"
+            textSub: "#94a3b8",
+            cardBg: "#111d2c",
+            border: "#1e293b",
+            activeLink: "#3b82f6",
+            activeText: "#ffffff",
+            sidebarBorder: "#1e293b"
         }
     };
 
+    const ACCENT_BLUE = "#3b82f6";
+    const ACCENT_PURPLE = "#8b5cf6";
     const ACCENT_PINK = "#ec4899";
-    const ACCENT_PURPLE = "#a855f7";
-    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_PINK} 0%, ${ACCENT_PURPLE} 100%)`;
+    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
 
-    const t = colors[theme];
+    const t = colors[theme] || colors.dark;
 
     const addSlide = () => {
         const newId = slides.length > 0 ? Math.max(...slides.map(s => s.id)) + 1 : 1;
@@ -844,491 +845,301 @@ function AdminHomePage() {
                     z-index: 100;
                     border-right: 1px solid ${t.sidebarBorder};
                     transition: transform 0.3s ease, background-color 0.3s ease;
-                }
-                .main-content {
-                    margin-left: 250px;
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    min-width: 0;
-                }
-                .top-header {
-                    height: 64px;
-                    background-color: ${t.header};
-                    border-bottom: 1px solid ${t.border};
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 0 24px;
-                    position: sticky;
-                    top: 0;
-                    z-index: 50;
+                    overflow-y: auto;
+                    padding: 20px 0;
                 }
                 .sidebar-item {
                     display: flex;
                     align-items: center;
                     gap: 12px;
                     padding: 10px 16px;
+                    margin: 4px 16px;
+                    border-radius: 12px;
                     cursor: pointer;
-                    font-size: 13px;
-                    font-weight: 600;
-                    border-radius: 0 50px 50px 0;
-                    margin-right: 16px;
-                    transition: all 0.2s;
-                    border: none;
-                    background: none;
-                    width: calc(100% - 16px);
+                    transition: all 0.2s ease;
+                    font-size: 14px;
+                    font-weight: 500;
                     color: ${t.textSub};
-                    text-align: left;
+                    text-decoration: none;
+                }
+                .sidebar-item:hover {
+                    background-color: ${t.activeLink}30;
+                    color: ${t.activeText};
                 }
                 .sidebar-item.active {
                     background-color: ${t.activeLink};
                     color: ${t.activeText};
-                    font-weight: 600;
-                    position: relative;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
                 }
-                .sidebar-item.expanded-parent {
-                    background-color: #6366f1;
-                    color: #ffffff;
-                    border-radius: 8px;
-                    margin: 8px 12px;
-                    width: calc(100% - 24px);
-                }
-                .submenu {
-                    margin-left: 24px;
-                    border-left: 1px solid rgba(255,255,255,0.1);
-                    margin-bottom: 8px;
-                }
-                .active-sub {
-                    color: ${t.activeText} !important;
-                    background-color: ${t.activeLink};
-                    border-radius: 4px;
-                }
-                .submenu-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 8px 20px;
-                    color: ${theme === 'dark' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)'};
-                    font-size: 13px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .submenu-item:hover {
-                    color: ${theme === 'dark' ? '#ffffff' : '#000000'};
-                    background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'};
-                }
-                .badge-orange {
-                    background-color: #f97316;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }
-                .badge-blue {
-                    background: ${ACCENT_GRADIENT};
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                }
-                .dot-icon {
-                    width: 6px;
-                    height: 6px;
-                    border: 1.5px solid currentColor;
-                    border-radius: 50%;
-                }
-                .stat-card {
-                    background-color: ${t.cardBg};
-                    padding: 16px;
-                    border-radius: 10px;
-                    border: 1px solid ${t.border};
-                    display: flex;
-                    flex-direction: column;
-                    position: relative;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                    transition: transform 0.2s, box-shadow 0.2s;
-                }
-                .stat-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-                }
-                .stat-icon-wrapper {
-                   position: absolute;
-                   right: 24px;
-                   top: 24px;
-                   width: 48px;
-                   height: 48px;
-                   border-radius: 10px;
-                   display: flex;
-                   align-items: center;
-                   justify-content: center;
-                }
-                .click-to-view {
-                    font-size: 12px;
-                    color: ${t.textSub};
-                    margin-top: 16px;
-                    cursor: pointer;
-                }
-                .section-header {
-                    padding: 32px 20px 12px;
-                    font-size: 12px;
+                .sidebar-group-title {
+                    padding: 0 32px;
+                    margin: 20px 0 10px 0;
+                    font-size: 11px;
+                    font-weight: 700;
                     text-transform: uppercase;
-                    letter-spacing: 1.5px;
-                    font-weight: 800;
-                    color: ${t.textMain};
-                    opacity: 0.6;
+                    letter-spacing: 0.05em;
+                    color: ${t.textSub}80;
+                }
+                .main-content {
+                    margin-left: 250px;
+                    flex: 1;
+                    padding: 32px;
+                    min-width: 0;
+                    transition: margin-left 0.3s ease;
                 }
                 @media (max-width: 1024px) {
-                    .sidebar { transform: translateX(-100%); }
+                    .sidebar { transform: translateX(-100%); width: 280px; }
                     .sidebar.open { transform: translateX(0); }
-                    .main-content { margin-left: 0; }
+                    .main-content { margin-left: 0; padding: 20px; }
+                    .sidebar-overlay { 
+                        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                        background: rgba(0,0,0,0.5); z-index: 90; display: none; 
+                    }
+                    .sidebar-overlay.visible { display: block; }
                 }
+                .widget-card {
+                    background-color: ${t.cardBg};
+                    border-radius: 16px;
+                    border: 1px solid ${t.border};
+                    padding: 24px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+                .widget-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                    gap: 24px;
+                    margin-bottom: 32px;
+                }
+                .section-card {
+                    background-color: ${t.cardBg};
+                    border-radius: 16px;
+                    border: 1px solid ${t.border};
+                    padding: 24px;
+                    margin-bottom: 24px;
+                }
+                .table-container {
+                    overflow-x: auto;
+                    border-radius: 12px;
+                    border: 1px solid ${t.border};
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th {
+                    text-align: left;
+                    padding: 12px 16px;
+                    background-color: ${theme === 'dark' ? '#1e293b' : '#f8fafc'};
+                    color: ${t.textSub};
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    border-bottom: 1px solid ${t.border};
+                }
+                td {
+                    padding: 16px;
+                    border-bottom: 1px solid ${t.border};
+                    font-size: 14px;
+                }
+                .badge {
+                    padding: 4px 10px;
+                    border-radius: 99px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                }
+                .badge-blue { background: #dbeafe; color: #1e40af; }
+                .badge-green { background: #dcfce7; color: #166534; }
+                .badge-yellow { background: #fef9c3; color: #854d0e; }
+                .badge-red { background: #fee2e2; color: #991b1b; }
             `}</style>
 
             <div className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 
             {/* Sidebar Navigation */}
             <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-start",
-                        gap: "10px",
-                        padding: '10px 4px',
-                    }}>
-                        {siteBranding.logoUrl ? (
-                            <img
-                                src={siteBranding.logoUrl}
-                                alt="Logo"
-                                style={{
-                                    height: "56px",
-                                    objectFit: "contain",
-                                    maxWidth: "100%",
-                                    filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none',
-                                    transition: 'filter 0.3s ease'
-                                }}
-                            />
-                        ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <div style={{ width: "32px", height: "32px", background: `linear-gradient(135deg, ${siteBranding.logoColor}, #3b82f6)`, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <Ticket color="#fff" size={24} weight="bold" />
-                                </div>
-                                <h2 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: t.textMain, letterSpacing: "-0.5px" }}>{siteBranding.name}</h2>
-                            </div>
-                        )}
+                <div style={{ padding: "0 24px 20px 24px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: ACCENT_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Ticket size={18} color="#fff" />
                     </div>
+                    <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>BookMyTicket</span>
                 </div>
 
-                <nav style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
-                    {/* Overview */}
-                    <p className="section-header">Overview</p>
-                    <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
-                        <LayoutDashboard size={20} /> Dashboard
-                    </button>
-                    <button onClick={() => setActiveTab("banner_ads")} className={`sidebar-item ${activeTab === "banner_ads" ? "active" : ""}`}>
-                        <Megaphone size={20} /> Banner Ads {bannerRequests.length > 0 && <span className="badge-orange">{bannerRequests.length}</span>}
-                    </button>
+                <nav style={{ flex: 1 }}>
+                    <p className="sidebar-group-title">Home</p>
+                    <div onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
+                        <LayoutDashboard size={18} /> Dashboard
+                    </div>
+                    <div onClick={() => setActiveTab("banner_ads")} className={`sidebar-item ${activeTab === "banner_ads" ? "active" : ""}`}>
+                        <Megaphone size={18} /> Banner Ads
+                    </div>
 
-                    {/* Operations */}
-                    <p className="section-header">Operations</p>
-                    <button onClick={() => setActiveTab("all_events")} className={`sidebar-item ${activeTab === "all_events" ? "active" : ""}`}>
-                        <Calendar size={20} /> Events
-                    </button>
-                    <button onClick={() => setActiveTab("bookings")} className={`sidebar-item ${activeTab === "bookings" ? "active" : ""}`}>
-                        <ShoppingCart size={20} /> Bookings
-                    </button>
+                    <p className="sidebar-group-title">Operations</p>
+                    <div onClick={() => setActiveTab("all_events")} className={`sidebar-item ${activeTab === "all_events" ? "active" : ""}`}>
+                        <Calendar size={18} /> Events
+                    </div>
+                    <div onClick={() => setActiveTab("bookings")} className={`sidebar-item ${activeTab === "bookings" ? "active" : ""}`}>
+                        <ShoppingCart size={18} /> Bookings
+                    </div>
+                    <div onClick={() => setActiveTab("categories")} className={`sidebar-item ${activeTab === "categories" ? "active" : ""}`}>
+                        <LayoutGrid size={18} /> Categories
+                    </div>
 
-                    {/* Customers */}
-                    <p className="section-header">Customers</p>
-                    <button onClick={() => setActiveTab("customers")} className={`sidebar-item ${activeTab === "customers" ? "active" : ""}`}>
-                        <UserCircle size={20} /> Customers
-                    </button>
-
-                    {/* Growth */}
-                    <p className="section-header">Growth</p>
-                    <div style={{ marginBottom: "4px" }}>
-                        <button
-                            onClick={() => setIsGrowthOpen(!isGrowthOpen)}
-                            className={`sidebar-item ${isGrowthOpen ? "expanded-parent" : ""}`}
-                            style={{ display: "flex", justifyContent: "space-between" }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Gift size={20} /> Growth
-                            </div>
-                            <Menu size={14} style={{ transform: isGrowthOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
-                        </button>
-                        {isGrowthOpen && (
-                            <div className="submenu">
-                                <div onClick={() => setActiveTab("promotions")} className={`submenu-item ${activeTab === "promotions" ? "active-sub" : ""}`}>
+                    <p className="sidebar-group-title">Partners</p>
+                    <div onClick={() => setActiveTab("customers")} className={`sidebar-item ${activeTab === "customers" ? "active" : ""}`}>
+                        <UserCircle size={18} /> Customers
+                    </div>
+                    <div onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} className={`sidebar-item ${isOrganizersOpen ? "active" : ""}`}>
+                        <Users size={18} /> <span>Organizers</span>
+                        <Menu size={14} style={{ marginLeft: "auto", transform: isOrganizersOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
+                    </div>
+                    {isOrganizersOpen && (
+                        <div className="submenu">
+                            {[
+                                { label: "All Organizers", id: "all_org" },
+                                { label: "KYC Pending", id: "kyc_pending" },
+                                { label: "Banned", id: "banned_org" },
+                                { label: "Requests", id: "org_requests" },
+                            ].map((sub) => (
+                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
                                     <div className="dot-icon"></div>
-                                    <span style={{ flex: 1 }}>Promotions</span>
+                                    <span>{sub.label}</span>
                                 </div>
-                                <div onClick={() => setActiveTab("send_notif")} className={`submenu-item ${activeTab === "send_notif" ? "active-sub" : ""}`}>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="sidebar-group-title">Growth</p>
+                    <div onClick={() => setActiveTab("promotions")} className={`sidebar-item ${activeTab === "promotions" ? "active" : ""}`}>
+                        <Gift size={18} /> Promotions
+                    </div>
+                    <div onClick={() => setActiveTab("send_notif")} className={`sidebar-item ${activeTab === "send_notif" ? "active" : ""}`}>
+                        <Bell size={18} /> Notifications
+                    </div>
+
+                    <p className="sidebar-group-title">Utils</p>
+                    <div onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
+                        <MessageCircle size={18} /> Support
+                    </div>
+                    <div onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
+                        <FileText size={18} /> Pages
+                    </div>
+
+                    <p className="sidebar-group-title">System</p>
+                    <div onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`sidebar-item ${isSettingsOpen ? "active" : ""}`}>
+                        <Settings size={18} /> <span>Settings</span>
+                        <Menu size={14} style={{ marginLeft: "auto", transform: isSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
+                    </div>
+                    {isSettingsOpen && (
+                        <div className="submenu">
+                            {[
+                                { label: "API Keys", id: "api_settings" },
+                                { label: "Payments", id: "payment_settings" },
+                                { label: "Email", id: "email_settings" },
+                                { label: "SEO & Meta", id: "meta_management" },
+                            ].map((sub) => (
+                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
                                     <div className="dot-icon"></div>
-                                    <span style={{ flex: 1 }}>Push Notifications</span>
+                                    <span>{sub.label}</span>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Partners */}
-                    <p className="section-header">Partners</p>
-                    <div style={{ marginBottom: "4px" }}>
-                        <button
-                            onClick={() => setIsOrganizersOpen(!isOrganizersOpen)}
-                            className={`sidebar-item ${isOrganizersOpen ? "expanded-parent" : ""}`}
-                            style={{ display: "flex", justifyContent: "space-between" }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Users size={20} /> Organizers
-                            </div>
-                            <Menu size={14} style={{ transform: isOrganizersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
-                        </button>
-                        {isOrganizersOpen && (
-                            <div className="submenu">
-                                {[
-                                    { label: "All Organizers", id: "all_org" },
-                                    { label: "Active Organizers", id: "active_org" },
-                                    { label: "KYC Pending", id: "kyc_pending" },
-                                    { label: "Banned Organizers", id: "banned_org" },
-                                    { label: "With Balance", id: "with_balance" },
-                                    { label: "Organiser Requests", id: "org_requests" },
-                                    { label: "Send Notification", id: "send_notif" },
-                                ].map((sub) => (
-                                    <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                        <div className="dot-icon"></div>
-                                        <span style={{ flex: 1 }}>{sub.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Reports */}
-                    <p className="section-header">Reports</p>
-                    <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
-                        <MessageCircle size={20} /> Support Tickets
-                    </button>
-                    <button onClick={() => setActiveTab("branding_partners")} className={`sidebar-item ${activeTab === "branding_partners" ? "active" : ""}`}>
-                        <Shield size={20} /> Branding Partners
-                    </button>
-                    <button onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
-                        <FileText size={20} /> Pages
-                    </button>
-                    <button onClick={() => setActiveTab("ad_popups")} className={`sidebar-item ${activeTab === "ad_popups" ? "active" : ""}`}>
-                        <Megaphone size={20} /> Ad Popups
-                    </button>
-
-                    {/* Administration */}
-                    <p className="section-header">Administration</p>
-                    <button onClick={() => setActiveTab("admin_management")} className={`sidebar-item ${activeTab === "admin_management" ? "active" : ""}`}>
-                        <Shield size={20} /> Team Management
-                    </button>
-
-                    {/* System */}
-                    <p className="section-header">System</p>
-                    <div style={{ marginBottom: "4px" }}>
-                        <button
-                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className={`sidebar-item ${isSettingsOpen ? "expanded-parent" : ""}`}
-                            style={{ display: "flex", justifyContent: "space-between" }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Settings size={20} /> Settings
-                            </div>
-                            <Menu size={14} style={{ transform: isSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
-                        </button>
-                        {isSettingsOpen && (
-                            <div className="submenu">
-                                {[
-                                    { label: "API Keys", id: "api_settings" },
-                                    { label: "Payment Gateways", id: "payment_settings" },
-                                    { label: "Ticket & Notifications", id: "ticket_settings" },
-                                    { label: "Email Integration", id: "email_settings" },
-                                    { label: "SEO & Meta", id: "meta_management" },
-                                    { label: "Email Templates", id: "email_templates" },
-                                    { label: "Disclaimer & Policies", id: "disclaimer_settings" },
-                                    { label: "SSO & OAuth2", id: "sso_settings" },
-                                ].map((sub) => (
-                                    <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                        <div className="dot-icon"></div>
-                                        <span style={{ flex: 1 }}>{sub.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ marginBottom: "4px" }}>
-                        <button
-                            onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)}
-                            className={`sidebar-item ${isHomeSettingsOpen ? "expanded-parent" : ""}`}
-                            style={{ display: "flex", justifyContent: "space-between" }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Globe size={20} /> Home Page
-                            </div>
-                            <Menu size={14} style={{ transform: isHomeSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
-                        </button>
-                        {isHomeSettingsOpen && (
-                            <div className="submenu">
-                                {[
-                                    { label: "Hero Banner (Slides)", id: "hero" },
-                                    { label: "Video Banner & Content", id: "video_banner" },
-                                    { label: "Site Branding", id: "site_branding" },
-                                    { label: "Featured Events", id: "events_settings" },
-                                    { label: "Event Partners", id: "event_partners" },
-                                    { label: "Recent Memories", id: "memories" },
-                                    { label: "Sections Order", id: "sections" },
-                                    { label: "Copyright & Footer", id: "copyright" },
-                                    { label: "SEO & Meta Ads", id: "meta_management" },
-                                ].map((sub) => (
-                                    <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                        <div className="dot-icon"></div>
-                                        <span style={{ flex: 1 }}>{sub.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {[
-                        { id: "categories", icon: LayoutGrid, label: "Categories" },
-                    ].map((item) => (
-                        <button key={item.id} onClick={() => setActiveTab(item.id)} className={`sidebar-item ${activeTab === item.id ? "active" : ""}`}>
-                            <item.icon size={20} /> {item.label}
-                        </button>
-                    ))}
-
-                    <div style={{ marginTop: "24px", borderTop: `1px solid ${t.sidebarBorder}`, paddingTop: "12px" }}>
-                        <button className="sidebar-item"><UserCircle size={20} /> Profile</button>
-                        <button className="sidebar-item" style={{ color: "#ef4444" }} onClick={handleLogout}><X size={20} /> Logout</button>
+                    <div style={{ marginTop: "40px", padding: "0 16px" }}>
+                        <div className="sidebar-item" style={{ color: "#ef4444", marginTop: "12px", border: "1px solid #ef444420" }} onClick={handleLogout}>
+                            <X size={18} /> Logout
+                        </div>
                     </div>
                 </nav>
             </aside>
 
             {/* Main Content */}
             <div className="main-content">
-                <header className="top-header">
-                    <div>
-                        <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
-                            {activeTab === "dashboard" ? "Dashboard" : activeTab === "all_events" ? "Events" : activeTab === "bookings" ? "Bookings" : activeTab === "customers" ? "Customers" : activeTab === "promotions" ? "Promotions" : activeTab === "financials" ? "Financials" : activeTab === "support_tickets" ? "Support Tickets" : activeTab === "branding_partners" ? "Branding Partners KYC" : activeTab === "categories" ? "Event Categories" : activeTab === "video_banner" ? "Video Banner & Content" : activeTab === "site_branding" ? "Site Branding" : activeTab === "copyright" ? "Copyright & Footer" : activeTab.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-                        </h1>
-                        <p style={{ fontSize: "12px", color: t.textSub, margin: 0, opacity: 0.8 }}>
-                            {activeTab === "dashboard" ? "Overview & stats" : activeTab === "all_events" ? "Create, edit, or archive events" : activeTab === "bookings" ? "Search and manage ticket orders" : activeTab === "customers" ? "User history and contact info" : activeTab === "promotions" ? "Coupon codes and BOGO offers" : activeTab === "send_notif" ? "Send alerts and reminders" : activeTab === "financials" ? "Export CSV/PDF for accounting" : activeTab === "support_tickets" ? "View and manage organiser support tickets; status changes notify organiser by email" : activeTab === "branding_partners" ? "Review and verify branding partner KYC requests" : activeTab === "api_settings" || activeTab === "payment_settings" ? "API keys, payment gateway, SEO" : activeTab === "ticket_settings" ? "Ticket format, logo, send workflow (SMS, Email, WhatsApp PDF)" : activeTab === "categories" ? "Manage event categories" : ""}
-                        </p>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <div style={{ display: "none", alignItems: "center", gap: "8px", padding: "6px 12px", border: `1px solid ${t.border}`, borderRadius: "6px", color: t.textSub, fontSize: "13px" }}>
-                            Select an option <Menu size={14} />
+                <header className="top-header" style={{ height: "70px", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, backgroundColor: t.header, borderBottom: `1px solid ${t.border}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1 }}>
+                        <div style={{ position: "relative", width: "400px" }}>
+                            <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
+                            <input 
+                                type="text" 
+                                placeholder="Search everything..." 
+                                style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'dark' ? "#1e293b" : "#f1f5f9", color: t.textMain, fontSize: "14px", outline: "none" }} 
+                            />
                         </div>
-                        <button style={{ color: t.activeText, background: t.activeLink, border: `1px solid ${t.activeText}40`, padding: "8px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Bell size={16} /> Refresh
-                        </button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                        <div style={{ position: "relative", cursor: "pointer" }}>
+                            <Bell size={20} color={t.textSub} />
+                            <div style={{ position: "absolute", top: "-2px", right: "-2px", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ef4444", border: `2px solid ${t.header}` }}></div>
+                        </div>
+                        <div style={{ width: "1px", height: "24px", backgroundColor: t.border }}></div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                            <div style={{ width: "36px", height: "36px", borderRadius: "12px", backgroundColor: theme === 'dark' ? "#1e293b" : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: ACCENT_PINK }}>A</div>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Admin User</span>
+                                <span style={{ fontSize: "11px", color: t.textSub }}>Super Admin</span>
+                            </div>
+                        </div>
                     </div>
                 </header>
 
-                {activeTab === "categories" && (
-                    <div style={{ borderBottom: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#f8fafc" : "#1e293b", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-                        <span style={{ fontSize: "14px", fontWeight: 600, color: t.textSub }}>Event Categories</span>
-                        <button
-                            onClick={() => setCategoryModal("add")}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}
-                        >
-                            <Plus size={18} /> Create a Category
-                        </button>
-                    </div>
-                )}
-
-                <main className="admin-main" style={{ padding: "20px", width: "100%" }}>
-                    {(activeTab === "hero" || activeTab === "video" || activeTab === "video_banner" || activeTab === "copyright" || activeTab === "events_settings" || activeTab === "event_partners" || activeTab === "sections" || activeTab === "site_branding" || activeTab === "email_settings" || activeTab === "email_templates" || activeTab === "disclaimer_settings" || activeTab === "sso_settings" || activeTab === "payment_settings" || activeTab === "api_settings" || activeTab === "ticket_settings") && (
-                        <div style={{ display: "flex", gap: "8px", backgroundColor: theme === 'light' ? "#fff" : t.cardBg, padding: "6px", borderRadius: "10px", border: `1px solid ${t.border}`, marginBottom: "20px", overflowX: "auto" }}>
-                            {(["email_settings", "email_templates", "disclaimer_settings", "sso_settings", "payment_settings", "api_settings", "ticket_settings"].includes(activeTab) ? [
-                                { id: "email_settings", label: "Email SMTP", icon: Mail },
-                                { id: "email_templates", label: "Templates", icon: ImageIcon },
-                                { id: "disclaimer_settings", label: "Disclaimer", icon: Shield },
-                                { id: "sso_settings", label: "SSO / OAuth2", icon: Lock },
-                                { id: "payment_settings", label: "Payments", icon: CreditCard },
-                                { id: "ticket_settings", label: "Ticket & Notifications", icon: Ticket },
-                                { id: "api_settings", label: "API Keys", icon: Code },
-                            ] : [
-                                { id: "hero", label: "Hero Slides", icon: ImageIcon },
-                                { id: "video_banner", label: "Video Banner", icon: Video },
-                                { id: "site_branding", label: "Branding", icon: Sparkles },
-                                { id: "events_settings", label: "Featured Events", icon: Ticket },
-                                { id: "event_partners", label: "Event Partners", icon: Users },
-                                { id: "memories", label: "Recent Memories", icon: ImageIcon },
-                                { id: "sections", label: "Sections Order", icon: LayoutDashboard },
-                                { id: "copyright", label: "Copyright & Footer", icon: FileText },
-                                { id: "meta_management", label: "SEO & Ads", icon: Globe },
-                            ]).map(tab => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="tab-btn"
-                                    style={{ flex: 1, padding: "10px", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "14px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: activeTab === tab.id ? (theme === 'light' ? "#fdf2f8" : "#1e293b") : "transparent", color: activeTab === tab.id ? ACCENT_PINK : t.textSub, whiteSpace: "nowrap" }}>
-                                    <tab.icon size={18} /> <span>{tab.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                <main style={{ padding: "32px" }}>
                     {activeTab === "dashboard" && (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
-                            {[
-                                { label: "TOTAL EVENTS", value: dashboardStats ? dashboardStats.totalEvents.toString() : "…", color: "#0ea5e9", icon: Ticket },
-                                { label: "TOTAL REVENUE", value: dashboardStats ? `₹${dashboardStats.totalRevenue.toLocaleString()}` : "…", color: "#22c55e", icon: LayoutDashboard },
-                                { label: "TOTAL CUSTOMERS", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", color: "#f59e0b", icon: Users },
-                                { label: "TOTAL ORGANIZERS", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", color: "#10b981", icon: Users },
-                                { label: "TOTAL TICKETS SOLD", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", color: "#8b5cf6", icon: Ticket },
-                                { label: "TOTAL BOOKINGS", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", color: "#ec4899", icon: ShoppingCart },
-                            ].map((stat, i) => (
-                                <div key={i} className="stat-card" style={{ backgroundColor: theme === 'light' ? `${stat.color}05` : `${stat.color}15`, borderLeft: `4px solid ${stat.color}` }}>
-                                    <div className="stat-icon-wrapper" style={{ backgroundColor: stat.color, width: "36px", height: "36px", right: "12px", top: "12px" }}>
-                                        <stat.icon size={16} color="#fff" />
+                        <>
+                            {/* Welcome Banner */}
+                            <div style={{ 
+                                background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                borderRadius: "24px",
+                                padding: "40px",
+                                marginBottom: "32px",
+                                position: "relative",
+                                overflow: "hidden",
+                                border: `1px solid ${t.border}`
+                            }}>
+                                <div style={{ position: "relative", zIndex: 2 }}>
+                                    <h2 style={{ fontSize: "32px", fontWeight: 800, color: t.textMain, marginBottom: "8px", letterSpacing: "-0.5px" }}>Welcome back, Admin! 👋</h2>
+                                    <p style={{ fontSize: "16px", color: t.textSub, maxWidth: "500px", lineHeight: "1.6" }}>
+                                        Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
+                                    </p>
+                                    <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "12px 24px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}>View Requests</button>
+                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "12px 24px", borderRadius: "12px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>Manage Events</button>
                                     </div>
-                                    <span style={{ fontSize: "10px", fontWeight: 800, color: t.textSub, opacity: 0.9 }}>{stat.label}</span>
-                                    <span style={{ fontSize: "22px", fontWeight: 800, color: stat.color, margin: "4px 0" }}>{stat.value}</span>
-                                    <span className="click-to-view" style={{ fontSize: "10px", marginTop: "8px" }}>View Details</span>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                {/* Modern Abstract Background Element */}
+                                <div style={{ position: "absolute", top: "-50px", right: "-50px", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_BLUE}20 0%, transparent 70%)`, pointerEvents: "none" }}></div>
+                            </div>
 
-                    {activeTab === "dashboard" && (() => {
-                        const categoryLabels = ["Music", "Sports", "Theatre", "Comedy", "Fest"];
-                        const byCat = categoryLabels.map(label => allEvents.filter(e => (e.category || "").toLowerCase().includes(label.toLowerCase())).length);
-                        const maxCat = Math.max(1, ...byCat);
-                        const paidCount = allEvents.filter(e => (e.type || "").toLowerCase() === "paid").length;
-                        const paidPct = allEvents.length ? Math.round((paidCount / allEvents.length) * 100) : 0;
-                        return (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                    <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Bookings by Category</h3>
-                                    <div style={{ height: "140px", display: "flex", alignItems: "flex-end", gap: "16px", padding: "0 10px" }}>
-                                        {byCat.map((count, i) => (
-                                            <div key={i} style={{ flex: 1, height: `${(count / maxCat) * 100}%`, backgroundColor: "#3b82f6", borderRadius: "3px 3px 0 0", minHeight: count ? "8px" : "0" }}></div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "11px", color: t.textSub }}>
-                                        {categoryLabels.map((l, i) => <span key={i}>{l}</span>)}
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: t.cardBg, padding: "16px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                    <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "12px" }}>Events by Type</h3>
-                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "140px" }}>
-                                        <div style={{ width: "110px", height: "110px", borderRadius: "50%", background: `conic-gradient(#3b82f6 0deg, #3b82f6 ${paidPct * 3.6}deg, ${t.border} ${paidPct * 3.6}deg)`, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            <div style={{ width: "74px", height: "74px", borderRadius: "50%", backgroundColor: t.cardBg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "absolute" }}>
-                                                <span style={{ fontSize: "18px", fontWeight: 800 }}>{paidPct}%</span>
-                                                <p style={{ margin: 0, fontSize: "11px", color: t.textSub }}>Paid</p>
+                            <div className="stats-grid">
+                                {[
+                                    { label: "Total Revenue", value: dashboardStats ? `₹${dashboardStats.totalRevenue.toLocaleString()}` : "…", icon: LayoutDashboard, color: "#3b82f6", trend: "+12.5%" },
+                                    { label: "Total Events", value: dashboardStats ? dashboardStats.totalEvents.toString() : "…", icon: Ticket, color: "#8b5cf6", trend: "+5.2%" },
+                                    { label: "Tickets Sold", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", icon: Ticket, color: "#ec4899", trend: "+8.1%" },
+                                    { label: "Customers", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", icon: UserCircle, color: "#f59e0b", trend: "+2.4%" },
+                                    { label: "Organisers", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", icon: Users, color: "#10b981", trend: "+1.8%" },
+                                    { label: "Bookings", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", icon: ShoppingCart, color: "#06b6d4", trend: "+14.2%" }
+                                ].map((stat, i) => (
+                                    <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                            <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: `${stat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color }}>
+                                                <stat.icon size={24} />
                                             </div>
+                                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", backgroundColor: "#f0fdf4", padding: "4px 8px", borderRadius: "6px" }}>{stat.trend}</span>
+                                        </div>
+                                        <div>
+                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 500, color: t.textSub }}>{stat.label}</p>
+                                            <h3 style={{ margin: "4px 0 0 0", fontSize: "28px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>{stat.value}</h3>
                                         </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
-                        );
-                    })()}
-
+                        </>
+                    )}
                     {activeTab === "banner_ads" && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                             {/* Pending Requests */}

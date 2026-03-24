@@ -1514,18 +1514,34 @@ function OrganiserPanel() {
                                         style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('ifscCode') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
                                     />
                                     {kycFormData.bankName && (
-                                        <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "8px", padding: "10px", backgroundColor: "#f0fdf4", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
-                                            <div style={{ fontWeight: 800 }}>✓ {kycFormData.bankName} Verified</div>
-                                            {kycFormData.branchName && (
-                                                <div style={{ marginTop: "4px", color: "#166534" }}>
-                                                    <strong>Branch:</strong> {kycFormData.branchName}
+                                        <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "8px", padding: "12px", backgroundColor: "#f0fdf4", borderRadius: "12px", border: "1.5px solid #dcfce7" }}>
+                                            <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }}></div>
+                                                {kycFormData.bankName} Verified
+                                            </div>
+                                            
+                                            <div style={{ display: "grid", gap: "12px" }}>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 700 }}>Confirm/Edit Branch Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={kycFormData.branchName} 
+                                                        onChange={e => setKycFormData({ ...kycFormData, branchName: e.target.value })} 
+                                                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none" }}
+                                                    />
                                                 </div>
-                                            )}
-                                            {kycFormData.branchAddress && (
-                                                <div style={{ marginTop: "2px", color: "#166534", fontSize: "10px", lineHeight: "1.4" }}>
-                                                    <strong>Address:</strong> {kycFormData.branchAddress}
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 700 }}>Confirm/Edit Branch Address</label>
+                                                    <textarea 
+                                                        value={kycFormData.branchAddress} 
+                                                        onChange={e => setKycFormData({ ...kycFormData, branchAddress: e.target.value })} 
+                                                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none", minHeight: "60px", resize: "vertical" }}
+                                                    />
                                                 </div>
-                                            )}
+                                            </div>
+                                            <p style={{ fontSize: "10px", color: "#166534", marginTop: "8px", fontStyle: "italic" }}>
+                                                * If the fetched details are incorrect, please update them manually.
+                                            </p>
                                         </div>
                                     )}
                                     {kycErrors.includes('ifscCode') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>IFSC Code is required</p>}
