@@ -120,7 +120,8 @@ export const resetPassword = mutation({
 
 // Internal helper for OTP generation and delivery
 async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string) {
-    const otp = Math.floor(10000000 + Math.random() * 90000000).toString();
+    // Generate a strictly 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString().padStart(6, '0');
     const expires = Date.now() + 600000; // 10 minutes
 
     const existing = await ctx.db
@@ -133,7 +134,9 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
     await ctx.db.insert("otps", { email, code: otp, expires, purpose });
 
     console.log("=================================================");
-    console.log(`🎟️ OTP GENERATED: ${otp} (for ${email} : ${purpose})`);
+    console.log(`🎟️ [OTP DEBUG] Purpose: ${purpose}`);
+    console.log(`🎟️ [OTP DEBUG] Email: ${email}`);
+    console.log(`🎟️ [OTP DEBUG] Generated OTP: ${otp} (Length: ${otp.length})`);
     console.log("=================================================");
 
     const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
@@ -161,6 +164,14 @@ export const sendOTP = mutation({
     handler: async (ctx, args) => {
         await internalSendOTP(ctx, args.email, args.purpose);
         return true;
+    },
+});
+
+export const testOTP = mutation({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        await internalSendOTP(ctx, args.email, "test");
+        return "Check the Convex dashboard or terminal logs for the 6-digit OTP.";
     },
 });
 

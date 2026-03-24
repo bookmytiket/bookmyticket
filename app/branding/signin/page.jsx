@@ -371,7 +371,7 @@ export default function BrandingSignIn() {
             <>
               <h2 style={{ fontSize: 26, fontWeight: 900, marginBottom: 6, color: "#111827", textAlign: "center" }}>Check Your Email 📬</h2>
               <p style={{ fontSize: 14, color: "#6b7280", textAlign: "center", marginBottom: 32 }}>
-                We sent an 8-digit verification code to <strong>{email}</strong>
+                We sent a 6-digit verification code to <strong>{email}</strong>
               </p>
               <form onSubmit={handleVerifyOTP}>
                 <div style={{ marginBottom: 24 }}>
@@ -381,7 +381,7 @@ export default function BrandingSignIn() {
                     type="text"
                     placeholder="000000"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     style={{ textAlign: "center", fontSize: 22, fontWeight: 800, letterSpacing: 8 }}
                     required
                   />

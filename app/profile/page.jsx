@@ -91,21 +91,21 @@ export default function ProfilePage() {
                         {displayBookings.length > 0 ? (
                             <div style={{ display: "grid", gap: "16px" }}>
                                 {displayBookings.map((booking, i) => (
-                                    <div key={i} style={{ border: `1px solid ${t.border}`, borderRadius: "12px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                                            <div style={{ width: "48px", height: "48px", background: booking.status === 'Cancelled' ? '#fee2e2' : '#fef9c3', borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+                                    <div key={i} className="booking-card">
+                                        <div className="booking-info">
+                                            <div style={{ width: "48px", height: "48px", background: booking.status === 'Cancelled' ? '#fee2e2' : '#fef9c3', borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>
                                                 {booking.status === 'Cancelled' ? '❌' : '🎟️'}
                                             </div>
                                             <div>
                                                 <h4 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: t.textMain }}>{booking.eventName || "Event Ticket"}</h4>
-                                                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                                                     <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>ID: #{booking._id?.substring(0, 6).toUpperCase()}</p>
-                                                    <span style={{ fontSize: "12px", color: t.border }}>|</span>
+                                                    <span className="hide-mobile" style={{ fontSize: "12px", color: t.border }}>|</span>
                                                     <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>{booking.ticketCount} Seats • ₹{booking.totalPrice}</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                                        <div className="booking-actions">
                                             <span style={{
                                                 fontSize: "11px",
                                                 fontWeight: "700",
@@ -196,12 +196,93 @@ export default function ProfilePage() {
     };
 
     return (
-        <div style={{ minHeight: "100vh", backgroundColor: t.bg, fontFamily: "'Inter', sans-serif", paddingTop: "120px" }}>
+        <div className="profile-page-container">
+            <style>{`
+                .profile-page-container {
+                    min-height: 100vh;
+                    background-color: ${t.bg};
+                    font-family: 'Inter', sans-serif;
+                    padding-top: 120px;
+                    padding-bottom: 40px;
+                }
+                .profile-content-wrap {
+                    display: flex;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 0 24px;
+                    gap: 32px;
+                    align-items: flex-start;
+                }
+                .profile-sidebar {
+                    width: 260px;
+                    background-color: ${t.sidebarBg};
+                    border-radius: 16px;
+                    border: 1px solid ${t.sidebarBorder};
+                    overflow: hidden;
+                    flex-shrink: 0;
+                }
+                .profile-main {
+                    flex: 1;
+                    min-width: 0;
+                }
+                .booking-card {
+                    border: 1px solid ${t.border};
+                    border-radius: 12px;
+                    padding: 16px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: ${t.cardBg};
+                }
+                .booking-info {
+                    display: flex;
+                    gap: 16px;
+                    align-items: center;
+                }
+                .booking-actions {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: 8px;
+                }
+                @media (max-width: 768px) {
+                    .profile-page-container {
+                        padding-top: 80px;
+                    }
+                    .profile-content-wrap {
+                        flex-direction: column;
+                        padding: 0 16px;
+                        gap: 24px;
+                    }
+                    .profile-sidebar {
+                        width: 100%;
+                    }
+                    .profile-main {
+                        width: 100%;
+                    }
+                    .booking-card {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 16px;
+                    }
+                    .booking-actions {
+                        width: 100%;
+                        flex-direction: row;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-top: 12px;
+                        border-top: 1px solid ${t.border};
+                    }
+                    .booking-info {
+                        width: 100%;
+                    }
+                }
+            `}</style>
 
-            <div style={{ display: "flex", maxWidth: "1200px", margin: "0 auto", padding: "0 24px", gap: "32px", alignItems: "flex-start" }}>
+            <div className="profile-content-wrap">
 
                 {/* Profile Sidebar */}
-                <aside style={{ width: "260px", backgroundColor: t.sidebarBg, borderRadius: "16px", border: `1px solid ${t.sidebarBorder}`, overflow: "hidden", flexShrink: 0 }}>
+                <aside className="profile-sidebar">
                     <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", borderBottom: `1px solid ${t.sidebarBorder}` }}>
                         <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: t.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "24px", marginBottom: "12px" }}>
                             {user.name?.[0]?.toUpperCase() || "U"}
@@ -233,7 +314,7 @@ export default function ProfilePage() {
                 </aside>
 
                 {/* Main Content Area */}
-                <main style={{ flex: 1, minWidth: 0 }}>
+                <main className="profile-main">
                     <div style={{ marginBottom: "24px" }}>
                         <h1 style={{ fontSize: "24px", fontWeight: "800", color: t.textMain, margin: "0 0 6px" }}>
                             {activeTab === "my_booking" ? "Ticket Bookings" : "Security"}

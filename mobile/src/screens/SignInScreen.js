@@ -131,8 +131,8 @@ export default function SignInScreen() {
 
   const handleLoginOTP = async () => {
     setError('');
-    if (otpCode.length !== 8) {
-      setError('Please enter the 8-digit code.');
+    if (otpCode.length !== 6) {
+      setError('Please enter the 6-digit code.');
       return;
     }
     setLoading(true);
@@ -174,8 +174,8 @@ export default function SignInScreen() {
 
   const handleVerifyOTP = async () => {
     setError('');
-    if (otpCode.length !== 8) {
-      setError('Please enter the 8-digit code sent to your email.');
+    if (otpCode.length !== 6) {
+      setError('Please enter the 6-digit code sent to your email.');
       return;
     }
     setLoading(true);
@@ -299,15 +299,15 @@ export default function SignInScreen() {
             ) : (
               <>
                 <Text style={styles.stepTitle}>Security Verification</Text>
-                <Text style={styles.infoText}>Enter the 8-digit code sent to {loginEmail}</Text>
+                <Text style={styles.infoText}>Enter the 6-digit code sent to {loginEmail}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="8-digit code"
+                  placeholder="6-digit code"
                   placeholderTextColor="#9ca3af"
                   value={otpCode}
                   onChangeText={setOtpCode}
                   keyboardType="number-pad"
-                  maxLength={8}
+                  maxLength={6}
                 />
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 <TouchableOpacity onPress={handleLoginOTP} disabled={loading}>
@@ -395,15 +395,15 @@ export default function SignInScreen() {
                 {signupStep === 2 && (
                   <>
                     <Text style={styles.stepTitle}>Step 2: Verify your email</Text>
-                    <Text style={styles.infoText}>Enter the 8-digit code sent to {signupEmail}</Text>
+                    <Text style={styles.infoText}>Enter the 6-digit code sent to {signupEmail}</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="8-digit code"
+                      placeholder="6-digit code"
                       placeholderTextColor="#9ca3af"
                       value={otpCode}
                       onChangeText={setOtpCode}
                       keyboardType="number-pad"
-                      maxLength={8}
+                      maxLength={6}
                     />
                     {error ? <Text style={styles.error}>{error}</Text> : null}
                     <TouchableOpacity onPress={handleVerifyOTP} disabled={loading}>

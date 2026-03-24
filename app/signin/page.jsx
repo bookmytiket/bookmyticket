@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Mail, X, ShieldCheck, Calendar, Gift, Ticket, AlertTriangle, ChevronDown, Check, Copy } from "lucide-react";
+import { Eye, EyeOff, Mail, X, Check, Copy } from "lucide-react";
 import HeroBanner from "@/components/HeroBanner";
 import { useAuth } from "@/components/AuthContext";
 import { useQuery, useMutation, useConvex } from "convex/react";
@@ -191,7 +191,7 @@ export default function SignInPage() {
     const handleSignupVerifyOTP = async (e) => {
         e.preventDefault();
         setSignupError("");
-        if (signupOtpCode.length !== 8) { setSignupError("Please enter the 8-digit code."); return; }
+        if (signupOtpCode.length !== 6) { setSignupError("Please enter the 6-digit code."); return; }
         setSignupOtpVerifying(true);
         try {
             // Strictly verify the OTP against the backend before proceeding
@@ -242,7 +242,7 @@ export default function SignInPage() {
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
         setOtpError("");
-        if (otpCode.length !== 8) { setOtpError("Please enter a valid 8-digit code."); return; }
+        if (otpCode.length !== 6) { setOtpError("Please enter a valid 6-digit code."); return; }
 
         try {
             if (otpPurpose === "signup") {
@@ -279,8 +279,37 @@ export default function SignInPage() {
             setForgotError("An error occurred. Please try again later.");
         }
     };
+    
+    // ── SSO Login Handler (Mock) ──
+    const handleSSOLogin = async (provider) => {
+        setLoading(true);
+        setLoginError("");
+        try {
+            // For demo purposes, we use a mock email
+            const mockEmail = `${provider}.demo@bookmyticket.com`;
+            const userData = await convex.query(api.users.getByIdentifier, { identifier: mockEmail });
+            
+            if (userData) {
+                // If demo user exists, perform login
+                await login(mockEmail, "", "user", userData);
+            } else {
+                // Experience: auto-fill signup for demo
+                setSignupEmail(mockEmail);
+                setMode("signup");
+                setSignupStep(3);
+                setSignupName(`${provider.charAt(0).toUpperCase() + provider.slice(1)} Demo User`);
+                // Move to top to show user the change
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+        } catch (err) {
+            console.error(`${provider} login error:`, err);
+            setLoginError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is currently unavailable.`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const inp = { width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "12px", transition: "all .2s" };
+    const inp = { width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "8px", transition: "all .2s" };
     const lbl = { display: "block", fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" };
     const fr = e => { e.target.style.borderColor = "#f84464"; };
     const bg = e => { e.target.style.borderColor = "#e2e8f0"; };
@@ -422,7 +451,6 @@ export default function SignInPage() {
                         ))}
                     </div>
                 </div>
-
                 <style dangerouslySetInnerHTML={{ __html: `
                     @keyframes slideInVertical {
                         0% { transform: translateY(30px); opacity: 0; }
@@ -434,18 +462,19 @@ export default function SignInPage() {
             {/* ══ RIGHT SIDE: SIGN IN FORM ══ */}
             <div className="signin-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "15px", background: "#f8fafc" }}>
                 
-                {/* ══ MOBILE PHONE FRAME (iPhone Style) ══ */}
+                {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div style={{ 
-                    width: "350px", 
-                    height: "640px", 
+                    width: "min(350px, 92vw)", 
+                    height: "min(680px, 92vh)", 
                     background: "#ffffff", 
-                    borderRadius: "54px", 
-                    border: "12px solid #1a1a1a", 
+                    borderRadius: "40px", 
+                    border: "8px solid #1a1a1a", 
                     position: "relative", 
-                    boxShadow: "0 50px 100px rgba(0,0,0,0.15)",
+                    boxShadow: "0 40px 80px rgba(0,0,0,0.15)",
                     display: "flex",
                     flexDirection: "column",
-                    overflow: "hidden"
+                    overflow: "hidden",
+                    margin: "10px auto"
                 }}>
                     {/* Notch (Dynamic Island Style) */}
                     <div style={{ width: "110px", height: "24px", background: "#101010", position: "absolute", top: "10px", left: "50%", transform: "translateX(-50%)", borderRadius: "18px", zIndex: 10 }}>
@@ -453,7 +482,7 @@ export default function SignInPage() {
                     </div>
 
                     {/* Status Bar */}
-                    <div style={{ padding: "14px 28px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", fontWeight: 700, color: "#000", zIndex: 9 }}>
+                    <div style={{ padding: "12px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", fontWeight: 700, color: "#000", zIndex: 9 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <span>{currentTime}</span>
                             <span style={{ fontSize: "10px", color: "#64748b" }}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
@@ -471,12 +500,12 @@ export default function SignInPage() {
                     </div>
                     
                     {/* Internal Screen Content */}
-                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "hidden", padding: "12px 22px 15px", position: "relative" }}>
+                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", marginTop: "5px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px", marginTop: "2px" }}>
                             <Link href="/">
-                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "75px", width: "auto", display: "block", cursor: "pointer" }} />
+                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "55px", width: "auto", display: "block", cursor: "pointer" }} />
                             </Link>
                         </div>
 
@@ -530,12 +559,18 @@ export default function SignInPage() {
                                         </div>
                                         <div style={{ display: "flex", gap: "10px" }}>
                                             {ssoConfigs.google && (
-                                                <button style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>
+                                                <button 
+                                                    onClick={() => handleSSOLogin("google")}
+                                                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}
+                                                >
                                                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "16px" }} />
                                                 </button>
                                             )}
                                             {ssoConfigs.facebook && (
-                                                <button style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}>
+                                                <button 
+                                                    onClick={() => handleSSOLogin("facebook")}
+                                                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}
+                                                >
                                                     <div style={{ width: "16px", height: "16px", background: "#1877F2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "#fff", fontSize: "10px", fontWeight: 900 }}>f</div>
                                                 </button>
                                             )}
@@ -556,9 +591,9 @@ export default function SignInPage() {
                         {/* ══ SIGN UP ══ */}
                         {mode === "signup" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "28px" }}>
-                                    <h2 style={{ fontSize: "26px", fontWeight: 800, color: "#0f172a", marginBottom: "10px" }}>Create account</h2>
-                                    <p style={{ fontSize: "14px", color: "#475569", margin: 0 }}>
+                                <div style={{ textAlign: "center", marginBottom: "14px" }}>
+                                    <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#0f172a", marginBottom: "4px" }}>Create account</h2>
+                                    <p style={{ fontSize: "12px", color: "#475569", margin: 0 }}>
                                         Already have an account?{" "}
                                         <button style={linkBtn} onClick={() => { setMode("signin"); setSignupError(""); setSignupSuccess(false); setSignupStep(1); setSignupOtpCode(""); setSignupEmail(""); }}>
                                             Sign in
@@ -593,8 +628,8 @@ export default function SignInPage() {
                                         <form onSubmit={handleSignupVerifyOTP}>
                                             <input
                                                 type="text" required
-                                                placeholder="00000000"
-                                                maxLength={8}
+                                                placeholder="000000"
+                                                maxLength={6}
                                                 value={signupOtpCode}
                                                 onChange={e => setSignupOtpCode(e.target.value.replace(/\D/g, ""))}
                                                 style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
@@ -611,7 +646,7 @@ export default function SignInPage() {
                                 {/* ── Step 3: Name + Password + Phone ── */}
                                 {!signupSuccess && signupStep === 3 && (
                                     <>
-                                        <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#1e293b", marginBottom: "24px" }}>Details</h2>
+                                        <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#1e293b", marginBottom: "14px" }}>Details</h2>
                                         <form onSubmit={handleSignup}>
                                             <input type="text" required placeholder="Full Name" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
                                             <input type="email" readOnly value={signupEmail} style={{ ...inp, background: "#f1f5f9", cursor: "not-allowed" }} />
@@ -685,8 +720,8 @@ export default function SignInPage() {
                                 <form onSubmit={handleVerifyOTP}>
                                     <input
                                         type="text" required
-                                        placeholder="00000000"
-                                        maxLength={8}
+                                        placeholder="000000"
+                                        maxLength={6}
                                         value={otpCode}
                                         onChange={e => setOtpCode(e.target.value.replace(/\D/g, ""))}
                                         style={{ ...inp, letterSpacing: "4px", fontSize: "24px", textAlign: "center", fontWeight: 700 }}
