@@ -65,8 +65,13 @@ export const approve = mutation({
         // Update the request status
         await ctx.db.patch(args.id, { status: "Approved" });
 
-        const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
-        const brandNameDisplay = "BookMyTicket";
+        const branding = await ctx.db.query("siteBranding").first();
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo.startsWith("/")) {
+            brandLogo = `${siteUrl}${brandLogo}`;
+        }
+        const brandNameDisplay = branding?.name || "BookMyTicket";
 
         // Send Email with credentials
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
@@ -86,7 +91,7 @@ export const approve = mutation({
 
                     <p style="color: #555; text-align: left; margin-bottom: 30px;">Please log in, update your password, and complete your KYC onboarding immediately.</p>
                     
-                    <a href="http://localhost:3000/signin" style="display: inline-block; background: linear-gradient(to right, #ff007f, #8000ff); color: white; padding: 14px 35px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 0, 127, 0.2);">Go to Dashboard</a>
+                    <a href="${siteUrl}/signin" style="display: inline-block; background: linear-gradient(to right, #ff007f, #8000ff); color: white; padding: 14px 35px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 0, 127, 0.2);">Go to Dashboard</a>
                 </div>
             `
         });

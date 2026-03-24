@@ -2258,6 +2258,17 @@ function AdminHomePage() {
                                             style={{ width: "60px", height: "40px", padding: "2px", borderRadius: "4px", border: "none", cursor: "pointer" }}
                                         />
                                     </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Public Site URL (for Emails)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. https://bookmyticket.in"
+                                            value={localBranding.siteUrl || ""}
+                                            onChange={(e) => setLocalBranding({ ...localBranding, siteUrl: e.target.value })}
+                                            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                        />
+                                        <p style={{ fontSize: "11px", color: t.textSub, marginTop: "4px", marginBottom: 0 }}>This is used to construct full image URLs in transactional emails.</p>
+                                    </div>
                                     <button 
                                         onClick={async (e) => {
                                             const btn = e.target;
@@ -2271,7 +2282,13 @@ function AdminHomePage() {
                                                 }
                                                 setLocalBranding({ ...localBranding, logoUrl: finalUrl });
                                                 
-                                                await updateSiteBrandingMutation({ name: localBranding.name || "", logoColor: localBranding.logoColor || "#111111", logoUrl: finalUrl });
+                                                let finalSiteUrl = localBranding.siteUrl || "";
+                                                if (finalSiteUrl.endsWith("/")) {
+                                                    finalSiteUrl = finalSiteUrl.slice(0, -1);
+                                                }
+                                                setLocalBranding(prev => ({ ...prev, siteUrl: finalSiteUrl }));
+
+                                                await updateSiteBrandingMutation({ name: localBranding.name || "", logoColor: localBranding.logoColor || "#111111", logoUrl: finalUrl, siteUrl: finalSiteUrl });
                                                 
                                                 btn.innerText = "Saved!";
                                                 setTimeout(() => { btn.innerText = originalText; }, 2000);

@@ -13,6 +13,7 @@ export const update = mutation({
         name: v.string(),
         logoColor: v.string(),
         logoUrl: v.string(),
+        siteUrl: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const existing = await ctx.db.query("siteBranding").first();

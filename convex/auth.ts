@@ -32,13 +32,14 @@ export const forgotPassword = mutation({
         });
 
         const branding = await ctx.db.query("siteBranding").first();
-        let brandLogo = branding?.logoUrl || "https://bookmyticket-nu.vercel.app/logo.png";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
-            brandLogo = `https://bookmyticket-nu.vercel.app${brandLogo}`;
+            brandLogo = `${siteUrl}${brandLogo}`;
         }
         const brandNameDisplay = branding?.name || "BookMyTicket";
 
-        const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${args.email}`;
+        const resetLink = `${siteUrl}/reset-password?token=${token}&email=${args.email}`;
 
         // Trigger the email action
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
@@ -144,9 +145,10 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
     console.log("=================================================");
 
     const branding = await ctx.db.query("siteBranding").first();
-    let brandLogo = branding?.logoUrl || "https://bookmyticket-nu.vercel.app/logo.png";
+    const siteUrl = branding?.siteUrl || "http://localhost:3000";
+    let brandLogo = branding?.logoUrl || "/logo.png";
     if (brandLogo.startsWith("/")) {
-        brandLogo = `https://bookmyticket-nu.vercel.app${brandLogo}`;
+        brandLogo = `${siteUrl}${brandLogo}`;
     }
     const brandNameDisplay = branding?.name || "BookMyTicket";
 

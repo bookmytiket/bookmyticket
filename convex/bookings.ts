@@ -135,8 +135,13 @@ export const createBooking = mutation({
                 }
             }
 
-            const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
-            const brandNameDisplay = "BookMyTicket";
+            const branding = await ctx.db.query("siteBranding").first();
+            const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+            let brandLogo = branding?.logoUrl || "/logo.png";
+            if (brandLogo.startsWith("/")) {
+                brandLogo = `${siteUrl}${brandLogo}`;
+            }
+            const brandNameDisplay = branding?.name || "BookMyTicket";
 
             // Send Email Confirmation
             const targetEmail = args.customerDetails?.email || args.userId;
@@ -190,8 +195,13 @@ export const confirmBooking = mutation({
             }
         }
 
-        const brandLogo = "https://bookmyticket-nu.vercel.app/logo.png";
-        const brandNameDisplay = "BookMyTicket";
+        const branding = await ctx.db.query("siteBranding").first();
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo.startsWith("/")) {
+            brandLogo = `${siteUrl}${brandLogo}`;
+        }
+        const brandNameDisplay = branding?.name || "BookMyTicket";
 
         // Send Email Confirmation
         const targetEmail = booking.customerDetails?.email || booking.userId;

@@ -47,13 +47,14 @@ export const sendEventCreationNotifications = action({
         });
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        let brandLogo = branding?.logoUrl || "https://bookmyticket-nu.vercel.app/logo.png";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
-            brandLogo = `https://bookmyticket-nu.vercel.app${brandLogo}`;
+            brandLogo = `${siteUrl}${brandLogo}`;
         }
         const brandNameDisplay = branding?.name || "BookMyTicket";
 
-        const eventLink = `https://bookmyticket.com/event/${eventId}`; // Update with real domain if available
+        const eventLink = `${siteUrl}/event/${eventId}`;
         const message = `Hello! A new event "${title}" has been created by ${organiserName}. 
 Date: ${date || "To be announced"}
 Location: ${location || "To be announced"}

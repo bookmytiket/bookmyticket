@@ -268,6 +268,7 @@ export default defineSchema({
         name: v.string(),
         logoColor: v.string(),
         logoUrl: v.string(),
+        siteUrl: v.optional(v.string()),
         updatedAt: v.number(),
     }),
 
