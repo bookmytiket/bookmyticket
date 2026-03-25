@@ -5,9 +5,10 @@ import { api } from "./_generated/api";
 export const forgotPassword = mutation({
     args: { email: v.string() },
     handler: async (ctx, args) => {
+        const email = args.email.trim().toLowerCase();
         const user = await ctx.db
             .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", email))
             .unique();
 
         // Also check organisers if not found in users
@@ -124,7 +125,8 @@ export const resetPassword = mutation({
 });
 
 // Internal helper for OTP generation and delivery
-async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string) {
+async function internalSendOTP(ctx: MutationCtx, rawEmail: string, purpose: string) {
+    const email = rawEmail.trim().toLowerCase();
     // Generate a strictly 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString().padStart(6, '0');
     const expires = Date.now() + 600000; // 10 minutes
@@ -137,11 +139,21 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
     for (const doc of existing) await ctx.db.delete(doc._id);
 
     await ctx.db.insert("otps", { email, code: otp, expires, purpose });
+    
+    // Store in systemConfig for backward compatibility and easier debugging if email fails
+    const configKey = `last_otp_${email}`;
+    const existingConfig = await ctx.db.query("systemConfig").withIndex("by_key", q => q.eq("key", configKey)).first();
+    if (existingConfig) {
+        await ctx.db.patch(existingConfig._id, { value: otp });
+    } else {
+        await ctx.db.insert("systemConfig", { key: configKey, value: otp });
+    }
 
     console.log("=================================================");
     console.log(`🎟️ [OTP DEBUG] Purpose: ${purpose}`);
     console.log(`🎟️ [OTP DEBUG] Email: ${email}`);
     console.log(`🎟️ [OTP DEBUG] Generated OTP: ${otp} (Length: ${otp.length})`);
+    console.log(`🎟️ [OTP DEBUG] Stored in systemConfig as: ${configKey}`);
     console.log("=================================================");
 
     const branding = await ctx.db.query("siteBranding").first();
@@ -151,19 +163,42 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
         brandLogo = `${siteUrl}${brandLogo}`;
     }
     const brandNameDisplay = branding?.name || "BookMyTicket";
+    
+    // Check for SMTP settings to avoid silent failure
+    const settings = await ctx.db.query("emailSettings").first();
+    if (!settings || !settings.host || !settings.user || !settings.pass) {
+        console.error("🎟️ [OTP ERROR] SMTP settings are not configured. Cannot send email.");
+        console.log(`🎟️ [OTP DEBUG] OTP ${otp} is available in systemConfig for key: ${configKey}`);
+        throw new Error("Email service not configured. Admin: Please set SMTP in Admin Panel > Email Settings.");
+    }
 
     await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
         to: email,
         subject: `${otp} is your ${brandNameDisplay} verification code`,
         html: `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-                <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
-                <h2 style="color: #333; margin-bottom: 20px;">Verification Code</h2>
-                <p style="color: #555; font-size: 16px; margin-bottom: 30px;">Your verification code for ${purpose === 'signup' ? 'creating an account' : 'logging in'} is:</p>
-                <div style="font-size: 32px; font-weight: 800; color: #ff007f; letter-spacing: 4px; margin-bottom: 30px; padding: 10px; background: #fdf2f8; border-radius: 8px; display: inline-block;">
-                    ${otp}
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px 20px; border: 1px solid #e2e8f0; border-radius: 16px; text-align: center; color: #1e293b; background-color: #ffffff;">
+                <div style="margin-bottom: 30px;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 60px; width: auto; display: block; margin: 0 auto;">
                 </div>
-                <p style="color: #999; font-size: 14px; margin-top: 35px;">This code will expire in 10 minutes. Please do not share this code with anyone.</p>
+                
+                <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: #0f172a;">Verify your email</h1>
+                <p style="font-size: 16px; line-height: 24px; color: #475569; margin-bottom: 32px;">
+                    Hello! To complete your ${purpose === 'signup' ? 'registration' : 'login'} on ${brandNameDisplay}, please use the verification code below:
+                </p>
+                
+                <div style="display: inline-block; padding: 16px 32px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 32px;">
+                    <span style="font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #be185d;">${otp}</span>
+                </div>
+                
+                <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
+                    This code will expire in <strong>10 minutes</strong>. If you did not request this code, you can safely ignore this email.
+                </p>
+                
+                <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; line-height: 18px;">
+                    <p style="margin: 0;">&copy; ${new Date().getFullYear()} ${brandNameDisplay}. All rights reserved.</p>
+                    <p style="margin: 4px 0;">This is an automated message from <a href="${siteUrl}" style="color: #6366f1; text-decoration: none;">${brandNameDisplay}</a></p>
+                    <p style="margin: 12px 0 0 0;">Don't want to receive these? Please contact support via our website.</p>
+                </div>
             </div>
         `,
     });
@@ -172,7 +207,8 @@ async function internalSendOTP(ctx: MutationCtx, email: string, purpose: string)
 export const sendOTP = mutation({
     args: { email: v.string(), purpose: v.string() }, // "signup" | "login"
     handler: async (ctx, args) => {
-        await internalSendOTP(ctx, args.email, args.purpose);
+        const email = args.email.trim().toLowerCase();
+        await internalSendOTP(ctx, email, args.purpose);
         return true;
     },
 });
@@ -188,9 +224,10 @@ export const testOTP = mutation({
 export const verifyOTPOnly = mutation({
     args: { email: v.string(), code: v.string(), purpose: v.string() },
     handler: async (ctx, args) => {
+        const email = args.email.trim().toLowerCase();
         const otpEntry = await ctx.db
             .query("otps")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", email))
             .filter((q) => q.eq(q.field("code"), args.code))
             .filter((q) => q.eq(q.field("purpose"), args.purpose))
             .unique();
@@ -211,9 +248,10 @@ export const verifyOTPAndCreateAccount = mutation({
         username: v.string(),
     },
     handler: async (ctx, args) => {
+        const email = args.email.trim().toLowerCase();
         const otpEntry = await ctx.db
             .query("otps")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", email))
             .filter((q) => q.eq(q.field("code"), args.code))
             .filter((q) => q.eq(q.field("purpose"), "signup"))
             .unique();

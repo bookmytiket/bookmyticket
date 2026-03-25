@@ -3224,7 +3224,7 @@ function AdminHomePage() {
                                                     }
                                                 });
                                                 if (result.success) {
-                                                    alert("Test email sent successfully! Please check your inbox.");
+                                                    alert(`Test email sent successfully!\n\nMessage ID: ${result.messageId}\n\nResponse: ${result.response}\n\nPlease check your inbox/spam folder.`);
                                                 } else {
                                                     alert("Error sending test email: " + result.error);
                                                 }

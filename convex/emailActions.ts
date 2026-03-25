@@ -53,18 +53,44 @@ export const sendEmail = action({
         try {
             const fromName = settings.fromName || "Ticketing Tool";
             const fromEmail = settings.from || settings.user;
+            const toEmail = args.to.trim().toLowerCase();
             
-            await transporter.sendMail({
+            console.log(`Attempting to send email to ${toEmail} via ${settings.host}...`);
+            
+            // Verify connection before sending
+            try {
+                await transporter.verify();
+                console.log("✅ SMTP connection verified.");
+            } catch (connError: any) {
+                console.error("❌ SMTP connection failed:", connError);
+                return { success: false, error: `Connection failed: ${connError.message}` };
+            }
+
+            const info = await transporter.sendMail({
                 from: `"${fromName}" <${fromEmail}>`,
-                to: args.to,
+                to: toEmail,
                 subject: args.subject,
                 html: args.html,
+                headers: {
+                    "X-Entity-Ref-ID": `${Date.now()}-${toEmail}`,
+                    "Precedence": "bulk",
+                    "X-Auto-Response-Suppress": "All",
+                }
             });
-            console.log("Email sent successfully to:", args.to);
-            return { success: true };
-        } catch (error) {
-            console.error("Error sending email to", args.to, ":", error);
-            return { success: false, error: String(error) };
+            console.log("✅ Email sent successfully to:", toEmail);
+            console.log("🎟️ Message ID:", info.messageId);
+            console.log("🎟️ SMTP Response:", info.response);
+            return { success: true, messageId: info.messageId, response: info.response };
+        } catch (error: any) {
+            console.error("❌ Error sending email to", args.to, ":", error);
+            console.error("SMTP Configuration used:", {
+                host: settings.host,
+                port: settings.port,
+                user: settings.user,
+                encryption: settings.encryption,
+                from: settings.from || settings.user
+            });
+            return { success: false, error: String(error?.message || error) };
         }
     },
 });

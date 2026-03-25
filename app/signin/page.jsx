@@ -167,13 +167,16 @@ export default function SignInPage() {
         e.preventDefault();
         setSignupError("");
         if (!signupEmail) { setSignupError("Please enter your email."); return; }
+        const email = signupEmail.trim();
         setSignupOtpSending(true);
         try {
-            await sendOTPMutation({ email: signupEmail, purpose: "signup" });
+            await sendOTPMutation({ email: email, purpose: "signup" });
             setSignupStep(2);
             setSignupOtpCode("");
+            setSignupError(""); // Clear any previous errors
         } catch (err) {
-            setSignupError(err.message || "Could not send verification code.");
+            console.error("Signup OTP error:", err);
+            setSignupError(err.message || "Could not send verification code. Please try again.");
         } finally {
             setSignupOtpSending(false);
         }
@@ -213,7 +216,7 @@ export default function SignInPage() {
             // verifyOTPAndCreateAccount does final OTP validation + account creation
             await verifySignupOTP({
                 fullName: signupName,
-                email: signupEmail,
+                email: signupEmail.trim(),
                 password: hashed,
                 username: signupEmail.split("@")[0] + Math.floor(Math.random() * 1000),
                 code: signupOtpCode,
@@ -260,7 +263,7 @@ export default function SignInPage() {
         e.preventDefault();
         setForgotError("");
         try {
-            const ok = await forgotPassMutation({ email: forgotEmail });
+            const ok = await forgotPassMutation({ email: forgotEmail.trim().toLowerCase() });
             if (ok) {
                 setForgotSuccess(true);
             } else {
@@ -616,21 +619,24 @@ export default function SignInPage() {
                                         <div style={{ textAlign: "center", padding: "16px", background: "#fdf2f8", borderRadius: "12px", marginBottom: "24px", border: "1.5px solid #f0abfc" }}>
                                             <p style={{ margin: 0, fontSize: "13px", color: "#86198f" }}>✉ OTP sent to <strong>{signupEmail}</strong></p>
                                         </div>
-                                        <form onSubmit={handleSignupVerifyOTP}>
-                                            <input
-                                                type="text" required
-                                                placeholder="000000"
-                                                maxLength={6}
-                                                value={signupOtpCode}
-                                                onChange={e => setSignupOtpCode(e.target.value.replace(/\D/g, ""))}
-                                                style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
-                                                onFocus={fr} onBlur={bg}
-                                            />
-                                            {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
-                                            <button type="submit" disabled={signupOtpVerifying} style={submitBtn}>
-                                                {signupOtpVerifying ? "Verifying..." : "Verify OTP →"}
-                                            </button>
-                                        </form>
+                                            <form onSubmit={handleSignupVerifyOTP}>
+                                                <input
+                                                    type="text" required
+                                                    placeholder="000000"
+                                                    maxLength={6}
+                                                    value={signupOtpCode}
+                                                    onChange={e => setSignupOtpCode(e.target.value.replace(/\D/g, ""))}
+                                                    style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
+                                                    onFocus={fr} onBlur={bg}
+                                                />
+                                                {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+                                                <button type="submit" disabled={signupOtpVerifying} style={submitBtn}>
+                                                    {signupOtpVerifying ? "Verifying..." : "Verify OTP →"}
+                                                </button>
+                                                <p style={{ textAlign: "center", fontSize: "11px", color: "#64748b", marginTop: "-8px" }}>
+                                                    Not received? Check your spam folder or <button type="button" onClick={handleSignupSendOTP} style={{ background: "none", border: "none", color: "#f43f5e", textDecoration: "underline", cursor: "pointer", padding: 0 }}>resend code</button>
+                                                </p>
+                                            </form>
                                     </>
                                 )}
 
