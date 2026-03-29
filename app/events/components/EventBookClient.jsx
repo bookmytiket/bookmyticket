@@ -142,15 +142,25 @@ export default function EventBookClient({ id }) {
     };
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)', paddingBottom: '60px' }}>
+        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-[60px]">
             <div className="container" style={{ padding: '24px 0', maxWidth: '1100px' }}>
-                <Link href={`/events/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px', marginBottom: '24px', textDecoration: 'none' }}>
-                    ← Back to event
-                </Link>
+                <div className="flex flex-col gap-6 mb-8">
+                    <Link href={`/events/${id}`} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors w-fit px-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        <span>Back to event</span>
+                    </Link>
+                </div>
 
                 <div className="event-detail-layout" style={{ alignItems: 'start', paddingTop: 0 }}>
-                    <div style={{ flex: '1', minWidth: 0 }}>
-                        <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                    <div style={{ flex: '1', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                            <span className="text-black/20 text-xl mx-3">|</span>
+                            <span className="font-bold text-black text-[17px]">Safe Checkout</span>
+                        </div>
+
+                        <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: '0 0 12px 0' }}>{event.title}</h1>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', color: '#4b5563', fontSize: '14px' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={16} /> {event.date}{event.time ? `, ${event.time}` : ''}</span>

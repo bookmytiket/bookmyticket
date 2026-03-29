@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import HeroBanner from '@/components/HeroBanner';
 import VideoHeroBanner from '@/components/VideoHeroBanner';
@@ -24,6 +25,7 @@ import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
+import ServiceCategories from '@/components/ServiceCategories';
 
 function TicketCard({ event }) {
   return (
@@ -112,7 +114,8 @@ export default function Home() {
     }
   }, [metaSettings]);
 
-  const convexEvents = useQuery(api.events.getActiveEvents) || [];
+  const convexEventsRaw = useQuery(api.events.getActiveEvents);
+  const convexEvents = useMemo(() => convexEventsRaw || [], [convexEventsRaw]);
 
   const parseEventDate = (dateStr, timeStr) => {
     if (!dateStr) return null;
@@ -254,8 +257,10 @@ export default function Home() {
 
   const heroSlidesConfig = useQuery(api.systemConfig.getConfig, { key: "admin_hero_slides" });
   const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
-  const activeBanners = useQuery(api.branding.getActiveBanners) || [];
-  const homeCoupons = useQuery(api.branding.getHomeCoupons) || [];
+  const activeBannersRaw = useQuery(api.branding.getActiveBanners);
+  const activeBanners = useMemo(() => activeBannersRaw || [], [activeBannersRaw]);
+  const homeCouponsRaw = useQuery(api.branding.getHomeCoupons);
+  const homeCoupons = useMemo(() => homeCouponsRaw || [], [homeCouponsRaw]);
   const allCoupons = useMemo(() => {
     // Merge Convex coupons with Static Partner deals
     return [...homeCoupons, ...BRAND_COUPONS.map(c => ({
@@ -333,7 +338,6 @@ export default function Home() {
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 'var(--header-h)' }}>
 
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap');
           .syne-heading {
             font-family: 'Syne', sans-serif !important;
             animation: slideInLeft 0.8s ease-out forwards;
@@ -452,6 +456,18 @@ export default function Home() {
 
             {/* 6) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />
+
+            {/* Professional Services Section */}
+            <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '60px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+                <div>
+                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.02em' }}>Professional Services</h2>
+                  <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>Top rated artists and studios for your special occasions</p>
+                </div>
+                <Link href="/services" style={{ color: '#f84464', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>View All Services →</Link>
+              </div>
+              <ServiceCategories />
+            </section>
 
             {/* Branding & Others */}
             <div style={{ width: '100%' }}>

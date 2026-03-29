@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { hashPassword } from "@/app/utils/hashPassword";
+import { isServiceProvider } from "@/app/data/serviceCategories";
 
 /* ─── Slider content for the left panel ─── */
 const SLIDES = [
@@ -99,15 +100,18 @@ export default function BrandingSignIn() {
     try {
       const hashed = await hashPassword(password);
       const res = await loginMutation({ identifier: email, password: hashed });
-      if (res.success) {
-        if (res.needsOtp) {
-          setStep(2);
-        } else if (res.role === "branding_partner") {
-          await login(email, hashed, "branding_partner", res.data);
+        if (res.success) {
+          if (res.needsOtp) {
+            setStep(2);
+          } else if (res.role === "branding_partner") {
+            await login(email, hashed, "branding_partner", res.data);
+          } else if (isServiceProvider(res.data?.category)) {
+            // If they are an artist/vendor trying to login through branding, redirect them to their dashboard
+            await login(email, hashed, res.role, res.data);
+          } else {
+            setError("This account is not registered as a branding partner.");
+          }
         } else {
-          setError("This account is not registered as a branding partner.");
-        }
-      } else {
         setError(res.error || "Invalid credentials.");
       }
     } catch (err) {

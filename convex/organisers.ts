@@ -11,9 +11,29 @@ async function hashPassword(password: string) {
 }
 
 export const list = query({
-    args: {},
-    handler: async (ctx) => {
-        return await ctx.db.query("organisers").collect();
+    args: { category: v.optional(v.string()) },
+    handler: async (ctx, args) => {
+        let q = ctx.db.query("organisers");
+        const results = await q.collect();
+        if (args.category) {
+            return results.filter(org => org.category === args.category);
+        }
+        return results;
+    },
+});
+
+export const listApprovedByServiceCategory = query({
+    args: { category: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("organisers")
+            .filter((q) => 
+                q.and(
+                    q.eq(q.field("kycStatus"), "Active"),
+                    q.eq(q.field("category"), args.category)
+                )
+            )
+            .collect();
     },
 });
 
@@ -32,6 +52,7 @@ export const create = mutation({
         userId: v.string(), // acts as email/username
         password: v.optional(v.string()), // password for login
         name: v.string(),
+        category: v.optional(v.string()),
         kycStatus: v.optional(v.string()), // 'Pending', 'Active', 'Banned', 'Rejected'
         walletBalance: v.optional(v.number()),
     },
@@ -57,32 +78,37 @@ export const patch = mutation({
         name: v.optional(v.string()),
         password: v.optional(v.string()),
         kycStatus: v.optional(v.string()),
+        category: v.optional(v.string()),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
         walletBalance: v.optional(v.number()),
         kycDetails: v.optional(
             v.object({
+                aadharFile: v.string(),
+                accountNumber: v.string(),
+                accountType: v.string(),
+                address: v.string(),
+                agreementAccepted: v.boolean(),
+                alternateNumber: v.optional(v.string()),
+                bankName: v.string(),
+                beneficiaryName: v.string(),
                 category: v.string(),
+                chequeFile: v.string(),
+                city: v.string(),
+                designation: v.string(),
+                email: v.string(),
+                fullName: v.string(),
+                gstin: v.optional(v.string()),
+                hasITR: v.boolean(),
+                hasOSTIN: v.boolean(),
+                ifscCode: v.string(),
+                mobile: v.string(),
+                panFile: v.string(),
                 panNumber: v.string(),
                 socialMediaLink: v.optional(v.string()),
-                hasITR: v.boolean(),
-                fullName: v.string(),
-                email: v.string(),
-                mobile: v.string(),
-                alternateNumber: v.optional(v.string()),
-                designation: v.string(),
-                city: v.string(),
-                address: v.string(),
                 websiteLink: v.optional(v.string()),
-                hasOSTIN: v.boolean(),
-                gstin: v.optional(v.string()),
-                panFile: v.string(),
-                chequeFile: v.string(),
-                aadharFile: v.string(),
-                beneficiaryName: v.string(),
-                accountType: v.string(),
-                bankName: v.string(),
-                accountNumber: v.string(),
-                ifscCode: v.string(),
-                agreementAccepted: v.boolean(),
             })
         ),
     },
@@ -102,38 +128,76 @@ export const remove = mutation({
 export const submitKyc = mutation({
     args: {
         id: v.id("organisers"),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
         kycDetails: v.object({
-            category: v.string(),
-            panNumber: v.string(),
+            category: v.optional(v.string()),
+            panNumber: v.optional(v.string()),
             socialMediaLink: v.optional(v.string()),
-            hasITR: v.boolean(),
-            fullName: v.string(),
-            email: v.string(),
-            mobile: v.string(),
+            hasITR: v.optional(v.boolean()),
+            fullName: v.optional(v.string()),
+            email: v.optional(v.string()),
+            mobile: v.optional(v.string()),
             alternateNumber: v.optional(v.string()),
-            designation: v.string(),
-            city: v.string(),
-            address: v.string(),
+            designation: v.optional(v.string()),
+            city: v.optional(v.string()),
+            address: v.optional(v.string()),
             websiteLink: v.optional(v.string()),
-            hasOSTIN: v.boolean(),
+            hasOSTIN: v.optional(v.boolean()),
             gstin: v.optional(v.string()),
-            panFile: v.string(),
-            chequeFile: v.string(),
-            aadharFile: v.string(),
-            beneficiaryName: v.string(),
-            accountType: v.string(),
-            bankName: v.string(),
-            accountNumber: v.string(),
-            ifscCode: v.string(),
+            panFile: v.optional(v.string()),
+            chequeFile: v.optional(v.string()),
+            aadharFile: v.optional(v.string()),
+            beneficiaryName: v.optional(v.string()),
+            accountType: v.optional(v.string()),
+            bankName: v.optional(v.string()),
+            accountNumber: v.optional(v.string()),
+            ifscCode: v.optional(v.string()),
             agreementAccepted: v.boolean(),
         }),
     },
     handler: async (ctx, args) => {
-        const { id, kycDetails } = args;
+        const { id, lat, lng, kycDetails } = args;
         await ctx.db.patch(id, {
-            kycStatus: "KYC Pending",
+            kycStatus: "Submitted", // Moves to "Under Review" / "KYC Verified" tab
+            lat,
+            lng,
             kycDetails: kycDetails,
         });
+    },
+});
+
+export const listByStage = query({
+    args: { category: v.string(), stage: v.string() }, // stage: 'requests', 'pending', 'review', 'active', 'banned'
+    handler: async (ctx, args) => {
+        const { category, stage } = args;
+        const query = ctx.db.query("organisers");
+        
+        if (stage === 'pending') {
+            return await query
+                .withIndex("by_kycStatus", (q) => q.eq("kycStatus", "KYC Pending"))
+                .filter((q) => q.eq(q.field("category"), category))
+                .collect();
+        }
+        if (stage === 'review') {
+            return await query
+                .withIndex("by_kycStatus", (q) => q.eq("kycStatus", "Submitted"))
+                .filter((q) => q.eq(q.field("category"), category))
+                .collect();
+        }
+        if (stage === 'active') {
+            return await query
+                .withIndex("by_kycStatus", (q) => q.eq("kycStatus", "KYC Completed"))
+                .filter((q) => q.eq(q.field("category"), category))
+                .collect();
+        }
+        if (stage === 'banned') {
+            return await query
+                .withIndex("by_kycStatus", (q) => q.eq("kycStatus", "Banned"))
+                .filter((q) => q.eq(q.field("category"), category))
+                .collect();
+        }
+        return await query.withIndex("by_category", (q) => q.eq("category", category)).collect();
     },
 });
 
@@ -171,7 +235,10 @@ export const approveRequest = mutation({
             userId: email,
             password: hashedPassword,
             name: `${request.firstName} ${request.lastName}`,
-            kycStatus: "Start Onboarding",
+            firstName: request.firstName,
+            lastName: request.lastName,
+            category: request.category,
+            kycStatus: "KYC Pending",
             walletBalance: 0,
         });
 
@@ -232,5 +299,23 @@ export const cleanupDuplicates = mutation({
             await ctx.db.delete(id);
         }
         return { deleted: toDelete.length };
+    },
+});
+
+export const fixSriharini = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const org = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", "sriharini15501@gmail.com"))
+            .unique();
+        if (org) {
+            await ctx.db.patch(org._id, { 
+                category: "Mehendi Artist",
+                kycStatus: "KYC Pending" 
+            });
+            return "Fixed";
+        }
+        return "Not found";
     },
 });

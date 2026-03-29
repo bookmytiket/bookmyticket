@@ -10,9 +10,6 @@ const nextConfig = {
       { protocol: "https", hostname: "flagicons.lipis.dev" },
     ],
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;

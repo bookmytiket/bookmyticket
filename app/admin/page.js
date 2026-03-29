@@ -5,10 +5,27 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
-import { MoreVertical, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle } from "lucide-react";
+import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
+
+const SERVICE_CATEGORIES = ["Mehendi Artist", "Mehandi Artist", "Photographer/Studio", "Makeup Artist", "Personal Service", "Artist"];
+// Standardize icons
+const NavIcon = ({ icon: Icon, size = 18, color }) => (
+    <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        width: '32px', 
+        height: '32px', 
+        borderRadius: '8px', 
+        backgroundColor: color ? `${color}15` : 'transparent',
+        color: color || 'inherit'
+    }}>
+        <Icon size={size} strokeWidth={2.5} />
+    </div>
+);
 
 const useConvexConfig = (key, initialValue, allConfig) => {
     const setConfigMutation = useMutation(api.systemConfig.setConfig);
@@ -97,9 +114,23 @@ function AdminHomePage() {
         setTimeout(() => logout(), 100);
     };
     const [activeTab, setActiveTab] = useState("dashboard");
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const dropdownRef = React.useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setProfileDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [theme, setTheme] = useState("light");
     const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
+    const [isServicesOpen, setIsServicesOpen] = useState(false);
     const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [selectedRequestForApproval, setSelectedRequestForApproval] = useState(null);
@@ -511,15 +542,36 @@ function AdminHomePage() {
     const patchOrganizerMutation = useMutation(api.organisers.patch);
     const removeOrganizerMutation = useMutation(api.organisers.remove);
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
+    const isProfService = (cat) => {
+        const c = String(cat || "").trim().toLowerCase();
+        return c.includes("mehandi") || c.includes("mehendi") || c.includes("photograph") || c.includes("makeup") || c.includes("artist") || c.includes("personal service");
+    };
+
     const mappedOrganizers = useMemo(() => {
-        return convexOrganizers.map(o => ({
-            id: o._id,
-            username: o.name,
-            email: o.userId,
-            status: o.kycStatus || "Active",
-            balance: `₹${o.walletBalance || 0}`,
-            kycDetails: o.kycDetails
-        }));
+        return convexOrganizers
+            .filter(o => {
+                const cat = o.category || o.kycDetails?.category;
+                return !isProfService(cat);
+            })
+            .map(o => ({
+                id: o._id,
+                username: o.name,
+                email: o.userId,
+                status: o.kycStatus || "Active",
+                category: o.category || o.kycDetails?.category || "Event Organiser",
+                balance: `₹${o.walletBalance || 0}`,
+                kycDetails: o.kycDetails
+            }));
+    }, [convexOrganizers]);
+
+    // Redundant serviceKyc memos removed as per simplified workflow.
+
+
+    const organiserKycVerified = useMemo(() => {
+        return convexOrganizers.filter(o => {
+            const cat = o.category || o.kycDetails?.category;
+            return !isProfService(cat) && o.kycStatus === "Submitted";
+        });
     }, [convexOrganizers]);
 
 
@@ -527,6 +579,26 @@ function AdminHomePage() {
     const convexOrganiserRequests = useQuery(api.organiserRequests.list) || [];
     const updateOrganiserRequestStatusMutation = useMutation(api.organiserRequests.updateStatus);
     const approveOrganiserRequestMutation = useMutation(api.organisers.approveRequest);
+
+    const serviceRequests = useMemo(() => {
+        return convexOrganiserRequests.filter(req => 
+            isProfService(req.category) && req.status === "Pending"
+        );
+    }, [convexOrganiserRequests]);
+
+    const serviceActive = useMemo(() => {
+        return convexOrganizers.filter(o => 
+            isProfService(o.category || o.kycDetails?.category) && 
+            o.kycStatus !== "Banned"
+        );
+    }, [convexOrganizers]);
+
+    const serviceBanned = useMemo(() => {
+        return convexOrganizers.filter(o => 
+            isProfService(o.category || o.kycDetails?.category) && 
+            o.kycStatus === "Banned"
+        );
+    }, [convexOrganizers]);
 
     const [events, setEvents] = useState([]);
 
@@ -761,7 +833,6 @@ function AdminHomePage() {
                 port: convexEmailSettings.port || 0,
                 user: convexEmailSettings.user || "",
                 pass: convexEmailSettings.pass || "",
-                from: convexEmailSettings.from || "",
                 fromName: convexEmailSettings.fromName || "",
                 encryption: convexEmailSettings.encryption || "None",
                 authMethod: convexEmailSettings.authMethod || "Basic Authentication"
@@ -769,29 +840,27 @@ function AdminHomePage() {
         }
     }, [convexEmailSettings]);
 
-
-
     const colors = {
         light: {
-            bg: "#f3f4f6",
+            bg: "#f8fafc",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#111827",
-            textSub: "#4b5563",
+            textMain: "#0f172a",
+            textSub: "#64748b",
             cardBg: "#ffffff",
-            border: "#e5e7eb",
-            activeLink: "#eff6ff",
-            activeText: "#2563eb",
-            sidebarBorder: "#f3f4f6"
+            border: "#e2e8f0",
+            activeLink: "#3b82f6",
+            activeText: "#ffffff",
+            sidebarBorder: "#e2e8f0"
         },
         dark: {
-            bg: "#0b0f19",
+            bg: "#0f172a",
             sidebar: "#111827",
             header: "#111827",
-            textMain: "#ffffff",
+            textMain: "#f8fafc",
             textSub: "#94a3b8",
-            cardBg: "#111d2c",
-            border: "#1e293b",
+            cardBg: "#1e293b",
+            border: "#334155",
             activeLink: "#3b82f6",
             activeText: "#ffffff",
             sidebarBorder: "#1e293b"
@@ -800,7 +869,7 @@ function AdminHomePage() {
 
     const ACCENT_BLUE = "#3b82f6";
     const ACCENT_PURPLE = "#8b5cf6";
-    const ACCENT_PINK = "#ec4899";
+    const ACCENT_PINK = "#f84464"; // Unified with Organiser portal
     const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
 
     const t = colors[theme] || colors.dark;
@@ -828,15 +897,15 @@ function AdminHomePage() {
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
     return (
-        <div className="admin-container">
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
                 .admin-container { 
                     display: flex; 
                     min-height: 100vh; 
-                    background-color: ${t.bg}; 
-                    color: ${t.textMain};
-                    font-family: 'Inter', sans-serif;
+                    background-color: #f8fafc; 
+                    color: #0f172a;
+                    font-family: 'Figtree', sans-serif;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     transition: all 0.3s ease;
@@ -1014,187 +1083,279 @@ function AdminHomePage() {
                 .badge-green { background: #dcfce7; color: #166534; }
                 .badge-yellow { background: #fef9c3; color: #854d0e; }
                 .badge-red { background: #fee2e2; color: #991b1b; }
+                
+                @keyframes dropdownFade {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .dropdown-hover:hover {
+                    background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f1f5f9'} !important;
+                }
+                .dropdown-hover-red:hover {
+                    background-color: #fef2f2 !important;
+                }
+                .sidebar-logo-text {
+                    font-size: 18px; 
+                    font-weight: 800; 
+                    color: ${t.textMain}; 
+                    letter-spacing: -0.5px;
+                }
             `}</style>
 
-            <div className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
+            
+            {/* Sidebar Overlay (mobile only) */}
+            {isSidebarOpen && (
+                <div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+            )}
 
-            {/* Sidebar Navigation */}
-            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <div style={{ padding: "0 24px 20px 24px", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: ACCENT_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Ticket size={18} color="#fff" />
+            {/* Sidebar Navigation - always visible on desktop, slide-in on mobile */}
+            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
+                {/* Header */}
+                <div className="h-20 flex items-center px-6 border-b border-slate-50 bg-white">
+                    <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-pink-500/20">
+                            B
+                        </div>
+                        <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">
+                            BookMyTicket
+                        </span>
                     </div>
-                    <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>BookMyTicket</span>
+                </div>
+                
+                {/* Side Sub-Header (Service Role) */}
+                <div className="px-6 py-6 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
+                        <Sparkles size={40} className="text-pink-500" />
+                    </div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Admin Portal</p>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
+                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Super Admin</span>
+                    </div>
                 </div>
 
-                <nav style={{ flex: 1 }}>
-                    <p className="sidebar-group-title">Home</p>
-                    <div onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
-                        <LayoutDashboard size={18} /> Dashboard
-                    </div>
-                    <div onClick={() => setActiveTab("banner_ads")} className={`sidebar-item ${activeTab === "banner_ads" ? "active" : ""}`}>
-                        <Megaphone size={18} /> Banner Ads
-                    </div>
+                <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
+                    {/* Render Helper */}
+                    {(() => {
+                        const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
+                                <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
+                                <span className={`text-[11px] uppercase tracking-widest ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                {active && <div className="absolute right-4 w-1 h-4 bg-pink-500 rounded-full"></div>}
+                            </button>
+                        );
+                        const SidebarGroupTitle = ({ title }) => (
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-6 mb-3 px-4">{title}</p>
+                        );
+                        const SidebarSubItem = ({ id, label, onClick, active }) => (
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-3 pl-10 rounded-2xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
+                                <span className="text-[10px] uppercase tracking-widest font-bold">{label}</span>
+                            </button>
+                        );
 
-                    <div onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} className={`sidebar-item ${isHomeSettingsOpen ? "active" : ""}`} style={{ marginTop: "10px" }}>
-                        <Globe size={18} /> <span>Home Page Setup</span>
-                        <Menu size={14} style={{ marginLeft: "auto", transform: isHomeSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
-                    </div>
-                    {isHomeSettingsOpen && (
-                        <div className="submenu">
-                            {[
-                                { label: "Hero Banner", id: "hero" },
-                                { label: "Video Banner", id: "video_banner" },
-                                { label: "Site Branding", id: "site_branding" },
-                                { label: "Featured Events", id: "events_settings" },
-                                { label: "Event Partners", id: "event_partners" },
-                                { label: "Recent Memories", id: "memories" },
-                                { label: "Sections Order", id: "sections" },
-                                { label: "Copyright Header", id: "copyright" },
-                            ].map((sub) => (
-                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                    <div className="dot-icon"></div>
-                                    <span>{sub.label}</span>
+                        return (
+                            <>
+                                <SidebarGroupTitle title="Home" />
+                                <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+                                <SidebarItem id="banner_ads" label="Banner Ads" icon={Megaphone} active={activeTab === "banner_ads"} onClick={() => setActiveTab("banner_ads")} />
+                                
+                                <div onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isHomeSettingsOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
+                                    <div className="flex items-center space-x-3">
+                                        <Globe size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold">Home Page Setup</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isHomeSettingsOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                {isHomeSettingsOpen && (
+                                    <div className="mt-1 space-y-1">
+                                        {[
+                                            { label: "Hero Banner", id: "hero" },
+                                            { label: "Video Banner", id: "video_banner" },
+                                            { label: "Site Branding", id: "site_branding" },
+                                            { label: "Featured Events", id: "events_settings" },
+                                            { label: "Event Partners", id: "event_partners" },
+                                            { label: "Recent Memories", id: "memories" },
+                                            { label: "Sections Order", id: "sections" },
+                                            { label: "Copyright Header", id: "copyright" }
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
 
-                    <p className="sidebar-group-title">Operations</p>
-                    <div onClick={() => setActiveTab("all_events")} className={`sidebar-item ${activeTab === "all_events" ? "active" : ""}`}>
-                        <Calendar size={18} /> Events
-                    </div>
-                    <div onClick={() => setActiveTab("bookings")} className={`sidebar-item ${activeTab === "bookings" ? "active" : ""}`}>
-                        <ShoppingCart size={18} /> Bookings
-                    </div>
-                    <div onClick={() => setActiveTab("categories")} className={`sidebar-item ${activeTab === "categories" ? "active" : ""}`}>
-                        <LayoutGrid size={18} /> Categories
-                    </div>
+                                <SidebarGroupTitle title="Operations" />
+                                <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
+                                <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+                                <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
 
-                    <p className="sidebar-group-title">Partners</p>
-                    <div onClick={() => setActiveTab("customers")} className={`sidebar-item ${activeTab === "customers" ? "active" : ""}`}>
-                        <UserCircle size={18} /> Customers
-                    </div>
-                    <div onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} className={`sidebar-item ${isOrganizersOpen ? "active" : ""}`}>
-                        <Users size={18} /> <span>Organizers</span>
-                        <Menu size={14} style={{ marginLeft: "auto", transform: isOrganizersOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
-                    </div>
-                    {isOrganizersOpen && (
-                        <div className="submenu">
-                            {[
-                                { label: "All Organizers", id: "all_org" },
-                                { label: "KYC Pending", id: "kyc_pending" },
-                                { label: "Banned", id: "banned_org" },
-                                { label: "Requests", id: "org_requests" },
-                            ].map((sub) => (
-                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                    <div className="dot-icon"></div>
-                                    <span>{sub.label}</span>
+                                <SidebarGroupTitle title="Partners" />
+                                <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
+                                
+                                <div onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isOrganizersOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
+                                    <div className="flex items-center space-x-3">
+                                        <Users size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold">Organizers</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isOrganizersOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                {isOrganizersOpen && (
+                                    <div className="mt-1 space-y-1">
+                                        {[
+                                            { label: "All Organizers", id: "all_org" },
+                                            { label: "KYC Pending", id: "kyc_pending" },
+                                            { label: "KYC Verified", id: "kyc_verified" },
+                                            { label: "Banned", id: "banned_org" },
+                                            { label: "Requests", id: "org_requests" },
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
 
-                    <p className="sidebar-group-title">Growth</p>
-                    <div onClick={() => setIsGrowthOpen(!isGrowthOpen)} className={`sidebar-item ${isGrowthOpen ? "active" : ""}`}>
-                        <Gift size={18} /> <span>Growth</span>
-                        <Menu size={14} style={{ marginLeft: "auto", transform: isGrowthOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
-                    </div>
-                    {isGrowthOpen && (
-                        <div className="submenu">
-                            {[
-                                { label: "Promotions", id: "promotions" },
-                                { label: "Push Notifications", id: "send_notif" },
-                            ].map((sub) => (
-                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                    <div className="dot-icon"></div>
-                                    <span>{sub.label}</span>
+                                <div onClick={() => setIsServicesOpen(!isServicesOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isServicesOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
+                                    <div className="flex items-center space-x-3">
+                                        <Briefcase size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold">Services</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                {isServicesOpen && (
+                                    <div className="mt-1 space-y-1">
+                                        {[
+                                            { label: "Requests", id: "service_requests" },
+                                            { label: "Active Users", id: "service_active" },
+                                            { label: "Banned Users", id: "service_banned" },
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
 
-                    <p className="sidebar-group-title">Reports</p>
-                    <div onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
-                        <MessageCircle size={18} /> Support Tickets
-                    </div>
-                    <div onClick={() => setActiveTab("branding_partners")} className={`sidebar-item ${activeTab === "branding_partners" ? "active" : ""}`}>
-                        <Shield size={18} /> Branding Partners
-                    </div>
-                    <div onClick={() => setActiveTab("pages")} className={`sidebar-item ${activeTab === "pages" ? "active" : ""}`}>
-                        <FileText size={18} /> Pages
-                    </div>
-                    <div onClick={() => setActiveTab("ad_popups")} className={`sidebar-item ${activeTab === "ad_popups" ? "active" : ""}`}>
-                        <Megaphone size={18} /> Ad Popups
-                    </div>
-
-                    <p className="sidebar-group-title">Administration</p>
-                    <div onClick={() => setActiveTab("admin_management")} className={`sidebar-item ${activeTab === "admin_management" ? "active" : ""}`}>
-                        <Shield size={18} /> Team Management
-                    </div>
-
-                    <p className="sidebar-group-title">System</p>
-                    <div onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`sidebar-item ${isSettingsOpen ? "active" : ""}`}>
-                        <Settings size={18} /> <span>Settings</span>
-                        <Menu size={14} style={{ marginLeft: "auto", transform: isSettingsOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }} />
-                    </div>
-                    {isSettingsOpen && (
-                        <div className="submenu">
-                            {[
-                                { label: "API Keys", id: "api_settings" },
-                                { label: "Payments", id: "payment_settings" },
-                                { label: "Emails", id: "email_settings" },
-                                { label: "SEO & Meta", id: "meta_management" },
-                                { label: "Email Templates", id: "email_templates" },
-                                { label: "Disclaimers", id: "disclaimer_settings" },
-                                { label: "SSO Config", id: "sso_settings" },
-                                { label: "Tickets & Notifs", id: "ticket_settings" }
-                            ].map((sub) => (
-                                <div key={sub.id} onClick={() => setActiveTab(sub.id)} className={`submenu-item ${activeTab === sub.id ? "active-sub" : ""}`}>
-                                    <div className="dot-icon"></div>
-                                    <span>{sub.label}</span>
+                                <SidebarGroupTitle title="Growth" />
+                                <div onClick={() => setIsGrowthOpen(!isGrowthOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isGrowthOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
+                                    <div className="flex items-center space-x-3">
+                                        <Gift size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold">Growth</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isGrowthOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                {isGrowthOpen && (
+                                    <div className="mt-1 space-y-1">
+                                        {[
+                                            { label: "Promotions", id: "promotions" },
+                                            { label: "Push Notifications", id: "send_notif" },
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
 
-                    <div style={{ marginTop: "40px", padding: "0 16px" }}>
-                        <div className="sidebar-item" style={{ color: "#ef4444", marginTop: "12px", border: "1px solid #ef444420" }} onClick={handleLogout}>
-                            <X size={18} /> Logout
-                        </div>
-                    </div>
+                                <SidebarGroupTitle title="Reports" />
+                                <SidebarItem id="support_tickets" label="Support Tickets" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
+                                <SidebarItem id="branding_partners" label="Branding Partners" icon={Shield} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
+                                <SidebarItem id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
+                                <SidebarItem id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
+
+                                <SidebarGroupTitle title="Administration" />
+                                <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
+
+                                <SidebarGroupTitle title="System" />
+                                <div onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isSettingsOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
+                                    <div className="flex items-center space-x-3">
+                                        <Settings size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold">Settings</span>
+                                    </div>
+                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
+                                </div>
+                                {isSettingsOpen && (
+                                    <div className="mt-1 space-y-1">
+                                        {[
+                                            { label: "API Keys", id: "api_settings" },
+                                            { label: "Payments", id: "payment_settings" },
+                                            { label: "Emails", id: "email_settings" },
+                                            { label: "SEO & Meta", id: "meta_management" },
+                                            { label: "Email Templates", id: "email_templates" },
+                                            { label: "Disclaimers", id: "disclaimer_settings" },
+                                            { label: "SSO Config", id: "sso_settings" },
+                                            { label: "Tickets & Notifs", id: "ticket_settings" }
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+
                 </nav>
+
+                {/* Footer - Profile Minimal */}
+                <div className="p-6 border-t border-slate-50 bg-slate-50/50 mt-auto">
+                    <div className="bg-white rounded-[1.5rem] p-4 mb-4 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner">
+                            A
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tight italic">Admin User</p>
+                            <p className="text-[9px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center space-x-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-500 shadow-sm"
+                    >
+                        <LogOut size={14} strokeWidth={3} />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">Sign Out</span>
+                    </button>
+                </div>
             </aside>
 
-            {/* Main Content */}
-            <div className="main-content">
-                <header className="top-header" style={{ height: "70px", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, backgroundColor: t.header, borderBottom: `1px solid ${t.border}` }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1 }}>
-                        <div style={{ position: "relative", width: "400px" }}>
-                            <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
-                            <input 
-                                type="text" 
-                                placeholder="Search everything..." 
-                                style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'dark' ? "#1e293b" : "#f1f5f9", color: t.textMain, fontSize: "14px", outline: "none" }} 
-                            />
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+                
+                {/* Top Header */}
+                <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
+                    <div className="flex items-center space-x-8">
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
+                        >
+                            <Menu size={22} />
+                        </button>
+                        <div>
+                            <div className="flex items-center gap-2.5 mb-0.5">
+                                <div className="w-1 h-3.5 bg-pink-500 rounded-full"></div>
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                    {activeTab.replace('_', ' ')}
+                                </h1>
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-3.5">
+                                Admin Dashboard Overview
+                            </p>
                         </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                        <div style={{ position: "relative", cursor: "pointer" }}>
-                            <Bell size={20} color={t.textSub} />
-                            <div style={{ position: "absolute", top: "-2px", right: "-2px", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ef4444", border: `2px solid ${t.header}` }}></div>
-                        </div>
-                        <div style={{ width: "1px", height: "24px", backgroundColor: t.border }}></div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                            <div style={{ width: "36px", height: "36px", borderRadius: "12px", backgroundColor: theme === 'dark' ? "#1e293b" : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: ACCENT_PINK }}>A</div>
-                            <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Admin User</span>
-                                <span style={{ fontSize: "11px", color: t.textSub }}>Super Admin</span>
+
+                    <div className="flex items-center space-x-4">
+                        <button className="relative p-3 rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all border border-slate-100 shadow-sm">
+                            <Bell size={20} />
+                            <span className="absolute top-3 right-3 w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
+                            <span className="absolute top-3 right-3 w-2 h-2 bg-pink-500 rounded-full border border-white"></span>
+                        </button>
+                        
+                        <div className="hidden md:flex items-center space-x-4 ml-4 pl-4 border-l border-slate-200">
+                            <div className="text-right">
+                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight italic">Admin User</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Platform Admin</p>
+                            </div>
+                            <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/20">
+                                A
                             </div>
                         </div>
                     </div>
                 </header>
 
+                {/* Main */}
                 <main style={{ padding: "32px" }}>
                     {activeTab === "dashboard" && (
                         <>
@@ -1206,20 +1367,22 @@ function AdminHomePage() {
                                 marginBottom: "32px",
                                 position: "relative",
                                 overflow: "hidden",
-                                border: `1px solid ${t.border}`
+                                border: `1px solid ${t.border}`,
+                                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)"
                             }}>
                                 <div style={{ position: "relative", zIndex: 2 }}>
-                                    <h2 style={{ fontSize: "32px", fontWeight: 800, color: t.textMain, marginBottom: "8px", letterSpacing: "-0.5px" }}>Welcome back, Admin! 👋</h2>
-                                    <p style={{ fontSize: "16px", color: t.textSub, maxWidth: "500px", lineHeight: "1.6" }}>
+                                    <h2 style={{ fontSize: "36px", fontWeight: 900, color: t.textMain, marginBottom: "12px", letterSpacing: "-0.03em" }}>Welcome back, Admin! 👋</h2>
+                                    <p style={{ fontSize: "16px", color: t.textSub, maxWidth: "500px", lineHeight: "1.6", fontWeight: 500 }}>
                                         Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
                                     </p>
                                     <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "12px 24px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}>View Requests</button>
-                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "12px 24px", borderRadius: "12px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 700, cursor: "pointer" }}>Manage Events</button>
+                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "14px 28px", borderRadius: "14px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 20px -5px rgba(59, 130, 246, 0.4)", transition: "all 0.2s" }}>View Requests</button>
+                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "14px 28px", borderRadius: "14px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }}>Manage Events</button>
                                     </div>
                                 </div>
                                 {/* Modern Abstract Background Element */}
-                                <div style={{ position: "absolute", top: "-50px", right: "-50px", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_BLUE}20 0%, transparent 70%)`, pointerEvents: "none" }}></div>
+                                <div style={{ position: "absolute", top: "-50px", right: "-50px", width: "400px", height: "400px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_BLUE}15 0%, transparent 70%)`, pointerEvents: "none" }}></div>
+                                <div style={{ position: "absolute", bottom: "-100px", left: "10%", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_PINK}10 0%, transparent 70%)`, pointerEvents: "none" }}></div>
                             </div>
 
                             <div className="stats-grid">
@@ -2453,7 +2616,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance"].includes(activeTab) && (
+                    {["all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance"].includes(activeTab) && (
                         <>
                             <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -2485,14 +2648,17 @@ function AdminHomePage() {
                                         </thead>
                                         <tbody>
                                             {mappedOrganizers.filter(org => {
-                                                if (activeTab === "all_org") return true;
-                                                if (activeTab === "active_org") return org.status === "Active";
+                                                if (activeTab === "all_org" || activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
                                                 if (activeTab === "banned_org") return org.status === "Banned";
-                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Pending", "Submitted"].includes(org.status);
+                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding"].includes(org.status);
+                                                if (activeTab === "kyc_verified") return org.status === "Submitted" || org.status === "Pending";
                                                 if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
                                                 if (activeTab === "email_unverified") return String(org.id).length % 2 === 0; // Fixed temporary logic
                                                 if (activeTab === "mobile_unverified") return String(org.id).length % 3 === 0; // Fixed temporary logic
-                                                if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active"].includes(org.status);
+                                                if (activeTab === "kyc_unverified") return !["KYC Pending", "Pending", "Submitted", "Active", "KYC Completed"].includes(org.status);
+                                                if (activeTab === "service_mehendi") return org.category === "Mehendi Artist";
+                                                if (activeTab === "service_photo") return org.category === "Photographer/Studio";
+                                                if (activeTab === "service_makeup") return org.category === "Makeup Artist";
                                                 return true;
                                             }).map((org) => (
                                                 <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
@@ -2505,15 +2671,19 @@ function AdminHomePage() {
                                                             fontSize: "11px",
                                                             fontWeight: 700,
                                                             backgroundColor:
-                                                                org.status === 'Active' ? '#22c55e15' :
+                                                                (org.status === 'Active' || org.status === 'KYC Completed') ? '#22c55e15' :
                                                                     org.status === 'Banned' ? '#ef444415' :
-                                                                        (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f9731615' : '#64748b15',
+                                                                        (org.status === 'Submitted' || org.status === 'Pending') ? '#3b82f615' :
+                                                                        (org.status === 'KYC Pending' || org.status === 'Start Onboarding') ? '#f9731615' : '#64748b15',
                                                             color:
-                                                                org.status === 'Active' ? '#22c55e' :
+                                                                (org.status === 'Active' || org.status === 'KYC Completed') ? '#22c55e' :
                                                                     org.status === 'Banned' ? '#ef4444' :
-                                                                        (org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted') ? '#f97316' : t.textSub
+                                                                        (org.status === 'Submitted' || org.status === 'Pending') ? '#3b82f6' :
+                                                                        (org.status === 'KYC Pending' || org.status === 'Start Onboarding') ? '#f97316' : t.textSub
                                                         }}>
-                                                            {(org.status === 'Pending' || org.status === 'Submitted') ? 'KYC PENDING' : org.status.toUpperCase()}
+                                                            {org.status === 'Submitted' || org.status === 'Pending' ? 'UNDER REVIEW' : 
+                                                             org.status === 'KYC Pending' || org.status === 'Start Onboarding' ? 'KYC PENDING' : 
+                                                             org.status === 'KYC Completed' ? 'ACTIVE' : org.status.toUpperCase()}
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
@@ -2534,7 +2704,7 @@ function AdminHomePage() {
 
                                                                         <button onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            patchOrganizerMutation({ id: org.id, kycStatus: 'Active' });
+                                                                            patchOrganizerMutation({ id: org.id, kycStatus: 'KYC Completed' });
                                                                             setOpenActionDropdown(null);
                                                                         }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                             <CheckCircle size={16} /> Approve KYC
@@ -2589,7 +2759,7 @@ function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {convexOrganiserRequests.map((req) => (
+                                        {convexOrganiserRequests.filter(req => !isProfService(req.category)).map((req) => (
                                             <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{req.firstName} {req.lastName}</td>
                                                 <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.email}</td>
@@ -2613,63 +2783,7 @@ function AdminHomePage() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: "12px", position: "relative" }}>
-                                                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                                        {req.status === 'Pending' && (
-                                                            <div style={{ position: "relative" }}>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setOpenRequestActionId(openRequestActionId === req._id ? null : req._id);
-                                                                    }}
-                                                                    style={{ padding: "6px", borderRadius: "6px", border: `1px solid ${t.border}`, background: "none", color: t.textSub, cursor: "pointer" }}
-                                                                >
-                                                                    <MoreVertical size={16} />
-                                                                </button>
-
-                                                                {openRequestActionId === req._id && (
-                                                                    <div style={{
-                                                                        position: "absolute",
-                                                                        right: 0,
-                                                                        top: "100%",
-                                                                        marginTop: "4px",
-                                                                        backgroundColor: t.cardBg,
-                                                                        border: `1px solid ${t.border}`,
-                                                                        borderRadius: "8px",
-                                                                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                                                                        zIndex: 100,
-                                                                        minWidth: "120px",
-                                                                        overflow: "hidden"
-                                                                    }}>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                setSelectedRequestForApproval(req);
-                                                                                setShowApprovalModal(true);
-                                                                                setOpenRequestActionId(null);
-                                                                            }}
-                                                                            style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#22c55e", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-                                                                        >
-                                                                            <CheckCircle size={14} /> Approve
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={async (e) => {
-                                                                                e.stopPropagation();
-                                                                                try {
-                                                                                    await updateOrganiserRequestStatusMutation({ id: req._id, status: 'Rejected' });
-                                                                                    setOpenRequestActionId(null);
-                                                                                } catch (err) {
-                                                                                    alert('Error rejecting: ' + err.message);
-                                                                                }
-                                                                            }}
-                                                                            style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#ef4444", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", borderTop: `1px solid ${t.border}` }}
-                                                                        >
-                                                                            <X size={14} /> Reject
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -2678,6 +2792,84 @@ function AdminHomePage() {
                                 {convexOrganiserRequests.length === 0 && (
                                     <div style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>No requests found.</div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "service_requests" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Service Provider Requests</h3>
+                            </div>
+                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {serviceRequests.map((req) => (
+                                            <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{req.firstName} {req.lastName}</td>
+                                                <td style={{ padding: "12px" }}>{req.email}</td>
+                                                <td style={{ padding: "12px" }}>{req.category}</td>
+                                                <td style={{ padding: "12px" }}>{req.phone}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {serviceRequests.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No pending service requests</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {["service_active", "service_banned"].includes(activeTab) && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
+                                    {activeTab === "service_active" ? "Active Service Providers" : "Banned Service Providers"}
+                                </h3>
+                            </div>
+                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
+                                            <tr key={org._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{org.name}</td>
+                                                <td style={{ padding: "12px" }}>{org.userId}</td>
+                                                <td style={{ padding: "12px" }}>{org.category || org.kycDetails?.category}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        {activeTab === "service_active" && (
+                                                            <button onClick={() => patchOrganizerMutation({ id: org._id, kycStatus: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
+                                                        )}
+                                                        {activeTab === "service_banned" && (
+                                                            <button onClick={() => patchOrganizerMutation({ id: org._id, kycStatus: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {((activeTab === "service_active" ? serviceActive : serviceBanned).length === 0) && 
+                                   <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No users found</div>}
                             </div>
                         </div>
                     )}
@@ -4497,8 +4689,9 @@ function AdminHomePage() {
                     )}
 
                 </main>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
+
 

@@ -5,9 +5,13 @@ import { FileCheck2, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
+import { isServiceProvider } from "@/app/data/serviceCategories";
 import { Country, State, City } from 'country-state-city';
 import { Html5Qrcode } from "html5-qrcode";
-
+import BlockMapDesigner from "./components/BlockMapDesigner";
+import CalendarPicker from "./components/CalendarPicker";
+import CustomSelect from "./components/CustomSelect";
+import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
     static getDerivedStateFromError(error) { return { error }; }
@@ -17,10 +21,12 @@ class OrganiserErrorBoundary extends Component {
     render() {
         if (this.state.error) {
             return (
-                <div style={{ minHeight: "100vh", padding: "24px", background: "#0f172a", color: "#e2e8f0", fontFamily: "monospace" }}>
-                    <h2 style={{ color: "#f87171" }}>Organiser panel error</h2>
-                    <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{this.state.error?.message || String(this.state.error)}</pre>
-                    <button onClick={() => this.setState({ error: null })} style={{ marginTop: "16px", padding: "8px 16px", cursor: "pointer" }}>Try again</button>
+                <div style={{ minHeight: "100vh", padding: "40px", background: "#f8fafc", color: "#0f172a", fontFamily: "'Figtree', sans-serif" }}>
+                    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "40px", backgroundColor: "#ffffff", borderRadius: "24px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)", border: "1px solid #e2e8f0" }}>
+                        <h2 style={{ color: "#ec4899", fontWeight: 900, fontSize: "24px", marginBottom: "16px", textTransform: "uppercase", fontStyle: "italic", letterSpacing: "-1px" }}>Organiser Portal Error</h2>
+                        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f1f5f9", padding: "20px", borderRadius: "12px", fontSize: "12px", border: "1px solid #e2e8f0", color: "#475569" }}>{this.state.error?.message || String(this.state.error)}</pre>
+                        <button onClick={() => this.setState({ error: null })} style={{ marginTop: "24px", padding: "12px 24px", background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)", color: "white", borderRadius: "12px", border: "none", fontWeight: 700, cursor: "pointer", transition: "all 0.3s ease" }}>Try again</button>
+                    </div>
                 </div>
             );
         }
@@ -32,9 +38,15 @@ import {
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
-    CloudUpload, ChevronDown, ChevronRight, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart
+    CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info
 } from "lucide-react";
+
+const ACCENT_BLUE = "#3b82f6";
+const ACCENT_PURPLE = "#8b5cf6";
+const ACCENT_PINK = "#ec4899";
+const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
+
 
 function LocationPickerModal({
     t, theme, tempLocation, setTempLocation, postEvent, setPostEvent,
@@ -116,56 +128,233 @@ function LocationPickerModal({
         }
     };
 
-    const handleSetOnlyLatLng = () => {
-        setPostEvent(pe => ({
-            ...pe,
-            latitude: String(tempLocation.lat),
-            longitude: String(tempLocation.lng)
-        }));
-        setShowMapModal(false);
-    };
-
     return (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200, padding: "20px" }}>
-            <div style={{ width: "100%", maxWidth: "840px", backgroundColor: t.cardBg, borderRadius: "20px", overflow: "hidden", border: `1px solid ${t.border}` }}>
-                <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${t.border}` }}>
-                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Location Picker</h3>
-                    <button type="button" onClick={() => setShowMapModal(false)} style={{ border: "none", background: "none", cursor: "pointer", color: t.textSub }}><X size={18} /></button>
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1200] flex items-center justify-center p-4 sm:p-6 md:p-10 backdrop-blur-md bg-black/40"
+        >
+            <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="w-full max-w-[1000px] h-[90vh] max-h-[700px] bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
+            >
+                {/* Header */}
+                <div className="px-8 py-5 border-b border-slate-50 flex items-center justify-between bg-white">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tighter italic">Location Picker</h3>
+                        <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Interactive Map Selection</p>
+                    </div>
+                    <button 
+                        onClick={() => setShowMapModal(false)} 
+                        className="w-10 h-10 rounded-full bg-slate-50 hover:bg-pink-50 text-slate-400 hover:text-pink-500 flex items-center justify-center transition-all border border-slate-100 hover:border-pink-200"
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "2.1fr 1fr", height: "420px" }}>
-                    <div ref={mapContainerRef} style={{ height: "100%", minHeight: "320px" }} />
-                    <div style={{ padding: "14px 16px", borderLeft: `1px solid ${t.border}`, display: "flex", flexDirection: "column", gap: "10px" }}>
-                        <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Drag the map marker or click the map to set location. Adjust lat/long below if needed.</p>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>Latitude</label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={tempLocation.lat}
-                                onChange={e => setTempLocation(prev => ({ ...prev, lat: parseFloat(e.target.value) || 0 }))}
-                                style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }}
-                            />
+
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    {/* Map Content */}
+                    <div className="flex-[2.5] relative">
+                         <div ref={mapContainerRef} className="absolute inset-0 z-0 h-full w-full" />
+                         {/* Coordinates Badge Glass */}
+                         <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white shadow-lg flex items-center gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Latitude</span>
+                                <span className="text-xs font-bold text-slate-800">{tempLocation.lat.toFixed(6)}</span>
+                            </div>
+                            <div className="w-[1px] h-6 bg-slate-200" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Longitude</span>
+                                <span className="text-xs font-bold text-slate-800">{tempLocation.lng.toFixed(6)}</span>
+                            </div>
+                         </div>
+                    </div>
+
+                    {/* Controls Sidebar */}
+                    <div className="flex-1 min-w-[320px] bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6 overflow-y-auto">
+                        <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-sm flex flex-col gap-4">
+                             <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tighter italic">
+                                Precisely position the marker on the map to autofill address details.
+                             </p>
+                             
+                             <div className="space-y-4 pt-2">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Latitude</label>
+                                    <input 
+                                        type="number" step="any" value={tempLocation.lat} 
+                                        onChange={e => setTempLocation(p => ({ ...p, lat: parseFloat(e.target.value) || 0 }))}
+                                        className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Longitude</label>
+                                    <input 
+                                        type="number" step="any" value={tempLocation.lng} 
+                                        onChange={e => setTempLocation(p => ({ ...p, lng: parseFloat(e.target.value) || 0 }))}
+                                        className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all font-mono"
+                                    />
+                                </div>
+                             </div>
                         </div>
-                        <div>
-                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>Longitude</label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={tempLocation.lng}
-                                onChange={e => setTempLocation(prev => ({ ...prev, lng: parseFloat(e.target.value) || 0 }))}
-                                style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "12px" }}
-                            />
-                        </div>
-                        {geoError && <p style={{ fontSize: "11px", color: "#f97316", margin: 0 }}>{geoError}</p>}
-                        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <button type="button" disabled={isGeoLoading} onClick={handleUseLocation} style={{ padding: "9px 14px", borderRadius: "8px", border: "none", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", opacity: isGeoLoading ? 0.8 : 1 }}>
-                                {isGeoLoading ? "Applying…" : "Use This Location & Autofill"}
+
+                        {geoError && (
+                            <div className="bg-red-50 text-red-500 p-4 rounded-2xl text-[11px] font-bold border border-red-100 flex items-start gap-2">
+                                <AlertCircle size={14} className="shrink-0" />
+                                <span>{geoError}</span>
+                            </div>
+                        )}
+
+                        <div className="mt-auto space-y-3">
+                            <button 
+                                onClick={handleUseLocation}
+                                disabled={isGeoLoading}
+                                className="w-full py-4 rounded-2xl bg-[#ec4899] text-white text-[13px] font-black tracking-widest uppercase shadow-xl shadow-pink-200 hover:shadow-pink-300 transition-all flex items-center justify-center gap-2 group"
+                                style={{ background: ACCENT_GRADIENT }}
+                            >
+                                {isGeoLoading ? (
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <MapPin size={18} className="group-hover:scale-110 transition-transform" />
+                                        Use Location & Autofill
+                                    </>
+                                )}
                             </button>
-                            <button type="button" onClick={handleSetOnlyLatLng} style={{ padding: "8px 14px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-                                Set Only Latitude & Longitude
+                            <button 
+                                onClick={() => {
+                                    setPostEvent(pe => ({ ...pe, latitude: String(tempLocation.lat), longitude: String(tempLocation.lng) }));
+                                    setShowMapModal(false);
+                                }}
+                                className="w-full py-4 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-600 text-[11px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2"
+                            >
+                                Set Lat/Long Only
                             </button>
                         </div>
                     </div>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, setKycErrors }) {
+    const mapContainerRef = useRef(null);
+    const mapRef = useRef(null);
+    const markerRef = useRef(null);
+    const [isGeoLoading, setIsGeoLoading] = useState(false);
+
+    useEffect(() => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+        return () => { if (link.parentNode) link.parentNode.removeChild(link); };
+    }, []);
+
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
+        const L = require("leaflet");
+        
+        // Fix Leaflet marker icon issue
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+            iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+            shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+        });
+
+        const initialLat = kycFormData.lat || 11.0168;
+        const initialLng = kycFormData.lng || 76.9558;
+
+        const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
+            attribution: "© OpenStreetMap contributors" 
+        }).addTo(map);
+
+        const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+        mapRef.current = map;
+        markerRef.current = marker;
+
+        marker.on("moveend", () => {
+            const latlng = marker.getLatLng();
+            setKycFormData(prev => ({ ...prev, lat: latlng.lat, lng: latlng.lng }));
+        });
+
+        map.on("click", (e) => {
+            marker.setLatLng(e.latlng);
+            setKycFormData(prev => ({ ...prev, lat: e.latlng.lat, lng: e.latlng.lng }));
+        });
+
+        return () => {
+            map.remove();
+            mapRef.current = null;
+            markerRef.current = null;
+        };
+    }, []);
+
+    const handleFetchAddress = async () => {
+        try {
+            setIsGeoLoading(true);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${kycFormData.lat}&lon=${kycFormData.lng}`);
+            const data = await res.json();
+            if (data.display_name) {
+                setKycFormData(prev => ({ ...prev, address: data.display_name }));
+                setKycErrors(prev => prev.filter(f => f !== 'address'));
+            }
+        } catch (err) {
+            console.error("Fetch address error:", err);
+        } finally {
+            setIsGeoLoading(false);
+        }
+    };
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
+                    <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Service Location</h3>
+                </div>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+                    <div style={{ gridColumn: "span 2" }}>
+                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Business/Service Address <span style={{ color: "#ef4444" }}>*</span></label>
+                        <div style={{ position: "relative" }}>
+                            <textarea 
+                                placeholder="Enter your full business address..." 
+                                value={kycFormData.address} 
+                                onChange={e => {
+                                    setKycFormData({ ...kycFormData, address: e.target.value });
+                                    setKycErrors(prev => prev.filter(f => f !== 'address'));
+                                }} 
+                                style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('address') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px", minHeight: "80px" }} 
+                            />
+                            <button 
+                                onClick={handleFetchAddress}
+                                disabled={isGeoLoading}
+                                style={{ position: "absolute", right: "8px", bottom: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                                {isGeoLoading ? "Fetching..." : "Fetch from Map"}
+                            </button>
+                        </div>
+                        {kycErrors.includes('address') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Address is required</p>}
+                    </div>
+                </div>
+
+                <div style={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}>
+                    <div style={{ padding: "12px 16px", backgroundColor: "#fff", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b" }}>Set Map Pin</span>
+                            <p style={{ margin: 0, fontSize: "10px", color: "#64748b" }}>Drag the marker to your exact location for customers to find you.</p>
+                        </div>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <div style={{ fontSize: "10px", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "4px" }}>Lat: {kycFormData.lat.toFixed(4)}</div>
+                            <div style={{ fontSize: "10px", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "4px" }}>Lng: {kycFormData.lng.toFixed(4)}</div>
+                        </div>
+                    </div>
+                    <div ref={mapContainerRef} style={{ height: "350px", width: "100%", zIndex: 1 }} />
                 </div>
             </div>
         </div>
@@ -177,6 +366,17 @@ const EMPTY_ARRAY = [];
 function OrganiserPanel() {
     const { user, loading, logout, selectedCity, locationHierarchy } = useAuth();
     const router = useRouter();
+
+    const isProfService = (cat) => {
+        return isServiceProvider(cat);
+    };
+
+    // IMMEDIATE GUARD: If the session already knows this is a professional service, redirect NOW.
+    if (!loading && user && isProfService(user.category)) {
+        if (typeof window !== "undefined") router.replace("/vendor/dashboard");
+        return null;
+    }
+
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -192,6 +392,20 @@ function OrganiserPanel() {
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");
     const [activeTab, setActiveTab] = useState("dashboard");
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const dropdownRef = React.useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setProfileDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -233,9 +447,9 @@ function OrganiserPanel() {
     // KYC Wizard State
     const [kycStep, setKycStep] = useState(1);
     const [kycFormData, setKycFormData] = useState({
-        category: "Individual", name: "", panCard: "", website: "", socialLink: "",
+        category: "Individual", name: "", firstName: "", lastName: "", panCard: "", website: "", socialLink: "",
         ostin: "No", gstin: "", itr: "No", fullName: effectiveEmail, email: effectiveEmail,
-        mobile: "", altContact: "", designation: "", city: "", address: "",
+        mobile: "", altContact: "", designation: "", city: "", address: "", lat: 0, lng: 0,
         beneficiaryName: "", accountType: "Savings account", bankName: "", accountNumber: "", ifscCode: "",
         branchName: "", branchAddress: ""
     });
@@ -248,14 +462,6 @@ function OrganiserPanel() {
         email: "",
         phone: "",
         kycStatus: "Pending"
-    });
-
-
-    // Wallet: loaded from Convex (organisers table)
-    const [wallet, setWallet] = useState({
-        balance: 0,
-        currency: "₹",
-        transactions: []
     });
 
     const equaliser = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
@@ -271,8 +477,19 @@ function OrganiserPanel() {
         "Airtel Payments Bank", "Jio Payments Bank", "Equitas Small Finance Bank", "AU Small Finance Bank"
     ].sort();
 
+    // Wallet: loaded from Convex (organisers table)
+    const [wallet, setWallet] = useState({
+        balance: 0,
+        currency: "₹",
+        transactions: []
+    });
+
     const organiserData = useQuery(api.organisers.get, { userId: effectiveEmail });
     const submitKycMutation = useMutation(api.organisers.submitKyc);
+
+    const isProfessionalService = useMemo(() => {
+        return isProfService(organiserData?.category || organiserData?.kycDetails?.category || user?.category);
+    }, [organiserData?.category, organiserData?.kycDetails?.category, user?.category]);
 
     const handleIfscChange = async (ifsc) => {
         setKycFormData(prev => ({ ...prev, ifscCode: ifsc.toUpperCase() }));
@@ -305,7 +522,7 @@ function OrganiserPanel() {
                 ...prev,
                 balance: organiserData.walletBalance || 0,
             }));
-            const mappedStatus = organiserData.kycStatus === "Active" ? "KYC Approved" : organiserData.kycStatus;
+            const mappedStatus = (organiserData.kycStatus === "Active") ? "KYC Approved" : (organiserData.kycStatus || "Pending");
             setProfile(prev => ({
                 ...prev,
                 kycStatus: mappedStatus,
@@ -346,17 +563,21 @@ function OrganiserPanel() {
                 setAgreedToVendor(kd.agreementAccepted || false);
             }
 
-            if (!organiserData.kycStatus || organiserData.kycStatus === "Pending" || organiserData.kycStatus === "Start Onboarding") {
+            if (isProfessionalService) {
+                setCurrentStage("approved");
+                router.push("/vendor/dashboard");
+                return;
+            } else if (!organiserData.kycStatus || organiserData.kycStatus === "Pending" || organiserData.kycStatus === "KYC Pending") {
                 setCurrentStage("kyc_start");
-            } else if (organiserData.kycStatus === "KYC Pending" || organiserData.kycStatus === "Submitted") {
+            } else if (organiserData.kycStatus === "Submitted" || organiserData.kycStatus === "Under Review") {
                 setCurrentStage("pending");
-            } else if (organiserData.kycStatus === "Active") {
+            } else if (organiserData.kycStatus === "Active" || organiserData.kycStatus === "KYC Verified" || organiserData.kycStatus === "KYC Completed") {
                 setCurrentStage("approved");
             } else {
                 setCurrentStage("kyc_start");
             }
         }
-    }, [organiserData]);
+    }, [organiserData, isProfessionalService, router]);
 
     const convexSupportTickets = useQuery(api.supportTickets.list) || EMPTY_ARRAY;
     const createTicketMutation = useMutation(api.supportTickets.create);
@@ -820,6 +1041,13 @@ function OrganiserPanel() {
             })) : undefined,
             dateSlots: isMultiple && effectiveSlots.length > 0 ? effectiveSlots.map(s => ({ date: s.date, time: s.time || "" })) : undefined,
             layoutType: isSeating ? (postEvent.layoutType || "stage") : undefined,
+            seatMapBackgroundUrl: postEvent.layoutType === "block" ? postEvent.seatMapBackgroundUrl : undefined,
+            blocks: postEvent.layoutType === "block" ? postEvent.blocks?.map(b => ({
+                id: b.id, name: b.name, x: Number(b.x), y: Number(b.y), width: Number(b.width), height: Number(b.height), rows: Number(b.rows), cols: Number(b.cols), category: String(b.category), color: String(b.color),
+                rowNaming: b.rowNaming || 'alphabetic',
+                startNumber: Number(b.startNumber) || 1,
+                numberingDirection: b.numberingDirection || 'ltr'
+            })) : undefined,
         };
 
         // Remove undefined keys (Convex may reject them in some versions)
@@ -868,55 +1096,91 @@ function OrganiserPanel() {
 
     const colors = {
         light: {
-            bg: "#f3f4f6",
+            bg: "#f8fafc",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#111827",
-            textSub: "#4b5563",
+            textMain: "#0f172a",
+            textSub: "#64748b",
             cardBg: "#ffffff",
-            border: "#e5e7eb",
-            activeLink: "#eff6ff",
-            activeText: "#2563eb",
-            sidebarBorder: "#f3f4f6"
+            border: "#e2e8f0",
+            activeLink: "#f1f5f9",
+            activeText: "#0f172a",
+            sidebarBorder: "#e2e8f0"
         },
         dark: {
-            bg: "#0b0f19",
-            sidebar: "#111827",
-            header: "#111827",
-            textMain: "#ffffff",
-            textSub: "#94a3b8",
-            cardBg: "#111d2c",
-            border: "#1e293b",
-            activeLink: "#3b82f6",
-            activeText: "#ffffff",
-            sidebarBorder: "#1e293b"
+            bg: "#f8fafc",
+            sidebar: "#ffffff",
+            header: "#ffffff",
+            textMain: "#0f172a",
+            textSub: "#64748b",
+            cardBg: "#ffffff",
+            border: "#e2e8f0",
+            activeLink: "#f1f5f9",
+            activeText: "#0f172a",
+            sidebarBorder: "#e2e8f0"
         }
     };
 
-    const ACCENT_BLUE = "#3b82f6";
-    const ACCENT_PURPLE = "#8b5cf6";
-    const ACCENT_PINK = "#ec4899";
-    const ACCENT_GRADIENT = `linear-gradient(135deg, ${ACCENT_BLUE} 0%, ${ACCENT_PURPLE} 100%)`;
-
-    const t = colors[theme] || colors.dark;
+    const t = colors[theme] || colors.light;
     const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
+    const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+    const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+    const renderEngagementMap = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const days = [];
+        const totalDays = daysInMonth(year, month);
+        const startingDay = firstDayOfMonth(year, month);
+
+        for (let i = 0; i < startingDay; i++) {
+            days.push(<div key={`empty-${i}`} style={{ height: "40px", backgroundColor: t.bg, border: `1px solid ${t.border}`, opacity: 0.1 }}></div>);
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const date = new Date(year, month, day);
+            const isSelected = selectedDate.toDateString() === date.toDateString();
+            const isToday = new Date().toDateString() === date.toDateString();
+            
+            days.push(
+                <div 
+                    key={day} 
+                    onClick={() => setSelectedDate(date)}
+                    style={{ 
+                        height: "40px", 
+                        border: `1px solid ${t.border}`, 
+                        padding: "4px", 
+                        cursor: "pointer", 
+                        position: "relative",
+                        backgroundColor: isSelected ? "#3b82f615" : t.cardBg,
+                        transition: "0.2s"
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "10px", fontWeight: 800, color: isSelected ? "#3b82f6" : isToday ? "#ec4899" : t.textMain }}>{day}</span>
+                    </div>
+                </div>
+            );
+        }
+        return days;
+    };
 
     const styles = (
         <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
             .admin-container { 
                 display: flex; 
                 min-height: 100vh; 
-                background-color: ${t.bg}; 
-                color: ${t.textMain};
-                font-family: 'Inter', sans-serif;
+                background-color: #f8fafc; 
+                color: #0f172a;
+                font-family: 'Figtree', sans-serif;
                 -webkit-font-smoothing: antialiased;
-                transition: all 0.3s ease;
             }
             .sidebar {
-                width: 250px;
-                background-color: ${t.sidebar};
-                color: ${t.textSub};
+                width: 260px;
+                background-color: #ffffff;
+                color: #64748b;
                 display: flex;
                 flex-direction: column;
                 position: fixed;
@@ -924,79 +1188,95 @@ function OrganiserPanel() {
                 left: 0;
                 top: 0;
                 z-index: 100;
-                border-right: 1px solid ${t.sidebarBorder};
-                transition: transform 0.3s ease, background-color 0.3s ease;
+                border-right: 1px solid #e2e8f0;
+                box-shadow: 20px 0 50px rgba(226, 232, 240, 0.4);
             }
             .sidebar-logo {
-                padding: 24px 20px;
+                padding: 32px 24px;
                 display: flex;
                 align-items: center;
                 gap: 12px;
+                border-bottom: 1px solid #f8fafc;
             }
             .sidebar-category {
-                padding: 24px 20px 8px;
-                font-size: 11px;
-                font-weight: 800;
+                padding: 32px 24px 12px;
+                font-size: 10px;
+                font-weight: 900;
                 text-transform: uppercase;
-                letter-spacing: 1px;
-                color: ${theme === 'dark' ? '#4b5563' : '#9ca3af'};
+                letter-spacing: 0.2em;
+                color: #94a3b8;
             }
             .sidebar-item {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 12px 16px;
+                padding: 14px 20px;
                 margin: 4px 12px;
                 cursor: pointer;
-                font-size: 14px;
-                font-weight: 500;
-                color: ${t.textSub};
-                transition: all 0.2s;
+                font-size: 13px;
+                font-weight: 600;
+                color: #64748b;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 border: none;
                 background: none;
                 text-align: left;
-                border-radius: 12px;
+                border-radius: 16px;
+                letter-spacing: -0.01em;
             }
             .sidebar-item:hover {
-                background-color: ${theme === 'light' ? '#f1f5f9' : 'rgba(255,255,255,0.05)'};
-                color: ${t.textMain};
+                background-color: #f8fafc;
+                color: #0f172a;
+                transform: translateX(4px);
             }
             .sidebar-item.active {
-                background-color: #3b82f6!important;
-                color: #fff!important;
-                font-weight: 700;
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                background-color: #0f172a!important;
+                color: #ffffff!important;
+                font-weight: 800;
+                box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
             }
             .sidebar-dropdown-item {
                 display: flex;
                 align-items: center;
-                padding: 10px 16px 10px 48px;
-                font-size: 13px;
-                color: ${t.textSub};
-                transition: all 0.2s;
+                padding: 12px 20px 12px 52px;
+                font-size: 12px;
+                font-weight: 700;
+                color: #64748b;
+                transition: all 0.3s;
                 border: none;
                 background: none;
                 width: 100%;
                 text-align: left;
                 cursor: pointer;
-                position: relative;
+                border-radius: 12px;
+                margin: 2px 12px;
+                width: calc(100% - 24px);
+            }
+            .sidebar-dropdown-item:hover {
+                color: #ec4899;
+                background-color: #fff1f2;
+            }
+            .sidebar-dropdown-item.active {
+                color: #ec4899;
+                font-weight: 800;
             }
             .main-content {
-                margin-left: 250px;
+                margin-left: 260px;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 min-width: 0;
                 position: relative;
+                background-color: #f8fafc;
             }
             .top-header {
-                height: 70px;
-                background-color: ${t.header};
-                border-bottom: 1px solid ${t.border};
+                height: 80px;
+                background-color: rgba(255, 255, 255, 0.8);
+                backdrop-filter: blur(20px);
+                border-bottom: 1px solid #e2e8f0;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 0 24px;
+                padding: 0 40px;
                 position: sticky;
                 top: 0;
                 z-index: 50;
@@ -1004,25 +1284,33 @@ function OrganiserPanel() {
             .top-header-search {
                 display: flex;
                 align-items: center;
-                background-color: ${theme === 'dark' ? '#1f2937' : '#f3f4f6'};
-                border-radius: 8px;
-                padding: 8px 16px;
-                width: 300px;
+                background-color: #f1f5f9;
+                border-radius: 16px;
+                padding: 10px 20px;
+                width: 320px;
                 gap: 12px;
+                border: 1px solid #e2e8f0;
+                transition: all 0.3s;
+            }
+            .top-header-search:focus-within {
+                border-color: #ec4899;
+                background-color: #ffffff;
+                box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.05);
             }
             .top-header-search input {
                 background: none;
                 border: none;
                 outline: none;
-                color: ${t.textMain};
-                font-size: 14px;
+                color: #0f172a;
+                font-size: 13px;
+                font-weight: 600;
                 width: 100%;
             }
             .dashboard-overview-grid {
                 display: grid;
                 grid-template-columns: repeat(6, 1fr);
-                gap: 16px;
-                margin-bottom: 24px;
+                gap: 20px;
+                margin-bottom: 32px;
             }
             @media (max-width: 1400px) {
                 .dashboard-overview-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1031,118 +1319,129 @@ function OrganiserPanel() {
                 .dashboard-overview-grid { grid-template-columns: repeat(2, 1fr); }
             }
             .overview-card {
-                background-color: ${t.cardBg};
-                padding: 24px 16px;
-                border-radius: 16px;
-                border: 1px solid ${t.border};
+                background-color: #ffffff;
+                padding: 28px 20px;
+                border-radius: 24px;
+                border: 1px solid #e2e8f0;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 text-align: center;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
             .overview-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 12px 24px -10px rgba(0,0,0,0.5);
-                border-color: #3b82f6;
+                transform: translateY(-8px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                border-color: #ec489950;
             }
             .overview-card-icon {
-                width: 48px;
-                height: 48px;
-                border-radius: 12px;
+                width: 54px;
+                height: 54px;
+                border-radius: 18px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 16px;
+                margin-bottom: 20px;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
             }
             .welcome-banner {
-                background-color: #111d2c;
-                border-radius: 16px;
-                padding: 24px;
-                margin-bottom: 24px;
+                background-color: #ffffff;
+                border-radius: 28px;
+                padding: 32px;
+                margin-bottom: 32px;
                 display: flex;
                 align-items: center;
-                gap: 20px;
-                border: 1px solid #1e293b;
+                gap: 24px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+                position: relative;
+                overflow: hidden;
+            }
+            .welcome-banner::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 200px;
+                height: 200px;
+                background: linear-gradient(135deg, #ec489910 0%, #3b82f610 100%);
+                border-radius: 100px;
+                margin-top: -100px;
+                margin-right: -100px;
             }
             .welcome-avatar {
-                width: 64px;
-                height: 64px;
-                border-radius: 50%;
-                border: 2px solid #3b82f6;
+                width: 72px;
+                height: 72px;
+                border-radius: 20px;
+                border: 3px solid #f8fafc;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             }
             .welcome-text h2 {
                 margin: 0;
-                font-size: 20px;
-                font-weight: 700;
-                color: #fff;
+                font-size: 24px;
+                font-weight: 900;
+                color: #0f172a;
+                letter-spacing: -0.03em;
+                font-style: italic;
+                text-transform: uppercase;
             }
             .welcome-text p {
-                margin: 4px 0 0;
-                font-size: 14px;
+                margin: 6px 0 0;
+                font-size: 11px;
+                font-weight: 800;
                 color: #94a3b8;
+                text-transform: uppercase;
+                letter-spacing: 0.2em;
             }
             .chart-card {
-                background-color: ${t.cardBg};
-                border-radius: 16px;
-                padding: 24px;
-                border: 1px solid ${t.border};
-            }
-            .sidebar-dropdown-item {
-                display: flex;
-                align-items: center;
-                padding: 10px 16px 10px 52px;
-                font-size: 13px;
-                color: ${t.textSub};
-                transition: all 0.2s;
-                border: none;
-                background: none;
-                width: 100%;
-                text-align: left;
-                cursor: pointer;
-                position: relative;
-            }
-            .sidebar-dropdown-item:hover {
-                color: #3b82f6;
-            }
-            .sidebar-dropdown-item.active {
-                color: #3b82f6;
-                font-weight: 600;
+                background-color: #ffffff;
+                border-radius: 24px;
+                padding: 32px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
             .breadcrumb {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                color: ${t.textSub};
-                margin-bottom: 24px;
+                gap: 12px;
+                font-size: 10px;
+                font-weight: 900;
+                color: #94a3b8;
+                margin-bottom: 32px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
             }
             .breadcrumb-item {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 12px;
             }
             .breadcrumb-item:after {
-                content: '>';
-                margin-left: 8px;
-                opacity: 0.5;
+                content: '/';
+                margin-left: 4px;
+                opacity: 0.3;
             }
             .breadcrumb-item:last-child:after {
                 content: none;
             }
+            .breadcrumb-item:last-child {
+                color: #ec4899;
+            }
             @media (max-width: 1024px) {
-                .sidebar { transform: translateX(-100%); }
+                .sidebar { transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                .sidebar.open { transform: translateX(0); }
                 .main-content { margin-left: 0; }
             }
             .mobile-header {
                 display: none;
-                height: 60px;
-                background-color: ${t.header};
-                border-bottom: 1px solid ${t.border};
+                height: 70px;
+                background-color: #ffffff;
+                border-bottom: 1px solid #e2e8f0;
                 align-items: center;
                 justify-content: space-between;
-                padding: 0 16px;
+                padding: 0 24px;
                 position: sticky;
                 top: 0;
                 z-index: 90;
@@ -1150,91 +1449,87 @@ function OrganiserPanel() {
             .bottom-nav {
                 display: none;
                 position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
+                bottom: 24px;
+                left: 24px;
+                right: 24px;
                 height: 70px;
-                background-color: ${t.header};
-                border-top: 1px solid ${t.border};
+                background-color: rgba(15, 23, 42, 0.95);
+                backdrop-filter: blur(10px);
+                border-radius: 24px;
                 display: flex;
                 justify-content: space-around;
                 align-items: center;
                 z-index: 1000;
-                padding-bottom: env(safe-area-inset-bottom);
-                backdrop-filter: blur(10px);
-                background-color: ${theme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)'};
+                padding: 0 12px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
             }
             .bottom-nav-item {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 gap: 4px;
-                color: ${t.textSub};
-                font-size: 11px;
-                font-weight: 600;
+                color: #94a3b8;
+                font-size: 10px;
+                font-weight: 800;
                 text-decoration: none;
                 border: none;
                 background: none;
                 cursor: pointer;
-                transition: all 0.2s;
-                padding: 8px;
-                border-radius: 12px;
+                transition: all 0.3s;
+                padding: 10px;
+                border-radius: 16px;
+                text-transform: uppercase;
             }
             .bottom-nav-item.active {
-                color: #3b82f6;
+                color: #ffffff;
+                background-color: #ec4899;
             }
-            .pwa-scanner-grid {
-                display: grid; 
-                grid-template-columns: 1fr 400px; 
-                gap: 32px; 
-                align-items: start; 
-                margin-bottom: 32px;
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
             }
-            @media (max-width: 768px) {
-                .mobile-header { display: flex; }
-                .bottom-nav { display: flex; }
-                .main-content { padding-bottom: 80px; }
-                .pwa-scanner-grid { 
-                    grid-template-columns: 1fr; 
-                    gap: 20px;
-                }
-                .manual-validation-box {
-                    flex-direction: column;
-                }
-                .manual-validation-box button {
-                    width: 100%;
-                    padding: 16px!important;
-                }
-                .scan-table-desktop { display: none; }
-                .scan-cards-mobile { display: flex; flex-direction: column; gap: 12px; }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: transparent;
             }
-            @media (min-width: 769px) {
-                .scan-cards-mobile { display: none; }
-                .scan-table-desktop { display: block; }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #e2e8f0;
+                border-radius: 10px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #cbd5e1;
+            }
+            @keyframes dropdownFade {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .dropdown-hover:hover {
+                background-color: #f1f5f9 !format;
+            }
+            .dropdown-hover-red:hover {
+                background-color: #fef2f2 !format;
             }
         `}</style>
     );
 
     // MFA View Component
     const renderMFAView = () => (
-        <div style={{ maxWidth: "450px", margin: "100px auto", textAlign: "center", backgroundColor: t.cardBg, padding: "40px", borderRadius: "20px", border: `1px solid ${t.border}`, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
-            <div style={{ backgroundColor: "#3b82f615", width: "80px", height: "80px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-                <Shield size={40} color="#3b82f6" />
+        <div style={{ maxWidth: "480px", margin: "100px auto", textAlign: "center", backgroundColor: "#ffffff", padding: "48px", borderRadius: "32px", border: "1px solid #e2e8f0", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
+            <div style={{ backgroundColor: "#fdf2f8", width: "80px", height: "80px", borderRadius: "24px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
+                <Shield size={40} color="#ec4899" />
             </div>
-            <h2 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "12px", color: t.textMain }}>Two-Factor Authentication</h2>
-            <p style={{ color: t.textSub, fontSize: "14px", lineHeight: "1.6", marginBottom: "32px" }}>For your account security, please setup MFA using your preferred Authenticator App.</p>
+            <h2 style={{ fontSize: "28px", fontWeight: 900, marginBottom: "12px", color: "#0f172a", letterSpacing: "-0.03em", fontStyle: "italic", textTransform: "uppercase" }}>Security First</h2>
+            <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600, lineHeight: "1.6", marginBottom: "40px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Setup Two-Factor Authentication to protect your account.</p>
 
-            <div style={{ backgroundColor: "#fff", padding: "16px", borderRadius: "12px", width: "200px", height: "200px", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${t.border}` }}>
-                <div style={{ width: "160px", height: "160px", backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=BookMyTicketOrganizerMFA')", backgroundSize: "cover" }}></div>
+            <div style={{ backgroundColor: "#ffffff", padding: "20px", borderRadius: "24px", width: "220px", height: "220px", margin: "0 auto 32px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }}>
+                <div style={{ width: "180px", height: "180px", backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=BookMyTicketOrganizerMFA')", backgroundSize: "cover" }}></div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <input type="text" placeholder="Enter 6-digit MFA Code" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, textAlign: "center", letterSpacing: "4px", fontWeight: "bold" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <input type="text" placeholder="ENTER 6-DIGIT CODE" style={{ width: "100%", padding: "16px", borderRadius: "16px", border: "2px solid #e2e8f0", backgroundColor: "#f8fafc", color: "#0f172a", textAlign: "center", letterSpacing: "0.3em", fontWeight: "900", fontSize: "18px", outline: "none", transition: "all 0.3s" }} onFocus={(e) => e.target.style.borderColor = "#ec4899"} onBlur={(e) => e.target.style.borderColor = "#e2e8f0"} />
                 <button
                     onClick={() => setCurrentStage("kyc_start")}
-                    style={{ width: "100%", padding: "14px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                    style={{ width: "100%", padding: "18px", borderRadius: "18px", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.1em", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}
                 >
-                    Verify & Continue <ArrowRight size={18} />
+                    Verify & Continue <ArrowRight size={20} />
                 </button>
             </div>
         </div>
@@ -1242,51 +1537,62 @@ function OrganiserPanel() {
 
     // KYC Start View (Banner & Features)
     const renderKYCStartView = () => (
-        <div style={{ maxWidth: "1000px", margin: "0 auto", backgroundColor: t.cardBg, borderRadius: "20px", border: `1px solid ${t.border}`, overflow: "hidden" }}>
-            <div style={{ backgroundColor: "#1e1b4b", padding: "30px 40px", color: "#fff", position: "relative" }}>
-                <div style={{ position: "absolute", left: "-20px", top: "20%" }}><img src="data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20L20 0Z' fill='white' fill-opacity='0.1'/%3E%3C/svg%3E" alt="" /></div>
-                <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 900, letterSpacing: "1px" }}>START ONBOARDING</h1>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "32px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
+            <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", padding: "48px 60px", color: "#fff", position: "relative" }}>
+                <div style={{ position: "absolute", right: "40px", top: "50%", transform: "translateY(-50%)", opacity: 0.1 }}><Shield size={160} /></div>
+                <span style={{ backgroundColor: "#ec4899", color: "#fff", padding: "6px 16px", borderRadius: "100px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Verification Hub</span>
+                <h1 style={{ margin: "16px 0 0", fontSize: "42px", fontWeight: 900, letterSpacing: "-0.04em", fontStyle: "italic", textTransform: "uppercase" }}>KYC PENDING</h1>
+                <p style={{ fontSize: "16px", color: "#94a3b8", fontWeight: 600, marginTop: "8px", maxWidth: "600px" }}>Secure your account and unlock professional event hosting features by completing your identity verification.</p>
             </div>
 
-            <div style={{ display: "flex", padding: "24px 40px", gap: "40px", alignItems: "center" }}>
+            <div style={{ display: "flex", padding: "60px", gap: "60px", alignItems: "center" }}>
                 <div style={{ flex: 1 }}>
-                    <div style={{ backgroundColor: "#f1f5f9", padding: "24px", borderRadius: "20px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                        <Shield size={80} color="#3b82f6" opacity={0.8} />
+                    <div style={{ backgroundColor: "#f8fafc", padding: "48px", borderRadius: "32px", display: "flex", justifyContent: "center", alignItems: "center", border: "1px solid #e2e8f0", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
+                        <ShieldCheck size={120} color="#ec4899" strokeWidth={1} />
                     </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                    <span style={{ backgroundColor: "#22c55e", color: "#fff", padding: "4px 12px", borderRadius: "16px", fontSize: "12px", fontWeight: 700 }}>Takes 3 mins</span>
-                    <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginTop: "16px", marginBottom: "8px" }}>Host events with confidence</h2>
-                    <p style={{ color: t.textSub, fontSize: "14px", marginBottom: "24px" }}>We prioritize security, trust, and seamless event experiences</p>
+                <div style={{ flex: 1.2 }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#f0fdf4", color: "#16a34a", padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, marginBottom: "24px" }}>
+                        <Clock size={16} /> Fast Track: Takes ~3 mins
+                    </div>
+                    <h2 style={{ fontSize: "32px", fontWeight: 900, color: "#0f172a", marginBottom: "16px", letterSpacing: "-0.03em" }}>Scale Your Event Business</h2>
+                    <p style={{ color: "#64748b", fontSize: "15px", fontWeight: 600, lineHeight: "1.7", marginBottom: "32px" }}>Join our community of verified professional organisers. We prioritize security and trust for all stakeholders.</p>
 
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "16px" }}>Why KYC Verification?</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
-                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                    <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "20px" }}>Benefits of Verification</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "40px" }}>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                            <div style={{ backgroundColor: "#fdf2f8", borderRadius: "12px", padding: "10px", color: "#ec4899" }}><Zap size={20} /></div>
                             <div>
-                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Seamless Event Hosting</div>
-                                <div style={{ fontSize: "12px", color: t.textSub }}>Verified hosts enjoy faster and hassle-free event access.</div>
+                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Unlimited Hosting</div>
+                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>No event limits</div>
                             </div>
                         </div>
-                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                            <div style={{ backgroundColor: "#eff6ff", borderRadius: "12px", padding: "10px", color: "#3b82f6" }}><Wallet size={20} /></div>
                             <div>
-                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Regulatory Compliance</div>
-                                <div style={{ fontSize: "12px", color: t.textSub }}>Ensures adherence to industry standards and policies.</div>
+                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Smooth Payouts</div>
+                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>Weekly settlements</div>
                             </div>
                         </div>
-                        <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                            <div style={{ backgroundColor: "#22c55e", borderRadius: "50%", padding: "4px", color: "#fff" }}><Check size={14} /></div>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                            <div style={{ backgroundColor: "#f0fdf4", borderRadius: "12px", padding: "10px", color: "#22c55e" }}><Shield size={20} /></div>
                             <div>
-                                <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>Seamless Payouts</div>
-                                <div style={{ fontSize: "12px", color: t.textSub }}>Ensure smooth and timely settlements.</div>
+                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Trust Shield</div>
+                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>Verified badge</div>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                            <div style={{ backgroundColor: "#fff7ed", borderRadius: "12px", padding: "10px", color: "#f97316" }}><Activity size={20} /></div>
+                            <div>
+                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Priority Ops</div>
+                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>24/7 Support</div>
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                        <button onClick={() => setCurrentStage("kyc_wizard")} style={{ backgroundColor: "#1e1b4b", color: "#fff", padding: "12px 24px", borderRadius: "24px", fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>Get Started <ArrowRight size={16} /></button>
-                        <a href="#" style={{ color: t.textMain, fontSize: "14px", textDecoration: "none", display: "flex", alignItems: "center", gap: "6px" }}>Contact Us <ExternalLink size={14} /></a>
+                    <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+                        <button onClick={() => setCurrentStage("kyc_wizard")} style={{ backgroundColor: "#0f172a", color: "#fff", padding: "18px 36px", borderRadius: "20px", fontWeight: 800, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.3s", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}>GET STARTED <ArrowRight size={20} /></button>
+                        <a href="#" style={{ color: "#0f172a", fontSize: "14px", fontWeight: 800, textDecoration: "none", display: "flex", alignItems: "center", gap: "8px", borderBottom: "2px solid #e2e8f0", paddingBottom: "2px" }}>Learn More <ExternalLink size={16} /></a>
                     </div>
                 </div>
             </div>
@@ -1295,53 +1601,52 @@ function OrganiserPanel() {
 
     // KYC Wizard View (3 steps)
     const renderKYCWizardView = () => (
-        <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", gap: "40px", backgroundColor: t.cardBg, borderRadius: "20px", border: `1px solid ${t.border}`, padding: "40px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", gap: "48px", backgroundColor: "#ffffff", borderRadius: "40px", border: "1px solid #e2e8f0", padding: "48px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
 
             {/* Left Sidebar Tracker */}
-            <div style={{ width: "240px", position: "relative", flexShrink: 0 }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 700, color: t.textMain, marginBottom: "32px", margin: 0, paddingLeft: "10px" }}>Organizer KYC</h2>
+            <div style={{ width: "280px", position: "relative", flexShrink: 0 }}>
+                <h2 style={{ fontSize: "11px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "40px", paddingLeft: "10px" }}>Verification Progress</h2>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "40px", position: "relative" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "48px", position: "relative" }}>
                     {[
-                        { num: 1, label: "Organization Details" },
-                        { num: 2, label: "Upload Documents" },
-                        { num: 3, label: "Agreement" }
+                        { num: 1, label: "Business Profile" },
+                        { num: 2, label: "Digital Assets" },
+                        { num: 3, label: "Legal Consensus" }
                     ].map((step, idx) => {
                         const isActive = kycStep === step.num;
                         const isCompleted = kycStep > step.num;
                         return (
-                            <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "16px", zIndex: 2 }}>
+                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "20px", zIndex: 2 }}>
                                 <div style={{
-                                    width: "36px",
-                                    height: "36px",
-                                    borderRadius: "50%",
+                                    width: "44px",
+                                    height: "44px",
+                                    borderRadius: "16px",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     flexShrink: 0,
-                                    fontWeight: 700,
-                                    fontSize: "14px",
-                                    marginTop: "2px",
-                                    backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#fff" : "#fff"),
-                                    backgroundImage: isActive ? ACCENT_GRADIENT : "none",
-                                    color: isActive ? "#fff" : (isCompleted ? "#fff" : "#94a3b8"),
-                                    border: isCompleted ? "none" : (isActive ? "none" : `2px solid #e2e8f0`),
-                                    boxShadow: isActive ? "0 4px 12px rgba(244, 63, 94, 0.3)" : "none"
+                                    fontWeight: 900,
+                                    fontSize: "15px",
+                                    backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#0f172a" : "#f8fafc"),
+                                    color: isActive || isCompleted ? "#fff" : "#94a3b8",
+                                    border: isActive || isCompleted ? "none" : "2px solid #f1f5f9",
+                                    boxShadow: isActive ? "0 10px 15px -3px rgba(15, 23, 42, 0.2)" : "none",
+                                    transition: "all 0.4s ease"
                                 }}>
-                                    {isCompleted ? <Check size={18} /> : step.num}
+                                    {isCompleted ? <Check size={22} strokeWidth={3} /> : step.num}
                                 </div>
-                                <span style={{ fontSize: "13px", fontWeight: 600, color: isActive ? "#0f172a" : (isCompleted ? "#0f172a" : "#94a3b8") }}>{step.label}</span>
+                                <span style={{ fontSize: "13px", fontWeight: 800, color: isActive || isCompleted ? "#0f172a" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.label}</span>
                             </div>
                         );
                     })}
 
-                    <div style={{ position: "absolute", left: "18px", top: "20px", bottom: "20px", width: "2px", backgroundColor: "#e2e8f0", zIndex: 0 }}></div>
-                    <div style={{ position: "absolute", left: "18px", top: "20px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: ACCENT_PINK, zIndex: 1, transition: "height 0.3s ease" }}></div>
+                    <div style={{ position: "absolute", left: "21px", top: "24px", bottom: "24px", width: "2px", backgroundColor: "#f1f5f9", zIndex: 0 }}></div>
+                    <div style={{ position: "absolute", left: "21px", top: "24px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: "#ec4899", zIndex: 1, transition: "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}></div>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div style={{ flex: 1, borderLeft: `1px solid ${t.border}`, paddingLeft: "40px" }}>
+            <div style={{ flex: 1, borderLeft: "1px solid #f1f5f9", paddingLeft: "48px" }}>
                 {kycStep === 1 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
                         {/* Organisation Details */}
@@ -1418,13 +1723,13 @@ function OrganiserPanel() {
                         </div>
 
                         {/* Contact Person Details */}
-                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
-                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Contact Person Details</h3>
+                        <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "24px", border: "1px solid #e2e8f0", boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
+                            <div style={{ padding: "0 0 16px", borderBottom: "4px solid #ec4899", display: "inline-block", marginBottom: "32px" }}>
+                                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.02em", fontStyle: "italic" }}>Contact Delegate</h3>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Full Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Full Contact Name <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.fullName} 
@@ -1432,12 +1737,21 @@ function OrganiserPanel() {
                                             setKycFormData({ ...kycFormData, fullName: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'fullName'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('fullName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('fullName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('fullName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Full Name is required</p>}
+                                    {kycErrors.includes('fullName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Contact name is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Official Designation</label>
+                                    <input 
+                                        type="text" 
+                                        value={kycFormData.designation} 
+                                        onChange={e => setKycFormData({ ...kycFormData, designation: e.target.value })} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Work Email <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.email} 
@@ -1445,12 +1759,12 @@ function OrganiserPanel() {
                                             setKycFormData({ ...kycFormData, email: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'email'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('email') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('email') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('email') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Email is required</p>}
+                                    {kycErrors.includes('email') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Email is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Mobile Number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Primary Mobile <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.mobile} 
@@ -1458,21 +1772,21 @@ function OrganiserPanel() {
                                             setKycFormData({ ...kycFormData, mobile: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'mobile'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('mobile') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('mobile') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('mobile') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Mobile is required</p>}
+                                    {kycErrors.includes('mobile') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Mobile is required</p>}
                                 </div>
                             </div>
                         </div>
 
                         {/* Bank Details */}
-                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
-                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Bank details</h3>
+                        <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "24px", border: "1px solid #e2e8f0", boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
+                            <div style={{ padding: "0 0 16px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "32px" }}>
+                                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.02em", fontStyle: "italic" }}>Financial Settlement</h3>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Beneficiary Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Payee Name <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.beneficiaryName} 
@@ -1480,29 +1794,29 @@ function OrganiserPanel() {
                                             setKycFormData({ ...kycFormData, beneficiaryName: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'beneficiaryName'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('beneficiaryName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('beneficiaryName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('beneficiaryName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Beneficiary Name is required</p>}
+                                    {kycErrors.includes('beneficiaryName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Beneficiary Name is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Account Type <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Account Type <span style={{ color: "#ef4444" }}>*</span></label>
                                     <select 
                                         value={kycFormData.accountType} 
                                         onChange={e => {
                                             setKycFormData({ ...kycFormData, accountType: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'accountType'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('accountType') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }}
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('accountType') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }}
                                     >
                                         <option value="Savings account">Savings account</option>
                                         <option value="Current account">Current account</option>
                                         <option value="Salary account">Salary account</option>
                                         <option value="NRI account">NRI account</option>
                                     </select>
-                                    {kycErrors.includes('accountType') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Account Type is required</p>}
+                                    {kycErrors.includes('accountType') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Account Type is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Bank IFSC <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Official IFSC <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         placeholder="SBIN0001763" 
@@ -1511,64 +1825,49 @@ function OrganiserPanel() {
                                             handleIfscChange(e.target.value);
                                             setKycErrors(prev => prev.filter(f => f !== 'ifscCode'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('ifscCode') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('ifscCode') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
                                     {kycFormData.bankName && (
-                                        <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "8px", padding: "12px", backgroundColor: "#f0fdf4", borderRadius: "12px", border: "1.5px solid #dcfce7" }}>
-                                            <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                                        <div style={{ fontSize: "11px", color: "#16a34a", marginTop: "12px", padding: "16px", backgroundColor: "#f0fdf4", borderRadius: "16px", border: "1px solid #dcfce7" }}>
+                                            <div style={{ fontWeight: 900, display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", textTransform: "uppercase" }}>
                                                 <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }}></div>
                                                 {kycFormData.bankName} Verified
                                             </div>
                                             
                                             <div style={{ display: "grid", gap: "12px" }}>
                                                 <div>
-                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 700 }}>Confirm/Edit Branch Name</label>
+                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 900, textTransform: "uppercase" }}>Branch Access</label>
                                                     <input 
                                                         type="text" 
                                                         value={kycFormData.branchName} 
                                                         onChange={e => setKycFormData({ ...kycFormData, branchName: e.target.value })} 
-                                                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none" }}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 700 }}>Confirm/Edit Branch Address</label>
-                                                    <textarea 
-                                                        value={kycFormData.branchAddress} 
-                                                        onChange={e => setKycFormData({ ...kycFormData, branchAddress: e.target.value })} 
-                                                        style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none", minHeight: "60px", resize: "vertical" }}
+                                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none", fontWeight: 600 }}
                                                     />
                                                 </div>
                                             </div>
-                                            <p style={{ fontSize: "10px", color: "#166534", marginTop: "8px", fontStyle: "italic" }}>
-                                                * If the fetched details are incorrect, please update them manually.
-                                            </p>
                                         </div>
                                     )}
-                                    {kycErrors.includes('ifscCode') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>IFSC Code is required</p>}
+                                    {kycErrors.includes('ifscCode') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>IFSC Code is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Bank Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Banking Institution <span style={{ color: "#ef4444" }}>*</span></label>
                                     <select 
                                         value={kycFormData.bankName} 
                                         onChange={e => {
                                             setKycFormData({ ...kycFormData, bankName: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'bankName'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('bankName') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }}
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('bankName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }}
                                     >
                                         <option value="">Select Bank</option>
                                         {INDIAN_BANKS.map(bank => (
                                             <option key={bank} value={bank}>{bank}</option>
                                         ))}
-                                        {kycFormData.bankName && !INDIAN_BANKS.includes(kycFormData.bankName) && (
-                                            <option value={kycFormData.bankName}>{kycFormData.bankName}</option>
-                                        )}
                                     </select>
-                                    {kycErrors.includes('bankName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Bank Name is required</p>}
-                                    <p style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>Note: Automatically updated on valid IFSC, or select manually.</p>
+                                    {kycErrors.includes('bankName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Bank Name is required</p>}
                                 </div>
                                 <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Account Number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Account Number <span style={{ color: "#ef4444" }}>*</span></label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.accountNumber} 
@@ -1576,9 +1875,9 @@ function OrganiserPanel() {
                                             setKycFormData({ ...kycFormData, accountNumber: e.target.value });
                                             setKycErrors(prev => prev.filter(f => f !== 'accountNumber'));
                                         }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('accountNumber') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('accountNumber') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('accountNumber') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Account Number is required</p>}
+                                    {kycErrors.includes('accountNumber') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Account Number is required</p>}
                                 </div>
                             </div>
                         </div>
@@ -1636,43 +1935,40 @@ function OrganiserPanel() {
                     <button
                         onClick={() => setKycStep(kycStep - 1)}
                         disabled={kycStep === 1}
-                        style={{ padding: "12px 32px", borderRadius: "100px", background: kycStep === 1 ? "#e2e8f0" : "linear-gradient(135deg, #94a3b8, #64748b)", color: "#fff", border: "none", fontWeight: 700, cursor: kycStep === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}
+                        style={{ padding: "16px 36px", borderRadius: "100px", background: kycStep === 1 ? "#f1f5f9" : "#ffffff", color: kycStep === 1 ? "#94a3b8" : "#0f172a", border: kycStep === 1 ? "none" : "2px solid #0f172a", fontWeight: 900, cursor: kycStep === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "all 0.3s ease", fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.1em" }}
                     >
-                        <ArrowLeft size={16} /> Prev
+                        <ArrowLeft size={18} strokeWidth={3} /> Return
                     </button>
                     <button
                         onClick={() => {
                             if (kycStep === 3) {
-                                if (!agreedToVendor) { alert("Please agree to the vendor agreement first."); return; }
+                                if (!agreedToVendor) { alert("Please agree to the terms first."); return; }
                                 if (organiserData?._id) {
-                                    submitKycMutation({
+                                    const kycPayload = {
                                         id: organiserData._id,
                                         kycDetails: {
-                                            category: kycFormData.category,
-                                            panNumber: kycFormData.panCard,
-                                            socialMediaLink: kycFormData.socialLink,
-                                            hasITR: kycFormData.itr === "Yes",
-                                            fullName: kycFormData.fullName,
+                                            category: organiserData.category || kycFormData.category,
                                             email: kycFormData.email,
                                             mobile: kycFormData.mobile,
-                                            alternateNumber: kycFormData.altContact,
-                                            designation: kycFormData.designation,
-                                            city: kycFormData.city,
                                             address: kycFormData.address,
-                                            websiteLink: kycFormData.website,
-                                            hasOSTIN: kycFormData.ostin === "Yes",
-                                            gstin: kycFormData.gstin,
-                                            panFile: kycFiles.pan || "",
-                                            chequeFile: kycFiles.cheque || "",
-                                            aadharFile: kycFiles.aadhar || "",
                                             beneficiaryName: kycFormData.beneficiaryName,
                                             accountType: kycFormData.accountType,
                                             bankName: kycFormData.bankName,
                                             accountNumber: kycFormData.accountNumber,
                                             ifscCode: kycFormData.ifscCode,
-                                            agreementAccepted: agreedToVendor
+                                            agreementAccepted: agreedToVendor,
+                                            panNumber: kycFormData.panCard,
+                                            fullName: kycFormData.fullName,
+                                            designation: kycFormData.designation,
+                                            hasOSTIN: kycFormData.ostin === "Yes",
+                                            gstin: kycFormData.gstin,
+                                            panFile: kycFiles.pan || "",
+                                            chequeFile: kycFiles.cheque || "",
+                                            aadharFile: kycFiles.aadhar || "",
                                         }
-                                    }).then(() => {
+                                    };
+                                    
+                                    submitKycMutation(kycPayload).then(() => {
                                         setCurrentStage("pending");
                                         setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
                                     }).catch(err => {
@@ -1683,26 +1979,22 @@ function OrganiserPanel() {
                                     alert("Organiser account not found. Please try again later.");
                                 }
                             } else {
+                                // Validation logic per step
                                 if (kycStep === 1) {
                                     const required = ['name', 'panCard', 'address', 'fullName', 'email', 'mobile', 'beneficiaryName', 'bankName', 'accountNumber', 'ifscCode'];
                                     const missing = required.filter(f => !kycFormData[f]);
                                     if (missing.length > 0) {
                                         setKycErrors(missing);
-                                        // Scroll to first error? For now just visual hint.
                                         return;
                                     }
-                                    if (kycFormData.ostin === "Yes" && !kycFormData.gstin) {
-                                        setKycErrors(['gstin']);
-                                        return;
-                                    }
-                                    setKycErrors([]);
                                 }
+                                setKycErrors([]);
                                 setKycStep(kycStep + 1);
                             }
                         }}
-                        style={{ padding: "12px 32px", borderRadius: "100px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease", boxShadow: "0 14px 28px rgba(236,72,153,0.18)" }}
+                        style={{ padding: "16px 48px", borderRadius: "100px", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", color: "#fff", border: "none", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "all 0.3s ease", boxShadow: "0 15px 30px rgba(15, 23, 42, 0.2)", fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.1em" }}
                     >
-                        {kycStep === 3 ? "Submit" : "Next"} <ArrowRight size={16} />
+                        {kycStep === 3 ? "Submit Protocol" : "Proceed"} <ArrowRight size={18} strokeWidth={3} />
                     </button>
                 </div>
 
@@ -1731,7 +2023,7 @@ function OrganiserPanel() {
                         <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: t.bg, border: `2px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.textSub }}>
                             <CheckCircle size={16} />
                         </div>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>KYC Submitted</span>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: t.textMain }}>KYC Verified</span>
                     </div>
 
                     <div style={{ flex: 1, height: "2px", backgroundColor: t.border, margin: "0 24px" }}></div>
@@ -1810,30 +2102,21 @@ function OrganiserPanel() {
     const renderDashboardView = () => {
         const renderTabContent = () => {
             const renderToggle = (label, field, options) => (
-                <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
-                    <div style={{ display: "flex", borderRadius: "4px", overflow: "hidden" }}>
-                        {options.map((opt, idx) => {
+                <div className="mb-6">
+                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
+                        {options.map((opt) => {
                             const isActive = postEvent[field] === opt.value;
                             return (
                                 <button
                                     key={opt.value}
                                     type="button"
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
-                                    style={{
-                                        flex: 1,
-                                        padding: "10px",
-                                        border: isActive ? "1px solid #3b82f6" : `1px solid ${t.border}`,
-                                        borderLeft: idx !== 0 && !isActive ? "none" : (isActive ? "1px solid #3b82f6" : `1px solid ${t.border}`),
-                                        backgroundColor: isActive ? "#eff6ff" : t.bg,
-                                        color: isActive ? "#3b82f6" : "#9ca3af",
-                                        fontWeight: 500,
-                                        fontSize: "13px",
-                                        cursor: "pointer",
-                                        transition: "all 0.2s ease",
-                                        outline: "none",
-                                        zIndex: isActive ? 1 : 0
-                                    }}
+                                    className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                        isActive 
+                                            ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100' 
+                                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
+                                    }`}
                                 >
                                     {opt.label}
                                 </button>
@@ -1854,92 +2137,98 @@ function OrganiserPanel() {
                     for (const cat of categories) {
                         const catRows = Math.max(0, Math.floor(Number(cat.rows) || 0));
                         if (rIdx < currentRowSum + catRows) {
-                            let color = "#3b82f6";
-                            if (cat.name === "VIP") color = "#f59e0b";
-                            else if (cat.name === "Gold" || cat.name === "Premium") color = "#6366f1";
-                            else if (cat.name === "Silver") color = "#22c55e";
+                            let color = "#22c55e"; // default green
+                            if (cat.name === "VIP") color = "#f59e0b"; // gold
+                            else if (cat.name === "Gold" || cat.name === "Premium") color = "#6366f1"; // purple
                             return { ...cat, color };
                         }
                         currentRowSum += catRows;
                     }
-                    return { name: "General", color: "#94a3b8", price: 0 };
+                    return { name: "General", color: "#22c55e", price: 0 };
                 };
 
                 const totalCalculatedRows = categories.reduce((sum, c) => sum + Math.max(0, Math.floor(Number(c.rows) || 0)), 0);
                 const effectiveRows = Math.min(100, isPreview ? totalCalculatedRows : (rows || totalCalculatedRows));
                 const effectiveCols = Math.min(100, cols);
+                
+                let currentCategoryName = null;
 
                 return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', padding: isPreview ? "20px" : "40px", borderRadius: "16px", overflowX: "auto", border: isPreview ? `1px dashed ${t.border}` : "none" }}>
-                        {/* Stage/Entrance Indicator */}
-                        {(layout === "stage" || layout === "rate") && (
-                            <div style={{ marginBottom: "30px", width: "60%", textAlign: "center" }}>
-                                <div style={{ height: "6px", backgroundColor: "#3b82f6", borderRadius: "3px", marginBottom: "8px", boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)" }} />
-                                <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "3px", color: t.textSub, margin: 0, fontWeight: 800 }}>STAGE / PERFORMANCE AREA</p>
-                            </div>
-                        )}
-                        {layout === "ground" && (
-                            <div style={{ marginBottom: "20px", padding: "8px 24px", border: `2px dashed ${t.border}`, borderRadius: "100px", color: t.textSub, fontSize: "10px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>
-                                ENTRANCE / EXIT
-                            </div>
-                        )}
+                    <div className={`flex flex-col items-center bg-white ${isPreview ? "p-4" : "p-8"} rounded-3xl overflow-x-auto min-w-[600px] w-full border ${isPreview ? 'border-dashed border-slate-200' : 'border-slate-100 shadow-sm'}`}>
+                        <div className="flex flex-col gap-2.5 w-full max-w-5xl mx-auto pt-4">
+                            {[...Array(effectiveRows)].map((_, rIdx) => {
+                                const rowLabel = ROW_LABELS[rIdx] || `R${rIdx + 1}`;
+                                const cat = getRowCategory(rIdx);
+                                const isNewCategory = cat.name !== currentCategoryName;
+                                if (isNewCategory) currentCategoryName = cat.name;
 
-                        {[...Array(effectiveRows)].map((_, rIdx) => {
-                            const rowLabel = ROW_LABELS[rIdx] || `R${rIdx + 1}`;
-                            const cat = getRowCategory(rIdx);
-
-                            return (
-                                <div key={rIdx} style={{ display: "flex", gap: isPreview ? "6px" : "10px", alignItems: "center", marginBottom: layout === "ground" && (rIdx + 1) % 3 === 0 ? "15px" : "0" }}>
-                                    <span style={{ width: isPreview ? "45px" : "60px", textAlign: "right", fontWeight: 800, fontSize: "10px", color: cat.color, marginRight: "8px", display: "flex", flexDirection: "column" }}>
-                                        <span>{rowLabel}</span>
-                                        {layout === "rate" && <span style={{ fontSize: "8px", opacity: 0.7 }}>₹{cat.price}</span>}
-                                    </span>
-                                    {[...Array(effectiveCols)].map((_, cIdx) => {
-                                        const seatId = `${rowLabel}${cIdx + 1}`;
-                                        const isBooked = !isPreview && mockBookedSeats[eventData.id]?.has(seatId);
-                                        const isAisle = layout === "ground" && (cIdx + 1) % 4 === 1 && cIdx !== 0;
-
-                                        return (
-                                            <div key={cIdx} style={{ display: "flex", alignItems: "center" }}>
-                                                {isAisle && <div style={{ width: isPreview ? "12px" : "20px" }} />}
-                                                <div title={`${seatId} (${cat.name} - ₹${cat.price})`} style={{
-                                                    width: isPreview ? "18px" : "28px",
-                                                    height: isPreview ? "18px" : "28px",
-                                                    borderRadius: "4px 4px 3px 3px",
-                                                    backgroundColor: isBooked ? "#f84464" : `${cat.color}15`,
-                                                    border: `1.5px solid ${isBooked ? "#f84464" : cat.color}`,
-                                                    position: "relative",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    fontSize: isPreview ? "7px" : "9px",
-                                                    fontWeight: 800,
-                                                    color: isBooked ? "#fff" : cat.color
-                                                }}>
-                                                    <div style={{
-                                                        position: "absolute", top: "-3px", left: "3px", right: "3px", height: "3px",
-                                                        backgroundColor: isBooked ? "#f84464" : cat.color, borderRadius: "1px 1px 0 0", opacity: 0.6
-                                                    }} />
-                                                    {cIdx + 1}
+                                return (
+                                    <React.Fragment key={`row-wrap-${rIdx}`}>
+                                        {/* Category Price Divider */}
+                                        {isNewCategory && layout === "rate" && (
+                                            <div className="w-full flex items-center justify-center relative my-6">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                                                <div className="relative bg-white px-4 text-[11px] font-black tracking-widest text-slate-500 uppercase flex items-center gap-2">
+                                                    <span>₹{cat.price}</span>
+                                                    <span className="text-slate-900">{cat.name}</span>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )
-                        })}
+                                        )}
+                                        {/* Row */}
+                                        <div className={`flex items-center justify-center gap-1 ${layout === "ground" && (rIdx + 1) % 3 === 0 ? "mb-6" : "mb-1"}`}>
+                                            <div className="w-8 flex-shrink-0 text-right pr-4 font-bold text-[11px] text-slate-700 uppercase">{rowLabel}</div>
+                                            <div className="flex gap-2 justify-center">
+                                                {[...Array(effectiveCols)].map((_, cIdx) => {
+                                                    const seatId = `${rowLabel}${cIdx + 1}`;
+                                                    const isBooked = !isPreview && mockBookedSeats[eventData.id]?.has(seatId);
+                                                    const isAisle = layout === "ground" && (cIdx + 1) % 4 === 1 && cIdx !== 0;
 
+                                                    return (
+                                                        <React.Fragment key={`seat-${cIdx}`}>
+                                                            {isAisle && <div className="w-6" />}
+                                                            <div 
+                                                                title={`${seatId} (${cat.name} - ₹${cat.price})`} 
+                                                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all cursor-pointer shadow-sm ${
+                                                                    isBooked 
+                                                                        ? "bg-slate-200 text-transparent border-slate-200 shadow-none pointer-events-none" 
+                                                                        : "bg-white border hover:bg-green-50"
+                                                                }`}
+                                                                style={{ 
+                                                                    borderColor: isBooked ? "#e2e8f0" : cat.color,
+                                                                    color: isBooked ? "transparent" : cat.color
+                                                                }}
+                                                            >
+                                                                {(cIdx + 1).toString().padStart(2, '0')}
+                                                            </div>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="w-8 flex-shrink-0" /> {/* Right alignment balance */}
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Stage Bottom UI */}
+                        {(layout === "stage" || layout === "rate") && (
+                            <div className="mt-20 mb-10 w-full flex flex-col items-center">
+                                <div className="w-3/4 max-w-xl h-10 border-t-2 border-l-2 border-r-2 border-blue-200/50 rounded-t-2xl bg-gradient-to-t from-blue-50/30 to-white" style={{ transform: "perspective(150px) rotateX(10deg)" }}></div>
+                                <p className="text-[11px] font-medium text-slate-500 mt-4 tracking-wide">All eyes this way please</p>
+                            </div>
+                        )}
                         {layout === "ground" && (
-                            <div style={{ marginTop: "20px", width: "70%", height: "2px", backgroundColor: t.border, borderRadius: "1px" }} />
+                            <div className="mt-16 mb-8 px-12 py-3 border-2 border-dashed border-slate-300 rounded-full text-slate-400 text-[11px] font-black uppercase tracking-widest">
+                                Main Entrance / Exit
+                            </div>
                         )}
 
                         {!isPreview && (
-                            <div style={{ marginTop: "32px", display: "flex", gap: "24px", padding: "16px 32px", backgroundColor: t.cardBg, borderRadius: "100px", border: `1px solid ${t.border}`, boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f59e0b" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>VIP</span></div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#6366f1" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>Premium</span></div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#22c55e" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>General</span></div>
-                                <div style={{ width: "1px", height: "16px", backgroundColor: t.border }}></div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#f84464" }}></div><span style={{ fontSize: "12px", fontWeight: 700 }}>Booked</span></div>
+                            <div className="mt-auto border-t border-slate-100 w-full pt-6 pb-2 flex justify-center gap-10">
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded border border-[#22c55e] bg-white"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Available</span></div>
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-[#22c55e]"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Selected</span></div>
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-slate-200"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Sold</span></div>
                             </div>
                         )}
                     </div>
@@ -1947,30 +2236,37 @@ function OrganiserPanel() {
             };
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
-                <div style={{ marginBottom: "20px", gridColumn: fullWidth ? "span 2" : "span 1" }}>
-                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
-                    <input
-                        type={type}
-                        value={postEvent[field] || ""}
-                        onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={placeholder}
-                        style={{
-                            width: "100%",
-                            padding: "10px 14px",
-                            borderRadius: "4px",
-                            border: `1px solid ${t.border}`,
-                            backgroundColor: t.bg,
-                            color: t.textMain,
-                            fontSize: "13px",
-                            outline: "none"
-                        }}
-                    />
+                <div className={`mb-6 ${fullWidth ? "col-span-2" : "col-span-1"}`}>
+                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <div className="relative flex items-center">
+                        {type === "date" ? (
+                            <CalendarPicker 
+                                value={postEvent[field] || ""} 
+                                onChange={(val) => setPostEvent(prev => ({ ...prev, [field]: val }))}
+                                placeholder={placeholder || "dd/mm/yyyy"}
+                            />
+                        ) : (
+                            <>
+                                <input
+                                    type={type}
+                                    value={postEvent[field] || ""}
+                                    onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
+                                    placeholder={placeholder}
+                                    className={`w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-inner ${
+                                        type === "time" ? "pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" : ""
+                                    }`}
+                                />
+                                {type === "time" && <Clock size={16} className="absolute right-4 text-slate-600 pointer-events-none" />}
+                            </>
+                        )}
+                    </div>
                 </div>
             );
 
             const renderSelect = (label, field, options) => {
-                const handleSelectChange = (e) => {
-                    const val = e.target.value;
+                const isLocationField = ["country", "state", "city", "district"].includes(field);
+                
+                const handleSelectChange = (val) => {
                     const updates = { [field]: val };
 
                     // Cascading Reset Logic
@@ -1978,17 +2274,14 @@ function OrganiserPanel() {
                         updates.state = "";
                         updates.district = "";
                         updates.city = "";
-                        // If selecting Country, find its code for children
                         const countryObj = Country.getAllCountries().find(c => c.name === val);
                         updates.countryCode = countryObj?.isoCode || "";
                     } else if (field === "state") {
                         updates.district = "";
                         updates.city = "";
-                        // Find state code
                         const stateObj = State.getStatesOfCountry(postEvent.countryCode).find(s => s.name === val);
                         updates.stateCode = stateObj?.isoCode || "";
                     } else if (field === "district") {
-                        // For world-wide data, we use 'City' as 'District' because 4 levels aren't standard globally in this lib
                         updates.city = "";
                     }
 
@@ -1996,32 +2289,15 @@ function OrganiserPanel() {
                 };
 
                 return (
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>{label}{label.endsWith('*') ? '' : '*'}</label>
-                        <div style={{ position: "relative" }}>
-                            <select
-                                value={postEvent[field] || ""}
-                                onChange={handleSelectChange}
-                                style={{
-                                    width: "100%",
-                                    padding: "10px 14px",
-                                    paddingRight: "40px",
-                                    borderRadius: "4px",
-                                    border: `1px solid ${t.border}`,
-                                    backgroundColor: t.bg,
-                                    color: t.textMain,
-                                    fontSize: "13px",
-                                    outline: "none",
-                                    appearance: "none"
-                                }}
-                            >
-                                <option value="" disabled hidden>Select</option>
-                                {options.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
-                            <ChevronDown size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, pointerEvents: "none" }} />
-                        </div>
+                    <div className="mb-6 col-span-1">
+                        <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}*</label>
+                        <CustomSelect 
+                            value={postEvent[field] || ""}
+                            options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.name || opt.label || String(opt) }))}
+                            onChange={handleSelectChange}
+                            placeholder={`Select ${label}...`}
+                            isLoading={isLocationField && field !== "country" && !options.length && (field !== "city" || postEvent.country === "India")}
+                        />
                     </div>
                 );
             };
@@ -2029,146 +2305,85 @@ function OrganiserPanel() {
                 case "dashboard":
                     return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                            {/* Welcome Banner */}
-                            <div className="welcome-banner" style={{ 
-                                background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                                position: "relative",
-                                overflow: "hidden"
-                            }}>
-                                <div style={{ position: "absolute", right: "-20px", top: "-20px", width: "150px", height: "150px", background: "rgba(59, 130, 246, 0.05)", borderRadius: "50%" }} />
-                                <img
-                                    src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
-                                    alt="Avatar"
-                                    className="welcome-avatar"
-                                    style={{ border: "3px solid #3b82f6", boxShadow: "0 0 20px rgba(59, 130, 246, 0.2)" }}
-                                />
-                                <div className="welcome-text">
-                                    <h2 style={{ fontSize: "24px", fontWeight: 800 }}>Welcome back! {profile.firstName || 'Organizer'} 👋</h2>
-                                    <p style={{ fontSize: "15px", opacity: 0.8 }}>Check your latest reports and performance metrics here.</p>
-                                </div>
-                                <div style={{ marginLeft: "auto", display: "flex", gap: "10px" }} className="hide-mobile">
-                                    <div style={{ padding: "12px 20px", borderRadius: "12px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 700, fontSize: "14px" }}>
-                                        KYC Status: {profile.kycStatus === "Active" ? "Verified" : profile.kycStatus}
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Stats Grid */}
                             <div className="dashboard-overview-grid">
                                 <div className="overview-card" style={{ borderTop: "4px solid #3b82f6" }}>
                                     <div className="overview-card-icon" style={{ backgroundColor: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", width: "56px", height: "56px" }}>
-                                        <Users size={28} />
+                                        <Ticket size={28} />
                                     </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length + events.length * 5).toLocaleString()}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Employees</p>
-                                </div>
-                                <div className="overview-card" style={{ borderTop: "4px solid #8b5cf6" }}>
-                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6", width: "56px", height: "56px" }}>
-                                        <UserCheck size={28} />
-                                    </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length).toLocaleString()}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Clients</p>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(events.length).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Events</p>
                                 </div>
                                 <div className="overview-card" style={{ borderTop: "4px solid #10b981" }}>
                                     <div className="overview-card-icon" style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10b981", width: "56px", height: "56px" }}>
-                                        <Briefcase size={28} />
+                                        <Activity size={28} />
                                     </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{events.length}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>Projects</p>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(events.filter(e => e.status === "Active").length).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>Active Events</p>
                                 </div>
-                                <div className="overview-card" style={{ borderTop: "4px solid #f59e0b" }}>
-                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", width: "56px", height: "56px" }}>
-                                        <Calendar size={28} />
+                                <div className="overview-card" style={{ borderTop: "4px solid #8b5cf6" }}>
+                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6", width: "56px", height: "56px" }}>
+                                        <Users size={28} />
                                     </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{events.filter(e => e.status === "Published").length}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Events</p>
-                                </div>
-                                <div className="overview-card" style={{ borderTop: "4px solid #ef4444" }}>
-                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", color: "#ef4444", width: "56px", height: "56px" }}>
-                                        <DollarSign size={28} />
-                                    </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>₹{Number(wallet.balance).toLocaleString()}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.5px" }}>Payroll</p>
-                                </div>
-                                <div className="overview-card" style={{ borderTop: "4px solid #06b6d4" }}>
-                                    <div className="overview-card-icon" style={{ backgroundColor: "rgba(6, 182, 212, 0.1)", color: "#06b6d4", width: "56px", height: "56px" }}>
-                                        <FileText size={28} />
-                                    </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{(events.length * 1.5).toFixed(0)}</p>
-                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.5px" }}>Reports</p>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length).toLocaleString()}</p>
+                                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Bookings</p>
                                 </div>
                             </div>
 
-                            {/* Charts Section */}
+                            {/* Charts Section - Compact Grid */}
                             <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px" }}>
-                                <div className="chart-card" style={{ padding: "32px" }}>
+                                {/* Revenue Flow Card */}
+                                <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                         <div>
-                                            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain }}>Revenue updates</h3>
-                                            <p style={{ margin: "4px 0 0", fontSize: "13px", color: t.textSub }}>Overview of Profit</p>
+                                            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain }}>Revenue Flow</h3>
+                                            <p style={{ margin: "4px 0 0", fontSize: "13px", color: t.textSub }}>Current performance overview</p>
                                         </div>
-                                        <div style={{ display: "flex", gap: "8px" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub }}>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} /> Earnings
-                                            </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: t.textSub }}>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#8b5cf6" }} /> Expense
-                                            </div>
-                                        </div>
-                                        <select style={{ backgroundColor: "rgba(255,255,255,0.05)", border: `1px solid ${t.border}`, borderRadius: "8px", color: t.textSub, fontSize: "12px", padding: "6px 12px" }}>
-                                            <option>Year 2025</option>
-                                            <option>Year 2024</option>
+                                        <select style={{ backgroundColor: t.bg, border: `1px solid ${t.border}`, borderRadius: "8px", color: t.textSub, fontSize: "12px", padding: "6px 12px", outline: "none" }}>
+                                            <option>Last 7 Days</option>
+                                            <option>Last 30 Days</option>
                                         </select>
                                     </div>
-                                    <div style={{ height: "300px", position: "relative" }}>
-                                        <svg width="100%" height="100%" viewBox="0 0 600 300" preserveAspectRatio="none">
+                                    <div style={{ height: "240px", width: "100%", position: "relative" }}>
+                                        <svg viewBox="0 0 1000 300" style={{ width: "100%", height: "100%" }}>
                                             <defs>
                                                 <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
                                                     <stop offset="0%" style={{ stopColor: "#3b82f6", stopOpacity: 0.2 }} />
                                                     <stop offset="100%" style={{ stopColor: "#3b82f6", stopOpacity: 0 }} />
                                                 </linearGradient>
                                             </defs>
-                                            <path d="M0,250 Q100,200 200,220 T400,100 T600,80 L600,300 L0,300 Z" fill="url(#grad1)" />
-                                            <path d="M0,250 Q100,200 200,220 T400,100 T600,80" fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" />
-                                            <path d="M0,280 Q100,240 200,260 T400,180 T600,160" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-                                            {[0, 1, 2, 3, 4, 5].map(i => (
-                                                <line key={i} x1="0" y1={i * 50 + 50} x2="600" y2={i * 50 + 50} stroke={t.border} strokeWidth="1" strokeDasharray="4" opacity="0.5" />
-                                            ))}
+                                            <path d="M0,250 Q125,200 250,230 T500,120 T750,180 T1000,50 L1000,300 L0,300 Z" fill="url(#grad1)" />
+                                            <path d="M0,250 Q125,200 250,230 T500,120 T750,180 T1000,50" fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" />
+                                            {[0, 1, 2, 3].map(i => <line key={i} x1="0" y1={i * 100} x2="1000" y2={i * 100} stroke={t.border} strokeWidth="1" strokeDasharray="4" opacity="0.3" />)}
                                         </svg>
-                                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", padding: "0 10px" }}>
-                                            {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"].map(d => <span key={d} style={{ fontSize: "12px", color: t.textSub, fontWeight: 500 }}>{d}</span>)}
-                                        </div>
                                     </div>
                                 </div>
-                                <div className="chart-card" style={{ padding: "32px" }}>
-                                    <h3 style={{ margin: "0 0 32px", fontSize: "18px", fontWeight: 800, color: t.textMain }}>Yearly Backup</h3>
-                                    <div style={{ height: "300px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                        <div style={{ position: "relative", width: "180px", height: "180px" }}>
-                                            <svg width="180" height="180" viewBox="0 0 42 42">
-                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="4"></circle>
-                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray="65 35" strokeDashoffset="25" strokeLinecap="round"></circle>
-                                                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#8b5cf6" strokeWidth="4" strokeDasharray="20 80" strokeDashoffset="60" strokeLinecap="round"></circle>
-                                            </svg>
-                                            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
-                                                <div style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>₹36,358</div>
-                                                <div style={{ fontSize: "11px", color: "#10b981", fontWeight: 700, marginTop: "4px" }}>+9% last year</div>
-                                            </div>
+
+                                {/* Compact Engagement Map Card */}
+                                <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                        <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: t.textMain }}>Engagement Map</h3>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, display: "flex" }}><ChevronLeft size={16} /></button>
+                                            <span style={{ fontSize: "12px", fontWeight: 800, color: t.textMain, width: "100px", textAlign: "center" }}>{currentDate.toLocaleString('default', { month: 'short', year: 'numeric' })}</span>
+                                            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, display: "flex" }}><ChevronRight size={16} /></button>
                                         </div>
-                                        <div style={{ marginTop: "40px", width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                    <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#3b82f6" }}></div>
-                                                    <span style={{ color: t.textSub, fontWeight: 500 }}>Events</span>
-                                                </div>
-                                                <span style={{ color: t.textMain, fontWeight: 800 }}>65%</span>
-                                            </div>
-                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", alignItems: "center" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                    <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#8b5cf6" }}></div>
-                                                    <span style={{ color: t.textSub, fontWeight: 500 }}>Tickets</span>
-                                                </div>
-                                                <span style={{ color: t.textMain, fontWeight: 800 }}>20%</span>
-                                            </div>
+                                    </div>
+                                    <div style={{ border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", backgroundColor: t.bg, borderBottom: `1px solid ${t.border}` }}>
+                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                                                <div key={day} style={{ textAlign: "center", padding: "8px 0", fontSize: "10px", fontWeight: 900, color: t.textSub }}>{day}</div>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+                                            {renderEngagementMap()}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginTop: "20px", display: "flex", alignItems: "center", gap: "12px", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.bg + "50" }}>
+                                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#ec489910", display: "flex", alignItems: "center", justifyContent: "center", color: "#ec4899" }}><Sparkles size={18} /></div>
+                                        <div>
+                                            <p style={{ margin: 0, fontSize: "11px", color: t.textSub, fontWeight: 700 }}>Pulse Check</p>
+                                            <p style={{ margin: 0, fontSize: "12px", fontWeight: 800, color: t.textMain }}>High Activity Expected</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2296,31 +2511,40 @@ function OrganiserPanel() {
                     // Step 1: Choose Online or Venue
                     if (addEventStep === "select_type") {
                         return (
-                            <div style={{ backgroundColor: t.bg, minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "700px", width: "100%" }}>
+                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in-95 duration-500">
+                                <div className="text-center mb-12 space-y-3">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-100 text-[10px] font-black uppercase tracking-widest text-pink-500 mb-2">
+                                        <Sparkles size={12} /> Format Selection
+                                    </div>
+                                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Create New Experience</h2>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
                                     <button
                                         onClick={() => { setPostEvent(pe => ({ ...pe, type: "Online" })); setAddEventStep("form"); }}
-                                        style={{
-                                            background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "48px 32px", cursor: "pointer",
-                                            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
-                                        }}
+                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20 hover:border-pink-200 hover:-translate-y-2"
                                     >
-                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            <CloudUpload size={40} color="#fff" />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform duration-500">
+                                            <CloudUpload size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
-                                        <span style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, letterSpacing: "0.5px" }}>ONLINE EVENT</span>
+                                        <div className="text-center space-y-2 z-10">
+                                            <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-pink-600 transition-colors">Digital Broadcast</span>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Access Event</span>
+                                        </div>
                                     </button>
                                     <button
                                         onClick={() => { setPostEvent(pe => ({ ...pe, type: "Venue" })); setAddEventStep("form"); }}
-                                        style={{
-                                            background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "48px 32px", cursor: "pointer",
-                                            display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)"
-                                        }}
+                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/20 hover:border-orange-200 hover:-translate-y-2"
                                     >
-                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f97316", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            <MapPin size={40} color="#fff" />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform duration-500">
+                                            <MapPin size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
-                                        <span style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, letterSpacing: "0.5px" }}>VENUE EVENT</span>
+                                        <div className="text-center space-y-2 z-10">
+                                            <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-orange-600 transition-colors">Physical Venue</span>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">In-person Gathering</span>
+                                        </div>
                                     </button>
                                 </div>
                             </div>
@@ -2330,24 +2554,25 @@ function OrganiserPanel() {
                     // Step 2: Online Form
                     if (postEvent.type === "Online") {
                         return (
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
-                                <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
-                                <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} style={{ display: "none" }} />
+                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
+                                <input type="file" ref={galleryInputRef} accept="image/*" multiple onChange={handleGalleryChange} className="hidden" />
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "20px" }}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                     {/* Thumbnail Image */}
                                     <div>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
-                                        <div style={{ border: `1px solid ${t.border}`, borderRadius: "8px", padding: "12px", textAlign: "center", backgroundColor: t.bg, display: "flex", alignItems: "center", gap: "16px", minHeight: "100px" }}>
-                                            <div style={{ width: "120px", height: "80px", borderRadius: "4px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                        <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
+                                            <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                                 {postEvent.bannerPreview ? (
-                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                                ) : <ImageIcon size={32} color="#94a3b8" />}
+                                                    <img src={postEvent.bannerPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                                ) : <ImageIcon size={28} className="text-slate-300" />}
                                             </div>
-                                            <div style={{ textAlign: "left" }}>
-                                                <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer", marginBottom: "4px" }}>Choose Image</button>
-                                                <p style={{ fontSize: "11px", color: "#f59e0b", margin: 0 }}>Size : 320x230</p>
+                                            <div className="flex flex-col gap-1 z-10 text-center md:text-left">
+                                                <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
                                             </div>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                     </div>
                                     {/* Gallery Images Snippet */}
@@ -2427,36 +2652,37 @@ function OrganiserPanel() {
                     }
                     // Step 3: Venue Form
                     return (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, maxWidth: "100%" }}>
-                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} style={{ display: "none" }} />
+                        <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+                            <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "20px" }}>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                                 {/* Thumbnail Image */}
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Thumbnail Image*</label>
-                                    <div style={{ border: `1px solid ${t.border}`, borderRadius: "8px", padding: "12px", textAlign: "center", backgroundColor: t.bg, display: "flex", alignItems: "center", gap: "16px", minHeight: "100px" }}>
-                                        <div style={{ width: "120px", height: "80px", borderRadius: "4px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                    <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
+                                        <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                             {postEvent.bannerPreview ? (
-                                                <img src={postEvent.bannerPreview} alt="Thumbnail" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            ) : <ImageIcon size={32} color="#94a3b8" />}
+                                                <img src={postEvent.bannerPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                            ) : <ImageIcon size={28} className="text-slate-300" />}
                                         </div>
-                                        <div style={{ textAlign: "left" }}>
-                                            <button type="button" onClick={() => thumbnailInputRef.current?.click()} style={{ padding: "6px 12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "12px", fontWeight: 600, cursor: "pointer", marginBottom: "4px" }}>Choose Image</button>
-                                            <p style={{ fontSize: "11px", color: "#f59e0b", margin: 0 }}>Size : 320x230</p>
+                                        <div className="flex flex-col gap-1 z-10 text-center md:text-left">
+                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
                                         </div>
+                                        <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 </div>
                                 {/* Basic Info */}
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                                         {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                                         {renderSelect("Visibility*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
-                                    </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                                         {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
-                                        {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                     </div>
-                                    {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                        {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
+                                        {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
+                                    </div>
                                 </div>
                             </div>
 
@@ -2503,87 +2729,123 @@ function OrganiserPanel() {
 
                                 {renderSelect("Country*", "country", Country.getAllCountries().map(c => ({ label: c.name, value: c.name })))}
 
-                                {renderSelect("State*", "state", !postEvent.countryCode ? [] : State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name })))}
+                                {renderSelect("State*", "state", 
+                                    postEvent.country === "India" 
+                                        ? INDIAN_STATES 
+                                        : (!postEvent.countryCode ? [] : State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name })))
+                                )}
 
-                                {renderSelect("District*", "district", (!postEvent.countryCode || !postEvent.stateCode) ? [] : City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name })))}
+                                {renderSelect("District*", "district", 
+                                    postEvent.country === "India"
+                                        ? getIndianDistricts(postEvent.state)
+                                        : ((!postEvent.countryCode || !postEvent.stateCode) ? [] : City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name })))
+                                )}
 
-                                {renderInput("City*", "city", "text", "City / Area")}
+                                {postEvent.country === "India" ? (
+                                    renderSelect("City*", "city", 
+                                        !postEvent.district ? [] : getIndianCities(postEvent.district).map(c => ({ label: c, value: c }))
+                                    )
+                                ) : (
+                                    renderInput("City*", "city", "text", "City / Area")
+                                )}
 
-                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} style={{ padding: "10px", backgroundColor: "#8b5cf6", color: "#fff", border: "none", borderRadius: "4px", fontSize: "13px", fontWeight: 700, cursor: "pointer", marginBottom: "20px" }}>Open Map</button>
+                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} className="w-12 h-12 rounded-2xl bg-[#8b5cf6] text-white hover:bg-[#7c3aed] flex items-center justify-center transition-all mb-6 shadow-lg shadow-purple-100/50 group">
+                                    <MapPin size={22} className="group-hover:scale-110 transition-transform" />
+                                </button>
                             </div>
 
-                            <div style={{ marginBottom: "20px", border: `1px solid ${t.border}`, padding: "20px", borderRadius: "12px", backgroundColor: t.bg }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                                    <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 800 }}>Ticketing & Seating</h4>
-                                    <div style={{ width: "200px" }}>
-                                        {renderToggle("", "seatingEnabled", [{ label: "Seats", value: true }, { label: "Standard", value: false }])}
+                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
+                                    <div>
+                                        <h4 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Ticketing & Seating</h4>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Configure event capacity and layout</p>
+                                    </div>
+                                    <div className="w-full md:w-64">
+                                        {renderToggle("", "seatingEnabled", [{ label: "Seats Map", value: true }, { label: "Standard", value: false }])}
                                     </div>
                                 </div>
 
                                 {postEvent.seatingEnabled !== false ? (
-                                    <div>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                                    <div className="space-y-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
                                             {renderInput("Seats per Row*", "cols", "number", "e.g. 10")}
                                             {renderSelect("Seat Map Layout*", "layoutType", [
                                                 { label: "Stage-Based", value: "stage" },
                                                 { label: "Ground-Based", value: "ground" },
-                                                { label: "Rate-Based", value: "rate" }
+                                                { label: "Rate-Based", value: "rate" },
+                                                { label: "Block / Image Based", value: "block" }
                                             ])}
-                                            <div style={{ fontSize: "12px", color: t.textSub, marginTop: "24px" }}>
-                                                Total Rows will be calculated based on categories below.
+                                            <div className="col-span-full flex items-center gap-2 text-[10px] font-bold text-pink-500 bg-pink-50 p-4 rounded-xl border border-pink-100">
+                                                <Info size={14} /> Total Rows are automatically calculated based on categories below.
                                             </div>
                                         </div>
-                                        <div style={{ backgroundColor: t.cardBg, borderRadius: "8px", padding: "16px", border: `1px solid ${t.border}` }}>
-                                            <p style={{ fontSize: "12px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>SEATING CATEGORIES (VIP, GOLD, SILVER)</p>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                                        <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
+                                            <div className="flex items-center justify-between mb-8">
+                                                <p className="text-[11px] font-black tracking-widest text-slate-900 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
+                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
+                                                    <Plus size={14} /> Add Category
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="flex flex-col gap-4">
                                                 {(postEvent.categories || []).map((cat, idx) => (
-                                                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: "12px", alignItems: "center" }}>
+                                                    <div key={idx} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1.5fr_auto] gap-4 items-center bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
                                                         <input value={cat.name} onChange={e => {
                                                             const nc = [...postEvent.categories]; nc[idx].name = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Category Name" style={{ padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
+                                                        }} placeholder="Category Name" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
+                                                        
                                                         <input type="number" value={cat.rows} onChange={e => {
                                                             const nc = [...postEvent.categories]; nc[idx].rows = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Rows" style={{ padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
-                                                        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                                                        }} placeholder="Rows" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
+                                                        
+                                                        <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
                                                             <input type="number" value={cat.price} disabled={cat.isFree} onChange={e => {
                                                                 const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
                                                                 setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                            }} placeholder="Price" style={{ width: "100%", padding: "8px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: cat.isFree ? t.border : t.bg, color: t.textMain, fontSize: "13px" }} />
-                                                            <label style={{ display: "flex", alignItems: "center", fontSize: "11px", color: t.textSub, cursor: "pointer" }}>
-                                                                <input type="checkbox" checked={cat.isFree} onChange={e => {
+                                                            }} placeholder="Price (₹)" className="w-full bg-transparent text-slate-900 text-xs font-bold px-4 py-3 focus:outline-none placeholder:text-slate-300 placeholder:font-medium disabled:opacity-50" />
+                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-black uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                                <input type="checkbox" checked={cat.isFree} className="rounded text-pink-500 focus:ring-pink-500 w-3.5 h-3.5 cursor-pointer" onChange={e => {
                                                                     const nc = [...postEvent.categories]; nc[idx].isFree = e.target.checked;
                                                                     if (e.target.checked) nc[idx].price = 0;
                                                                     setPostEvent(prev => ({ ...prev, categories: nc }));
                                                                 }} />Free
                                                             </label>
                                                         </div>
-                                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== idx) }))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                        
+                                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== idx) }))} className="p-3 text-red-500 hover:text-red-700 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl shadow-sm transition-all cursor-pointer">
+                                                            <Trash2 size={16} />
+                                                        </button>
                                                     </div>
                                                 ))}
-                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content" }}><Plus size={14} /> Add Category</button>
                                             </div>
                                         </div>
 
-                                        {/* Live Preview Section */}
-                                        <div style={{ marginTop: "24px" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                                                <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "1px" }}>Live Map Preview</p>
-                                                <span style={{ fontSize: "10px", color: "#3b82f6", fontWeight: 700, backgroundColor: "#3b82f615", padding: "2px 8px", borderRadius: "100px" }}>Real-time</span>
+                                        {postEvent.layoutType === "block" ? (
+                                            <div className="mt-8 pt-6 border-t border-slate-100">
+                                                <BlockMapDesigner postEvent={postEvent} setPostEvent={setPostEvent} />
                                             </div>
-                                            {renderSeatVisualization(postEvent, true)}
-                                        </div>
+                                        ) : (
+                                            <div className="mt-8 pt-6 border-t border-slate-100">
+                                                <div className="flex justify-between items-center mb-6 pl-2">
+                                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-widest">Live Map Preview</p>
+                                                    <span className="text-[9px] text-pink-600 font-bold bg-pink-100/50 border border-pink-200 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 shadow-sm"><Sparkles size={10} /> Real-time Sync</span>
+                                                </div>
+                                                {renderSeatVisualization(postEvent, true)}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
                                         {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
-                                        <div style={{ marginBottom: "20px" }}>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Ticket Price (₹)*</label>
-                                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px" }} />
-                                                <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: t.textMain, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                                    <input type="checkbox" checked={postEvent.ticketsAreFree} onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
+                                        <div className="mb-6">
+                                            <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
+                                            <div className="flex bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
+                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-300 disabled:bg-slate-50 disabled:text-slate-400" />
+                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-black uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                    <input type="checkbox" checked={postEvent.ticketsAreFree} className="rounded text-pink-500 focus:ring-pink-500 w-4 h-4 cursor-pointer" onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
                                                 </label>
                                             </div>
                                         </div>
@@ -2591,9 +2853,9 @@ function OrganiserPanel() {
                                 )}
                             </div>
 
-                            <div style={{ marginBottom: "20px" }}>
-                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Event Description*</label>
-                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
+                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
+                                <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
+                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 shadow-inner resize-y leading-relaxed" />
                             </div>
 
                             <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
@@ -3777,7 +4039,7 @@ function OrganiserPanel() {
         };
 
         return (
-            <div className="admin-container">
+            <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
                 {styles}
                 {/* Create Event Modal */}
                 {showCreateEvent && (
@@ -3992,51 +4254,55 @@ function OrganiserPanel() {
                         markerRef={markerRef}
                     />
                 )}
+                {/* Mobile Overlay */}
+                {typeof sidebarOpen === 'boolean' && sidebarOpen && (
+                    <div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+                )}
 
-                {/* Sidebar — image format: Search + dropdown sections + sub-sidebar */}
-                {/* Sidebar — "Tailwindadmin" style */}
-                <aside className="sidebar">
-                    <div className="sidebar-logo">
-                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Ticket size={18} color="#fff" />
+                {/* Sidebar */}
+                <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 ${typeof sidebarOpen === 'boolean' && sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
+                    {/* Logo */}
+                    <div className="h-20 flex items-center px-6 border-b border-slate-50 bg-white">
+                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-pink-500/20">B</div>
+                            <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">BookMyTicket</span>
                         </div>
-                        <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>
-                            Tailwind<span style={{ color: t.textSub, fontWeight: 500 }}>admin</span>
-                        </span>
                     </div>
-
+                    <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50" />
+                            <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">{profile.firstName || "Verified Partner"}</span>
+                        </div>
+                    </div>
                     <div style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
                         <div className="sidebar-category">Home</div>
                         <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                 <LayoutDashboard size={18} />
-                                <span>Modern</span>
+                                <span>Dashboard</span>
                             </div>
                         </button>
 
-                        <div className="sidebar-category">Events</div>
-                        {!isStaff && (
-                            <>
-                                <button
-                                    onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
-                                    className="sidebar-item"
-                                    style={{ color: (activeTab === "post_event" || activeTab === "manage_events") ? t.textMain : t.textSub }}
-                                >
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        <Grid size={18} />
-                                        <span>Management</span>
-                                    </div>
-                                    {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                </button>
-                                {sidebarOpen.eventManagement && (
-                                    <div style={{ marginBottom: "8px" }}>
-                                        <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Add Event</button>
-                                        <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>All Events</button>
-                                        <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
-                                        <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
-                                    </div>
-                                )}
-                            </>
+                        <div className="sidebar-category">Management</div>
+                        <button
+                            onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
+                            className="sidebar-item"
+                            style={{ color: ["post_event", "manage_events", "venue_events", "online_events"].includes(activeTab) ? t.textMain : t.textSub }}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Grid size={18} />
+                                <span>Events</span>
+                            </div>
+                            {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </button>
+                        {sidebarOpen.eventManagement && (
+                            <div style={{ marginBottom: "8px" }}>
+                                <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Post Event</button>
+                                <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>Manage Events</button>
+                                <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
+                                <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
+                            </div>
                         )}
 
                         <div className="sidebar-category">Bookings</div>
@@ -4084,14 +4350,7 @@ function OrganiserPanel() {
                                 <span>Pwa Scanner</span>
                             </div>
                         </button>
-                        {!isStaff && (
-                            <button onClick={() => setActiveTab("staff_accounts")} className={`sidebar-item ${activeTab === "staff_accounts" ? "active" : ""}`}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <Users size={18} />
-                                    <span>Staff</span>
-                                </div>
-                            </button>
-                        )}
+
 
                         <div className="sidebar-category">Support</div>
                         <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
@@ -4135,7 +4394,7 @@ function OrganiserPanel() {
                 </aside>
 
                 {/* Main Content */}
-                <div className="main-content">
+                <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
                     {isStaff && (
                         <div className="mobile-header">
                             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -4152,10 +4411,18 @@ function OrganiserPanel() {
                             </button>
                         </div>
                     )}
-                    <header className="top-header">
-                        <div className="top-header-search">
-                            <Search size={18} color={t.textSub} />
-                            <input type="text" placeholder="Search..." />
+                    <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
+                        <div className="flex items-center gap-6">
+                            <button 
+                                onClick={() => setSidebarOpen(true)} 
+                                className="p-2.5 rounded-xl bg-slate-50 text-slate-400 md:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
+                            >
+                                <Menu size={20} />
+                            </button>
+                            <div className="hidden md:flex items-center bg-slate-50 rounded-full px-4 py-2 border border-slate-100">
+                                <Search size={16} className="text-slate-400" />
+                                <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none pl-2 text-[12px] font-bold text-slate-600 placeholder:text-slate-400" />
+                            </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                             <button onClick={toggleTheme} style={{ color: t.textMain, background: "none", border: "none", cursor: "pointer", padding: "8px" }}>
@@ -4165,18 +4432,100 @@ function OrganiserPanel() {
                                 <Bell size={20} />
                                 <div style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
                             </button>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", paddingLeft: "12px", borderLeft: `1px solid ${t.border}` }}>
-                                <img
-                                    src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
-                                    alt="User"
-                                    style={{ width: "36px", height: "36px", borderRadius: "50%", border: `2px solid ${ACCENT_BLUE}` }}
-                                />
+                            <div style={{ position: "relative" }} ref={dropdownRef}>
+                                <button 
+                                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                                    style={{ 
+                                        display: "flex", 
+                                        alignItems: "center", 
+                                        gap: "12px", 
+                                        paddingLeft: "12px", 
+                                        borderLeft: `1px solid ${t.border}`,
+                                        background: "none",
+                                        borderTop: "none",
+                                        borderRight: "none",
+                                        borderBottom: "none",
+                                        cursor: "pointer",
+                                        outline: "none"
+                                    }}
+                                >
+                                    <img
+                                        src={profile.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"}
+                                        alt="User"
+                                        style={{ width: "36px", height: "36px", borderRadius: "50%", border: `2px solid ${ACCENT_BLUE}` }}
+                                    />
+                                    <ChevronDown size={14} color={t.textSub} style={{ transform: profileDropdownOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.3s" }} />
+                                </button>
+
+                                {profileDropdownOpen && (
+                                    <div style={{
+                                        position: "absolute",
+                                        top: "120%",
+                                        right: 0,
+                                        width: "220px",
+                                        backgroundColor: t.cardBg,
+                                        borderRadius: "16px",
+                                        border: `1px solid ${t.border}`,
+                                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+                                        zIndex: 1000,
+                                        padding: "8px",
+                                        overflow: "hidden",
+                                        animation: "dropdownFade 0.2s ease-out"
+                                    }}>
+                                        <div style={{ padding: "12px", borderBottom: `1px solid ${t.border}`, marginBottom: "4px" }}>
+                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: t.textMain }}>{profile.firstName} {profile.lastName}</p>
+                                            <p style={{ margin: 0, fontSize: "12px", color: t.textSub, textOverflow: "ellipsis", overflow: "hidden" }}>{profile.email}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => { setActiveTab("change_password"); setProfileDropdownOpen(false); }}
+                                            style={{ 
+                                                display: "flex", 
+                                                alignItems: "center", 
+                                                gap: "10px", 
+                                                width: "100%", 
+                                                padding: "10px 12px", 
+                                                borderRadius: "10px", 
+                                                border: "none", 
+                                                background: "none", 
+                                                color: t.textMain, 
+                                                fontSize: "13px", 
+                                                fontWeight: 600, 
+                                                cursor: "pointer",
+                                                textAlign: "left"
+                                            }}
+                                            className="dropdown-hover"
+                                        >
+                                            <Lock size={16} color={t.textSub} /> Change Password
+                                        </button>
+                                        <button 
+                                            onClick={() => { setProfileDropdownOpen(false); handleLogout(); }}
+                                            style={{ 
+                                                display: "flex", 
+                                                alignItems: "center", 
+                                                gap: "10px", 
+                                                width: "100%", 
+                                                padding: "10px 12px", 
+                                                borderRadius: "10px", 
+                                                border: "none", 
+                                                background: "none", 
+                                                color: "#ef4444", 
+                                                fontSize: "13px", 
+                                                fontWeight: 600, 
+                                                cursor: "pointer",
+                                                textAlign: "left"
+                                            }}
+                                            className="dropdown-hover-red"
+                                        >
+                                            <LogOut size={16} /> Sign Out
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </header>
-                    <main style={{ padding: "24px", display: "flex", flexDirection: "column", minHeight: "calc(100vh - 64px)" }}>
-                        <div style={{ flex: 1 }}>{renderTabContent()}</div>
-                        <footer style={{ padding: "16px 0", marginTop: "24px", textAlign: "center", fontSize: "12px", color: t.textSub, borderTop: `1px solid ${t.border}` }}>
+                    <main className="flex-1 p-6 lg:p-10 relative z-0 flex flex-col">
+                        <div className="flex-1">{renderTabContent()}</div>
+                        <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
                             Copyright ©2026. All Rights Reserved.
                         </footer>
                     </main>
@@ -4213,24 +4562,19 @@ function OrganiserPanel() {
 
     // Restricted Sidebar for Stages (MFA/KYC/Pending)
     const renderRestrictedSidebar = (children) => (
-        <div className="admin-container">
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
             {styles}
             <aside className="sidebar">
                 <div className="sidebar-logo">
-                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Ticket size={18} color="#fff" />
-                    </div>
-                    <span style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>
-                        Tailwind<span style={{ color: t.textSub, fontWeight: 500 }}>admin</span>
-                    </span>
+                    <img src="/logo.png" alt="BookMyTicket Logo" style={{ height: "45px", width: "auto", display: "block" }} />
                 </div>
 
                 <nav style={{ flex: 1, paddingBottom: "24px", opacity: 0.5 }}>
                     <div className="sidebar-category">Home</div>
-                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><LayoutDashboard size={18} /> Modern (Locked)</div></div>
+                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><LayoutDashboard size={18} /> Dashboard (Locked)</div></div>
                     
-                    <div className="sidebar-category">Events</div>
-                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><Grid size={18} /> Management (Locked)</div></div>
+                    <div className="sidebar-category">{isProfessionalService ? "Portfolio" : "Events"}</div>
+                    <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><Grid size={18} /> {isProfessionalService ? "Service Setup" : "Management"} (Locked)</div></div>
                 </nav>
 
                 <div style={{ padding: "12px" }}>
@@ -4263,7 +4607,12 @@ function OrganiserPanel() {
             <main className="main-content">
                 <header className="top-header">
                     <div>
-                        <h1 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: 0 }}>Organiser Onboarding</h1>
+                        <h1 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: 0 }}>
+                            {isProfessionalService 
+                                ? `${organiserData?.category || 'Service'} Onboarding` 
+                                : "Organiser Onboarding"
+                            }
+                        </h1>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     </div>
@@ -4481,6 +4830,11 @@ function OrganiserPanel() {
             )}
         </>
     );
+
+    // Professional Services should never see the Organiser KYC/Onboarding screens.
+    // We also hide the UI while organiserData is loading to prevent flashing the KYC screen
+    // for users who are about to be identified as Professional Services and redirected.
+    if (isProfessionalService || !organiserData) return null;
 
     // Main Stage Dispatcher
     switch (currentStage) {

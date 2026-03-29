@@ -27,6 +27,11 @@ export default function ProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "my_booking");
+    const [bookingFilter, setBookingFilter] = useState("all");
+    const [viewTicketModal, setViewTicketModal] = useState(null);
+
+    const eventBookingsList = useQuery(api.bookings.getByUser, { userId: user.identifier });
+    const vendorBookingsList = useQuery(api.vendorBookings.getByUser, { userId: user.identifier });
 
     useEffect(() => {
         if (user && (user.role === "organiser" || user.role === "staff")) {
@@ -45,19 +50,33 @@ export default function ProfilePage() {
 
     const t = THEME;
 
+    // Derived combined booking list
+    const bookings = [
+        ...(eventBookingsList || []),
+        ...(vendorBookingsList || [])
+    ].sort((a, b) => {
+        const dateA = a.bookingDate || a._creationTime;
+        const dateB = b.bookingDate || b._creationTime;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+
+    const bookedTickets = bookings.filter(b => ["Confirmed", "Paid", "Scanned"].includes(b.status));
+    const cancelledTickets = bookings.filter(b => ["Cancelled", "Rejected"].includes(b.status));
+    const paidTickets = bookings.filter(b => ["Paid", "Scanned", "Confirmed"].includes(b.status));
+
     const renderTabContent = () => {
         switch (activeTab) {
             case "my_booking":
-                const displayBookings = bookingFilter === "all" ? userBookings :
+                const displayBookings = bookingFilter === "all" ? bookings :
                     bookingFilter === "booked" ? bookedTickets :
                         bookingFilter === "cancelled" ? cancelledTickets : paidTickets;
 
                 return (
                     <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <div>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px", color: t.textMain }}>My Event Experience</h3>
-                                <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>Track your ticket bookings, cancellations and payments.</p>
+                            <div className="flex flex-col">
+                                <h3 className="text-xl font-black text-slate-900 italic tracking-tighter uppercase">Personal Experiences</h3>
+                                <p className="text-sm text-slate-500 font-medium">Track your ticket bookings, sessions, and payments.</p>
                             </div>
                             <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "8px", gap: "4px" }}>
                                 {["all", "booked", "cancelled", "payments"].map((f) => (
@@ -88,54 +107,46 @@ export default function ProfilePage() {
                                 {displayBookings.map((booking, i) => (
                                     <div key={i} className="booking-card">
                                         <div className="booking-info">
-                                            <div style={{ width: "48px", height: "48px", background: booking.status === 'Cancelled' ? '#fee2e2' : '#fef9c3', borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>
-                                                {booking.status === 'Cancelled' ? '❌' : '🎟️'}
-                                            </div>
+                                            {booking.isVendorBooking ? (
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-50 flex items-center justify-center text-pink-500 border border-yellow-200 shadow-inner">
+                                                    <Sparkles size={18} strokeWidth={2.5} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-pink-500 border border-slate-100 shadow-inner">
+                                                    <Ticket size={24} strokeWidth={1.5} />
+                                                </div>
+                                            )}
                                             <div>
-                                                <h4 style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: "600", color: t.textMain }}>{booking.eventName || "Event Ticket"}</h4>
-                                                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                                                    <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>ID: #{booking._id?.substring(0, 6).toUpperCase()}</p>
-                                                    <span className="hide-mobile" style={{ fontSize: "12px", color: t.border }}>|</span>
-                                                    <p style={{ margin: 0, fontSize: "13px", color: t.textSub }}>{booking.ticketCount} Seats • ₹{booking.totalPrice}</p>
+                                                <h4 className="font-black text-slate-900 tracking-tight group-hover:text-pink-600 transition-colors uppercase italic text-sm">
+                                                    {booking.eventName}
+                                                </h4>
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                                    <span>ID: #{booking._id.slice(-6).toUpperCase()}</span>
+                                                    <span>•</span>
+                                                    {booking.isVendorBooking ? (
+                                                        <span>Service Session</span>
+                                                    ) : (
+                                                        <span>{booking.ticketCount} Seats</span>
+                                                    )}
+                                                    <span>•</span>
+                                                    <span>₹{booking.totalPrice}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="booking-actions">
-                                            <span style={{
-                                                fontSize: "11px",
-                                                fontWeight: "700",
-                                                padding: "4px 10px",
-                                                borderRadius: "20px",
-                                                textTransform: "uppercase",
-                                                background: (booking.scanned || booking.status === 'Scanned' || booking.status === 'Confirmed' || booking.status === 'Paid') ? '#dcfce7' : booking.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
-                                                color: (booking.scanned || booking.status === 'Scanned' || booking.status === 'Confirmed' || booking.status === 'Paid') ? '#166534' : booking.status === 'Cancelled' ? '#991b1b' : '#92400e'
-                                            }}>
-                                                {(booking.scanned || booking.status === 'Scanned') ? 'Checked In' : booking.status}
+                                        <div className="flex flex-col items-end gap-1.5 min-w-[100px]">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                                booking.status === "Cancelled" || booking.status === "Rejected"
+                                                    ? "bg-red-50 text-red-500 border-red-100" 
+                                                    : "bg-yellow-100 text-yellow-600 border-yellow-200"
+                                            }`}>
+                                                {booking.status}
                                             </span>
-                                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                                {booking.status !== 'Cancelled' && (
-                                                    <button onClick={() => setViewTicketModal(booking)} style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>View Ticket</button>
-                                                )}
-                                                {booking.status !== 'Cancelled' && (booking.meetingUrl || booking.eventType === "Online") && (
-                                                    <a 
-                                                        href={booking.meetingUrl || "#"} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer"
-                                                        style={{ 
-                                                            padding: "6px 14px", 
-                                                            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
-                                                            color: "#fff", 
-                                                            borderRadius: "8px", 
-                                                            fontSize: "12px", 
-                                                            fontWeight: "700", 
-                                                            textDecoration: "none",
-                                                            boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)"
-                                                        }}
-                                                    >
-                                                        Join Now
-                                                    </a>
-                                                )}
-                                            </div>
+                                            <button 
+                                                onClick={() => setViewTicketModal(booking)}
+                                                className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                            >
+                                                {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -311,12 +322,8 @@ export default function ProfilePage() {
                 {/* Main Content Area */}
                 <main className="profile-main">
                     <div style={{ marginBottom: "24px" }}>
-                        <h1 style={{ fontSize: "24px", fontWeight: "800", color: t.textMain, margin: "0 0 6px" }}>
-                            {activeTab === "my_booking" ? "Ticket Bookings" : "Security"}
-                        </h1>
-                        <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>
-                            Manage your event experiences and account settings.
-                        </p>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">My Bookings & Activity</h2>
+                        <p className="text-slate-500 font-medium">Manage your event experiences and professional sessions.</p>
                     </div>
                     {renderTabContent()}
                 </main>

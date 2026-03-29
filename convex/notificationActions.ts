@@ -19,9 +19,9 @@ export const sendEventCreationNotifications = action({
         // 1. Fetch all recipients
         console.log("Fetching recipients for event notification...");
         const [users, organisers, subscribers] = await Promise.all([
-            ctx.runQuery(api.users.list),
-            ctx.runQuery(api.organisers.list),
-            ctx.runQuery(api.subscribers.list),
+            ctx.runQuery((api.users as any).list, {}),
+            ctx.runQuery((api.organisers as any).list, {}),
+            ctx.runQuery((api.subscribers as any).list, {}),
         ]);
         console.log(`Found: ${users.length} users, ${organisers.length} organisers, ${subscribers.length} subscribers.`);
 
@@ -248,7 +248,7 @@ Book your tickets here: ${eventLink}`;
         const successes = results.filter(r => r.status === "fulfilled");
         console.log(`${successes.length} notifications dispatched successfully.`);
 
-        return { success: true, emailCount: emailRecipients.size, whatsappCount: whatsappRecipients.size };
+        return { success: true, emailCount: emailRecipients.size, whatsappCount: (whatsappRecipients as any).size };
     },
 });
 
@@ -300,9 +300,9 @@ export const sendBulkGreetingToAll = action({
         const { subject, message } = args;
 
         const [users, organisers, subscribers] = await Promise.all([
-            ctx.runQuery(api.users.list),
-            ctx.runQuery(api.organisers.list),
-            ctx.runQuery(api.subscribers.list),
+            ctx.runQuery((api.users as any).list, {}),
+            ctx.runQuery((api.organisers as any).list, {}),
+            ctx.runQuery((api.subscribers as any).list, {}),
         ]);
 
         const emailRecipients = new Set<string>();
@@ -345,13 +345,13 @@ export const sendBulkGreetingToAll = action({
 export const testLatestEventNotification = action({
     args: {},
     handler: async (ctx): Promise<any> => {
-        const events = await ctx.runQuery(api.events.getActiveEvents) as any[];
+        const events = await ctx.runQuery(api.events.getActiveEvents, {}) as any[];
         if (events.length === 0) return { success: false, error: "No events found" };
         
         // Sort by creation time descending if possible, or just take the last one
         const latestEvent = events[events.length - 1];
         
-        const organizers = await ctx.runQuery(api.organisers.list) as any[];
+        const organizers = await ctx.runQuery((api.organisers as any).list, {}) as any[];
         const organiser = organizers.find((o: any) => o.userId === latestEvent.organiserId);
 
         return await ctx.runAction(api.notificationActions.sendEventCreationNotifications, {

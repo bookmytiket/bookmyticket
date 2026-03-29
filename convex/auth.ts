@@ -291,32 +291,13 @@ export const login = mutation({
     args: { identifier: v.string(), password: v.string() }, // password is hashed
     handler: async (ctx, args) => {
         const identifier = args.identifier.trim().toLowerCase();
-        
-        // 1. Check Users table
-        const user = await ctx.db
-            .query("users")
-            .withIndex("by_email", (q) => q.eq("email", identifier))
-            .unique() || 
-            await ctx.db
-            .query("users")
-            .withIndex("by_username", (q) => q.eq("username", identifier))
-            .unique();
 
-        if (user && user.password === args.password) {
-            if (user.status === "Banned" || user.status === "Inactive") {
-                throw new Error("Account is restricted.");
-            }
-            // Trigger login OTP using helper
-            await internalSendOTP(ctx, user.email, "login");
-            return { success: true, needsOtp: true, email: user.email };
-        }
-
-        // 2. Check Admins table (Team Management) — by username OR email
+        // 1. PRIORITY: Check Admins table first (by username OR email)
         const teamMemberByUsername = await ctx.db
             .query("admins")
             .withIndex("by_username", (q) => q.eq("username", identifier))
             .unique();
-        
+
         const teamMemberByEmail = !teamMemberByUsername ? await ctx.db
             .query("admins")
             .withIndex("by_email", (q) => q.eq("email", identifier))
@@ -329,12 +310,11 @@ export const login = mutation({
                 throw new Error("Account is inactive.");
             }
             await ctx.db.patch(teamMember._id, { lastLogin: Date.now() });
-            // Return 'admin' role if the database role is 'Admin', otherwise 'admin_team'
             const activeRole = teamMember.role === "Admin" ? "admin" : "admin_team";
             return { success: true, role: activeRole, data: teamMember };
         }
 
-        // 3. Check Staff table
+        // 2. PRIORITY: Check Staff table
         const staff = await ctx.db
             .query("staff")
             .withIndex("by_email", (q) => q.eq("email", identifier))
@@ -344,7 +324,9 @@ export const login = mutation({
             return { success: true, role: "staff", data: staff };
         }
 
-        // 3. Check Organisers table
+        // 3. PRIORITY: Check Organisers table — must come before Users
+        // This prevents organisers who also have a user record from being
+        // incorrectly routed through the OTP flow.
         const organiser = await ctx.db
             .query("organisers")
             .withIndex("by_userId", (q) => q.eq("userId", identifier))
@@ -355,6 +337,25 @@ export const login = mutation({
                 return { success: false, error: "Account is restricted." };
             }
             return { success: true, role: "organiser", data: organiser };
+        }
+
+        // 4. Check Users table last — triggers OTP for regular users
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q) => q.eq("email", identifier))
+            .unique() ||
+            await ctx.db
+            .query("users")
+            .withIndex("by_username", (q) => q.eq("username", identifier))
+            .unique();
+
+        if (user && user.password === args.password) {
+            if (user.status === "Banned" || user.status === "Inactive") {
+                throw new Error("Account is restricted.");
+            }
+            // Trigger login OTP for regular users
+            await internalSendOTP(ctx, user.email, "login");
+            return { success: true, needsOtp: true, email: user.email };
         }
 
         return { success: false, error: "Invalid username / email or password." };

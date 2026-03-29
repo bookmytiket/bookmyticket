@@ -58,7 +58,8 @@ export const approve = mutation({
             userId: request.email,
             password: tempPassword,
             name: `${request.firstName} ${request.lastName}`,
-            kycStatus: "Start Onboarding",
+            category: request.category,
+            kycStatus: "KYC Pending",
             walletBalance: 0,
         });
 

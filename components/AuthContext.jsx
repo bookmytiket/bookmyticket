@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { isServiceProvider } from "@/app/data/serviceCategories";
 
 const AuthContext = createContext();
 
@@ -99,10 +100,25 @@ export function AuthProvider({ children }) {
         if (role === "organiser") {
             // If userData is already provided (from signin page), use it immediately
             if (userData) {
-                const authUser = { identifier, role: "organiser", name: userData.name, id: userData._id };
+                const topCategory = (userData.category || "").toLowerCase();
+                const kycCategory = (userData.kycDetails?.category || "").toLowerCase();
+                
+                const isProfessionalService = isServiceProvider(topCategory) || isServiceProvider(kycCategory);
+                
+                const authUser = { 
+                    identifier, 
+                    role: "organiser", 
+                    name: userData.name, 
+                    id: userData._id,
+                    category: topCategory || kycCategory
+                };
                 localStorage.setItem("user", JSON.stringify(authUser));
                 setUser(authUser);
-                router.push(redirectPath || "/organiser");
+                
+                // ALWAYS route to the correct portal — never use the URL redirect param
+                // for organisers/artists as it may contain a path from a different role
+                const destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                router.push(destination);
                 return true;
             }
 
@@ -114,10 +130,24 @@ export function AuthProvider({ children }) {
 
                 if (result.success) {
                     const org = result.organiser;
-                    const authUser = { identifier, role: "organiser", name: org.name, id: org._id };
+                    const topCategory = (org.category || "").toLowerCase();
+                    const kycCategory = (org.kycDetails?.category || "").toLowerCase();
+                    
+                    const isProfessionalService = isServiceProvider(topCategory) || isServiceProvider(kycCategory);
+
+                    const authUser = { 
+                        identifier, 
+                        role: "organiser", 
+                        name: org.name, 
+                        id: org._id,
+                        category: topCategory || kycCategory
+                    };
                     localStorage.setItem("user", JSON.stringify(authUser));
                     setUser(authUser);
-                    router.push(redirectPath || "/organiser");
+                    
+                    // ALWAYS route to correct portal — never use URL redirect param
+                    const destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                    router.push(destination);
                     return true;
                 }
 
@@ -126,7 +156,7 @@ export function AuthProvider({ children }) {
                     const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
                     localStorage.setItem("user", JSON.stringify(mockUser));
                     setUser(mockUser);
-                    router.push(redirectPath || "/organiser");
+                    router.push("/organiser");
                     return true;
                 }
             } catch (err) {

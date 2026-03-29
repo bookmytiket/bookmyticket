@@ -193,45 +193,165 @@ export default function CheckoutClient({ id }) {
     }
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)', paddingBottom: '60px' }}>
-            <div className="container" style={{ padding: '24px 0', maxWidth: '900px' }}>
-                <Link href={`/events/${id}/book`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px', marginBottom: '24px', textDecoration: 'none' }}>← Back to tickets</Link>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '24px', color: '#111827' }}>Booking confirmation</h1>
+        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24">
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-4">
+                
+                {/* Checkout Header */}
+                <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <Link 
+                        href={`/events/${id}/book`}
+                        className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-bold px-4 py-2 hover:bg-slate-100 rounded-xl transition-all"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        <span>Back</span>
+                    </Link>
+                    <div className="w-24"></div> {/* Spacer for symmetry */}
+                </div>
 
-                <div className="event-detail-layout" style={{ alignItems: 'start', paddingTop: 0 }}>
-                    <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <p style={{ fontSize: '14px', color: '#4b5563', marginBottom: '16px' }}>Name, email, and payment will be collected on the next step.</p>
-                        <p style={{ fontWeight: 600, color: '#111827' }}>Event: {event.title}</p>
-                        <p style={{ fontSize: '14px', color: '#4b5563', marginTop: '8px' }}>{qty} ticket{qty !== 1 ? 's' : ''}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    {/* Left: Booking Details Form */}
+                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                        
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                            <span className="text-black/20 text-xl mx-3">|</span>
+                            <span className="font-bold text-black text-[17px]">Safe Checkout</span>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-8 md:p-10">
+                            <h2 className="text-[22px] font-extrabold text-[#111827] tracking-tight mb-8">Booking Confirmation</h2>
+                            
+                            <form onSubmit={(e) => { e.preventDefault(); handleConfirmPay(); }} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[13px] font-semibold text-slate-600 block">Name <span className="text-[#FF5A5F]">*</span></label>
+                                        <input 
+                                            type="text" 
+                                            required
+                                            defaultValue={user?.name || ""}
+                                            placeholder="Name"
+                                            className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg text-[14px] font-medium text-slate-900 outline-none focus:border-[#FF5A5F] transition-all placeholder:text-slate-400"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[13px] font-semibold text-slate-600 block">Email <span className="text-[#FF5A5F]">*</span></label>
+                                        <input 
+                                            type="email" 
+                                            required
+                                            defaultValue={user?.identifier || user?.email || ""}
+                                            placeholder="example@gmail.com"
+                                            className="w-full px-3 py-3 bg-white border border-slate-200 rounded-lg text-[14px] font-medium text-slate-900 outline-none focus:border-[#FF5A5F] transition-all placeholder:text-slate-400"
+                                        />
+                                        <p className="text-[11px] text-slate-400 mt-1.5 font-medium">The confirmation will be sent to this email</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                    <div className="space-y-2 relative">
+                                        <label className="text-[13px] font-semibold text-slate-600 flex items-center gap-1">
+                                            Mobile Number<span className="text-green-500 font-bold ml-0.5 text-[10px] items-center flex">WA</span> <span className="text-[#FF5A5F]">*</span>
+                                        </label>
+                                        <div className="flex">
+                                            <div className="flex items-center justify-center bg-slate-50 border border-slate-200 border-r-0 rounded-l-lg px-3 gap-2 shrink-0 h-[46px]">
+                                                <span className="text-[16px] leading-none grayscale-[0.2]">🇮🇳</span>
+                                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                            </div>
+                                            <input 
+                                                type="tel" 
+                                                required
+                                                placeholder="+91"
+                                                defaultValue={user?.phone || ""}
+                                                className="w-full px-3 h-[46px] bg-white border border-slate-200 rounded-r-lg text-[14px] font-medium text-slate-900 outline-none focus:border-[#FF5A5F] transition-all placeholder:text-slate-400"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-10 space-y-3.5">
+                                    <label className="flex items-start space-x-3 cursor-pointer">
+                                        <div className="relative flex items-start">
+                                            <input type="checkbox" className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
+                                        </div>
+                                        <span className="text-[13px] font-semibold text-slate-600">Create an account to manage booking</span>
+                                    </label>
+                                    <label className="flex items-start space-x-3 cursor-pointer">
+                                        <div className="relative flex items-start">
+                                            <input type="checkbox" required className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
+                                        </div>
+                                        <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the website <a href="#" className="text-blue-500 hover:underline">terms and conditions</a></span>
+                                    </label>
+                                </div>
+
+                                <div className="pt-6">
+                                    <button 
+                                        type="submit"
+                                        className="px-8 flex items-center justify-center min-w-[160px] py-[13px] bg-[#FF5A5F] hover:bg-[#ff4449] text-white rounded-[2rem] font-bold shadow-sm transition-all text-[14px] tracking-wide"
+                                    >
+                                        {total > 0 ? "Confirm & Pay" : "Confirm Booking"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <div className="event-detail-right-col" style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <div style={{ width: '100%', height: '120px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
-                            <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                    {/* Right: Summary Card */}
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+                        <div className="bg-white rounded-[1rem] border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-5 md:p-6 pb-7">
+                            <div className="w-full h-[180px] bg-black rounded-lg overflow-hidden mb-6 relative">
+                                <img src={event.img} className="w-full h-full object-cover" alt="Cover" />
+                            </div>
+                            
+                            <h3 className="font-bold text-[15px] text-[#111827] leading-[1.3] mb-5">{event.title} - {event.location}</h3>
+                            
+                            <div className="space-y-3.5 mb-8">
+                                <div className="flex items-start text-[13px] font-medium text-slate-500">
+                                    <MapPin size={15} className="shrink-0 mr-3 text-slate-400 mt-0.5" />
+                                    <span>{event.location}</span>
+                                </div>
+                                <div className="flex items-center text-[13px] font-medium text-slate-500">
+                                    <Calendar size={15} className="shrink-0 mr-3 text-slate-400" />
+                                    <span>{event.date}{event.time && ` ,${event.time}`}</span>
+                                </div>
+                                <div className="flex items-center text-[13px] font-medium text-slate-500">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mr-3 text-slate-400"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M7 12h.01"/><path d="M17 12h.01"/><path d="M11 12h.01"/><path d="M12 6v12"/><path d="M12 6a2 2 0 0 1-2 2h0a2 2 0 0 0-2 2v0a2 2 0 0 0 2 2h0a2 2 0 0 1 2 2"/><path d="M12 18a2 2 0 0 0 2-2h0a2 2 0 0 1 2-2v0a2 2 0 0 1-2-2h0a2 2 0 0 0-2-2"/></svg>
+                                    <span>{qty} Ticket{qty > 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-5">
+                                <div className="flex justify-between items-center text-[12px] mb-5">
+                                    <span className="font-semibold text-slate-700">Ticket Name</span>
+                                    <span className="font-semibold text-slate-700">Price & Quantity</span>
+                                </div>
+                                
+                                <div className="flex justify-between items-center mb-5">
+                                    <span className="font-bold text-[#111827] text-[13px]">Standard</span>
+                                    <span className="font-bold text-[#111827] text-[13px]">₹ {ticketPrice} x {qty}</span>
+                                </div>
+                                
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center space-x-1.5 text-blue-500/90 cursor-pointer">
+                                        <span className="text-[12px] font-medium">Includes convenience fees</span>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                    </div>
+                                    <span className="text-[12px] font-medium text-slate-400">₹ {convenienceFee.toFixed(2)}</span>
+                                </div>
+
+                                <div className="border-t border-slate-100 pt-5 flex justify-between items-center">
+                                    <span className="font-extrabold text-[#111827] text-[16px]">Total</span>
+                                    <span className="font-extrabold text-[#111827] text-[16px]">₹ {total.toFixed(2)}</span>
+                                </div>
+                            </div>
                         </div>
-                        <p style={{ fontWeight: 700, margin: '0 0 4px 0', fontSize: '14px' }}>{event.title}</p>
-                        <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}><Calendar size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {event.date}</p>
-                        <p style={{ fontSize: '13px', color: '#4b5563', margin: '4px 0 12px' }}><MapPin size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {event.location}</p>
-                        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', marginTop: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px' }}>
-                                <span style={{ color: '#4b5563' }}>Ticket (₹ {ticketPrice} × {qty})</span>
-                                <span style={{ fontWeight: 600 }}>₹ {baseAmount.toFixed(2)}</span>
+
+                        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.02)]">
+                            <div className="bg-green-500 rounded-full p-1 shrink-0 mt-0.5">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px' }}>
-                                <span style={{ color: '#4b5563' }}>Convenience Fee</span>
-                                <span style={{ fontWeight: 600 }}>₹ {convenienceFee.toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                                <span style={{ color: '#4b5563' }}>GST</span>
-                                <span style={{ fontWeight: 600 }}>₹ {gst.toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                                <span style={{ fontWeight: 700, fontSize: '15px' }}>Total</span>
-                                <span style={{ fontSize: '1.125rem', fontWeight: 800 }}>₹ {total.toFixed(2)}</span>
-                            </div>
+                            <p className="text-[12px] font-medium text-[#111827] leading-[1.6]">
+                                Book with Confidence : BookMyTicket guarantees refunds, ensuring your peace of mind. <button className="text-blue-500 hover:underline">Learn More</button>
+                            </p>
                         </div>
-                        <button type="button" onClick={handleConfirmPay} style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                            {total > 0 ? "Confirm & Pay" : "Confirm Booking"}
-                        </button>
                     </div>
                 </div>
             </div>

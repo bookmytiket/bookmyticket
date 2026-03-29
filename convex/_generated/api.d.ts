@@ -24,6 +24,7 @@ import type * as eventBookings from "../eventBookings.js";
 import type * as events from "../events.js";
 import type * as feeSettings from "../feeSettings.js";
 import type * as homeSettings from "../homeSettings.js";
+import type * as images from "../images.js";
 import type * as memories from "../memories.js";
 import type * as migrations from "../migrations.js";
 import type * as notificationActions from "../notificationActions.js";
@@ -37,6 +38,7 @@ import type * as promotions from "../promotions.js";
 import type * as pwaScans from "../pwaScans.js";
 import type * as removeDuplicatePages from "../removeDuplicatePages.js";
 import type * as seed from "../seed.js";
+import type * as seedMehendi from "../seedMehendi.js";
 import type * as seoSettings from "../seoSettings.js";
 import type * as siteBranding from "../siteBranding.js";
 import type * as ssoSettings from "../ssoSettings.js";
@@ -47,6 +49,11 @@ import type * as systemConfig from "../systemConfig.js";
 import type * as test from "../test.js";
 import type * as ticketSettings from "../ticketSettings.js";
 import type * as users from "../users.js";
+import type * as vendorBookings from "../vendorBookings.js";
+import type * as vendorCalendar from "../vendorCalendar.js";
+import type * as vendorCommunications from "../vendorCommunications.js";
+import type * as vendorReviews from "../vendorReviews.js";
+import type * as vendors from "../vendors.js";
 import type * as whatsappSettings from "../whatsappSettings.js";
 
 import type {
@@ -72,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   feeSettings: typeof feeSettings;
   homeSettings: typeof homeSettings;
+  images: typeof images;
   memories: typeof memories;
   migrations: typeof migrations;
   notificationActions: typeof notificationActions;
@@ -85,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   pwaScans: typeof pwaScans;
   removeDuplicatePages: typeof removeDuplicatePages;
   seed: typeof seed;
+  seedMehendi: typeof seedMehendi;
   seoSettings: typeof seoSettings;
   siteBranding: typeof siteBranding;
   ssoSettings: typeof ssoSettings;
@@ -95,6 +104,11 @@ declare const fullApi: ApiFromModules<{
   test: typeof test;
   ticketSettings: typeof ticketSettings;
   users: typeof users;
+  vendorBookings: typeof vendorBookings;
+  vendorCalendar: typeof vendorCalendar;
+  vendorCommunications: typeof vendorCommunications;
+  vendorReviews: typeof vendorReviews;
+  vendors: typeof vendors;
   whatsappSettings: typeof whatsappSettings;
 }>;
 

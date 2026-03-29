@@ -113,67 +113,117 @@ export default function EventDetailClient({ id }) {
     }
 
     return (
-        <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: 'var(--header-h)' }}>
-            <section style={{ position: 'relative', width: '100%', minHeight: '420px', maxHeight: '55vh', backgroundColor: '#0f172a' }}>
-                <img 
-                    src={event.img} 
-                    alt={event.title} 
-                    style={{ width: '100%', height: '100%', minHeight: '420px', maxHeight: '55vh', objectFit: 'cover', display: 'block' }}
-                    onError={(e) => { e.currentTarget.src = DEFAULT_IMG; }}
-                />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 0 40px', pointerEvents: 'auto' }}>
-                    <div className="container">
-                        <span style={{ display: 'inline-block', background: '#F43F5E', color: '#fff', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: 700, marginBottom: '12px' }}>{event.category}</span>
-                        <h1 style={{ color: '#fff', fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, margin: '0 0 12px 0', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>{event.title}</h1>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px', color: 'rgba(255,255,255,0.95)', fontSize: '15px' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={18} /> {event.date}{event.time ? `, ${event.time}` : ''}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <MapPin size={18} /> {event.venue}{event.city ? `, ${event.city}` : ''}
-                            </span>
-                        </div>
+        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24">
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-4">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                    <Link 
+                        href="/"
+                        className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-bold px-4 py-2 hover:bg-slate-100 rounded-xl transition-all"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        <span>Back</span>
+                    </Link>
+                    <div className="flex gap-3">
+                        <button className="flex items-center justify-center border border-slate-200 p-2.5 rounded-full bg-white hover:bg-slate-50 transition-colors shadow-sm"><Heart size={18} className="text-slate-500" /></button>
+                        <button className="flex items-center justify-center border border-slate-200 p-2.5 rounded-full bg-white hover:bg-slate-50 transition-colors shadow-sm"><Share2 size={18} className="text-slate-500" /></button>
                     </div>
                 </div>
-            </section>
 
-            <div className="container event-detail-layout">
-                <div style={{ flex: '1', minWidth: 0 }}>
-                    <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', marginBottom: '30px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                            <div>
-                                <span style={{ background: '#F43F5E', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 700 }}>{event.category}</span>
-                                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '15px', color: '#111827' }}>{event.title}</h2>
-                            </div>
-                            <div style={{ display: 'flex', gap: '15px' }}>
-                                <button style={{ border: '1px solid #e5e7eb', padding: '8px', borderRadius: '50%', background: '#fff' }}><Heart size={20} color="#6b7280" /></button>
-                                <button style={{ border: '1px solid #e5e7eb', padding: '8px', borderRadius: '50%', background: '#fff' }}><Share2 size={20} color="#6b7280" /></button>
-                            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    {/* Left: Event Information */}
+                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                        
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                            <span className="text-black/20 text-xl mx-3">|</span>
+                            <span className="font-bold text-black text-[17px]">Safe Checkout</span>
                         </div>
-                        <div className="grid-cols-2-responsive" style={{ marginTop: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563' }}>
-                                <Calendar className="text-orange-500" size={20} />
-                                <div><p style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>{event.date}</p><p style={{ fontSize: '12px', margin: 0 }}>{event.time}</p></div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-8 md:p-10">
+                            <h2 className="text-[20px] font-extrabold text-[#111827] tracking-tight mb-6">Event Information</h2>
+                            
+                            <div className="flex flex-wrap gap-4 mb-8">
+                                <div className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <Users size={18} className="text-[#FF5A5F]" />
+                                    <span className="text-[14px] font-semibold text-slate-700">{event.ageLimit}</span>
+                                </div>
+                                <div className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <Languages size={18} className="text-[#FF5A5F]" />
+                                    <span className="text-[14px] font-semibold text-slate-700">{event.language}</span>
+                                </div>
+                                <div className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <Clock size={18} className="text-[#FF5A5F]" />
+                                    <span className="text-[14px] font-semibold text-slate-700">{event.time}</span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#4b5563' }}>
-                                <MapPin className="text-orange-500" size={20} />
-                                <div><p style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>{event.venue}</p><p style={{ fontSize: '12px', margin: 0 }}>{event.city}</p></div>
+                            
+                            <hr className="border-slate-100 mb-8" />
+                            
+                            <h3 className="text-[16px] font-extrabold text-[#111827] tracking-tight mb-4">About the Event</h3>
+                            <p className="text-[14px] font-medium text-slate-600 leading-[1.8] whitespace-pre-line mb-8">
+                                {event.description}
+                            </p>
+                            
+                            <hr className="border-slate-100 mb-8" />
+                            
+                            <h3 className="text-[16px] font-extrabold text-[#111827] tracking-tight mb-4">Venue & Features</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                {event.features.map((feature, idx) => (
+                                    <div key={idx} className="flex items-start gap-3">
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 border border-slate-200 shrink-0 text-[14px]">
+                                            {feature.icon || "✓"}
+                                        </div>
+                                        <span className="text-[13px] font-medium text-slate-600 mt-1.5">{feature.label || feature}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div className="mt-8 pt-8 border-t border-slate-100">
+                                <h3 className="text-[16px] font-extrabold text-[#111827] tracking-tight mb-4">Terms & Refund Policy</h3>
+                                <ul className="space-y-3">
+                                    {event.refundPolicy.map((rule, idx) => (
+                                        <li key={idx} className="flex items-start gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 mt-2"></div>
+                                            <span className="text-[13px] font-medium text-slate-500 leading-relaxed">{rule}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
                         </div>
                     </div>
-                    <div style={{ background: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '20px' }}>Event Information</h3>
-                        <div style={{ display: 'flex', gap: '30px', marginBottom: '25px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 15px', background: '#f8fafc', borderRadius: '8px' }}><Users size={20} className="text-orange-500" /><span style={{ fontSize: '14px', fontWeight: 600 }}>{event.ageLimit}</span></div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 15px', background: '#f8fafc', borderRadius: '8px' }}><Languages size={20} className="text-orange-500" /><span style={{ fontSize: '14px', fontWeight: 600 }}>{event.language}</span></div>
-                        </div>
-                        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '20px' }}><p style={{ whiteSpace: 'pre-line', color: '#4b5563', lineHeight: '1.8' }}>{event.description}</p></div>
-                    </div>
-                    {/* ... other sections ... */}
-                    {/* I'm keeping the sections concisely for the sake of the client component structure */}
-                </div>
-                <div className="event-detail-right-col">
-                    <div style={{ position: 'sticky', top: '130px' }}>
-                        <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
+
+                    {/* Right: Summary Card */}
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-4 sticky top-[120px]">
+                        <div className="bg-white rounded-[1rem] border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-5 md:p-6 pb-7">
+                            <div className="w-full h-[180px] bg-black rounded-lg overflow-hidden mb-5 relative">
+                                <img src={event.img} className="w-full h-full object-cover" alt="Cover" onError={(e) => { e.currentTarget.src = DEFAULT_IMG; }} />
+                                <div className="absolute top-3 left-3 bg-[#FF5A5F] text-white px-3 py-1 rounded-[100px] text-[10px] font-bold tracking-wide uppercase shadow-sm">
+                                    {event.category}
+                                </div>
+                            </div>
+                            
+                            <h3 className="font-extrabold text-[18px] text-[#111827] leading-[1.3] mb-5 tracking-tight">{event.title}</h3>
+                            
+                            <div className="space-y-3.5 mb-8">
+                                <div className="flex items-start text-[13px] font-medium text-slate-500">
+                                    <MapPin size={16} className="shrink-0 mr-3 text-slate-400 mt-0.5" />
+                                    <div>
+                                        <span className="block font-bold text-[#111827] mb-0.5">{event.venue}</span>
+                                        <span className="text-[12px]">{event.city}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-start text-[13px] font-medium text-slate-500">
+                                    <Calendar size={16} className="shrink-0 mr-3 text-slate-400 mt-0.5" />
+                                    <div>
+                                        <span className="block font-bold text-[#111827] mb-0.5">{event.date}</span>
+                                        <span className="text-[12px]">{event.time}</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={() => {
@@ -181,13 +231,16 @@ export default function EventDetailClient({ id }) {
                                     if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
                                     else router.push(bookUrl);
                                 }}
-                                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(248, 68, 164, 0.3)' }}
-                            >Book Now</button>
+                                className="w-full flex items-center justify-center space-x-2 py-[14px] text-white rounded-[1rem] font-bold shadow-sm transition-all text-[15px] tracking-wide hover:scale-[1.02] active:scale-[0.98]"
+                                style={{ background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }}
+                            >
+                                <span>Book Now</span>
+                            </button>
                         </div>
                     </div>
+
                 </div>
             </div>
-            <div style={{ height: '50px' }}></div>
         </main>
     );
 }

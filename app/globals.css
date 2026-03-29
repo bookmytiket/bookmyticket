@@ -1,7 +1,11 @@
 /* ═══════════════════════════════════════════
    FONTS & RESET
 ═══════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Syne:wght@400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&family=Syne:wght@400..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --font-logo: 'Syne', sans-serif;
@@ -1030,11 +1034,30 @@ nextjs-portal {
   text-decoration: none;
   transition: all 0.2s ease;
   padding: 0 4px;
+  position: relative;
+}
+
+.subnav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--evente-pink);
+  border-radius: 2px 2px 0 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease, height 0.2s ease, background 0.2s ease;
 }
 
 .subnav-link:hover {
   color: var(--evente-pink) !important;
   transform: translateY(-1px);
+}
+
+.subnav-link:hover::after {
+  transform: scaleX(1);
 }
 
 .subnav-link.active {
@@ -1081,23 +1104,25 @@ nextjs-portal {
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--evente-pink); /* Permanent pink underline at top */
-  transition: all 0.2s;
+  background: var(--evente-pink);
+  border-radius: 2px 2px 0 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease, background 0.2s ease, height 0.2s ease;
   border-radius: 2px 2px 0 0;
 }
 
 .subnav-action:hover::after {
-  background: var(--evente-pink) !important;
+  transform: scaleX(1);
 }
 
 .header-scrolled .subnav-action::after {
-  background: #fde047 !important; /* Permanent yellow underline when scrolled */
+  background: #fde047 !important;
 }
 
-/* Specific hover for scrolled state to maintain yellow */
 .header-scrolled .subnav-action:hover::after {
   background: #fde047 !important;
-  height: 4px; /* Slightly thicker on hover? Or just keep it. */
+  height: 4px;
 }
 
 .subnav-action-icon {

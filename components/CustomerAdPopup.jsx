@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink, Sparkles } from "lucide-react";
 import { useQuery } from "convex/react";
@@ -41,6 +42,7 @@ const DEFAULT_GRADIENTS = [
 ];
 
 export default function CustomerAdPopup() {
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   
@@ -126,6 +128,7 @@ export default function CustomerAdPopup() {
   }, [currentPopup, handleClose]);
 
   if (!mounted || !currentPopup) return null;
+  if (pathname?.startsWith("/vendor")) return null;
 
   const gradientBg =
     currentPopup.bgColor ||

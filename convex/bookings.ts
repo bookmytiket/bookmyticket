@@ -232,3 +232,27 @@ export const updateBooking = mutation({
         await ctx.db.patch(id, patch);
     },
 });
+
+export const getByUser = query({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+        const bookings = await ctx.db
+            .query("bookings")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .collect();
+
+        return Promise.all(
+            bookings.map(async (booking) => {
+                const validEventId = ctx.db.normalizeId("events", booking.eventId);
+                const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+
+                return {
+                    ...booking,
+                    eventName: event?.title || "Event Ticket",
+                    eventType: event?.type || "Physical",
+                    meetingUrl: event?.meetingUrl || null,
+                };
+            })
+        );
+    },
+});

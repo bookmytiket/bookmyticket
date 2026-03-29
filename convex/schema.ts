@@ -44,7 +44,23 @@ export default defineSchema({
             date: v.string(),
             time: v.string(),
         }))),
-        layoutType: v.optional(v.string()), // 'stage', 'ground', 'rate'
+        layoutType: v.optional(v.string()), // 'stage', 'ground', 'rate', 'block'
+        seatMapBackgroundUrl: v.optional(v.string()),
+        blocks: v.optional(v.array(v.object({
+            id: v.string(),
+            name: v.string(),
+            x: v.number(),
+            y: v.number(),
+            width: v.number(),
+            height: v.number(),
+            rows: v.number(),
+            cols: v.number(),
+            category: v.string(),
+            color: v.optional(v.string()),
+            rowNaming: v.optional(v.string()), // 'numeric' | 'alphabetic'
+            startNumber: v.optional(v.number()),
+            numberingDirection: v.optional(v.string()), // 'ltr' | 'rtl'
+        }))),
     }),
 
     bookings: defineTable({
@@ -94,6 +110,11 @@ export default defineSchema({
         userId: v.string(), // acts as email/username
         password: v.optional(v.string()),
         name: v.string(),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
+        category: v.optional(v.string()), // Mehendi Artist, Photographer, etc.
         kycStatus: v.optional(v.string()),
         walletBalance: v.optional(v.number()),
         kycDetails: v.optional(
@@ -101,7 +122,7 @@ export default defineSchema({
                 category: v.optional(v.string()),
                 panNumber: v.optional(v.string()),
                 socialMediaLink: v.optional(v.string()),
-                hasITR: v.boolean(),
+                hasITR: v.optional(v.boolean()),
                 fullName: v.optional(v.string()),
                 email: v.optional(v.string()),
                 mobile: v.optional(v.string()),
@@ -110,7 +131,7 @@ export default defineSchema({
                 city: v.optional(v.string()),
                 address: v.optional(v.string()),
                 websiteLink: v.optional(v.string()),
-                hasOSTIN: v.boolean(),
+                hasOSTIN: v.optional(v.boolean()),
                 gstin: v.optional(v.string()),
                 panFile: v.optional(v.string()),
                 chequeFile: v.optional(v.string()),
@@ -123,7 +144,9 @@ export default defineSchema({
                 agreementAccepted: v.boolean(),
             })
         ),
-    }).index("by_userId", ["userId"]),
+    }).index("by_userId", ["userId"])
+      .index("by_kycStatus", ["kycStatus"])
+      .index("by_category", ["category"]),
 
     organiserRequests: defineTable({
         firstName: v.string(),
@@ -506,4 +529,63 @@ export default defineSchema({
         showEveryMinutes: v.number(),           // re-show interval (e.g. 30 = every 30 min)
         createdAt: v.number(),
     }).index("by_isActive", ["isActive"]),
+
+    vendorProfiles: defineTable({
+        organiserId: v.string(), // Reference to organiser userId (email)
+        category: v.string(), // "Mehendi Artist", "Photographer/Studio", "Makeup Artist"
+        bio: v.optional(v.string()),
+        portfolio: v.optional(v.array(v.object({
+            url: v.string(),
+            type: v.string(), // "image" | "video"
+            category: v.optional(v.string()),
+            beforeAfter: v.optional(v.boolean()),
+        }))),
+        pricing: v.optional(v.any()), // Dynamic per category
+        availability: v.optional(v.any()), // Calendar/Slot data
+        blockedDates: v.optional(v.array(v.string())),
+        advancedSettings: v.optional(v.any()), // Tags, Team, Equipment, Brands
+        updatedAt: v.number(),
+    }).index("by_organiserId", ["organiserId"]),
+
+    vendorBookings: defineTable({
+        vendorId: v.string(), // Reference to organiser userId
+        userId: v.string(), // Reference to user email
+        serviceType: v.string(), // "Bridal", "Party", "Event", etc.
+        bookingDate: v.string(), // "YYYY-MM-DD"
+        bookingTime: v.optional(v.string()), // "HH:MM"
+        status: v.string(), // "pending", "confirmed", "completed", "cancelled"
+        totalAmount: v.number(),
+        customerDetails: v.object({
+            name: v.string(),
+            phone: v.string(),
+            email: v.string(),
+            address: v.optional(v.string()),
+        }),
+        remarks: v.optional(v.string()),
+        rescheduleDate: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_vendorId", ["vendorId"]).index("by_userId", ["userId"]).index("by_status", ["status"]),
+
+    chatRooms: defineTable({
+        participants: v.array(v.string()), // Array of user/vendor emails
+        lastMessage: v.optional(v.string()),
+        lastMessageAt: v.number(),
+        bookingId: v.optional(v.id("vendorBookings")),
+    }).index("by_lastMessageAt", ["lastMessageAt"]),
+
+    chatMessages: defineTable({
+        roomId: v.id("chatRooms"),
+        senderId: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+    }).index("by_roomId", ["roomId"]),
+
+    vendorReviews: defineTable({
+        vendorId: v.string(),
+        userId: v.string(),
+        rating: v.number(), // 1-5
+        comment: v.string(),
+        response: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_vendorId", ["vendorId"]),
 });

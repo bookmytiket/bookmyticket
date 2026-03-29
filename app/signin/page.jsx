@@ -520,30 +520,30 @@ export default function SignInPage() {
                                         style={inp} onFocus={fr} onBlur={bg}
                                     />
 
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
-                                    </div>
-                                    <div style={{ position: "relative" }}>
+                                    <div style={{ position: "relative", marginBottom: "16px" }}>
                                         <input
                                             type={showPass ? "text" : "password"} required
                                             placeholder="Password"
                                             value={password}
                                             onChange={e => setPassword(e.target.value)}
-                                            style={{ ...inp, paddingRight: "40px" }} onFocus={fr} onBlur={bg}
+                                            style={{ ...inp, paddingRight: "40px", marginBottom: 0 }} onFocus={fr} onBlur={bg}
                                         />
                                         <button type="button" onClick={() => setShowPass(p => !p)}
-                                            style={{ position: "absolute", right: "10px", top: "15px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                            style={{ position: "absolute", right: "10px", top: "12px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
                                             {showPass ? <Eye size={16} /> : <EyeOff size={16} />}
                                         </button>
                                     </div>
 
                                     {loginError && (
-                                        <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {loginError}</p>
+                                        <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "12px", marginTop: "-8px" }}>⚠ {loginError}</p>
                                     )}
 
-                                    <button type="submit" style={{ ...submitBtn, background: "#f43f5e" }}>
+                                    <button type="submit" style={{ ...submitBtn, background: "#f43f5e", marginBottom: "12px" }}>
                                         Log in
                                     </button>
+                                    <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
+                                    </div>
                                 </form>
 
                                 {(ssoConfigs?.google || ssoConfigs?.facebook) && (
