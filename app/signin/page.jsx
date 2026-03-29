@@ -87,6 +87,7 @@ export default function SignInPage() {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
     const [loginError, setLoginError] = useState("");
 
@@ -308,7 +309,7 @@ export default function SignInPage() {
     const lbl = { display: "block", fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" };
     const fr = e => { e.target.style.borderColor = "#f84464"; };
     const bg = e => { e.target.style.borderColor = "#e2e8f0"; };
-    const submitBtn = { width: "100%", padding: "14px", borderRadius: "12px", border: "none", background: "#f84464", color: "#fff", fontWeight: 700, fontSize: "15px", cursor: "pointer", marginBottom: "15px", marginTop: "8px", transition: "opacity 0.2s" };
+    const submitBtn = { width: "100%", padding: "14px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", color: "#fff", fontWeight: 800, fontSize: "15px", cursor: "pointer", marginBottom: "15px", marginTop: "8px", transition: "all 0.3s ease", boxShadow: "0 4px 15px rgba(248, 68, 164, 0.25)" };
     const linkBtn = { background: "none", border: "none", color: "#000", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", padding: 0 };
 
     const activeDeal = PARTNER_DEALS[dealIdx];
@@ -542,7 +543,7 @@ export default function SignInPage() {
                                         <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "12px", marginTop: "-8px" }}>⚠ {loginError}</p>
                                     )}
 
-                                    <button type="submit" style={{ ...submitBtn, background: "#f43f5e", marginBottom: "12px" }}>
+                                    <button type="submit" style={{ ...submitBtn, marginBottom: "12px" }}>
                                         Log in
                                     </button>
                                     <div style={{ textAlign: "center", marginBottom: "12px" }}>
