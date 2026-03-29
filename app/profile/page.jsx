@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ticket, Lock, LogOut, ArrowLeft } from "lucide-react";
+import { Ticket, Lock, LogOut, ArrowLeft, Sparkles } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -26,7 +26,12 @@ export default function ProfilePage() {
     const { user, logout } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const [mounted, setMounted] = useState(false);
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "my_booking");
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const [bookingFilter, setBookingFilter] = useState("all");
     const [viewTicketModal, setViewTicketModal] = useState(null);
 
@@ -38,6 +43,13 @@ export default function ProfilePage() {
             router.replace("/organiser");
         }
     }, [user, router]);
+
+    // Hydration guard: show nothing or a loader until client-side mount
+    if (!mounted) {
+        return (
+            <div style={{ minHeight: "100vh", background: THEME.bg }} />
+        );
+    }
 
     // Fallback UI rendering for when user is not loaded
     if (!user) {

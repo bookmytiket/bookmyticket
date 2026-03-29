@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import { hashPassword } from "@/app/utils/hashPassword";
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
 import CouponModal from "@/components/CouponModal";
+import EmojiBackground from "@/components/EmojiBackground";
 
 const FALLBACK_BANNER_SLIDES = [
     { image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", subtitle: "Book tickets for concerts, sports & more" },
@@ -454,7 +455,10 @@ export default function SignInPage() {
             </div>
 
             {/* ══ RIGHT SIDE: SIGN IN FORM ══ */}
-            <div className="signin-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "15px", background: "#f8fafc" }}>
+            <div className="signin-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "15px", background: "transparent", position: "relative", overflow: "hidden" }}>
+                
+                {/* WhatsApp Emoji Animation Background for the form area */}
+                <EmojiBackground />
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div style={{ 
