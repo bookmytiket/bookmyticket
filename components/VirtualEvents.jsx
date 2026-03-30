@@ -1,108 +1,132 @@
 "use client";
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Video, Calendar, ArrowRight, Heart, Zap } from "lucide-react";
 
 function VirtualCard({ event }) {
     const [wished, setWished] = useState(false);
+    
+    // Check if event is free
+    const isFree = !event.price || event.price === 0 || 
+                  event.normalTicketPrice === 0 ||
+                  event.seatCategories?.every(c => c.isFree);
+
     return (
         <Link
-            href={`/events/detail?id=${event.id}`}
+            href={`/events/detail?id=${event._id}`}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
             <article
                 style={{
-                    minWidth: "280px",
-                    width: "280px",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
+                    minWidth: "300px",
+                    width: "300px",
+                    borderRadius: "24px",
+                    border: "1px solid #f1f5f9",
                     background: "#fff",
                     overflow: "hidden",
                     flexShrink: 0,
                     cursor: "pointer",
-                    transition: "box-shadow 0.25s ease, border-color 0.25s ease",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)"
                 }}
                 onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,0,0,0.1)";
-                    e.currentTarget.style.borderColor = "#d1d5db";
-                }}
-                onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)";
                     e.currentTarget.style.borderColor = "#e2e8f0";
                 }}
+                onMouseLeave={e => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)";
+                    e.currentTarget.style.borderColor = "#f1f5f9";
+                }}
             >
-                <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", overflow: "hidden" }}>
+                <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden" }}>
                     <img
-                        src={event.img}
+                        src={event.img || event.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80"}
                         alt={event.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
                         onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
                     />
+                    
+                    {/* Badge Overlay */}
+                    <div style={{
+                        position: "absolute", top: "12px", left: "12px",
+                        display: "flex", gap: "6px"
+                    }}>
+                        <div style={{
+                            background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(8px)",
+                            color: "#fff", fontSize: "10px", fontWeight: 900, padding: "4px 10px",
+                            borderRadius: "100px", display: "flex", alignItems: "center", gap: "4px",
+                            letterSpacing: "0.05em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.1)"
+                        }}>
+                            <Zap size={10} fill="#facc15" stroke="#facc15" /> Virtual
+                        </div>
+                        <div style={{
+                            background: isFree ? "rgba(34, 197, 94, 0.9)" : "rgba(99, 102, 241, 0.9)",
+                            backdropFilter: "blur(8px)", color: "#fff", fontSize: "10px", fontWeight: 900,
+                            padding: "4px 10px", borderRadius: "100px", letterSpacing: "0.05em",
+                            textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.1)"
+                        }}>
+                            {isFree ? "Free" : "Paid"}
+                        </div>
+                    </div>
+
                     <button
                         onClick={e => { e.preventDefault(); e.stopPropagation(); setWished(w => !w); }}
                         style={{
-                            position: "absolute", top: "8px", right: "8px",
-                            width: "30px", height: "30px", borderRadius: "50%",
-                            background: "rgba(255,255,255,0.9)", border: "none",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                            transition: "transform 0.2s",
-                            zIndex: 10
+                            position: "absolute", top: "12px", right: "12px",
+                            width: "36px", height: "36px", borderRadius: "12px",
+                            background: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)",
+                            border: "none", display: "flex", alignItems: "center", justifyContent: "center",
+                            cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                            transition: "all 0.2s", zIndex: 10, color: wished ? "#ef4444" : "#64748b"
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
-                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                        onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.background = "#fff"; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = "rgba(255,255,255,0.9)"; }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24"
-                            fill={wished ? "#ef4444" : "none"}
-                            stroke={wished ? "#ef4444" : "#555"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                        </svg>
+                        <Heart size={18} fill={wished ? "currentColor" : "none"} strokeWidth={2.5} />
                     </button>
-
-                    {/* Virtual badge on image */}
-                    <div style={{
-                        position: "absolute", bottom: "8px", left: "8px",
-                        background: "rgba(0,0,0,0.6)", color: "#fff",
-                        fontSize: "10px", fontWeight: 700, padding: "3px 8px",
-                        borderRadius: "20px", display: "flex", alignItems: "center", gap: "4px",
-                    }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="2" />
-                            <path d="M16.24 7.76a6 6 0 0 1 0 8.49" /><path d="M7.76 7.76a6 6 0 0 0 0 8.49" />
-                            <path d="M20.07 4.93a10 10 0 0 1 0 14.14" /><path d="M3.93 4.93a10 10 0 0 0 0 14.14" />
-                        </svg>
-                        LIVE
-                    </div>
                 </div>
-                <div style={{ padding: "12px 14px 14px" }}>
+
+                <div style={{ padding: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#64748b" }}>
+                            <Calendar size={14} />
+                            <span style={{ fontSize: "12px", fontWeight: 700 }}>{event.date || "TBA"}</span>
+                        </div>
+                        <div style={{ width: "3px", height: "3px", borderRadius: "50%", background: "#cbd5e1" }} />
+                        <span style={{ fontSize: "12px", color: "#ef4444", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.02em" }}>Online</span>
+                    </div>
+
                     <h3 style={{
-                        fontSize: "15px", fontWeight: 700, color: "#111827",
-                        margin: "0 0 8px", lineHeight: 1.3,
+                        fontSize: "18px", fontWeight: 900, color: "#0f172a",
+                        margin: "0 0 12px", lineHeight: 1.25,
                         display: "-webkit-box", WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical", overflow: "hidden",
+                        fontFamily: "'Figtree', sans-serif", letterSpacing: "-0.02em"
                     }}>
                         {event.title}
                     </h3>
 
-                    {/* Virtual location tag — signal icon + "Virtual" */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "6px" }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="2" />
-                            <path d="M16.24 7.76a6 6 0 0 1 0 8.49" /><path d="M7.76 7.76a6 6 0 0 0 0 8.49" />
-                        </svg>
-                        <span style={{ fontSize: "12px", color: "#ef4444", fontWeight: 600 }}>Virtual</span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 600 }}>{event.date}</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                            <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Started from</span>
+                            <span style={{ fontSize: "16px", fontWeight: 900, color: "#0f172a" }}>
+                                {isFree ? "FREE" : `₹${event.price || event.normalTicketPrice || 0}`}
+                            </span>
                         </div>
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                            <span style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{event.type}</span>
-                            <span style={{ position: "absolute", bottom: "-2px", left: 0, width: "100%", height: "2px", background: "#ef4444", borderRadius: "2px", display: "block" }} />
+                        <div 
+                          style={{ 
+                            width: "40px", height: "40px", borderRadius: "14px", 
+                            background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+                            display: "flex", alignItems: "center", justifyContent: "center", 
+                            color: "#fff", boxShadow: "0 8px 16px -4px rgba(59, 130, 246, 0.5)"
+                          }}
+                        >
+                            <ArrowRight size={20} strokeWidth={3} />
                         </div>
                     </div>
                 </div>
@@ -111,109 +135,88 @@ function VirtualCard({ event }) {
     );
 }
 
-export default function VirtualEvents({ events = [] }) {
-    const parseEventDate = (dateStr, timeStr) => {
-        if (!dateStr) return null;
-        try {
-            let dt = String(dateStr).trim();
-            if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
-                const parts = dt.split(/[-/]/);
-                dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-            const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
-            
-            let normalizedTime = "23:59";
-            if (timeStr) {
-                let t = String(timeStr).trim().toUpperCase();
-                const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
-                if (ampmMatch) {
-                    let [_, hours, mins = "00", ampm] = ampmMatch;
-                    hours = parseInt(hours);
-                    if (ampm === "PM" && hours < 12) hours += 12;
-                    if (ampm === "AM" && hours === 12) hours = 0;
-                    normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
-                } else {
-                    normalizedTime = t.includes(':') ? t : `${t}:00`;
-                }
-            }
-            
-            const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
-            return isNaN(eventDate.getTime()) ? null : eventDate;
-        } catch (_) { return null; }
-    };
-
-    const now = new Date();
-    const VIRTUAL_EVENTS = events.filter((e) => {
-        if (!e.virtual && e.type !== "Online") return false;
-        const eventDate = parseEventDate(e.rawDate || e.date, e.rawTime || e.time);
-        if (!eventDate) return true;
-        return eventDate >= now;
-    });
+export default function VirtualEvents() {
+    // using meetings query to filter for virtual events
+    const virtualEvents = useQuery(api.meetings.getVirtualEvents) || [];
     const scrollRef = useRef(null);
     const scroll = dir =>
-        scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });
+        scrollRef.current?.scrollBy({ left: dir === "left" ? -330 : 330, behavior: "smooth" });
+
+    if (virtualEvents.length === 0) return null;
 
     return (
-        <section style={{ width: "100%", backgroundColor: "#fff", padding: "44px 0 40px" }}>
-            <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
+        <section style={{ width: "100%", backgroundColor: "#f8fafc", padding: "80px 0" }}>
+            <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 24px" }}>
 
-                {/* Centered Header */}
-                <div style={{ textAlign: "center", marginBottom: "28px" }}>
-                    <h2 style={{
-                        fontSize: "28px",
-                        fontWeight: 900,
-                        color: "#111827",
-                        margin: "0 0 8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        letterSpacing: "-0.04em",
-                        lineHeight: 1.1,
-                        fontFamily: "var(--font-heading)"
-                    }}>
-                        Virtual <span style={{
-                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            display: 'inline-block'
-                        }}>Events</span> 💻
-                    </h2>
-                    <p style={{ fontSize: "14px", color: "#9ca3af", margin: 0, fontWeight: 500 }}>
-                        Join us from anywhere and be part of exciting virtual experiences!
-                    </p>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "40px" }}>
+                    <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                            <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: "rgba(236, 72, 153, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ec4899" }}>
+                                <Video size={18} />
+                            </div>
+                            <span style={{ fontSize: "12px", fontWeight: 900, color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Experiences</span>
+                        </div>
+                        <h2 style={{
+                            fontSize: "36px",
+                            fontWeight: 950,
+                            color: "#0f172a",
+                            margin: 0,
+                            letterSpacing: "-0.05em",
+                            lineHeight: 1,
+                            fontFamily: "'Figtree', sans-serif"
+                        }}>
+                            Virtual <span style={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                            }}>Events</span>
+                        </h2>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: "10px" }}>
+                        <button
+                            onClick={() => scroll("left")}
+                            style={{
+                                width: "48px", height: "48px", borderRadius: "16px",
+                                background: "#fff", border: "1px solid #e2e8f0",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", transition: "all 0.2s", color: "#64748b"
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#3b82f6"; e.currentTarget.style.color = "#3b82f6"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}
+                        >
+                            <ArrowRight size={20} style={{ transform: "rotate(180deg)" }} />
+                        </button>
+                        <button
+                            onClick={() => scroll("right")}
+                            style={{
+                                width: "48px", height: "48px", borderRadius: "16px",
+                                background: "#fff", border: "1px solid #e2e8f0",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", transition: "all 0.2s", color: "#64748b"
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#3b82f6"; e.currentTarget.style.color = "#3b82f6"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}
+                        >
+                            <ArrowRight size={20} />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Scroll row with right arrow */}
                 <div style={{ position: "relative" }}>
                     <div
                         ref={scrollRef}
-                        style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px", paddingRight: "48px" }}
-                    >
-                        {VIRTUAL_EVENTS.length > 0 ? VIRTUAL_EVENTS.map(event => <VirtualCard key={event.id} event={event} />) : (
-                            <div style={{ padding: "40px", textAlign: "center", width: "100%", color: "#9ca3af" }}>
-                                Virtual experiences coming soon.
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right-edge arrow */}
-                    <button
-                        onClick={() => scroll("right")}
-                        style={{
-                            position: "absolute", top: "50%", right: 0, transform: "translateY(-60%)",
-                            width: "38px", height: "38px", borderRadius: "50%",
-                            background: "#fff", border: "1px solid #e5e7eb",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
-                            zIndex: 2, transition: "all 0.2s",
+                        style={{ 
+                            display: "flex", 
+                            gap: "24px", 
+                            overflowX: "auto", 
+                            scrollbarWidth: "none", 
+                            msOverflowStyle: "none", 
+                            padding: "4px 4px 30px" 
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#f97316"; e.currentTarget.style.borderColor = "#f97316"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                    </button>
+                        {virtualEvents.map(event => <VirtualCard key={event._id} event={event} />)}
+                    </div>
                 </div>
 
             </div>

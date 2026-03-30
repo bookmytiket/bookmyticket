@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, ChevronRight, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench } from "lucide-react";
+import { Search, MapPin, ChevronDown, ChevronRight, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
@@ -441,6 +442,33 @@ export default function Navbar() {
 
           {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
+            {/* Join Now Button + Popover */}
+            <Link
+              href="/meeting/join"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%)',
+                color: '#fff',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '13px',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 18px rgba(99,102,241,0.35)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(99,102,241,0.25)'; }}
+            >
+              <Video size={15} /> Join Now
+            </Link>
+
+
             {!mounted ? (
               /* Render a neutral placeholder during SSR / before hydration */
               <Link
@@ -821,6 +849,10 @@ export default function Navbar() {
               <button className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }} onClick={() => { setOrgOpen(true); setMenuOpen(false); }}>
                 Become a Partner
               </button>
+
+              <Link href="/meeting/join" className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)", display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setMenuOpen(false)}>
+                <Video size={18} /> Join Now
+              </Link>
 
               <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
                 {user ? (

@@ -81,6 +81,16 @@ export default function SignInPage() {
         }, 4000);
         return () => { clearInterval(timer); clearInterval(dealTimer); };
     }, []);
+    
+    // REDIRECT GUARD: If already logged in, go to redirectPath or home
+    const { user, login } = useAuth();
+    useEffect(() => {
+        if (!loading && user) {
+            console.log("SignInPage: already logged in as", user.role, ". Redirecting to:", redirectPath || "default");
+            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : (user.role === "admin" ? "/admin" : (user.role === "organiser" ? "/organiser" : "/"));
+            router.replace(destination);
+        }
+    }, [user, loading, router, redirectPath]);
 
 
     // Sign In
@@ -287,7 +297,7 @@ export default function SignInPage() {
             
             if (userData) {
                 // If demo user exists, perform login
-                await login(mockEmail, "", "user", userData);
+                await login(mockEmail, "", "user", userData, redirectPath);
             } else {
                 // Experience: auto-fill signup for demo
                 setSignupEmail(mockEmail);

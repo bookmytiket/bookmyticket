@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, Video, CheckCircle2, Ticket } from 'lucide-react';
+
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 import TicketTemplate from '@/components/TicketTemplate';
@@ -81,6 +82,7 @@ export default function CheckoutClient({ id }) {
                 ticketType: 'General Admission',
                 paymentMethod: 'Online',
                 location: existingBooking.location || event?.location,
+                meetingUrl: existingBooking.meetingUrl || event?.meetingUrl,
             });
             setBookingDone(true);
         }
@@ -124,6 +126,7 @@ export default function CheckoutClient({ id }) {
                     ticketType: 'General Admission',
                     paymentMethod: 'Free',
                     location: event.location,
+                    meetingUrl: event.meetingUrl,
                 });
                 setBookingDone(true);
             } else {
@@ -134,6 +137,26 @@ export default function CheckoutClient({ id }) {
             alert("Unexpected error. Please try again.");
         }
     }, [id, event, user, total, qty, createBookingMutation, router]);
+
+    const [redirectCountdown, setRedirectCountdown] = useState(3);
+    useEffect(() => {
+        if (bookingDone && (event?.virtual || lastBooking?.meetingUrl)) {
+            const timer = setInterval(() => {
+                setRedirectCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        const url = (lastBooking?.meetingUrl || event?.meetingUrl);
+                        if (url) {
+                            const target = url.startsWith("http") ? url : `/${url}`;
+                            window.location.href = target;
+                        }
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [bookingDone, event, lastBooking, router]);
 
     const handleDownloadPdf = useCallback(() => {
         if (!event) return;
@@ -176,17 +199,60 @@ export default function CheckoutClient({ id }) {
                         <div style={{ fontSize: '48px', marginBottom: '8px' }}>✓</div>
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px', color: '#111827' }}>Booking confirmed</h1>
                         <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>{event.title} — {qty} ticket{qty !== 1 ? 's' : ''}.</p>
+                        {(event.virtual || lastBooking?.meetingUrl) && (
+                            <p style={{ fontSize: '13px', color: '#059669', marginTop: '12px', fontWeight: 700 }}>
+                                Redirecting to your virtual meeting in {redirectCountdown} seconds...
+                            </p>
+                        )}
                     </div>
 
                     <div style={{ marginBottom: '24px', background: '#fff', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <TicketTemplate booking={lastBooking} event={{ ...event, img: event.img, location: event.location, date: event.date, time: event.time }} settings={ticketSettings} />
+                        <TicketTemplate 
+                            booking={lastBooking} 
+                            event={{ 
+                                ...event, 
+                                img: event.img, 
+                                location: event.location, 
+                                date: event.date, 
+                                time: event.time,
+                                virtual: event.virtual,
+                                meetingUrl: event.meetingUrl
+                            }} 
+                            settings={ticketSettings} 
+                        />
                     </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+                        {event.virtual && (
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    const url = event.meetingUrl && event.meetingUrl.startsWith("http") ? event.meetingUrl : `/${event.meetingUrl}`;
+                                    window.open(url, '_blank');
+                                }} 
+                                style={{ 
+                                    padding: '12px 24px', 
+                                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 900, 
+                                    cursor: 'pointer', 
+                                    fontSize: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 8px 20px -6px rgba(99,102,241,0.5)'
+                                }}
+                            >
+                                <Video size={18} /> Join Meeting Now
+                            </button>
+                        )}
                         <button type="button" onClick={handleDownloadPdf} style={{ padding: '12px 20px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Download ticket (PDF)</button>
                         <button type="button" onClick={handleSendEmail} style={{ padding: '12px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send ticket to Email</button>
                         <button type="button" onClick={handleSendSms} style={{ padding: '12px 20px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send SMS</button>
                     </div>
+
                 </div>
             </main>
         );

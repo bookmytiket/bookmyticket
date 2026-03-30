@@ -115,26 +115,23 @@ export const createBooking = mutation({
         // Update Organiser Wallet ONLY if status is 'Confirmed'
         if (args.status === 'Confirmed') {
             const validEventId = ctx.db.normalizeId("events", args.eventId);
+            const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
             let eventName = "Event";
-            if (validEventId !== null) {
-                const event = (await ctx.db.get(validEventId)) as any;
-                if (event) {
-                    eventName = event.title || "Event";
-                    if (event.organiserId) {
-                        const organiser = (await ctx.db
-                            .query("organisers")
-                            .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                            .unique()) as any;
-    
-                        if (organiser) {
-                            await ctx.db.patch(organiser._id, {
-                                walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
-                            });
-                        }
+            if (event) {
+                eventName = event.title || "Event";
+                if (event.organiserId) {
+                    const organiser = (await ctx.db
+                        .query("organisers")
+                        .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                        .unique()) as any;
+
+                    if (organiser) {
+                        await ctx.db.patch(organiser._id, {
+                            walletBalance: (organiser.walletBalance || 0) + args.totalPrice,
+                        });
                     }
                 }
             }
-
             const branding = await ctx.db.query("siteBranding").first();
             const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
             let brandLogo = branding?.logoUrl || "/logo.png";
@@ -155,6 +152,16 @@ export const createBooking = mutation({
                         <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${args.ticketCount}</strong> ticket(s) for:</p>
                         <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
                         <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${args.totalPrice}</strong></p>
+                        
+                        ${(event && (event as any).virtual) ? `
+                        <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
+                            <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
+                            <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
+                            <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
+                            <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
+                        </div>
+                        ` : ''}
+
                         <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
                     </div>
                 `,
@@ -215,6 +222,16 @@ export const confirmBooking = mutation({
                     <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${booking.ticketCount}</strong> ticket(s) for:</p>
                     <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
                     <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${booking.totalPrice}</strong></p>
+                    
+                    ${(event && (event as any).virtual) ? `
+                    <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
+                        <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
+                        <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
+                        <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
+                        <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
+                    </div>
+                    ` : ''}
+
                     <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
                 </div>
             `,
@@ -251,6 +268,7 @@ export const getByUser = query({
                     eventName: event?.title || "Event Ticket",
                     eventType: event?.type || "Physical",
                     meetingUrl: event?.meetingUrl || null,
+                    virtual: event?.virtual || false,
                 };
             })
         );

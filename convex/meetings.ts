@@ -16,7 +16,8 @@ export const create = mutation({
         }),
     },
     handler: async (ctx, args) => {
-        const meetingLink = Math.random().toString(36).substring(2, 10);
+        // Generate 9-digit numeric code
+        const meetingLink = Math.floor(100000000 + Math.random() * 900000000).toString();
         const meetingId = await ctx.db.insert("meetings", {
             ...args,
             status: "scheduled",
@@ -211,5 +212,61 @@ export const deleteMeeting = mutation({
         for (const m of messages) {
             await ctx.db.delete(m._id);
         }
+    },
+});
+
+// ── Virtual Event Integrations ─────────────────────────────────────────────
+
+// Auto-create a meeting for a virtual event and patch the event with the meetingUrl slug
+export const createForEvent = mutation({
+    args: {
+        eventId: v.id("events"),
+        title: v.string(),
+        creatorId: v.string(),
+        description: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        // Generate 9-digit numeric code
+        const meetingLink = Math.floor(100000000 + Math.random() * 900000000).toString();
+        await ctx.db.insert("meetings", {
+            title: args.title,
+            description: args.description,
+            creatorId: args.creatorId,
+            status: "scheduled",
+            meetingLink,
+            settings: {
+                lobby: false,
+                muteOnJoin: false,
+                videoOffOnJoin: false,
+                chatEnabled: true,
+                screenShareEnabled: true,
+            },
+            createdAt: Date.now(),
+        });
+        await ctx.db.patch(args.eventId, { meetingUrl: meetingLink });
+        return meetingLink;
+    },
+});
+
+// Get the meeting linked to a virtual event (for booking confirmation link reveal)
+export const getEventMeeting = query({
+    args: { meetingUrl: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("meetings")
+            .withIndex("by_meetingLink", (q) => q.eq("meetingLink", args.meetingUrl))
+            .unique();
+    },
+});
+
+// Return all active virtual events for the home page "Virtual Events" section
+export const getVirtualEvents = query({
+    args: {},
+    handler: async (ctx) => {
+        const events = await ctx.db
+            .query("events")
+            .filter((q) => q.eq(q.field("virtual"), true))
+            .collect();
+        return events.filter((e) => !e.status || e.status === "Active");
     },
 });

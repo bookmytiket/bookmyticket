@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ticket, Lock, LogOut, ArrowLeft, Sparkles } from "lucide-react";
+import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -38,11 +38,13 @@ export default function ProfilePage() {
     const eventBookingsList = useQuery(api.bookings.getByUser, { userId: user.identifier });
     const vendorBookingsList = useQuery(api.vendorBookings.getByUser, { userId: user.identifier });
 
+    // Removed forced redirect for organisers/staff to allow them to view personal bookings and join meetings
     useEffect(() => {
-        if (user && (user.role === "organiser" || user.role === "staff")) {
-            router.replace("/organiser");
+        // Only redirect if no user is found and mounting is complete
+        if (!user && mounted) {
+            router.push("/signin");
         }
-    }, [user, router]);
+    }, [user, router, mounted]);
 
     // Hydration guard: show nothing or a loader until client-side mount
     if (!mounted) {
@@ -153,12 +155,29 @@ export default function ProfilePage() {
                                             }`}>
                                                 {booking.status}
                                             </span>
-                                            <button 
-                                                onClick={() => setViewTicketModal(booking)}
-                                                className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
-                                            >
-                                                {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
-                                            </button>
+                                            <div className="flex items-center gap-3">
+                                                <button 
+                                                    onClick={() => setViewTicketModal(booking)}
+                                                    className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                                >
+                                                    {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
+                                                </button>
+                                                {"Cancelled" !== booking.status && (booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const url = booking.meetingUrl;
+                                                            if (url) {
+                                                                const target = url.startsWith("http") ? url : `/${url}`;
+                                                                window.open(target, '_blank');
+                                                            }
+                                                        }}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer"
+                                                    >
+                                                        <Video size={10} /> Join Now
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -364,27 +383,42 @@ export default function ProfilePage() {
                                 <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.status}</p>
                             </div>
                         </div>
-                        {(viewTicketModal.meetingUrl || viewTicketModal.eventType === "Online") && (
-                            <a 
-                                href={viewTicketModal.meetingUrl || "#"} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{ 
-                                    display: "block",
-                                    marginTop: "20px",
-                                    padding: "14px", 
-                                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
-                                    color: "#fff", 
-                                    borderRadius: "12px", 
-                                    fontSize: "14px", 
-                                    fontWeight: "800", 
-                                    textDecoration: "none",
-                                    boxShadow: "0 10px 20px rgba(16, 185, 129, 0.2)",
-                                    textAlign: "center"
-                                }}
-                            >
-                                🎥 Join Meeting Now
-                            </a>
+                        {(viewTicketModal.meetingUrl || viewTicketModal.eventType === "Online" || viewTicketModal.virtual) && (
+                            <div style={{ marginTop: "20px" }}>
+                                <div style={{ marginBottom: "12px", background: "#fff", border: "1.5px solid #e2e8f0", padding: "10px", borderRadius: "12px" }}>
+                                    <p style={{ margin: "0 0 2px", fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Meeting Code</p>
+                                    <p style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: "#0f172a", fontFamily: "monospace", letterSpacing: "0.1em" }}>{viewTicketModal.meetingUrl || "PENDING"}</p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const url = viewTicketModal.meetingUrl;
+                                        if (url) {
+                                            const target = url.startsWith("http") ? url : `/${url}`;
+                                            window.open(target, '_blank');
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: "100%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "8px",
+                                        padding: "14px", 
+                                        background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
+                                        color: "#fff", 
+                                        borderRadius: "12px", 
+                                        fontSize: "14px", 
+                                        fontWeight: "800", 
+                                        textDecoration: "none",
+                                        boxShadow: "0 10px 20px rgba(16, 185, 129, 0.2)",
+                                        textAlign: "center",
+                                        border: "none",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    <Video size={18} /> Join Meeting Now
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

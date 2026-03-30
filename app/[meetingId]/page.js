@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
-import { useWebRTC } from "../hooks/useWebRTC";
+import { useWebRTC } from "@/app/meeting/hooks/useWebRTC";
 import { 
     Mic, MicOff, Video, VideoOff, ScreenShare, Share, 
     MessageSquare, Users, PhoneOff, Settings, MoreVertical, 
@@ -134,7 +135,12 @@ export default function MeetingRoom() {
                 userId: userId,
             });
         }
-        router.push("/organiser");
+        // Redirect bases on role
+        if (user?.role === "organiser" || user?.role === "admin") {
+            router.push("/organiser");
+        } else {
+            router.push("/profile");
+        }
     };
 
     const handleSendMessage = async (e) => {
@@ -149,10 +155,25 @@ export default function MeetingRoom() {
         setChatInput("");
     };
 
-    if (authLoading || !meeting) {
+    if (authLoading || meeting === undefined) {
         return (
             <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (!meeting) {
+        return (
+            <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4 text-center" style={{ fontFamily: "'Figtree', 'Inter', sans-serif" }}>
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.3-4.3"/><path d="M9.5 15.5 18 7"/><path d="M4.5 9a5.5 5.5 0 1 0 11 0 5.5 5.5 0 1 0-11 0Z"/></svg>
+                </div>
+                <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Meeting Not Found</h1>
+                <p className="text-slate-600 mb-8 max-w-sm">The meeting code <strong>{meetingLink}</strong> is invalid or the meeting has ended.</p>
+                <Link href="/" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95">
+                    Back to Home
+                </Link>
             </div>
         );
     }

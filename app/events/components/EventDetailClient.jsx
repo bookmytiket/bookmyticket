@@ -23,6 +23,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
+import { Video, Lock, ExternalLink, Play, CheckCircle2 } from 'lucide-react';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const DEFAULT_FEATURES = [
@@ -38,6 +39,15 @@ export default function EventDetailClient({ id }) {
     const router = useRouter();
     const convexEvents = useQuery(api.events.getActiveEvents);
     const [storageLoaded, setStorageLoaded] = useState(false);
+
+    // Fetch user bookings to check if they've already booked this event
+    const userBookings = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+    
+    // Check if this specific event is already booked by the user
+    const existingBooking = useMemo(() => {
+        if (!userBookings || !id) return null;
+        return userBookings.find(b => String(b.eventId) === String(id));
+    }, [userBookings, id]);
 
     useEffect(() => {
         setStorageLoaded(true);
@@ -222,21 +232,62 @@ export default function EventDetailClient({ id }) {
                                         <span className="text-[12px]">{event.time}</span>
                                     </div>
                                 </div>
+                                {event.virtual && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl mt-4">
+                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                                        <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest italic">Live Meeting Link Included</span>
+                                    </div>
+                                )}
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const bookUrl = `/events/book?id=${id}`;
-                                    if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
-                                    else router.push(bookUrl);
-                                }}
-                                className="w-full flex items-center justify-center space-x-2 py-[14px] text-white rounded-[1rem] font-bold shadow-sm transition-all text-[15px] tracking-wide hover:scale-[1.02] active:scale-[0.98]"
-                                style={{ background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }}
-                            >
-                                <span>Book Now</span>
-                            </button>
+                            {existingBooking ? (
+                                <div className="space-y-3">
+                                    {event.virtual ? (
+                                        <>
+                                            {(event.price === 0 || existingBooking.status === "Confirmed") ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const url = event.meetingUrl && event.meetingUrl.startsWith("http") ? event.meetingUrl : `/${event.meetingUrl}`;
+                                                        window.open(url, '_blank');
+                                                    }}
+                                                    className="w-full flex items-center justify-center space-x-2 py-[14px] text-white rounded-[1rem] font-black shadow-lg transition-all text-[15px] tracking-wide hover:scale-[1.02] active:scale-[0.98]"
+                                                    style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', boxShadow: '0 8px 20px -6px rgba(99,102,241,0.5)' }}
+                                                >
+                                                    <Video size={18} />
+                                                    <span>Join Meeting Now</span>
+                                                </button>
+                                            ) : (
+                                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+                                                    <Lock size={20} className="mx-auto mb-2 text-slate-400" />
+                                                    <p className="text-[12px] font-bold text-slate-600">Meeting link reveals after successful payment</p>
+                                                    <div className="mt-2 text-[10px] uppercase font-black text-amber-600 bg-amber-50 inline-block px-2 py-0.5 rounded-full">Payment Pending</div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2 p-4 bg-green-50 border border-green-100 rounded-2xl">
+                                            <CheckCircle2 size={18} className="text-green-500" />
+                                            <span className="text-[14px] font-black text-green-700 italic uppercase">Ticket Booked!</span>
+                                        </div>
+                                    )}
+                                    <p className="text-center text-[11px] font-bold text-slate-400">You already have a booking for this event.</p>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const bookUrl = `/events/book?id=${id}`;
+                                        if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                        else router.push(bookUrl);
+                                    }}
+                                    className="w-full flex items-center justify-center space-x-2 py-[14px] text-white rounded-[1rem] font-bold shadow-sm transition-all text-[15px] tracking-wide hover:scale-[1.02] active:scale-[0.98]"
+                                    style={{ background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }}
+                                >
+                                    <span>{event.price === 0 ? "Get Free Ticket" : "Book Now"}</span>
+                                </button>
+                            )}
                         </div>
+
                     </div>
 
                 </div>

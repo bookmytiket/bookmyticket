@@ -47,13 +47,19 @@ export function AuthProvider({ children }) {
         // Cross-tab logout synchronization
         const handleStorageChange = (e) => {
             if (e.key === "user") {
+                console.log("AuthContext: storage event detected for 'user' key. Value changed to:", !!e.newValue);
                 if (!e.newValue) {
                     setUser(null);
+                    console.log("AuthContext: user logged out in another tab, redirecting to signin.");
                     router.push("/signin");
                 } else {
                     try {
-                        setUser(JSON.parse(e.newValue));
-                    } catch (_) {}
+                        const parsed = JSON.parse(e.newValue);
+                        setUser(parsed);
+                        console.log("AuthContext: user updated from another tab:", parsed.role);
+                    } catch (err) {
+                        console.error("AuthContext: error parsing user from storage event:", err);
+                    }
                 }
             }
         };
@@ -83,7 +89,10 @@ export function AuthProvider({ children }) {
             };
             localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
-            router.push(redirectPath || "/admin");
+            
+            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/admin";
+            console.log("Redirecting admin:", destination);
+            router.push(destination);
             return true;
         }
 
@@ -92,11 +101,15 @@ export function AuthProvider({ children }) {
             const authUser = { identifier, role: "user", name: userData.fullName || userData.name, id: userData._id };
             localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
-            router.push(redirectPath || "/");
+            
+            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/";
+            console.log("Redirecting user:", destination);
+            router.push(destination);
             return true;
         }
 
         // Validate Organiser against Convex Database
+        console.log("AuthContext login called:", { identifier, role, hasUserData: !!userData, redirectPath });
         if (role === "organiser") {
             // If userData is already provided (from signin page), use it immediately
             if (userData) {
@@ -115,9 +128,10 @@ export function AuthProvider({ children }) {
                 localStorage.setItem("user", JSON.stringify(authUser));
                 setUser(authUser);
                 
-                // ALWAYS route to the correct portal — never use the URL redirect param
-                // for organisers/artists as it may contain a path from a different role
-                const destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                // Prioritize redirectPath if provided, but fallback to dashboard
+                const dashboard = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : dashboard;
+                console.log("Redirecting organiser (data):", destination);
                 router.push(destination);
                 return true;
             }
@@ -145,8 +159,10 @@ export function AuthProvider({ children }) {
                     localStorage.setItem("user", JSON.stringify(authUser));
                     setUser(authUser);
                     
-                    // ALWAYS route to correct portal — never use URL redirect param
-                    const destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                    // Prioritize redirectPath if provided, but fallback to dashboard
+                    const dashboard = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : dashboard;
+                    console.log("Redirecting organiser (query):", destination);
                     router.push(destination);
                     return true;
                 }
@@ -156,7 +172,10 @@ export function AuthProvider({ children }) {
                     const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
                     localStorage.setItem("user", JSON.stringify(mockUser));
                     setUser(mockUser);
-                    router.push("/organiser");
+                    
+                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/organiser";
+                    console.log("Redirecting demo organiser:", destination);
+                    router.push(destination);
                     return true;
                 }
             } catch (err) {
@@ -177,7 +196,10 @@ export function AuthProvider({ children }) {
                     const authUser = { identifier, role: "staff", name: staff.name, id: staff._id, organiserId: staff.organiserId };
                     localStorage.setItem("user", JSON.stringify(authUser));
                     setUser(authUser);
-                    router.push(redirectPath || "/organiser?tab=pwa_scanner");
+                    
+                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/organiser?tab=pwa_scanner";
+                    console.log("Redirecting staff:", destination);
+                    router.push(destination);
                     return true;
                 }
             } catch (err) {
@@ -196,7 +218,10 @@ export function AuthProvider({ children }) {
             };
             localStorage.setItem("user", JSON.stringify(authUser));
             setUser(authUser);
-            router.push(redirectPath || "/branding/dashboard");
+            
+            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/branding/dashboard";
+            console.log("Redirecting branding partner:", destination);
+            router.push(destination);
             return true;
         }
 

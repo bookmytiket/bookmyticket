@@ -4,7 +4,13 @@ import Navbar from "@/components/Navbar";
 
 export default function ConditionalNavbar() {
     const pathname = usePathname();
+    
+    const isMeetingRoute = pathname && /^\/[a-zA-Z0-9]{6,12}$/.test(pathname) && ![
+        '/events', '/services', '/admin', '/organiser', '/vendor', '/signin', '/login', '/profile', '/movies', '/branding', '/advertising', '/checkout'
+    ].includes(pathname);
+
     if (
+        isMeetingRoute ||
         pathname?.startsWith("/admin") ||
         pathname?.startsWith("/organiser") ||
         pathname?.startsWith("/vendor") ||

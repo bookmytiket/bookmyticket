@@ -151,7 +151,10 @@ const AdminMeetingsTable = ({ t, router }) => {
                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                             <div style={{ display: "flex", gap: "8px" }}>
                                 <button 
-                                    onClick={() => router.push(`/meeting/${meeting.meetingLink}`)}
+                                    onClick={() => {
+                                        const url = meeting.meetingLink && meeting.meetingLink.startsWith("http") ? meeting.meetingLink : `/${meeting.meetingLink}`;
+                                        window.open(url, '_blank');
+                                    }}
                                     style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                                 >
                                     Join

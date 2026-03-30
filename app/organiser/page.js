@@ -602,9 +602,10 @@ function OrganiserPanel() {
     }, [convexSupportTickets, effectiveEmail]);
 
     const convexEvents = useQuery(api.events.getOrganiserEvents, { organiserId: effectiveEmail });
-    const deleteEventMutation = useMutation(api.events.deleteEvent);
-    const updateEventMutation = useMutation(api.events.updateEvent);
     const createEventMutation = useMutation(api.events.createEvent);
+    const updateEventMutation = useMutation(api.events.updateEvent);
+    const createMeetingForEvent = useMutation(api.meetings.createForEvent);
+    const deleteEventMutation = useMutation(api.events.deleteEvent);
 
     const convexBookings = useQuery(api.bookings.getBookings) || EMPTY_ARRAY;
     const updateBookingMutation = useMutation(api.bookings.updateBooking);
@@ -1023,7 +1024,7 @@ function OrganiserPanel() {
             district: !isOnline ? postEvent.district : undefined,
             city: !isOnline ? postEvent.city : undefined,
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
-            meetingUrl: isOnline ? (postEvent.meetingUrl || undefined) : undefined,
+            meetingUrl: isOnline ? (postEvent.meetingUrl || (editingEvent?.meetingUrl || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
             status: postEvent.eventStatus || "Active",
@@ -1072,7 +1073,19 @@ function OrganiserPanel() {
                 });
         } else {
             createEventMutation(payload)
-                .then(() => {
+                .then(async (eventId) => {
+                    if (isOnline) {
+                        try {
+                            await createMeetingForEvent({
+                                eventId,
+                                title: payload.title,
+                                creatorId: effectiveEmail,
+                                description: payload.description
+                            });
+                        } catch (meetErr) {
+                            console.error("Failed to auto-create meeting:", meetErr);
+                        }
+                    }
                     setPostEvent(getInitialPostEvent());
                     setAddEventStep("select_type");
                     try { localStorage.removeItem("organiser_draft"); } catch (_) { }
@@ -2130,7 +2143,7 @@ function OrganiserPanel() {
         };
 
         const copyLink = (link) => {
-            const url = `${window.location.origin}/meeting/${link}`;
+            const url = `${window.location.origin}/${link}`;
             navigator.clipboard.writeText(url);
             alert("Meeting link copied to clipboard!");
         };
@@ -2215,7 +2228,10 @@ function OrganiserPanel() {
                             
                             <div className="flex flex-col gap-3">
                                 <button 
-                                    onClick={() => router.push(`/meeting/${meeting.meetingLink}`)}
+                                    onClick={() => {
+                                        const url = meeting.meetingLink && meeting.meetingLink.startsWith("http") ? meeting.meetingLink : `/${meeting.meetingLink}`;
+                                        window.open(url, '_blank');
+                                    }}
                                     className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
                                 >
                                     <Video size={16} /> Start / Join Meeting
@@ -2579,7 +2595,15 @@ function OrganiserPanel() {
                                                             </div>
                                                             <div>
                                                                 <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
-                                                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>{ev.venue || "Online"}</p>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                                                                    <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>{ev.venue || "Online"}</p>
+                                                                    {ev.type === "Online" && ev.meetingUrl && (
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                                                                            <span style={{ fontSize: "9px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Code:</span>
+                                                                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace" }}>{ev.meetingUrl}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>

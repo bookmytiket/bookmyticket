@@ -90,6 +90,42 @@ export default function TicketTemplate({ booking = {}, event = {}, settings = {}
                     <div><span style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Payment</span><p style={{ margin: "2px 0 0", fontSize: "13px", fontWeight: 600 }}>{paymentMethod} · {paymentStatus}</p></div>
                 </div>
 
+                {/* Virtual Meeting Access Section */}
+                {(booking.meetingUrl || event.meetingUrl || event.virtual || booking.virtual || event.type === "Online") && (
+                    <div style={{ padding: "16px 20px", borderTop: "2px solid #10b981", background: "#f0fdf4" }}>
+                        <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0", color: "#065f46" }}>Meeting Access</h3>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                                <p style={{ margin: "0 0 4px", fontSize: "10px", fontWeight: 700, color: "#059669", textTransform: "uppercase" }}>Meeting Code</p>
+                                <p style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: "#064e3b", fontFamily: "monospace", letterSpacing: "0.1em" }}>{booking.meetingUrl || event.meetingUrl || "PENDING"}</p>
+                            </div>
+                            {(booking.meetingUrl || event.meetingUrl) && (
+                                <a 
+                                    href={
+                                        (booking.meetingUrl && booking.meetingUrl.startsWith("http")) ? booking.meetingUrl : 
+                                        (event.meetingUrl && event.meetingUrl.startsWith("http")) ? event.meetingUrl : 
+                                        `/${booking.meetingUrl || event.meetingUrl}`
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ 
+                                        padding: "10px 20px", 
+                                        backgroundColor: "#10b981", 
+                                        color: "#fff", 
+                                        borderRadius: "8px", 
+                                        fontSize: "12px", 
+                                        fontWeight: 800, 
+                                        textDecoration: "none",
+                                        boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)"
+                                    }}
+                                >
+                                    Join Meeting Now
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Important information */}
                 <div style={{ padding: "16px 20px", borderTop: "2px solid #7dd3fc" }}>
                     <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0" }}>Important information</h3>
