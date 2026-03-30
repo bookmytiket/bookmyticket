@@ -58,7 +58,7 @@ const PARTNER_DEALS = [
 ];
 
 export default function SignInPage() {
-    const { login } = useAuth();
+    const { user, login, loading: authLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectPath = searchParams.get("redirect");
@@ -83,14 +83,13 @@ export default function SignInPage() {
     }, []);
     
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
-    const { user, login } = useAuth();
     useEffect(() => {
-        if (!loading && user) {
+        if (!authLoading && user) {
             console.log("SignInPage: already logged in as", user.role, ". Redirecting to:", redirectPath || "default");
             const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : (user.role === "admin" ? "/admin" : (user.role === "organiser" ? "/organiser" : "/"));
             router.replace(destination);
         }
-    }, [user, loading, router, redirectPath]);
+    }, [user, authLoading, router, redirectPath]);
 
 
     // Sign In

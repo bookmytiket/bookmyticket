@@ -163,19 +163,24 @@ export default function ProfilePage() {
                                                     {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
                                                 </button>
                                                 {"Cancelled" !== booking.status && (booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const url = booking.meetingUrl;
-                                                            if (url) {
+                                                    booking.meetingUrl ? (
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const url = booking.meetingUrl;
+                                                                // Internal meeting code → /{code}, external URL → open as-is
                                                                 const target = url.startsWith("http") ? url : `/${url}`;
-                                                                window.open(target, '_blank');
-                                                            }
-                                                        }}
-                                                        className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer"
-                                                    >
-                                                        <Video size={10} /> Join Now
-                                                    </button>
+                                                                window.open(target, '_blank', 'noopener,noreferrer');
+                                                            }}
+                                                            className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer"
+                                                        >
+                                                            <Video size={10} /> Join Now
+                                                        </button>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1 px-2 py-1 bg-slate-200 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-not-allowed" title="Meeting link not yet available">
+                                                            <Video size={10} /> Pending
+                                                        </span>
+                                                    )
                                                 )}
                                             </div>
                                         </div>
