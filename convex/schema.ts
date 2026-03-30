@@ -588,4 +588,51 @@ export default defineSchema({
         response: v.optional(v.string()),
         createdAt: v.number(),
     }).index("by_vendorId", ["vendorId"]),
+
+    meetings: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        creatorId: v.string(), // organiser or user email
+        status: v.string(), // "scheduled", "live", "ended"
+        startTime: v.optional(v.number()),
+        endTime: v.optional(v.number()),
+        password: v.optional(v.string()),
+        meetingLink: v.string(), // unique slug/id
+        settings: v.object({
+            lobby: v.boolean(),
+            muteOnJoin: v.boolean(),
+            videoOffOnJoin: v.boolean(),
+            chatEnabled: v.boolean(),
+            screenShareEnabled: v.boolean(),
+        }),
+        createdAt: v.number(),
+    }).index("by_creatorId", ["creatorId"]).index("by_meetingLink", ["meetingLink"]),
+
+    meetingParticipants: defineTable({
+        meetingId: v.id("meetings"),
+        userId: v.string(), // email
+        name: v.string(),
+        role: v.string(), // "host", "participant"
+        status: v.string(), // "waiting", "joined", "left"
+        joinedAt: v.optional(v.number()),
+        leftAt: v.optional(v.number()),
+    }).index("by_meetingId", ["meetingId"]).index("by_userId", ["userId"]),
+
+    signals: defineTable({
+        meetingId: v.id("meetings"),
+        senderId: v.string(), // participant id (email)
+        receiverId: v.optional(v.string()), // target participant id (email), null for broadcast
+        type: v.string(), // "offer", "answer", "ice-candidate"
+        data: v.string(), // stringified JSON
+        timestamp: v.number(),
+    }).index("by_meetingId", ["meetingId"]).index("by_receiverId", ["receiverId"]),
+
+    meetingMessages: defineTable({
+        meetingId: v.id("meetings"),
+        senderId: v.string(),
+        senderName: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+    }).index("by_meetingId", ["meetingId"]),
 });
+

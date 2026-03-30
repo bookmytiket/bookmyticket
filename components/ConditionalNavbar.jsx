@@ -17,6 +17,7 @@ export default function ConditionalNavbar() {
         pathname?.startsWith("/events/book") ||
         pathname?.startsWith("/services/") ||
         pathname?.startsWith("/profile") ||
+        pathname?.startsWith("/meeting") ||
         pathname?.includes("/checkout")
     ) {
         return null;

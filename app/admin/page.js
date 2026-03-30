@@ -98,6 +98,79 @@ export default function AdminHomePageWrapper() {
     );
 }
 
+const AdminMeetingsTable = ({ t, router }) => {
+    const meetings = useQuery(api.meetings.listAll);
+    const deleteMeeting = useMutation(api.meetings.deleteMeeting);
+
+    if (meetings === undefined) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading meetings...</div>;
+    if (meetings.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No meetings scheduled on the platform.</div>;
+
+    return (
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+            <thead>
+                <tr style={{ textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Meeting Details</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Organiser</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Created At</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {meetings.map((meeting) => (
+                    <tr key={meeting._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#3b82f620", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}>
+                                    <Video size={20} />
+                                </div>
+                                <div>
+                                    <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>{meeting.title}</p>
+                                    <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>ID: {meeting.meetingLink}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 600, color: t.textMain }}>{meeting.creatorId}</div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <span style={{ 
+                                padding: "4px 10px", 
+                                borderRadius: "100px", 
+                                fontSize: "11px", 
+                                fontWeight: 800, 
+                                backgroundColor: (meeting.status === 'live' ? "#22c55e20" : "#3b82f620"),
+                                color: (meeting.status === 'live' ? "#22c55e" : "#3b82f6")
+                            }}>
+                                {meeting.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ fontSize: "12px", color: t.textSub }}>{new Date(meeting.createdAt).toLocaleString()}</div>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                <button 
+                                    onClick={() => router.push(`/meeting/${meeting.meetingLink}`)}
+                                    style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                                >
+                                    Join
+                                </button>
+                                <button 
+                                    onClick={() => { if(confirm("Delete this meeting?")) deleteMeeting({ meetingId: meeting._id }); }}
+                                    style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 function AdminHomePage() {
     const { user, loading, logout } = useAuth();
     const searchParams = useSearchParams();
@@ -1187,6 +1260,7 @@ function AdminHomePage() {
                                 <SidebarGroupTitle title="Operations" />
                                 <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
                                 <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+                                <SidebarItem id="meetings" label="Meetings" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
                                 <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
 
                                 <SidebarGroupTitle title="Partners" />
@@ -4289,7 +4363,29 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management", "ad_popups"].includes(activeTab)) ? null : (
+                    {activeTab === "meetings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Global Meetings</h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <div style={{ position: "relative" }}>
+                                        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub }} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search meetings..." 
+                                            style={{ padding: "10px 12px 10px 36px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "13px", width: "240px" }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style={{ overflowX: "auto" }}>
+                                <AdminMeetingsTable t={t} router={router} />
+                            </div>
+                        </div>
+                    )}
+
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management", "ad_popups", "meetings"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

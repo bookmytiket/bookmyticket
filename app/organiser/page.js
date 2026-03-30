@@ -39,7 +39,7 @@ import {
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share
 } from "lucide-react";
 
 const ACCENT_BLUE = "#3b82f6";
@@ -2098,6 +2098,142 @@ function OrganiserPanel() {
         </div>
     );
 
+    // Meetings Tab Component
+    const MeetingsTab = ({ t, effectiveEmail, router }) => {
+        const meetings = useQuery(api.meetings.listByCreator, { creatorId: effectiveEmail });
+        const createMeeting = useMutation(api.meetings.create);
+        const deleteMeeting = useMutation(api.meetings.deleteMeeting);
+        const [isCreating, setIsCreating] = useState(false);
+        const [newMeeting, setNewMeeting] = useState({ title: "", description: "" });
+
+        const handleCreate = async (e) => {
+            e.preventDefault();
+            if (!newMeeting.title.trim()) return;
+            try {
+                await createMeeting({
+                    creatorId: effectiveEmail,
+                    title: newMeeting.title,
+                    description: newMeeting.description,
+                    settings: {
+                        lobby: false,
+                        muteOnJoin: false,
+                        videoOffOnJoin: false,
+                        chatEnabled: true,
+                        screenShareEnabled: true,
+                    }
+                });
+                setIsCreating(false);
+                setNewMeeting({ title: "", description: "" });
+            } catch (err) {
+                alert("Failed to create meeting: " + err.message);
+            }
+        };
+
+        const copyLink = (link) => {
+            const url = `${window.location.origin}/meeting/${link}`;
+            navigator.clipboard.writeText(url);
+            alert("Meeting link copied to clipboard!");
+        };
+
+        return (
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between mb-2">
+                    <div>
+                        <h2 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900 leading-none">Meeting Hub</h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
+                    </div>
+                    <button 
+                        onClick={() => setIsCreating(true)}
+                        className="px-6 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xl shadow-slate-200"
+                    >
+                        <Plus size={16} strokeWidth={3} /> New Meeting
+                    </button>
+                </div>
+
+                {isCreating && (
+                    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-pink-500">Configure Session</h3>
+                            <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-all"><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleCreate} className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
+                                <input 
+                                    type="text" 
+                                    required
+                                    value={newMeeting.title}
+                                    onChange={(e) => setNewMeeting({...newMeeting, title: e.target.value})}
+                                    placeholder="Enter a descriptive title..."
+                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
+                                <textarea 
+                                    value={newMeeting.description}
+                                    onChange={(e) => setNewMeeting({...newMeeting, description: e.target.value})}
+                                    placeholder="Brief agenda or instructions..."
+                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300 min-h-[100px]"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setIsCreating(false)} className="px-6 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">Initialize Meeting</button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {meetings?.length === 0 && !isCreating ? (
+                        <div className="col-span-full py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
+                                <Video size={40} />
+                            </div>
+                            <h4 className="text-lg font-black italic tracking-tighter uppercase text-slate-400">No Meetings Planned</h4>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2">Start by creating your first virtual event</p>
+                        </div>
+                    ) : meetings?.map(meeting => (
+                        <div key={meeting._id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
+                            <div className="flex justify-between items-start mb-6">
+                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                    meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' : 
+                                    meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
+                                }`}>
+                                    {meeting.status}
+                                </div>
+                                <button 
+                                    onClick={() => deleteMeeting({ meetingId: meeting._id })}
+                                    className="p-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                            <h4 className="text-xl font-black italic tracking-tighter uppercase text-slate-900 mb-2 truncate">{meeting.title}</h4>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8 line-clamp-2">{meeting.description || "No description provided."}</p>
+                            
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={() => router.push(`/meeting/${meeting.meetingLink}`)}
+                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                                >
+                                    <Video size={16} /> Start / Join Meeting
+                                </button>
+                                <button 
+                                    onClick={() => copyLink(meeting.meetingLink)}
+                                    className="w-full py-4 border border-slate-100 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Share size={16} /> Copy Invitation Link
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     // Main Dashboard View (Approved)
     const renderDashboardView = () => {
         const renderTabContent = () => {
@@ -2505,6 +2641,15 @@ function OrganiserPanel() {
                                 </div>
                             </div>
                         </div>
+                    );
+                }
+                case "meetings": {
+                    return (
+                        <MeetingsTab 
+                            t={t} 
+                            effectiveEmail={effectiveEmail} 
+                            router={router}
+                        />
                     );
                 }
                 case "post_event":
@@ -4304,6 +4449,16 @@ function OrganiserPanel() {
                                 <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
                             </div>
                         )}
+
+                        <button
+                            onClick={() => setActiveTab("meetings")}
+                            className={`sidebar-item ${activeTab === "meetings" ? "active" : ""}`}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Video size={18} />
+                                <span>Meetings</span>
+                            </div>
+                        </button>
 
                         <div className="sidebar-category">Bookings</div>
                         {!isStaff && (
