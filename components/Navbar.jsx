@@ -2,8 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, ChevronRight, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
-
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
@@ -12,7 +11,7 @@ import { api } from "@/convex/_generated/api";
 
 const SUBNAV_LINKS = [
   { href: "/#explore-popular-events", label: "Events" },
-  { href: "/#services", label: "Services" },
+  { href: "/services", label: "Services" },
 ];
 
 
@@ -126,22 +125,18 @@ const POPULAR_CITIES_BY_COUNTRY = {
 const EVENT_CATEGORIES = [
   "Concert", "Sports", "Comedy", "Theatre", "Music",
   "Workshop", "Festival", "Conference", "Exhibition", "Other",
-  "Mehendi Artist", "Photographer/Studio", "Makeup Artist", "Personal Service", "Artist"
 ];
 
 import { useAuth } from "./AuthContext";
 
-const CITY_IMAGES = {
-  "Bengaluru": "https://images.unsplash.com/photo-1596760408281-9947aa5970ee?q=80&w=400&fit=crop",
-  "Mumbai": "https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?q=80&w=400&fit=crop",
-  "Delhi": "https://images.unsplash.com/photo-1587474260584-136574528ed5?q=80&w=400&fit=crop",
-  "Chennai": "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?q=80&w=400&fit=crop",
-  "Hyderabad": "https://images.unsplash.com/photo-1572445271230-a78b5944a659?q=80&w=400&fit=crop",
-  "Coimbatore": "https://images.unsplash.com/photo-1583091000329-07aa2257242d?q=80&w=400&fit=crop",
-  "Kochi": "https://images.unsplash.com/photo-1544161405-fbe7174e9411?q=80&w=400&fit=crop",
-  "Kolkata": "https://images.unsplash.com/photo-1558431382-7f9e8557b6f6?q=80&w=400&fit=crop",
-  "Dubai": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?q=80&w=400&fit=crop",
-  "Generic": "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=400&fit=crop"
+const ALL_CITIES_BY_COUNTRY = {
+  "India": ["Coimbatore", "Chennai", "Salem", "Madurai", "Trichy", "Tirupur", "Erode", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Kolkata", "Delhi", "Gurgaon", "Noida", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kochi", "Thiruvananthapuram", "Chandigarh", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Ludhiana", "Agra", "Nashik", "Rajkot", "Varanasi", "Srinagar", "Amritsar", "Aurangabad", "Solapur"],
+  "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Al Ain", "Ras Al Khaimah", "Fujairah", "Umm Al Quwain", "Ajman"],
+  "Singapore": ["Central", "North", "South", "East", "West"],
+  "Malaysia": ["Kuala Lumpur", "George Town", "Ipoh", "Shah Alam", "Petaling Jaya", "Malacca City", "Johor Bahru", "Kuching", "Kota Kinabalu"],
+  "Thailand": ["Bangkok", "Nonthaburi", "Nakhon Ratchasima", "Chiang Mai", "Udon Thani", "Hat Yai", "Pattaya", "Phuket Town", "Suphan Buri", "Surat Thani"],
+  "Germany": ["Berlin", "Hamburg", "Munich", "Cologne", "Frankfurt", "Stuttgart", "Düsseldorf", "Leipzig", "Dortmund", "Essen"],
+  "United States": ["New York City", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
 };
 
 const DEFAULT_CATEGORIES = [
@@ -197,42 +192,9 @@ export default function Navbar() {
 
   /* Location modal states */
   const [locSearch, setLocSearch] = useState("");
-  const [locResults, setLocResults] = useState([]);
-  const [isLocSearching, setIsLocSearching] = useState(false);
   const [activeCountry, setActiveCountry] = useState("India");
   const [showOtherCities, setShowOtherCities] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
-
-  // Debounced Live Search Effect
-  useEffect(() => {
-    if (locSearch.length < 3) {
-      setLocResults([]);
-      setIsLocSearching(false);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsLocSearching(true);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locSearch)}&limit=8&addressdetails=1`);
-        const data = await res.json();
-        setLocResults(data.map(item => ({
-          name: item.display_name.split(',')[0],
-          fullName: item.display_name,
-          type: item.address?.city ? 'City' : item.address?.town ? 'Town' : item.address?.village ? 'Village' : 'Location',
-          image: CITY_IMAGES[item.display_name.split(',')[0]] || CITY_IMAGES.Generic,
-          lat: item.lat,
-          lon: item.lon
-        })));
-      } catch (err) {
-        console.error("Location search failed:", err);
-      } finally {
-        setIsLocSearching(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [locSearch]);
 
   // country-state-city states
   const [selCountry, setSelCountry] = useState("");
@@ -442,33 +404,6 @@ export default function Navbar() {
 
           {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
-            {/* Join Now Button + Popover */}
-            <Link
-              href="/meeting/join"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%)',
-                color: '#fff',
-                padding: '9px 18px',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '13px',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(99,102,241,0.25)',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-                textDecoration: 'none',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 18px rgba(99,102,241,0.35)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(99,102,241,0.25)'; }}
-            >
-              <Video size={15} /> Join Now
-            </Link>
-
-
             {!mounted ? (
               /* Render a neutral placeholder during SSR / before hydration */
               <Link
@@ -495,8 +430,7 @@ export default function Navbar() {
             ) : user ? (
               <Link
                 href={
-                  (user.role === "organiser" || user.role === "staff") ? 
-                    ((user.category?.includes("mehandi") || user.category?.includes("mehendi") || user.category?.includes("photograph") || user.category?.includes("makeup") || user.category?.includes("artist")) ? "/vendor/dashboard" : "/organiser") :
+                  user.role === "organiser" || user.role === "staff" ? "/organiser" :
                   user.role === "admin" ? "/admin" :
                   user.role === "branding_partner" ? "/branding/dashboard" :
                   "/profile"
@@ -525,8 +459,7 @@ export default function Navbar() {
                 }}
               >
                 {
-                  (user.role === "organiser" || user.role === "staff") ? 
-                    ((user.category?.toLowerCase()?.includes("mehandi") || user.category?.toLowerCase()?.includes("mehendi") || user.category?.toLowerCase()?.includes("photograph") || user.category?.toLowerCase()?.includes("makeup") || user.category?.toLowerCase()?.includes("artist")) ? "Vendor Panel" : "Organiser Panel") :
+                  user.role === "organiser" || user.role === "staff" ? "Vendor Panel" :
                   user.role === "admin" ? "Admin Panel" :
                   user.role === "branding_partner" ? "Partner Dashboard" :
                   "Dashboard"
@@ -638,8 +571,7 @@ export default function Navbar() {
                       
                         <Link 
                           href={
-                            (user.role === "organiser" || user.role === "staff") ? 
-                              ((user.category?.includes("mehandi") || user.category?.includes("mehendi") || user.category?.includes("photograph") || user.category?.includes("makeup") || user.category?.includes("artist")) ? "/vendor/dashboard" : "/organiser") :
+                            user.role === "organiser" || user.role === "staff" ? "/organiser" :
                             user.role === "admin" ? "/admin" :
                             user.role === "branding_partner" ? "/branding/dashboard" :
                             "/profile"
@@ -661,8 +593,7 @@ export default function Navbar() {
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; }}
                         >
                           <User size={18} /> {
-                            (user.role === "organiser" || user.role === "staff") ? 
-                              ((user.category?.toLowerCase()?.includes("mehandi") || user.category?.toLowerCase()?.includes("mehendi") || user.category?.toLowerCase()?.includes("photograph") || user.category?.toLowerCase()?.includes("makeup") || user.category?.toLowerCase()?.includes("artist")) ? "Vendor Panel" : "Organiser Panel") :
+                            user.role === "organiser" || user.role === "staff" ? "Vendor Panel" :
                             user.role === "admin" ? "Admin Panel" :
                             user.role === "branding_partner" ? "Partner Dashboard" :
                             "My Profile"
@@ -850,10 +781,6 @@ export default function Navbar() {
                 Become a Partner
               </button>
 
-              <Link href="/meeting/join" className="mobile-nav-link" style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)", display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setMenuOpen(false)}>
-                <Video size={18} /> Join Now
-              </Link>
-
               <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
                 {user ? (
                   <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
@@ -870,26 +797,18 @@ export default function Navbar() {
 
       {
         locOpen && (
-          <div className="modal-backdrop" onClick={() => selectedCity && setLocOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
-            <div className="loc-modal" onClick={(e) => e.stopPropagation()} style={{ 
-              position: 'relative', 
-              borderRadius: '16px', 
-              overflow: 'hidden',
-              width: '92%',
-              maxWidth: '960px',
-              backgroundColor: '#fff',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-            }}>
+          <div className="modal-backdrop" onClick={() => selectedCity && setLocOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="loc-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
               <div className="mobile-handle show-mobile"></div>
               {selectedCity && (
-                <button className="loc-close-x" onClick={() => setLocOpen(false)} style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <button className="loc-close-x" onClick={() => setLocOpen(false)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               )}
 
-              <h2 className="loc-title" style={{ marginTop: '24px', fontWeight: 800, fontSize: '20px', color: '#1e293b' }}>Select Your Location to Continue</h2>
+              <h2 className="loc-title" style={{ marginTop: '10px' }}>Select Your Location to Continue</h2>
 
-              <div className="loc-search-group" style={{ marginBottom: '16px' }}>
+              <div className="loc-search-group" style={{ marginBottom: '24px' }}>
                 <div className="loc-search-box">
                   <svg className="loc-icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   <input
@@ -948,126 +867,130 @@ export default function Navbar() {
                 ))}
               </div>
 
-              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginBottom: '16px' }}></div>
+              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginBottom: '24px' }}></div>
 
-              <div className="loc-content-scrollable custom-scrollbar" style={{ maxHeight: '320px', overflowY: 'auto', padding: '0 4px' }}>
-                <AnimatePresence mode="wait">
-                  {locSearch.length >= 3 ? (
-                    <motion.div
-                      key="search-results"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="loc-search-results"
-                    >
-                      <p className="loc-section-label">Search Results</p>
-                      {isLocSearching ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: '40px', gap: '12px' }}>
-                          <div className="w-8 h-8 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
-                          <p style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Looking for locations...</p>
-                        </div>
-                      ) : locResults.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '12px', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
-                          {locResults.map((res, i) => (
-                            <button
-                              key={i}
-                              onClick={() => {
-                                updateCity(res.name);
-                                setLocOpen(false);
-                                setLocSearch("");
-                              }}
-                              style={{
-                                width: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '14px',
-                                padding: '14px 20px',
-                                background: '#fff',
-                                border: 'none',
-                                borderBottom: i === locResults.length - 1 ? 'none' : '1px solid #f1f5f9',
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                            >
-                              <div style={{ flexShrink: 0, marginTop: '2px' }}>
-                                <MapPin size={18} color="#ef4444" fill="#fee2e2" />
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', marginBottom: '1px' }}>{res.name}</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.fullName}</div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: 'center', py: '40px' }}>
-                          <p style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8' }}>No locations found for "{locSearch}"</p>
-                          <p style={{ fontSize: '11px', color: '#cbd5e1' }}>Try searching for a different city or area.</p>
-                        </div>
-                      )}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="popular-cities"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <p className="loc-section-label" style={{ marginBottom: '16px' }}>Popular Cities</p>
-                      <div className="loc-cities-grid" style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(8, 1fr)', 
-                        gap: '12px'
-                      }}>
-                        {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).map((city) => (
-                          <button
-                            key={city.name}
-                            className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
-                            onClick={() => { updateCity(city.name); setLocOpen(false); }}
-                            style={{ 
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '6px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '4px',
-                              borderRadius: '12px',
-                              transition: 'all 0.2s'
-                            }}
-                          >
-                            <div className="loc-city-icon-wrap" style={{ 
-                              width: '100%',
-                              aspectRatio: '1/1',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              background: '#f8fafc', 
-                              borderRadius: '12px',
-                              border: selectedCity === city.name ? '2px solid #6366f1' : '1px solid #f1f5f9',
-                              padding: '8px'
-                            }}>
-                              <span className="loc-city-svg" style={{ color: selectedCity === city.name ? '#6366f1' : '#475569' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
-                            </div>
-                            <span className="loc-city-name" style={{ 
-                              color: selectedCity === city.name ? "#6366f1" : "#475569", 
-                              fontWeight: selectedCity === city.name ? "700" : "500", 
-                              fontSize: '10px',
-                              textAlign: 'center',
-                              lineHeight: '1.2'
-                            }}>{city.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                    </AnimatePresence>
+              <p className="loc-section-label">Popular Cities</p>
+
+              <div className="loc-cities-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(4, 1fr)', 
+                gap: '12px',
+                padding: '0 4px'
+              }}>
+                {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).map((city) => (
+                  <button
+                    key={city.name}
+                    className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
+                    onClick={() => { updateCity(city.name); setLocOpen(false); }}
+                    style={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '8px 4px',
+                      borderRadius: '12px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div className="loc-city-icon-wrap" style={{ 
+                      width: '100%',
+                      aspectRatio: '1/1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f8fafc', 
+                      borderRadius: '12px',
+                      border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid #f1f5f9',
+                      padding: '10px'
+                    }}>
+                      <span className="loc-city-svg" style={{ color: selectedCity === city.name ? '#6366f1' : '#94a3b8' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
+                    </div>
+                    <span className="loc-city-name" style={{ 
+                      color: selectedCity === city.name ? "#6366f1" : "#475569", 
+                      fontWeight: selectedCity === city.name ? "700" : "500", 
+                      fontSize: '11px',
+                      textAlign: 'center',
+                      lineHeight: '1.2'
+                    }}>{city.name}</span>
+                  </button>
+                ))}
               </div>
-              <div style={{ height: '24px' }}></div>
+
+              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginTop: '32px', marginBottom: '24px' }}></div>
+
+              <div className="loc-others-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  padding: '14px 24px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  width: '100%',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }} onClick={() => setShowOtherCities(!showOtherCities)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>Events in other cities</span>
+                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" style={{ transition: 'transform 0.3s', transform: showOtherCities ? 'rotate(180deg)' : 'rotate(0)' }}><polyline points="6 9 12 15 18 9" /></svg>
+                </div>
+
+                {showOtherCities && (
+                  <div className="loc-select-group">
+                    <select
+                      className="loc-select-input"
+                      value={selCountry}
+                      onChange={(e) => {
+                        const code = Country.getAllCountries().find(c => c.name === e.target.value)?.isoCode || "";
+                        setSelCountry(e.target.value);
+                        setSelCountryCode(code);
+                        setSelState("");
+                        setSelStateCode("");
+                        setSelCity("");
+                      }}
+                    >
+                      <option value="">Select Country</option>
+                      {Country.getAllCountries().map(c => <option key={c.isoCode} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <select
+                      className="loc-select-input"
+                      value={selState}
+                      disabled={!selCountryCode}
+                      onChange={(e) => {
+                        const code = State.getStatesOfCountry(selCountryCode).find(s => s.name === e.target.value)?.isoCode || "";
+                        setSelState(e.target.value);
+                        setSelStateCode(code);
+                        setSelCity("");
+                      }}
+                    >
+                      <option value="">Select State</option>
+                      {selCountryCode && State.getStatesOfCountry(selCountryCode).map(s => <option key={s.isoCode} value={s.name}>{s.name}</option>)}
+                    </select>
+                    <select
+                      className="loc-select-input"
+                      value={selCity}
+                      disabled={!selStateCode}
+                      onChange={(e) => {
+                        setSelCity(e.target.value);
+                        updateCity(e.target.value, { country: selCountry, state: selState, city: e.target.value });
+                        setLocOpen(false);
+                        setShowOtherCities(false);
+                      }}
+                    >
+                      <option value="">Select City</option>
+                      {selCountryCode && selStateCode && City.getCitiesOfState(selCountryCode, selStateCode).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ paddingBottom: '32px' }}></div>
             </div>
           </div>
         )
