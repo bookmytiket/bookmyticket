@@ -263,12 +263,17 @@ export const getByUser = query({
                 const validEventId = ctx.db.normalizeId("events", booking.eventId);
                 const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
 
+                const isVirtual = event?.virtual || 
+                                 event?.type?.toLowerCase() === "online" || 
+                                 event?.location?.toLowerCase().includes("online") ||
+                                 event?.title?.toLowerCase().includes("online meeting");
+
                 return {
                     ...booking,
                     eventName: event?.title || "Event Ticket",
                     eventType: event?.type || "Physical",
                     meetingUrl: event?.meetingUrl || null,
-                    virtual: event?.virtual || false,
+                    virtual: !!isVirtual,
                 };
             })
         );

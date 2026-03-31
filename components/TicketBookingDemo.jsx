@@ -10,7 +10,8 @@ import {
   User,
   Mail,
   Phone,
-  Ticket
+  Ticket,
+  Video
 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -56,7 +57,8 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
         date: ev.date,
         loc: ev.location || ev.venue || ev.city,
         img: ev.img || ev.bannerPreview || DEFAULT_EVENTS[0].img,
-        price: '₹' + (ev.price || '999')
+        price: '₹' + (ev.price || '999'),
+        virtual: ev.virtual || String(ev.type || '').toLowerCase() === 'online' || String(ev.location || '').toLowerCase().includes('online')
     }));
   }, [convexEvents, selectedCity]);
 
@@ -128,7 +130,7 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
       timer = setTimeout(() => {
         setStep(0);
         setTypedInfo({ name: '', email: '', phone: '' });
-      }, 5000);
+      }, 8000);
     }
     return () => clearTimeout(timer);
   }, [step]);
@@ -145,9 +147,27 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
             {events.map(ev => (
               <div key={ev.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}`, marginBottom: 12 }}>
                 <img src={ev.img} style={{ width: '100%', height: 80, objectFit: 'cover' }} />
-                <div style={{ padding: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800 }}>{ev.title}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>{ev.date}</div>
+                <div style={{ padding: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800 }}>{ev.title}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>{ev.date}</div>
+                  </div>
+                  {ev.virtual && (
+                    <button style={{ 
+                      background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', 
+                      color: '#fff', 
+                      border: 'none', 
+                      padding: '4px 8px', 
+                      borderRadius: '6px', 
+                      fontSize: '9px', 
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}>
+                      <Video size={10} /> Join
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -193,8 +213,16 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
             <CheckCircle size={40} color={C.success} style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>Confirmed!</div>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>BMT-6429-XT</div>
-            <div style={{ width: '100%', aspectRatio: '1', background: '#f8fafc', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}` }}>
+            <div style={{ width: '100%', aspectRatio: '1', background: '#f8fafc', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, position: 'relative' }}>
               <Ticket size={60} color={C.primarySolid} strokeWidth={1} />
+              
+              {events[0].virtual && (
+                <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12 }}>
+                  <button style={{ width: '100%', background: '#22c55e', color: '#fff', border: 'none', padding: '10px', borderRadius: 8, fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}>
+                    <Video size={14} /> Join Now
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

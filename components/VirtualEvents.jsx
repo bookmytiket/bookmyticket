@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Video, Calendar, ArrowRight, Heart, Zap } from "lucide-react";
+import { isVirtualEvent } from "@/app/utils/eventUtils";
 
 function VirtualCard({ event }) {
     const [wished, setWished] = useState(false);
@@ -120,13 +121,15 @@ function VirtualCard({ event }) {
                         </div>
                         <div 
                           style={{ 
-                            width: "40px", height: "40px", borderRadius: "14px", 
-                            background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-                            display: "flex", alignItems: "center", justifyContent: "center", 
-                            color: "#fff", boxShadow: "0 8px 16px -4px rgba(59, 130, 246, 0.5)"
+                            padding: "8px 16px",
+                            borderRadius: "14px", 
+                            background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                            color: "#fff", boxShadow: "0 8px 16px -4px rgba(248, 68, 164, 0.5)"
                           }}
                         >
-                            <ArrowRight size={20} strokeWidth={3} />
+                            <span style={{ fontSize: "12px", fontWeight: 900 }}>BOOK EVENT</span>
+                            <ArrowRight size={18} strokeWidth={3} />
                         </div>
                     </div>
                 </div>
@@ -135,9 +138,15 @@ function VirtualCard({ event }) {
     );
 }
 
-export default function VirtualEvents() {
-    // using meetings query to filter for virtual events
-    const virtualEvents = useQuery(api.meetings.getVirtualEvents) || [];
+export default function VirtualEvents({ events }) {
+    // using meetings query to filter for virtual events if no prop provided
+    const convexVirtualEvents = useQuery(api.meetings.getVirtualEvents) || [];
+    
+    // Determine the list of events to show
+    const virtualEvents = (Array.isArray(events) && events.length > 0) 
+        ? events.filter(e => isVirtualEvent(e))
+        : convexVirtualEvents;
+
     const scrollRef = useRef(null);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -330 : 330, behavior: "smooth" });

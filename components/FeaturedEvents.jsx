@@ -1,6 +1,8 @@
 "use client";
 import React, { useRef, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { Video } from "lucide-react";
+import { isVirtualEvent } from "@/app/utils/eventUtils";
 import { HOME_EVENTS } from "@/app/data/homeEvents";
 
 const DEFAULT_FEATURED = HOME_EVENTS.filter((e) => e.featured);
@@ -158,6 +160,25 @@ export default function FeaturedEvents({ events }) {
                                             {event.location}
                                         </span>
                                     </div>
+                                    
+                                    {isVirtualEvent(event) && (
+                                        <div style={{ 
+                                            marginBottom: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)',
+                                            color: '#fff',
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: '10px',
+                                            fontWeight: 900,
+                                            width: 'fit-content',
+                                            boxShadow: '0 2px 6px rgba(248, 68, 164, 0.3)'
+                                        }}>
+                                            <Video size={10} strokeWidth={3} /> JOIN NOW
+                                        </div>
+                                    )}
 
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>

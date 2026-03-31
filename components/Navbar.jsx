@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench } from "lucide-react";
+import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
@@ -171,6 +171,9 @@ export default function Navbar() {
 
 
   const convexCategories = useQuery(api.systemConfig.getConfig, { key: "admin_categories" });
+  const userBookings = useQuery(api.bookings.getByUser, (mounted && user) ? { userId: user.identifier } : "skip");
+
+  const nextMeeting = (userBookings || []).find(b => b.status !== "Cancelled" && b.meetingUrl);
 
   useEffect(() => {
     if (convexCategories && Array.isArray(convexCategories)) {
@@ -427,72 +430,114 @@ export default function Navbar() {
               >
                 Book Now
               </Link>
-            ) : user ? (
-              <Link
-                href={
-                  user.role === "organiser" || user.role === "staff" ? "/organiser" :
-                  user.role === "admin" ? "/admin" :
-                  user.role === "branding_partner" ? "/branding/dashboard" :
-                  "/profile"
-                }
-                style={{
-                  background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                  color: '#fff',
-                  padding: '10px 24px',
-                  borderRadius: '8px',
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                  transition: 'all 0.3s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-                }}
-              >
-                {
-                  user.role === "organiser" || user.role === "staff" ? "Vendor Panel" :
-                  user.role === "admin" ? "Admin Panel" :
-                  user.role === "branding_partner" ? "Partner Dashboard" :
-                  "Dashboard"
-                }
-              </Link>
             ) : (
-              <Link
-                href="/signin"
-                style={{
-                  background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)',
-                  color: '#fff',
-                  padding: '10px 24px',
-                  borderRadius: '8px',
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                  transition: 'all 0.3s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-                }}
-              >
-                Book Now
-              </Link>
+                <>
+                {/* Persistent Join Now Button - Pink */}
+                <button
+                    onClick={() => {
+                        if (nextMeeting) {
+                            const url = nextMeeting.meetingUrl;
+                            const target = url.startsWith("http") ? url : `/${url}`;
+                            window.open(target, '_blank', 'noopener,noreferrer');
+                        } else {
+                            router.push('/meeting/join');
+                        }
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                      color: '#fff',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                      transition: 'all 0.3s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                    }}
+                  >
+                    <Video size={16} /> Join Now
+                </button>
+
+                {user ? (
+                    <Link
+                      href={
+                        user.role === "organiser" || user.role === "staff" ? "/organiser" :
+                        user.role === "admin" ? "/admin" :
+                        user.role === "branding_partner" ? "/branding/dashboard" :
+                        "/profile"
+                      }
+                      style={{
+                        background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                        color: '#fff',
+                        padding: '10px 24px',
+                        borderRadius: '8px',
+                        fontWeight: 800,
+                        fontSize: '13px',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                        transition: 'all 0.3s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                      }}
+                    >
+                      {
+                        user.role === "organiser" || user.role === "staff" ? "Vendor Panel" :
+                        user.role === "admin" ? "Admin Panel" :
+                        user.role === "branding_partner" ? "Partner Dashboard" :
+                        "Dashboard"
+                      }
+                    </Link>
+                ) : (
+                    <Link
+                      href="/signin"
+                      style={{
+                        background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                        color: '#fff',
+                        padding: '10px 24px',
+                        borderRadius: '8px',
+                        fontWeight: 800,
+                        fontSize: '13px',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
+                        transition: 'all 0.3s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                      }}
+                    >
+                      Book Now
+                    </Link>
+                )}
+                </>
             )}
           </div>
 
@@ -512,9 +557,6 @@ export default function Navbar() {
                 </span>
               </div>
             </button>
-
-
-
             {mounted && user ? (
               <div style={{ position: 'relative' }}>
                 <div
@@ -781,11 +823,28 @@ export default function Navbar() {
                 Become a Partner
               </button>
 
+              <button
+                className="mobile-nav-link"
+                style={{ textAlign: "left", background: "none", borderBottom: "1px solid var(--border)" }}
+                onClick={() => {
+                  if (nextMeeting) {
+                      const url = nextMeeting.meetingUrl;
+                      const target = url.startsWith("http") ? url : `/${url}`;
+                      window.open(target, '_blank', 'noopener,noreferrer');
+                  } else {
+                      router.push('/meeting/join');
+                  }
+                  setMenuOpen(false);
+                }}
+              >
+                Join Now
+              </button>
+
               <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
                 {user ? (
                   <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
                 ) : (
-                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
+                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
                 )}
               </div>
             </div>

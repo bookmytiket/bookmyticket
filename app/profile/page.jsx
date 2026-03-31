@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
+import { isVirtualEvent } from "@/app/utils/eventUtils";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -162,7 +163,7 @@ export default function ProfilePage() {
                                                 >
                                                     {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
                                                 </button>
-                                                {"Cancelled" !== booking.status && (booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
+                                                {"Cancelled" !== booking.status && (booking.meetingUrl || isVirtualEvent(booking) || booking.virtual) && (
                                                     booking.meetingUrl ? (
                                                         <button 
                                                             onClick={(e) => {
@@ -388,7 +389,7 @@ export default function ProfilePage() {
                                 <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.status}</p>
                             </div>
                         </div>
-                        {(viewTicketModal.meetingUrl || viewTicketModal.eventType === "Online" || viewTicketModal.virtual) && (
+                        {(viewTicketModal.meetingUrl || isVirtualEvent(viewTicketModal) || viewTicketModal.virtual) && (
                             <div style={{ marginTop: "20px" }}>
                                 <div style={{ marginBottom: "12px", background: "#fff", border: "1.5px solid #e2e8f0", padding: "10px", borderRadius: "12px" }}>
                                     <p style={{ margin: "0 0 2px", fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Meeting Code</p>

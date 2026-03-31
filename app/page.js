@@ -26,6 +26,7 @@ import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
+import { isVirtualEvent } from '@/app/utils/eventUtils';
 
 function TicketCard({ event }) {
   return (

@@ -2,6 +2,7 @@
 import React from "react";
 import { MapPin, Calendar, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { isVirtualEvent } from "@/app/utils/eventUtils";
 
 export default function VenueEventCard({ event }) {
     if (!event) return null;
@@ -128,20 +129,22 @@ export default function VenueEventCard({ event }) {
                 >
                     <div>
                         <p style={{ margin: 0, fontSize: "10px", color: "#94a3b8", fontWeight: 700 }}>STARTING FROM</p>
-                        <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>{event.time || "Join Now"}</p>
+                        <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>
+                            {event.time || (isVirtualEvent(event) ? "Online" : "TBA")}
+                        </p>
                     </div>
                     <Link href={`/events/detail?id=${event.id}`} style={{ textDecoration: "none" }}>
                         <button
-                            style={{
+                                style={{
                                 padding: "10px 18px",
-                                background: "linear-gradient(90deg, #f84464, #ef4444)",
+                                background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)',
                                 color: "#fff",
                                 border: "none",
                                 borderRadius: "12px",
                                 fontSize: "13px",
                                 fontWeight: 700,
                                 cursor: "pointer",
-                                boxShadow: "0 4px 12px rgba(248,68,100,0.2)",
+                                boxShadow: "0 4px 12px rgba(248, 68, 164, 0.2)",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "6px",
@@ -156,7 +159,7 @@ export default function VenueEventCard({ event }) {
                                 e.currentTarget.style.boxShadow = "0 4px 12px rgba(248,68,100,0.2)";
                             }}
                         >
-                            Details <ArrowRight size={14} />
+                            {isVirtualEvent(event) ? "Join Now" : "Details"} <ArrowRight size={14} />
                         </button>
                     </Link>
                 </div>

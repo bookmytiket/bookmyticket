@@ -396,6 +396,11 @@ function OrganiserPanel() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const dropdownRef = React.useRef(null);
+    const handleLogout = () => {
+        setProfileDropdownOpen(false);
+        router.push("/signin");
+        setTimeout(() => logout(), 100);
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -410,9 +415,18 @@ function OrganiserPanel() {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get("tab");
-        if (tab) setActiveTab(tab);
-        else if (user?.role === "staff") setActiveTab("pwa_scanner");
-    }, [user]);
+        
+        if (user?.role === "staff") {
+            const allowedStaffTabs = ["pwa_scanner"];
+            if (!tab || !allowedStaffTabs.includes(tab)) {
+                setActiveTab("pwa_scanner");
+            } else {
+                setActiveTab(tab);
+            }
+        } else if (tab) {
+            setActiveTab(tab);
+        }
+    }, [user, activeTab]);
     const [theme, setTheme] = useState("light");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState({
@@ -4445,44 +4459,48 @@ function OrganiserPanel() {
                         </div>
                     </div>
                     <div style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
-                        <div className="sidebar-category">Home</div>
-                        <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <LayoutDashboard size={18} />
-                                <span>Dashboard</span>
-                            </div>
-                        </button>
+                        {!isStaff && (
+                            <>
+                                <div className="sidebar-category">Home</div>
+                                <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <LayoutDashboard size={18} />
+                                        <span>Dashboard</span>
+                                    </div>
+                                </button>
 
-                        <div className="sidebar-category">Management</div>
-                        <button
-                            onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
-                            className="sidebar-item"
-                            style={{ color: ["post_event", "manage_events", "venue_events", "online_events"].includes(activeTab) ? t.textMain : t.textSub }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Grid size={18} />
-                                <span>Events</span>
-                            </div>
-                            {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </button>
-                        {sidebarOpen.eventManagement && (
-                            <div style={{ marginBottom: "8px" }}>
-                                <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Post Event</button>
-                                <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>Manage Events</button>
-                                <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
-                                <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
-                            </div>
+                                <div className="sidebar-category">Management</div>
+                                <button
+                                    onClick={() => setSidebarOpen(prev => ({ ...prev, eventManagement: !prev.eventManagement }))}
+                                    className="sidebar-item"
+                                    style={{ color: ["post_event", "manage_events", "venue_events", "online_events"].includes(activeTab) ? t.textMain : t.textSub }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Grid size={18} />
+                                        <span>Events</span>
+                                    </div>
+                                    {sidebarOpen.eventManagement ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                </button>
+                                {sidebarOpen.eventManagement && (
+                                    <div style={{ marginBottom: "8px" }}>
+                                        <button onClick={() => setActiveTab("post_event")} className={`sidebar-dropdown-item ${activeTab === "post_event" ? "active" : ""}`}>Post Event</button>
+                                        <button onClick={() => setActiveTab("manage_events")} className={`sidebar-dropdown-item ${activeTab === "manage_events" ? "active" : ""}`}>Manage Events</button>
+                                        <button onClick={() => setActiveTab("venue_events")} className={`sidebar-dropdown-item ${activeTab === "venue_events" ? "active" : ""}`}>Venue Events</button>
+                                        <button onClick={() => setActiveTab("online_events")} className={`sidebar-dropdown-item ${activeTab === "online_events" ? "active" : ""}`}>Online Events</button>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={() => setActiveTab("meetings")}
+                                    className={`sidebar-item ${activeTab === "meetings" ? "active" : ""}`}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Video size={18} />
+                                        <span>Meetings</span>
+                                    </div>
+                                </button>
+                            </>
                         )}
-
-                        <button
-                            onClick={() => setActiveTab("meetings")}
-                            className={`sidebar-item ${activeTab === "meetings" ? "active" : ""}`}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Video size={18} />
-                                <span>Meetings</span>
-                            </div>
-                        </button>
 
                         <div className="sidebar-category">Bookings</div>
                         {!isStaff && (
@@ -4508,19 +4526,23 @@ function OrganiserPanel() {
                             </>
                         )}
 
-                        <div className="sidebar-category">Finance</div>
-                        <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Wallet size={18} />
-                                <span>Withdraw</span>
-                            </div>
-                        </button>
-                        <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <ArrowLeftRight size={18} />
-                                <span>Transactions</span>
-                            </div>
-                        </button>
+                        {!isStaff && (
+                            <>
+                                <div className="sidebar-category">Finance</div>
+                                <button onClick={() => setActiveTab("withdraw")} className={`sidebar-item ${activeTab === "withdraw" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Wallet size={18} />
+                                        <span>Withdraw</span>
+                                    </div>
+                                </button>
+                                <button onClick={() => setActiveTab("transactions")} className={`sidebar-item ${activeTab === "transactions" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <ArrowLeftRight size={18} />
+                                        <span>Transactions</span>
+                                    </div>
+                                </button>
+                            </>
+                        )}
 
                         <div className="sidebar-category">Tools</div>
                         <button onClick={() => setActiveTab("pwa_scanner")} className={`sidebar-item ${activeTab === "pwa_scanner" ? "active" : ""}`}>
@@ -4531,27 +4553,35 @@ function OrganiserPanel() {
                         </button>
 
 
-                        <div className="sidebar-category">Support</div>
-                        <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <FileText size={18} />
-                                <span>Tickets</span>
-                            </div>
-                        </button>
+                        {!isStaff && (
+                            <>
+                                <div className="sidebar-category">Support</div>
+                                <button onClick={() => setActiveTab("support_tickets")} className={`sidebar-item ${activeTab === "support_tickets" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <FileText size={18} />
+                                        <span>Tickets</span>
+                                    </div>
+                                </button>
+                            </>
+                        )}
 
-                        <div className="sidebar-category">Settings</div>
-                        <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Users size={18} />
-                                <span>Profile</span>
-                            </div>
-                        </button>
-                        <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <Lock size={18} />
-                                <span>Security</span>
-                            </div>
-                        </button>
+                        {!isStaff && (
+                            <>
+                                <div className="sidebar-category">Settings</div>
+                                <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Users size={18} />
+                                        <span>Profile</span>
+                                    </div>
+                                </button>
+                                <button onClick={() => setActiveTab("change_password")} className={`sidebar-item ${activeTab === "change_password" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Lock size={18} />
+                                        <span>Security</span>
+                                    </div>
+                                </button>
+                            </>
+                        )}
                         
                         <div style={{ padding: "12px 12px 0" }}>
                             <button
@@ -4714,23 +4744,10 @@ function OrganiserPanel() {
                             <button 
                                 className={`bottom-nav-item ${activeTab === "pwa_scanner" ? "active" : ""}`}
                                 onClick={() => setActiveTab("pwa_scanner")}
+                                style={{ width: "100%" }}
                             >
                                 <Camera size={24} />
                                 <span>Scanner</span>
-                            </button>
-                            <button 
-                                className={`bottom-nav-item ${activeTab === "support_tickets" ? "active" : ""}`}
-                                onClick={() => setActiveTab("support_tickets")}
-                            >
-                                <LifeBuoy size={24} />
-                                <span>Support</span>
-                            </button>
-                            <button 
-                                className={`bottom-nav-item ${activeTab === "settings" ? "active" : ""}`}
-                                onClick={() => setActiveTab("settings")}
-                            >
-                                <Settings size={24} />
-                                <span>Settings</span>
                             </button>
                         </div>
                     )}

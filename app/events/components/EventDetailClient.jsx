@@ -24,6 +24,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Video, Lock, ExternalLink, Play, CheckCircle2 } from 'lucide-react';
+import { isVirtualEvent } from '@/app/utils/eventUtils';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const DEFAULT_FEATURES = [
@@ -232,7 +233,7 @@ export default function EventDetailClient({ id }) {
                                         <span className="text-[12px]">{event.time}</span>
                                     </div>
                                 </div>
-                                {event.virtual && (
+                                {isVirtualEvent(event) && (
                                     <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl mt-4">
                                         <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                                         <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest italic">Live Meeting Link Included</span>
@@ -242,7 +243,7 @@ export default function EventDetailClient({ id }) {
 
                             {existingBooking ? (
                                 <div className="space-y-3">
-                                    {event.virtual ? (
+                                    {isVirtualEvent(event) ? (
                                         <>
                                             {(event.price === 0 || existingBooking.status === "Confirmed") ? (
                                                 <button
