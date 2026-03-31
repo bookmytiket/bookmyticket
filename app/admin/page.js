@@ -181,7 +181,7 @@ function AdminHomePage() {
 
     useEffect(() => {
         if (!loading && (!user || user.role !== "admin")) {
-            router.push("/signin");
+            router.push("/signin?redirect=/admin");
         }
     }, [user, loading, router]);
 

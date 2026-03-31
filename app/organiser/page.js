@@ -384,10 +384,16 @@ function OrganiserPanel() {
     }, []);
 
     useEffect(() => {
-        if (!loading && !user) {
-            router.push("/signin");
+        if (!loading && mounted) {
+            if (!user) {
+                router.push("/signin?redirect=/organiser");
+            } else if (user.role !== "organiser" && user.role !== "admin" && user.role !== "staff") {
+                // If a regular user tries to access organiser panel, redirect to profile
+                console.log("OrganiserPanel: unauthorized role", user.role, "- redirecting to profile");
+                router.push("/profile");
+            }
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, mounted]);
 
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
     const [currentStage, setCurrentStage] = useState("approved");

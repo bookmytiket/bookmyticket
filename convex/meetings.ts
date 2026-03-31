@@ -234,6 +234,7 @@ export const createForEvent = mutation({
             creatorId: args.creatorId,
             status: "scheduled",
             meetingLink,
+            eventId: args.eventId,
             settings: {
                 lobby: false,
                 muteOnJoin: false,
@@ -243,7 +244,17 @@ export const createForEvent = mutation({
             },
             createdAt: Date.now(),
         });
-        await ctx.db.patch(args.eventId, { meetingUrl: meetingLink });
+        const event = await ctx.db.get(args.eventId);
+        if (event) {
+            const url = event.meetingUrl;
+            // Identify if the current URL is an internal management link that should be replaced
+            const isInternalLink = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+            
+            // Only patch if meetingUrl is missing OR it's a misconfigured internal link
+            if (!url || isInternalLink) {
+                await ctx.db.patch(args.eventId, { meetingUrl: meetingLink });
+            }
+        }
         return meetingLink;
     },
 });
@@ -256,6 +267,18 @@ export const getEventMeeting = query({
             .query("meetings")
             .withIndex("by_meetingLink", (q) => q.eq("meetingLink", args.meetingUrl))
             .unique();
+    },
+});
+
+// Resiliency Query: Find a meeting for an event if meetingUrl is missing/broken
+export const getMeetingByEvent = query({
+    args: { eventId: v.id("events") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("meetings")
+            .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+            .order("desc") // Get the latest one
+            .first();
     },
 });
 

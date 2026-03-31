@@ -24,13 +24,19 @@ import {
 import Link from "next/link";
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const vendorId = getVendorAccountKey(user);
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
         setMounted(true);
     }, []);
+
+    React.useEffect(() => {
+        if (!loading && !user && mounted) {
+            router.push("/signin?redirect=/vendor/dashboard");
+        }
+    }, [user, loading, router, mounted]);
 
     const profile = useQuery(
         api.vendors.getByOrganiserId,

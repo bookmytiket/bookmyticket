@@ -336,12 +336,6 @@ export default function CheckoutClient({ id }) {
                                 <div className="pt-10 space-y-3.5">
                                     <label className="flex items-start space-x-3 cursor-pointer">
                                         <div className="relative flex items-start">
-                                            <input type="checkbox" className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
-                                        </div>
-                                        <span className="text-[13px] font-semibold text-slate-600">Create an account to manage booking</span>
-                                    </label>
-                                    <label className="flex items-start space-x-3 cursor-pointer">
-                                        <div className="relative flex items-start">
                                             <input type="checkbox" required className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
                                         </div>
                                         <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the website <a href="#" className="text-blue-500 hover:underline">terms and conditions</a></span>

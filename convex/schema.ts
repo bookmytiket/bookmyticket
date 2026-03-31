@@ -598,6 +598,7 @@ export default defineSchema({
         endTime: v.optional(v.number()),
         password: v.optional(v.string()),
         meetingLink: v.string(), // unique slug/id
+        eventId: v.optional(v.id("events")),
         settings: v.object({
             lobby: v.boolean(),
             muteOnJoin: v.boolean(),
@@ -606,7 +607,9 @@ export default defineSchema({
             screenShareEnabled: v.boolean(),
         }),
         createdAt: v.number(),
-    }).index("by_creatorId", ["creatorId"]).index("by_meetingLink", ["meetingLink"]),
+    }).index("by_creatorId", ["creatorId"])
+      .index("by_meetingLink", ["meetingLink"])
+      .index("by_eventId", ["eventId"]),
 
     meetingParticipants: defineTable({
         meetingId: v.id("meetings"),

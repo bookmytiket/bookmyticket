@@ -268,11 +268,26 @@ export const getByUser = query({
                                  event?.location?.toLowerCase().includes("online") ||
                                  event?.title?.toLowerCase().includes("online meeting");
 
+                let resolvedUrl = event?.meetingUrl || null;
+
+                // RESILIENCY: If meetingUrl is missing or points to organiser/admin dashboard (common misconfig),
+                // attempt to find the correct 9-digit code in the meetings table.
+                const isInternal = resolvedUrl?.toLowerCase().includes("organiser") || resolvedUrl?.toLowerCase().includes("admin") || resolvedUrl?.toLowerCase().includes("vendor");
+                if (validEventId && (isVirtual) && (!resolvedUrl || isInternal)) {
+                    const meeting = await ctx.db.query("meetings")
+                        .withIndex("by_eventId", (q) => q.eq("eventId", validEventId))
+                        .order("desc")
+                        .first();
+                    if (meeting) {
+                        resolvedUrl = meeting.meetingLink;
+                    }
+                }
+
                 return {
                     ...booking,
                     eventName: event?.title || "Event Ticket",
                     eventType: event?.type || "Physical",
-                    meetingUrl: event?.meetingUrl || null,
+                    meetingUrl: resolvedUrl,
                     virtual: !!isVirtual,
                 };
             })

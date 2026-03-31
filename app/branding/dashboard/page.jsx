@@ -13,7 +13,7 @@ import { DistributeChannelModal } from './DistributeChannelModal';
 export default function BrandingDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
   const activeTab = searchParams?.get('tab') || 'dashboard';
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -34,6 +34,12 @@ export default function BrandingDashboard() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!loading && !user && isMounted) {
+      router.push("/signin?redirect=/branding/dashboard");
+    }
+  }, [user, loading, router, isMounted]);
   
   const generateUploadUrl = useMutation(api.branding.generateUploadUrl);
   const uploadBannerMutation = useMutation(api.branding.uploadBanner);

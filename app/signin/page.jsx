@@ -105,6 +105,14 @@ export default function SignInPage() {
                     // If no specific redirect, go to organiser dashboard
                     destination = "/organiser";
                 }
+            } else {
+                // IMPORTANT: For public users, never redirect to management/protected paths
+                // This prevents redirection loops if a user somehow has redirect=/organiser
+                const protectedPaths = ["/organiser", "/admin", "/vendor", "/branding", "/coupons", "/services/manage"];
+                if (protectedPaths.some(p => destination.startsWith(p))) {
+                    console.log("SignInPage: Public user blocked from protected path:", destination);
+                    destination = "/profile";
+                }
             }
 
             console.log("SignInPage: final destination determined as:", destination);
