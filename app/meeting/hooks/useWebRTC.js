@@ -8,6 +8,8 @@ const STUN_SERVERS = {
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
         { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
     ],
 };
 
@@ -16,7 +18,9 @@ export function useWebRTC(meetingId, userId, name) {
     const [mediaError, setMediaError] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({}); // { userId: { stream: MediaStream, name: string } }
     const pcs = useRef({}); // { userId: RTCPeerConnection }
+    const iceQueues = useRef({}); // { userId: RTCIceCandidate[] }
     const processedSignals = useRef(new Set());
+    const [peerCount, setPeerCount] = useState(0);
 
     const sendSignal = useMutation(api.meetings.sendSignal);
     const signals = useQuery(
@@ -28,9 +32,7 @@ export function useWebRTC(meetingId, userId, name) {
         meetingId ? { meetingId } : "skip"
     );
 
-    // Use a ref to track the active stream — avoids stale closure in useCallback
     const localStreamRef = useRef(null);
-    // Guard against concurrent getUserMedia calls
     const isAcquiring = useRef(false);
 
     const setStream = useCallback((stream) => {
@@ -38,30 +40,19 @@ export function useWebRTC(meetingId, userId, name) {
         setLocalStream(stream);
     }, []);
 
-    // 1. Initialize Local Stream with Smart Fallback & Multi-Camera Search
-    // getMedia uses NO state in its deps — it reads localStreamRef.current for cleanup
+    // 1. Initialize Local Stream with Smart Fallback
     const getMedia = useCallback(async (isRetry = false) => {
-        // Prevent concurrent acquisition attempts
-        if (isAcquiring.current) {
-            console.warn("Camera acquisition already in progress, skipping.");
-            return null;
-        }
+        if (isAcquiring.current) return null;
         isAcquiring.current = true;
 
         try {
-            // Hard Cleanup: Stop all existing tracks using the ref (not stale state)
             if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach(track => {
-                    track.stop();
-                    console.log(`Stopped ${track.kind} track for hard reset.`);
-                });
+                localStreamRef.current.getTracks().forEach(track => track.stop());
                 setStream(null);
             }
 
-            // Give the browser a moment to release the hardware on retries
             if (isRetry) await new Promise(r => setTimeout(r, 1200));
 
-            // First attempt: Default Media (Video + Audio)
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
@@ -72,36 +63,8 @@ export function useWebRTC(meetingId, userId, name) {
                 return stream;
             } catch (err) {
                 console.error("Primary media attempt failed:", err);
-
-                if (
-                    err.name === "NotReadableError" ||
-                    err.name === "TrackStartError" ||
-                    err.name === "AbortError" ||
-                    err.name === "NotFoundError"
-                ) {
-                    console.warn("Camera busy/unavailable. Searching for alternative cameras...");
-
-                    // List all devices and try each camera one at a time
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const videoDevices = devices.filter(d => d.kind === "videoinput");
-
-                    for (const device of videoDevices) {
-                        try {
-                            console.log(`Attempting camera: ${device.label || device.deviceId}`);
-                            const altStream = await navigator.mediaDevices.getUserMedia({
-                                video: { deviceId: { exact: device.deviceId } },
-                                audio: true,
-                            });
-                            setStream(altStream);
-                            setMediaError(null);
-                            return altStream;
-                        } catch (altErr) {
-                            console.warn(`Camera ${device.deviceId} failed:`, altErr.name);
-                        }
-                    }
-
-                    // All cameras failed — fall back to audio-only
-                    console.warn("No cameras available, falling back to Audio Only...");
+                if (err.name === "NotReadableError" || err.name === "NotFoundError" || err.name === "NotAllowedError") {
+                    // Fallback to audio-only if camera is blocked/busy
                     try {
                         const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
                             video: false,
@@ -111,40 +74,56 @@ export function useWebRTC(meetingId, userId, name) {
                         setMediaError("camera_busy_audio_only");
                         return audioOnlyStream;
                     } catch (audioErr) {
-                        console.error("Audio-only fallback failed:", audioErr);
                         setMediaError("hardware_blocked_all");
                         setStream(null);
                         return null;
                     }
                 }
-
-                setMediaError(err.name || "MediaError");
-                setStream(null);
+                setMediaError(err.name);
                 return null;
             }
         } finally {
             isAcquiring.current = false;
         }
-    }, [setStream]); // ← stable: only depends on setStream which is also stable
+    }, [setStream]);
 
     useEffect(() => {
         getMedia();
         return () => {
-            // Final cleanup on unmount using the ref
             localStreamRef.current?.getTracks().forEach(track => track.stop());
+            Object.values(pcs.current).forEach(pc => pc.close());
         };
-    }, []); // ← runs exactly once on mount
+    }, []);
+
+    // Helper: Drain ICE Candidate Queue
+    const drainIceQueue = useCallback(async (remoteUserId) => {
+        const pc = pcs.current[remoteUserId];
+        const queue = iceQueues.current[remoteUserId];
+        if (!pc || !queue || pc.remoteDescription === null) return;
+
+        while (queue.length > 0) {
+            const candidate = queue.shift();
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log(`Successfully added buffered ICE candidate for ${remoteUserId}`);
+            } catch (err) {
+                console.error(`Error adding buffered ICE candidate for ${remoteUserId}:`, err);
+            }
+        }
+    }, []);
 
     const createPeerConnection = useCallback((remoteUserId, remoteName, isInitiator) => {
         if (pcs.current[remoteUserId]) return pcs.current[remoteUserId];
 
+        console.log(`Creating PeerConnection for ${remoteName} (${remoteUserId}), initiator: ${isInitiator}`);
         const pc = new RTCPeerConnection(STUN_SERVERS);
         pcs.current[remoteUserId] = pc;
+        iceQueues.current[remoteUserId] = [];
 
-        // Add local tracks
-        if (localStream) {
-            localStream.getTracks().forEach(track => {
-                pc.addTrack(track, localStream);
+        // Add local tracks BEFORE creating offer
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => {
+                pc.addTrack(track, localStreamRef.current);
             });
         }
 
@@ -161,16 +140,31 @@ export function useWebRTC(meetingId, userId, name) {
         };
 
         pc.ontrack = (event) => {
+            console.log(`Received track from ${remoteName}:`, event.track.kind);
             const [stream] = event.streams;
             setRemoteStreams(prev => ({
                 ...prev,
                 [remoteUserId]: { stream, name: remoteName }
             }));
+            setPeerCount(Object.keys(pcs.current).length);
+        };
+
+        pc.onconnectionstatechange = () => {
+            console.log(`Connection state with ${remoteName}: ${pc.connectionState}`);
+            if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                setRemoteStreams(prev => {
+                    const next = { ...prev };
+                    delete next[remoteUserId];
+                    return next;
+                });
+                setPeerCount(prev => Math.max(0, prev - 1));
+            }
         };
 
         pc.onnegotiationneeded = async () => {
             if (isInitiator) {
                 try {
+                    console.log(`Negotiation needed for ${remoteName}, creating offer...`);
                     const offer = await pc.createOffer();
                     await pc.setLocalDescription(offer);
                     sendSignal({
@@ -181,42 +175,44 @@ export function useWebRTC(meetingId, userId, name) {
                         data: JSON.stringify(offer),
                     });
                 } catch (err) {
-                    console.error("Error creating offer:", err);
+                    console.error("Error during negotiation:", err);
                 }
             }
         };
 
         return pc;
-    }, [localStream, meetingId, userId, sendSignal]);
+    }, [meetingId, userId, sendSignal]);
 
-    // 2. Handle incoming participants
+    // 2. Sync with Participants
     useEffect(() => {
         if (!activeParticipants || !localStream) return;
 
         activeParticipants.forEach(participant => {
             if (participant.userId !== userId && !pcs.current[participant.userId]) {
-                // If I'm already in and someone else joined, I'll be the initiator for them
-                // Strategy: Alphabetical order to decide who initiates (simple mesh strategy)
+                // If I am already in and a new person joins, we decide who initiates
+                // Order: Smaller userId initiates (Fixed mesh logic)
                 const isInitiator = userId < participant.userId;
                 createPeerConnection(participant.userId, participant.name, isInitiator);
             }
         });
 
-        // Clean up disconnected participants
+        // Cleanup stale connections
         Object.keys(pcs.current).forEach(pId => {
             if (!activeParticipants.find(p => p.userId === pId)) {
                 pcs.current[pId].close();
                 delete pcs.current[pId];
+                delete iceQueues.current[pId];
                 setRemoteStreams(prev => {
                     const next = { ...prev };
                     delete next[pId];
                     return next;
                 });
+                setPeerCount(prev => Math.max(0, prev - 1));
             }
         });
     }, [activeParticipants, localStream, userId, createPeerConnection]);
 
-    // 3. Handle incoming signals
+    // 3. Robust Signaling Loop
     useEffect(() => {
         if (!signals || !localStream) return;
 
@@ -229,9 +225,11 @@ export function useWebRTC(meetingId, userId, name) {
             const remoteName = remoteParticipant?.name || "Guest";
 
             let pc = pcs.current[senderId];
-            if (!pc) {
+            if (!pc && (type === "offer" || type === "ice-candidate")) {
                 pc = createPeerConnection(senderId, remoteName, false);
             }
+
+            if (!pc) return;
 
             try {
                 if (type === "offer") {
@@ -246,18 +244,29 @@ export function useWebRTC(meetingId, userId, name) {
                         type: "answer",
                         data: JSON.stringify(answer),
                     });
+                    // Remote description is set, drain any waiting candidates
+                    await drainIceQueue(senderId);
                 } else if (type === "answer") {
                     const answer = JSON.parse(data);
                     await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    // Remote description is set, drain any waiting candidates
+                    await drainIceQueue(senderId);
                 } else if (type === "ice-candidate") {
                     const candidate = JSON.parse(data);
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    if (pc.remoteDescription) {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    } else {
+                        // Buffer candidates arriving before the handshake is ready
+                        iceQueues.current[senderId].push(candidate);
+                        console.log(`Buffered ICE candidate for ${senderId} (remoteDesc not yet set)`);
+                    }
                 }
             } catch (err) {
-                console.error("Signal handle error:", err);
+                console.error(`Error processing signal ${type} from ${senderId}:`, err);
             }
         });
-    }, [signals, localStream, activeParticipants, createPeerConnection, meetingId, userId, sendSignal]);
+    }, [signals, localStream, activeParticipants, createPeerConnection, meetingId, userId, sendSignal, drainIceQueue]);
+
 
     // 4. Exposed controls
     const toggleAudio = useCallback(() => {

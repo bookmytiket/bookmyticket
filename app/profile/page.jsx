@@ -164,31 +164,26 @@ export default function ProfilePage() {
                                                     {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
                                                 </button>
                                                 {"Cancelled" !== booking.status && (booking.meetingUrl || isVirtualEvent(booking) || booking.virtual) && (
-                                                    (() => {
-                                                        const url = booking.meetingUrl;
-                                                        const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
-                                                        
-                                                        if (!url || isInternal) {
-                                                            return (
-                                                                <div className="px-2 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed">
-                                                                    Pending
-                                                                </div>
-                                                            );
-                                                        }
-                                                        
-                                                        return (
-                                                            <button 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
-                                                                    window.open(target, '_blank', 'noopener,noreferrer');
-                                                                }}
-                                                                className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer shadow-sm"
-                                                            >
-                                                                <Video size={10} /> Join Now
-                                                            </button>
-                                                        );
-                                                    })()
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const url = booking.meetingUrl;
+                                                            // SANITIZE: Prevent redirection to management internal routes
+                                                            const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                                                            
+                                                            if (!url || isInternal) {
+                                                                alert("Meeting has not started yet. Please check back later.");
+                                                                return;
+                                                            }
+                                                            // If it's a full URL (starts with http), open it directly.
+                                                            // Otherwise, it's a 9-digit code for our internal meeting room.
+                                                            const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
+                                                            window.open(target, '_blank', 'noopener,noreferrer');
+                                                        }}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer shadow-sm"
+                                                    >
+                                                        <Video size={10} /> Join Now
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
@@ -448,30 +443,22 @@ export default function ProfilePage() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        {(() => {
-                                            const url = viewTicketModal.meetingUrl;
-                                            const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
-                                            
-                                            if (!url || isInternal) {
-                                                return (
-                                                    <div className="px-4 py-3 bg-slate-100 text-slate-400 rounded-xl text-xs font-black uppercase tracking-[0.2em] border border-slate-200 cursor-not-allowed">
-                                                        Wait for Host
-                                                    </div>
-                                                );
-                                            }
-                                            
-                                            return (
-                                                <button 
-                                                    onClick={() => {
-                                                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
-                                                        window.open(target, '_blank', 'noopener,noreferrer');
-                                                    }}
-                                                    className="px-6 py-3 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-[0_4px_0_0_rgb(5,150,105)] active:translate-y-1 active:shadow-none"
-                                                >
-                                                    Join Room
-                                                </button>
-                                            );
-                                        })()}
+                                        <button 
+                                            onClick={() => {
+                                                const url = viewTicketModal.meetingUrl;
+                                                const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                                                
+                                                if (!url || isInternal) {
+                                                    alert("Meeting has not started yet. Please check back later.");
+                                                    return;
+                                                }
+                                                const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
+                                                window.open(target, '_blank', 'noopener,noreferrer');
+                                            }}
+                                            className="px-6 py-3 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-[0_4px_0_0_rgb(5,150,105)] active:translate-y-1 active:shadow-none"
+                                        >
+                                            Join Room
+                                        </button>
                                     </div>
                                 </div>
                             </div>

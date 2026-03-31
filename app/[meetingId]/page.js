@@ -447,6 +447,7 @@ export default function MeetingRoom() {
                             <div key={peerId} className="relative group bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden ring-4 ring-transparent hover:ring-blue-500/30 transition-all shadow-2xl">
                                 <video 
                                     autoPlay 
+                                    playsInline
                                     ref={el => { if(el && stream) el.srcObject = stream; }}
                                     className="w-full h-full object-cover"
                                 />
