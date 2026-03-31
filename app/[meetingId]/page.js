@@ -94,6 +94,18 @@ export default function MeetingRoom() {
 
     const handleJoin = async () => {
         if (!meeting) return;
+        
+        // Resume AudioContext on user interaction to unblock audio playback
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') await ctx.resume();
+            }
+        } catch (e) {
+            console.warn("Could not resume AudioContext:", e);
+        }
+
         await joinMeeting({
             meetingId: meeting._id,
             userId: user?.email || `guest-${Math.random().toString(36).substr(2, 5)}`,
@@ -413,34 +425,42 @@ export default function MeetingRoom() {
                         Object.keys(remoteStreams).length <= 4 ? 'grid-cols-2 grid-rows-2' :
                         'grid-cols-3'
                     }`}>
-                        {/* Local Video */}
-                        <div className="relative group bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden ring-4 ring-transparent hover:ring-blue-500/30 transition-all shadow-2xl">
-                            {videoEnabled && localStream && hasVideo ? (
-                                <video 
-                                    autoPlay 
-                                    muted 
-                                    playsInline
-                                    ref={localVideoRef}
-                                    className="w-full h-full object-cover scale-x-[-1]"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 bg-slate-950">
-                                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
-                                        <VideoOff className="opacity-40" />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">
-                                        {mediaError === 'camera_busy_audio_only' ? 'Audio-only Mode' : 'Video Disabled'}
-                                    </span>
-                                </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                            <div className="absolute bottom-6 left-6 flex items-center gap-3">
-                                <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
-                                    You (Host)
-                                </span>
-                                {!audioEnabled && <div className="p-2 rounded-full bg-red-500/80 backdrop-blur-sm text-white"><MicOff size={14} /></div>}
-                            </div>
-                        </div>
+                         {/* Local Video */}
+                         <div className="relative group bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden ring-4 ring-transparent hover:ring-blue-500/30 transition-all shadow-2xl">
+                             {(videoEnabled || isScreenSharing) && localStream && hasVideo ? (
+                                 <video 
+                                     autoPlay 
+                                     muted 
+                                     playsInline
+                                     ref={localVideoRef}
+                                     className="w-full h-full object-cover scale-x-[-1]"
+                                 />
+                             ) : (
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 bg-slate-950">
+                                     <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
+                                         <VideoOff className="opacity-40" />
+                                     </div>
+                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">
+                                         {mediaError === 'camera_busy_audio_only' ? 'Audio-only Mode' : 'Video Disabled'}
+                                     </span>
+                                 </div>
+                             )}
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                             <div className="absolute bottom-6 left-6 flex items-center gap-3">
+                                 <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
+                                     You (Host)
+                                 </span>
+                                 {!audioEnabled && (
+                                    <motion.div 
+                                        initial={{ scale: 0 }} 
+                                        animate={{ scale: 1 }} 
+                                        className="p-2 rounded-full bg-red-500/80 backdrop-blur-sm text-white shadow-lg"
+                                    >
+                                        <MicOff size={14} />
+                                    </motion.div>
+                                 )}
+                             </div>
+                         </div>
 
                         {/* Remote Videos */}
                         {Object.entries(remoteStreams).map(([peerId, { stream, name }]) => (
@@ -448,14 +468,28 @@ export default function MeetingRoom() {
                                 <video 
                                     autoPlay 
                                     playsInline
-                                    ref={el => { if(el && stream) el.srcObject = stream; }}
+                                    ref={el => { 
+                                        if(el && stream) {
+                                            el.srcObject = stream;
+                                            // Handle potential browser autoplay blocks
+                                            el.play().catch(err => {
+                                                console.warn(`Audio/Video play failed for ${name}:`, err);
+                                            });
+                                        }
+                                    }}
                                     className="w-full h-full object-cover"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                 <div className="absolute bottom-6 left-6 flex items-center gap-3">
                                     <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
                                         {name}
                                     </span>
+                                    {/* Muted indicator for remote participant */}
+                                    {stream && stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && (
+                                        <div className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-red-500 shadow-lg border border-red-500/20">
+                                            <MicOff size={14} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
