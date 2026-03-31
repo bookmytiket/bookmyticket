@@ -282,6 +282,24 @@ export const getMeetingByEvent = query({
     },
 });
 
+// Maintenance Mutation: Purge all misconfigured/internal meeting links from events table
+export const cleanupInternalLinks = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const events = await ctx.db.query("events").collect();
+        let count = 0;
+        for (const event of events) {
+            const url = event.meetingUrl;
+            const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+            if (isInternal) {
+                await ctx.db.patch(event._id, { meetingUrl: undefined });
+                count++;
+            }
+        }
+        return { cleaned: count };
+    },
+});
+
 // Return all active virtual events for the home page "Virtual Events" section
 export const getVirtualEvents = query({
     args: {},

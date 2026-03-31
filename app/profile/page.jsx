@@ -164,30 +164,31 @@ export default function ProfilePage() {
                                                     {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
                                                 </button>
                                                 {"Cancelled" !== booking.status && (booking.meetingUrl || isVirtualEvent(booking) || booking.virtual) && (
-                                                    booking.meetingUrl ? (
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const url = booking.meetingUrl;
-                                                                        // SANITIZE: Prevent redirection to management internal routes if misconfigured
-                                                                        if (!url.startsWith("http") && (url.toLowerCase().includes("organiser") || url.toLowerCase().includes("admin") || url.toLowerCase().includes("vendor"))) {
-                                                                            console.warn("Invalid meeting URL detected:", url);
-                                                                            return;
-                                                                        }
-                                                                        // If it's a full URL (starts with http), open it directly.
-                                                                        // Otherwise, it's a 9-digit code for our internal meeting room.
-                                                                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
-                                                                        window.open(target, '_blank', 'noopener,noreferrer');
-                                                                    }}
-                                                                    className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer shadow-sm"
-                                                                >
-                                                                    <Video size={10} /> Join Now
-                                                                </button>
-                                                    ) : (
-                                                        <span className="flex items-center gap-1 px-2 py-1 bg-slate-200 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-not-allowed" title="Meeting link not yet available">
-                                                            <Video size={10} /> Pending
-                                                        </span>
-                                                    )
+                                                    (() => {
+                                                        const url = booking.meetingUrl;
+                                                        const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                                                        
+                                                        if (!url || isInternal) {
+                                                            return (
+                                                                <div className="px-2 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed">
+                                                                    Pending
+                                                                </div>
+                                                            );
+                                                        }
+                                                        
+                                                        return (
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
+                                                                    window.open(target, '_blank', 'noopener,noreferrer');
+                                                                }}
+                                                                className="flex items-center gap-1 px-2 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all cursor-pointer shadow-sm"
+                                                            >
+                                                                <Video size={10} /> Join Now
+                                                            </button>
+                                                        );
+                                                    })()
                                                 )}
                                             </div>
                                         </div>
@@ -430,63 +431,49 @@ export default function ProfilePage() {
                         </div>
                         {(viewTicketModal.meetingUrl || isVirtualEvent(viewTicketModal) || viewTicketModal.virtual) && (
                             <div style={{ marginTop: "20px" }}>
-                                <div style={{ marginBottom: "12px", background: "#fff", border: "1.5px solid #e2e8f0", padding: "10px", borderRadius: "12px" }}>
-                                    <p style={{ margin: "0 0 2px", fontSize: "10px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                        {viewTicketModal.meetingUrl?.startsWith("http") ? "Meeting URL" : "Meeting Code"}
-                                    </p>
-                                    <p style={{ 
-                                        margin: 0, 
-                                        fontSize: viewTicketModal.meetingUrl?.startsWith("http") ? "12px" : "16px", 
-                                        fontWeight: 900, 
-                                        color: "#0f172a", 
-                                        fontFamily: "monospace", 
-                                        letterSpacing: viewTicketModal.meetingUrl?.startsWith("http") ? "0" : "0.1em",
-                                        wordBreak: "break-all"
-                                    }}>
-                                        {viewTicketModal.meetingUrl || "PENDING"}
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        const url = viewTicketModal.meetingUrl;
-                                        if (url) {
-                                            // Identify if the current URL is an internal management link that should be ignored
-                                            const isInternalLink = url.toLowerCase().includes("organiser") || url.toLowerCase().includes("admin") || url.toLowerCase().includes("vendor");
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1 p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                        <p style={{ fontSize: "9px", color: "#64748b", fontWeight: 800, textTransform: "uppercase", marginBottom: "4px" }}>Meeting URL</p>
+                                        <p style={{ 
+                                            fontSize: "13px", 
+                                            fontWeight: 900, 
+                                            color: "#0f172a", 
+                                            fontFamily: "monospace", 
+                                            letterSpacing: (viewTicketModal.meetingUrl && !viewTicketModal.meetingUrl.toLowerCase().includes("organiser")) ? "0.1em" : "0",
+                                            wordBreak: "break-all"
+                                        }}>
+                                            {(!viewTicketModal.meetingUrl || viewTicketModal.meetingUrl.toLowerCase().includes("organiser") || viewTicketModal.meetingUrl.toLowerCase().includes("admin")) 
+                                                ? "PENDING" 
+                                                : viewTicketModal.meetingUrl}
+                                        </p>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        {(() => {
+                                            const url = viewTicketModal.meetingUrl;
+                                            const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
                                             
-                                            // Resolve the target: If it's a full URL and NOT an internal management link, use it.
-                                            // Otherwise use the URL as a path segment (for 9-digit codes).
-                                            // If it's a "bad" internal link, the backend resolution should have already fixed it, 
-                                            // but as a failsafe we block it here.
-                                            if (isInternalLink && url.startsWith("http")) {
-                                                console.warn("Blocking redirect to management portal:", url);
-                                                return;
+                                            if (!url || isInternal) {
+                                                return (
+                                                    <div className="px-4 py-3 bg-slate-100 text-slate-400 rounded-xl text-xs font-black uppercase tracking-[0.2em] border border-slate-200 cursor-not-allowed">
+                                                        Wait for Host
+                                                    </div>
+                                                );
                                             }
                                             
-                                            const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
-                                            window.open(target, '_blank', 'noopener,noreferrer');
-                                        }
-                                    }}
-                                    style={{ 
-                                        width: "100%",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "8px",
-                                        padding: "14px", 
-                                        background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", 
-                                        color: "#fff", 
-                                        borderRadius: "12px", 
-                                        fontSize: "14px", 
-                                        fontWeight: "800", 
-                                        textDecoration: "none",
-                                        boxShadow: "0 10px 20px rgba(16, 185, 129, 0.2)",
-                                        textAlign: "center",
-                                        border: "none",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    <Video size={18} /> Join Meeting Now
-                                </button>
+                                            return (
+                                                <button 
+                                                    onClick={() => {
+                                                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `/${url}`;
+                                                        window.open(target, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                    className="px-6 py-3 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-[0_4px_0_0_rgb(5,150,105)] active:translate-y-1 active:shadow-none"
+                                                >
+                                                    Join Room
+                                                </button>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

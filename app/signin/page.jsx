@@ -101,8 +101,11 @@ export default function SignInPage() {
                 // If it's a professional service vendor, always go to vendor dashboard
                 if (user.category && isServiceProvider(user.category)) {
                     destination = "/vendor/dashboard";
-                } else if (!redirectPath || redirectPath === "/" || redirectPath === "/signin") {
-                    // If no specific redirect, go to organiser dashboard
+                } else if (redirectPath?.startsWith("/organiser")) {
+                    // Respect specific redirects to organiser sub-pages if they already point to the dashboard
+                    destination = redirectPath;
+                } else {
+                    // Default to organiser dashboard even if redirectPath requests /profile or /
                     destination = "/organiser";
                 }
             } else {
