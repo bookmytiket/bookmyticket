@@ -87,15 +87,27 @@ export default function SignInPage() {
     useEffect(() => {
         if (!authLoading && user) {
             console.log("SignInPage: already logged in as", user.role, ". Redirecting to:", redirectPath || "default");
-            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") 
-                ? redirectPath 
-                : (user.role === "admin" 
-                    ? "/admin" 
-                    : (user.role === "organiser" 
-                        ? (user.category && isServiceProvider(user.category) ? "/vendor/dashboard" : "/organiser")
-                        : (user.role === "staff"
-                            ? "/organiser?tab=pwa_scanner"
-                            : (user.role === "branding_partner" ? "/branding/dashboard" : "/"))));
+            // Determine destination: prioritize role-based dashboard for management roles, 
+            // but allow redirectPath for regular users and organisers (unless organiser is professional vendor)
+            let destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/";
+
+            if (user.role === "admin") {
+                destination = "/admin";
+            } else if (user.role === "staff") {
+                destination = "/organiser?tab=pwa_scanner";
+            } else if (user.role === "branding_partner") {
+                destination = "/branding/dashboard";
+            } else if (user.role === "organiser") {
+                // If it's a professional service vendor, always go to vendor dashboard
+                if (user.category && isServiceProvider(user.category)) {
+                    destination = "/vendor/dashboard";
+                } else if (!redirectPath || redirectPath === "/" || redirectPath === "/signin") {
+                    // If no specific redirect, go to organiser dashboard
+                    destination = "/organiser";
+                }
+            }
+
+            console.log("SignInPage: final destination determined as:", destination);
             router.replace(destination);
         }
     }, [user, authLoading, router, redirectPath]);
