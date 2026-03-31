@@ -11,6 +11,7 @@ import { hashPassword } from "@/app/utils/hashPassword";
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
 import CouponModal from "@/components/CouponModal";
 import EmojiBackground from "@/components/EmojiBackground";
+import { isServiceProvider } from "@/app/data/serviceCategories";
 
 const FALLBACK_BANNER_SLIDES = [
     { image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", subtitle: "Book tickets for concerts, sports & more" },
@@ -86,7 +87,15 @@ export default function SignInPage() {
     useEffect(() => {
         if (!authLoading && user) {
             console.log("SignInPage: already logged in as", user.role, ". Redirecting to:", redirectPath || "default");
-            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : (user.role === "admin" ? "/admin" : (user.role === "organiser" ? "/organiser" : "/"));
+            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") 
+                ? redirectPath 
+                : (user.role === "admin" 
+                    ? "/admin" 
+                    : (user.role === "organiser" 
+                        ? (user.category && isServiceProvider(user.category) ? "/vendor/dashboard" : "/organiser")
+                        : (user.role === "staff"
+                            ? "/organiser?tab=pwa_scanner"
+                            : (user.role === "branding_partner" ? "/branding/dashboard" : "/"))));
             router.replace(destination);
         }
     }, [user, authLoading, router, redirectPath]);
