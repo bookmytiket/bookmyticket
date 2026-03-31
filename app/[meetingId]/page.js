@@ -108,9 +108,10 @@ export default function MeetingRoom() {
 
         await joinMeeting({
             meetingId: meeting._id,
-            userId: user?.email || `guest-${Math.random().toString(36).substr(2, 5)}`,
+            userId: userId, // Use the stable userId computed at line 40
             name,
-            role: meeting.creatorId === user?.email ? "host" : "participant",
+            // role: strictly compare creatorId. If creatorId is missing or doesn't match, it's a participant.
+            role: (meeting.creatorId && user?.email && meeting.creatorId === user?.email) ? "host" : "participant",
         });
         setIsJoined(true);
     };
@@ -448,7 +449,7 @@ export default function MeetingRoom() {
                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                              <div className="absolute bottom-6 left-6 flex items-center gap-3">
                                  <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
-                                     You (Host)
+                                     You ({meeting.creatorId && user?.email && meeting.creatorId === user?.email ? "Host" : "Participant"})
                                  </span>
                                  {!audioEnabled && (
                                     <motion.div 
@@ -482,7 +483,7 @@ export default function MeetingRoom() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                 <div className="absolute bottom-6 left-6 flex items-center gap-3">
                                     <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
-                                        {name}
+                                        {name} {meeting.creatorId && peerId === meeting.creatorId ? "(Host)" : ""}
                                     </span>
                                     {/* Muted indicator for remote participant */}
                                     {stream && stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && (

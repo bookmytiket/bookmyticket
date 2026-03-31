@@ -46,18 +46,18 @@ export const join = mutation({
         role: v.string(),
     },
     handler: async (ctx, args) => {
-        const existing = await ctx.db
+        // CLEANUP: Ensure no duplicate entries for this user in this meeting
+        const duplicateParticipants = await ctx.db
             .query("meetingParticipants")
             .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
             .filter((q) => q.eq(q.field("userId"), args.userId))
-            .unique();
-
-        if (existing) {
-            await ctx.db.patch(existing._id, {
-                status: "joined",
-                joinedAt: Date.now(),
-            });
-            return existing._id;
+            .collect();
+        
+        // If there are existing records, delete them to ensure a fresh, single session
+        if (duplicateParticipants.length > 0) {
+            for (const p of duplicateParticipants) {
+                await ctx.db.delete(p._id);
+            }
         }
 
         return await ctx.db.insert("meetingParticipants", {
@@ -95,11 +95,22 @@ export const leave = mutation({
 export const getParticipants = query({
     args: { meetingId: v.id("meetings") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const participants = await ctx.db
             .query("meetingParticipants")
             .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
             .filter((q) => q.eq(q.field("status"), "joined"))
             .collect();
+        
+        // Final guard for UI: unique by userId
+        const unique = [];
+        const seen = new Set();
+        for (const p of participants) {
+            if (!seen.has(p.userId)) {
+                seen.add(p.userId);
+                unique.push(p);
+            }
+        }
+        return unique;
     },
 });
 

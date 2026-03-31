@@ -216,7 +216,10 @@ export function useWebRTC(meetingId, userId, name) {
     useEffect(() => {
         if (!signals || !localStream) return;
 
-        signals.forEach(async (signal) => {
+        // Sort signals by timestamp to ensure correct order (Offer -> Answer -> ICE)
+        const sortedSignals = [...signals].sort((a, b) => a.timestamp - b.timestamp);
+
+        sortedSignals.forEach(async (signal) => {
             if (processedSignals.current.has(signal._id)) return;
             processedSignals.current.add(signal._id);
 
@@ -234,6 +237,7 @@ export function useWebRTC(meetingId, userId, name) {
             try {
                 if (type === "offer") {
                     const offer = JSON.parse(data);
+                    console.log(`Processing offer from ${remoteName}`);
                     await pc.setRemoteDescription(new RTCSessionDescription(offer));
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
@@ -244,21 +248,18 @@ export function useWebRTC(meetingId, userId, name) {
                         type: "answer",
                         data: JSON.stringify(answer),
                     });
-                    // Remote description is set, drain any waiting candidates
                     await drainIceQueue(senderId);
                 } else if (type === "answer") {
                     const answer = JSON.parse(data);
+                    console.log(`Processing answer from ${remoteName}`);
                     await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                    // Remote description is set, drain any waiting candidates
                     await drainIceQueue(senderId);
                 } else if (type === "ice-candidate") {
                     const candidate = JSON.parse(data);
                     if (pc.remoteDescription) {
                         await pc.addIceCandidate(new RTCIceCandidate(candidate));
                     } else {
-                        // Buffer candidates arriving before the handshake is ready
                         iceQueues.current[senderId].push(candidate);
-                        console.log(`Buffered ICE candidate for ${senderId} (remoteDesc not yet set)`);
                     }
                 }
             } catch (err) {
