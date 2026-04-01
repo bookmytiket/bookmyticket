@@ -26,6 +26,12 @@ export function useWebRTC(meetingId, userId, name) {
     const [connectionStates, setConnectionStates] = useState({}); // { userId: connectionState }
     const screenStreamRef = useRef(null);
 
+    // 0. Persistence & Self-Healing Refs
+    const lastSignalTimestamp = useRef(0);
+    const retryCount = useRef({}); // { userId: number }
+    const pcStates = useRef({}); // { userId: string }
+    const sessionStartTime = useRef(Date.now());
+    
     // Standard WebRTC State Machine (Prevents Glare/Blinking)
     const makingOffer = useRef({}); // { userId: boolean }
     const isSettingRemoteDescription = useRef({}); // { userId: boolean }
@@ -191,13 +197,31 @@ export function useWebRTC(meetingId, userId, name) {
         };
 
         pc.onconnectionstatechange = () => {
-            console.log(`Connection state with ${remoteName}: ${pc.connectionState}`);
+            const state = pc.connectionState;
+            console.log(`[Hardened Connection] ${remoteName}: ${state}`);
+            pcStates.current[remoteUserId] = state;
+            
             setConnectionStates(prev => ({
                 ...prev,
-                [remoteUserId]: pc.connectionState
+                [remoteUserId]: state
             }));
 
-            if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+            // Self-Healing: Trigger ICE Restart if connection stays failed/disconnected
+            if (state === 'failed' || (state === 'disconnected' && !isInitiator)) {
+                const count = (retryCount.current[remoteUserId] || 0) + 1;
+                retryCount.current[remoteUserId] = count;
+                
+                if (count <= 3) {
+                    console.warn(`Attempting ICE Restart for ${remoteName} (Attempt ${count})`);
+                    pc.restartIce();
+                }
+            }
+
+            if (state === 'connected') {
+                retryCount.current[remoteUserId] = 0;
+            }
+
+            if (state === 'closed') {
                 setRemoteStreams(prev => {
                     const next = { ...prev };
                     delete next[remoteUserId];
@@ -267,17 +291,24 @@ export function useWebRTC(meetingId, userId, name) {
         const sortedSignals = [...signals].sort((a, b) => a.timestamp - b.timestamp);
 
         sortedSignals.forEach(async (signal) => {
-            if (processedSignals.current.has(signal._id)) return;
-            processedSignals.current.add(signal._id);
+            const { senderId, type, data, timestamp } = signal;
+            
+            // 0. SIGNAL SYNC GUARD (Fixes Zombie Handshakes & Flickering)
+            // Ignore signals older than the session start or the last processed signal
+            if (timestamp < sessionStartTime.current || timestamp <= lastSignalTimestamp.current) {
+                console.log(`Skipping stale signal from ${senderId}`);
+                return;
+            }
+            lastSignalTimestamp.current = timestamp;
 
-            const { senderId, type, data } = signal;
-            // Find participant by their unique _id (stored as senderId in signal)
             const remoteParticipant = activeParticipants?.find(p => p._id === senderId);
             const remoteName = remoteParticipant?.name || "Guest";
             
             let pc = pcs.current[senderId];
             if (!pc && (type === "offer" || type === "ice-candidate")) {
-                pc = createPeerConnection(senderId, remoteName, false);
+                // Initiator logic based on ID comparison
+                const isInitiator = userId < senderId;
+                pc = createPeerConnection(senderId, remoteName, isInitiator);
             }
 
             if (!pc) return;
@@ -287,6 +318,8 @@ export function useWebRTC(meetingId, userId, name) {
                     const offer = JSON.parse(data);
                     const offerCollision = makingOffer.current[senderId] || pc.signalingState !== "stable";
                     
+                    // initiator in this context is the side with the higher ID
+                    const isInitiator = userId < senderId;
                     ignoreOffer.current[senderId] = !isInitiator && offerCollision;
                     if (ignoreOffer.current[senderId]) {
                         console.log(`Ignoring offer collision from ${remoteName}`);
@@ -310,15 +343,21 @@ export function useWebRTC(meetingId, userId, name) {
                     await drainIceQueue(senderId);
                 } else if (type === "answer") {
                     const answer = JSON.parse(data);
-                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                    await drainIceQueue(senderId);
+                    if (pc.signalingState === "have-local-offer") {
+                        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        await drainIceQueue(senderId);
+                    }
                 } else if (type === "ice-candidate") {
                     const candidate = JSON.parse(data);
                     try {
-                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        if (pc.remoteDescription && pc.remoteDescription.type) {
+                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } else {
+                            iceQueues.current[senderId].push(candidate);
+                        }
                     } catch (err) {
                         if (!ignoreOffer.current[senderId]) {
-                            iceQueues.current[senderId].push(candidate);
+                            console.warn("ICE candidate failed but not ignored:", err);
                         }
                     }
                 }

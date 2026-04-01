@@ -34,6 +34,9 @@ export default defineSchema({
         normalTicketCapacity: v.optional(v.number()),
         normalTicketPrice: v.optional(v.number()),
         virtual: v.optional(v.boolean()),
+        meetingType: v.optional(v.string()), // 'internal' or 'external'
+        externalMeetingUrl: v.optional(v.string()), // For Zoom/Teams/etc.
+        endDateTime: v.optional(v.number()), // Computed timestamp for expiration
         seatCategories: v.optional(v.array(v.object({
             name: v.string(),
             price: v.number(),
@@ -599,6 +602,7 @@ export default defineSchema({
         password: v.optional(v.string()),
         meetingLink: v.string(), // unique slug/id
         eventId: v.optional(v.id("events")),
+        endDateTime: v.optional(v.number()),
         settings: v.object({
             lobby: v.boolean(),
             muteOnJoin: v.boolean(),

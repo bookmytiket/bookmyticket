@@ -461,6 +461,10 @@ function AdminHomePage() {
             ];
             defaults.forEach(d => createPageMutation(d));
         }
+
+        if (allConfig["internal_meeting_portal_enabled"] === undefined) {
+            setConfigMutation({ key: "internal_meeting_portal_enabled", value: JSON.stringify(true) });
+        }
     }, [allConfig, convexTicketSettings, convexEmailSettings, convexSeoSettings, convexPolicies, convexSsoSettings, convexEmailTemplates, convexPages, updateTicketSettingsMutation, updateEmailSettingsMutation, updateSeoSettingsMutation, updatePoliciesMutation, updateSsoSettingsMutation, addEmailTemplateMutation, createPageMutation]);
 
     // Fallback settings for stable UI
@@ -583,6 +587,8 @@ function AdminHomePage() {
         privacyUrl: "#",
         termsUrl: "#"
     }, allConfig);
+    
+    const [internalMeetingEnabled, setInternalMeetingEnabled] = useConvexConfig("internal_meeting_portal_enabled", true, allConfig);
 
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [bookings, setBookings] = useState([]);
@@ -1253,7 +1259,8 @@ function AdminHomePage() {
                                             { label: "Event Partners", id: "event_partners" },
                                             { label: "Recent Memories", id: "memories" },
                                             { label: "Sections Order", id: "sections" },
-                                            { label: "Copyright Header", id: "copyright" }
+                                            { label: "Copyright Header", id: "copyright" },
+                                            { label: "Meeting Settings", id: "meeting_settings" }
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
@@ -2345,6 +2352,64 @@ function AdminHomePage() {
                                     }}
                                     style={{ width: "100%", padding: "10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                 />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "meeting_settings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Internal Meeting Portal Settings</h3>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <span style={{ fontSize: "14px", fontWeight: 700, color: internalMeetingEnabled ? "#22c55e" : "#ef4444" }}>
+                                        {internalMeetingEnabled ? "ENABLED" : "DISABLED"}
+                                    </span>
+                                    <button
+                                        onClick={() => setInternalMeetingEnabled(!internalMeetingEnabled)}
+                                        style={{ 
+                                            position: "relative", 
+                                            width: "50px", 
+                                            height: "26px", 
+                                            borderRadius: "100px", 
+                                            backgroundColor: internalMeetingEnabled ? "#22c55e" : "#cbd5e1", 
+                                            border: "none", 
+                                            cursor: "pointer",
+                                            transition: "all 0.3s ease" 
+                                        }}
+                                    >
+                                        <div style={{ 
+                                            position: "absolute", 
+                                            top: "3px", 
+                                            left: internalMeetingEnabled ? "27px" : "3px", 
+                                            width: "20px", 
+                                            height: "20px", 
+                                            borderRadius: "50%", 
+                                            backgroundColor: "#fff", 
+                                            transition: "all 0.3s ease",
+                                            boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                                        }} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div style={{ backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', padding: "20px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                                    <div style={{ padding: "10px", borderRadius: "10px", backgroundColor: "#3b82f620", color: "#3b82f6" }}>
+                                        <Video size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: t.textMain }}>Internal Meeting Portal Access</h4>
+                                        <p style={{ margin: "8px 0 0", fontSize: "14px", color: t.textSub, lineHeight: "1.6" }}>
+                                            When enabled, organisers can generate platform-managed meeting links for virtual events. When disabled, organisers are forced to provide external meeting links (Zoom, Google Meet, Microsoft Teams, etc.).
+                                        </p>
+                                        {!internalMeetingEnabled && (
+                                            <div style={{ marginTop: "16px", padding: "12px", borderRadius: "8px", backgroundColor: "#ef444410", color: "#ef4444", border: "1px solid #ef444420", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600 }}>
+                                                <AlertCircle size={16} />
+                                                Organisers will only see the 'External Link' option when creating virtual events.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

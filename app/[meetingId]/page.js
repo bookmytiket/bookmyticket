@@ -229,18 +229,38 @@ export default function MeetingRoom() {
                 const video = videoRef.current;
                 if (video.srcObject !== stream) {
                     video.srcObject = stream;
-                    // Safari stability fix: Explicitly load before play
                     video.load();
                 }
                 
                 const playVideo = () => {
                     video.play().catch(e => {
                         console.warn("Retrying video play...", e);
-                        // Recursive retry for mobile auto-play blocks
-                        setTimeout(playVideo, 1000);
+                        setTimeout(playVideo, 1500);
                     });
                 };
                 playVideo();
+
+                // Playback Watchdog: Fixes "Black Screen" on mobile if video gets stuck
+                let lastTime = 0;
+                let stuckCount = 0;
+                const checkStatus = setInterval(() => {
+                    if (video.paused) {
+                        video.play().catch(() => {});
+                    } else if (video.currentTime === lastTime && video.currentTime > 0) {
+                        stuckCount++;
+                        if (stuckCount > 3) { // Stuck for ~3 seconds
+                            console.warn("Video watchdog detected stuck stream. Reloading...");
+                            video.load();
+                            video.play().catch(() => {});
+                            stuckCount = 0;
+                        }
+                    } else {
+                        lastTime = video.currentTime;
+                        stuckCount = 0;
+                    }
+                }, 1000);
+
+                return () => clearInterval(checkStatus);
             }
         }, [stream]);
 
@@ -312,17 +332,64 @@ export default function MeetingRoom() {
         );
     }
 
-    if (!meeting) {
+    if (!meeting || meeting.isExpired) {
         return (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
-                <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-6">
-                    <Shield size={32} />
+                <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-[2rem] flex items-center justify-center mb-8 border border-amber-500/20 shadow-2xl">
+                    <Clock size={40} className="animate-pulse" />
                 </div>
-                <h1 className="text-3xl font-extrabold text-white mb-3">Meeting Not Found</h1>
-                <p className="text-slate-400 mb-8 max-w-sm">The meeting code <strong>{meetingLink}</strong> is invalid or has ended.</p>
-                <Link href="/" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-all shadow-lg active:scale-95">
-                    Return Home
+                <h1 className="text-4xl font-black text-white mb-4 tracking-tighter uppercase italic">Event Concluded</h1>
+                <p className="text-slate-400 mb-10 max-w-sm font-bold text-sm uppercase tracking-widest leading-relaxed">
+                    {!meeting ? `The meeting code ${meetingLink} is invalid.` : `The virtual event "${meeting.title}" has successfully concluded.`}
+                </p>
+                <Link href="/" className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-2xl shadow-blue-500/30 active:scale-95 border border-white/10">
+                    Explore Other Events
                 </Link>
+            </div>
+        );
+    }
+
+    // ----------------------------------------------------
+    // EXTERNAL MEETING REDIRECTOR
+    // ----------------------------------------------------
+    if (meeting.meetingType === "external" && !isJoined) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full max-w-lg bg-slate-50 border border-slate-200 rounded-[3rem] p-12 shadow-2xl"
+                >
+                    <div className="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl rotate-3">
+                        <Radio size={40} />
+                    </div>
+                    <h1 className="text-3xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter">{meeting.title}</h1>
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mb-8">External Virtual Experience</p>
+                    
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-10 text-left">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Shield size={18} className="text-emerald-500" />
+                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">Safe Access Protocol</span>
+                        </div>
+                        <p className="text-slate-400 text-xs font-medium leading-relaxed">You are about to join an external meeting platform (Zoom/Teams/Meet). Please ensure you have the necessary application installed.</p>
+                    </div>
+
+                    <a 
+                        href={meeting.externalMeetingUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="block w-full py-5 bg-black text-white rounded-2xl font-black uppercase tracking-[0.3em] text-xs hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                    >
+                        Launch External App
+                    </a>
+                    
+                    <button 
+                        onClick={() => router.push("/")}
+                        className="mt-6 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        Cancel and Return
+                    </button>
+                </motion.div>
             </div>
         );
     }
@@ -523,8 +590,14 @@ export default function MeetingRoom() {
                                             <span className="truncate uppercase tracking-wider">{name}</span>
                                             {stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && <MicOff size={11} className="text-red-400 ml-2 shrink-0" />}
                                         </div>
-                                        {connectionStates[peerId] && connectionStates[peerId] !== 'connected' && (
-                                            <div className="absolute top-2 right-2 bg-amber-500/90 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase tracking-tighter shadow-xl border border-white/20">
+                                        {connectionStates[peerId] && (connectionStates[peerId] === 'failed' || connectionStates[peerId] === 'disconnected') && (
+                                            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-4 text-center">
+                                                <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mb-3" />
+                                                <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest animate-pulse">Recovering Connection...</span>
+                                            </div>
+                                        )}
+                                        {connectionStates[peerId] && connectionStates[peerId] !== 'connected' && connectionStates[peerId] !== 'failed' && connectionStates[peerId] !== 'disconnected' && (
+                                            <div className="absolute top-2 right-2 bg-slate-900/60 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase tracking-tighter shadow-xl border border-white/20">
                                                 {connectionStates[peerId]}
                                             </div>
                                         )}

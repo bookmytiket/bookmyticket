@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 
 export const create = mutation({
     args: {
@@ -31,10 +31,32 @@ export const create = mutation({
 export const getByLink = query({
     args: { meetingLink: v.string() },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const meeting = await ctx.db
             .query("meetings")
             .withIndex("by_meetingLink", (q) => q.eq("meetingLink", args.meetingLink))
             .unique();
+        
+        if (!meeting) return null;
+
+        if (meeting.eventId) {
+            const event = await ctx.db.get(meeting.eventId);
+            if (event?.endDateTime && Date.now() > event.endDateTime) {
+                return { 
+                    ...meeting, 
+                    isExpired: true, 
+                    meetingType: event.meetingType, 
+                    externalMeetingUrl: event.externalMeetingUrl 
+                };
+            }
+            return { 
+                ...meeting, 
+                isExpired: false, 
+                meetingType: event?.meetingType || "internal", 
+                externalMeetingUrl: event?.externalMeetingUrl 
+            };
+        }
+
+        return { ...meeting, isExpired: false, meetingType: "internal" };
     },
 });
 
@@ -226,7 +248,21 @@ export const createForEvent = mutation({
         description: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        // Idempotency: Check if a meeting already exists for this event
+        // Check if internal meeting portal is enabled
+        const rawConfig = await ctx.db
+            .query("systemConfig")
+            .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
+            .unique();
+        
+        const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+        if (!isEnabled) {
+            throw new Error("Internal Meeting Portal is currently disabled by administrator.");
+        }
+
+        const event = await ctx.db.get(args.eventId);
+        if (!event) return null;
+
+        // 2. Local Meeting Logic (Internal or External redirector)
         const existingMeeting = await ctx.db.query("meetings")
             .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
             .first();
@@ -234,7 +270,7 @@ export const createForEvent = mutation({
         if (existingMeeting) {
             // Ensure the event table also has this link
             const event = await ctx.db.get(args.eventId);
-            if (event && !event.meetingUrl) {
+            if (event && event.meetingUrl !== existingMeeting.meetingLink) {
                 await ctx.db.patch(args.eventId, { meetingUrl: existingMeeting.meetingLink });
             }
             return existingMeeting.meetingLink;
@@ -249,6 +285,7 @@ export const createForEvent = mutation({
             status: "scheduled",
             meetingLink,
             eventId: args.eventId,
+            endDateTime: event.endDateTime, // Local copy for easier queries
             settings: {
                 lobby: false,
                 muteOnJoin: false,
@@ -258,7 +295,8 @@ export const createForEvent = mutation({
             },
             createdAt: Date.now(),
         });
-        const event = await ctx.db.get(args.eventId);
+        
+        // Re-use the 'event' variable defined at the top
         if (event) {
             const url = event.meetingUrl;
             // Identify if the current URL is an internal management link that should be replaced
@@ -318,9 +356,18 @@ export const cleanupInternalLinks = mutation({
 export const getVirtualEvents = query({
     args: {},
     handler: async (ctx) => {
+        const now = Date.now();
         const events = await ctx.db
             .query("events")
-            .filter((q) => q.eq(q.field("virtual"), true))
+            .filter((q) => 
+                q.and(
+                    q.eq(q.field("virtual"), true),
+                    q.or(
+                        q.eq(q.field("endDateTime"), undefined),
+                        q.gte(q.field("endDateTime"), now)
+                    )
+                )
+            )
             .collect();
         return events.filter((e) => !e.status || e.status === "Active");
     },

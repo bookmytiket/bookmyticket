@@ -1,6 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { Doc, Id } from "./_generated/dataModel";
+
+const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function computeEndDateTime(dateStr?: string, timeStr?: string) {
+    if (!dateStr || !timeStr) return undefined;
+    try {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        let [time, modifier] = timeStr.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+        
+        const date = new Date(year, month - 1, day, hours, minutes);
+        return date.getTime() + DEFAULT_DURATION_MS;
+    } catch (e) {
+        return undefined;
+    }
+}
 
 export const getActiveEvents = query({
     args: {},
@@ -78,6 +97,9 @@ export const createEvent = mutation({
         normalTicketCapacity: v.optional(v.number()),
         normalTicketPrice: v.optional(v.number()),
         virtual: v.optional(v.boolean()),
+        meetingType: v.optional(v.string()), // 'internal' or 'external'
+        externalMeetingUrl: v.optional(v.string()),
+        endDateTime: v.optional(v.number()),
         seatCategories: v.optional(v.array(v.object({
             name: v.string(),
             price: v.number(),
@@ -107,7 +129,23 @@ export const createEvent = mutation({
         }))),
     },
     handler: async (ctx, args) => {
-        const eventId = await ctx.db.insert("events", args);
+        // Enforce Internal Meeting Portal restriction
+        if (args.meetingType === "internal") {
+            const rawConfig = await ctx.db
+                .query("systemConfig")
+                .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
+                .unique();
+            const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+            if (!isEnabled) {
+                throw new Error("Internal Meeting Portal is currently disabled by administrator.");
+            }
+        }
+
+        const endDateTime = args.endDateTime || computeEndDateTime(args.date, args.time);
+        const eventId = await ctx.db.insert("events", {
+            ...args,
+            endDateTime
+        });
         
         // Workflow Automation: If this is an online event, create a meeting link immediately.
         const isVirtual = args.virtual || 
@@ -183,6 +221,9 @@ export const updateEvent = mutation({
         normalTicketCapacity: v.optional(v.number()),
         normalTicketPrice: v.optional(v.number()),
         virtual: v.optional(v.boolean()),
+        meetingType: v.optional(v.string()), // 'internal' or 'external'
+        externalMeetingUrl: v.optional(v.string()),
+        endDateTime: v.optional(v.number()),
         seatCategories: v.optional(v.array(v.object({
             name: v.string(),
             price: v.number(),
@@ -213,6 +254,29 @@ export const updateEvent = mutation({
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
+
+        // Enforce Internal Meeting Portal restriction
+        if (updates.meetingType === "internal") {
+            const rawConfig = await ctx.db
+                .query("systemConfig")
+                .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
+                .unique();
+            const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+            if (!isEnabled) {
+                throw new Error("Internal Meeting Portal is currently disabled by administrator.");
+            }
+        }
+        
+        if (updates.date || updates.time) {
+            const current = await ctx.db.get(id);
+            if (current && !updates.endDateTime) {
+                updates.endDateTime = computeEndDateTime(
+                    updates.date || current.date, 
+                    updates.time || current.time
+                );
+            }
+        }
+
         await ctx.db.patch(id, updates);
 
         // Workflow Resiliency: If this is an online event but no meeting exists, create one.
@@ -244,5 +308,49 @@ export const updateEvent = mutation({
             }
         }
     },
+});
+
+export const backfillExpiration = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const events = await ctx.db.query("events").collect();
+        let updatedCount = 0;
+        
+        for (const event of events) {
+            const isVirtual = event.virtual || 
+                             event.type?.toLowerCase() === "online" || 
+                             event.type?.toLowerCase() === "virtual" ||
+                             event.location?.toLowerCase().includes("online") ||
+                             event.location?.toLowerCase().includes("virtual") ||
+                             event.title?.toLowerCase().includes("online") ||
+                             event.title?.toLowerCase().includes("virtual");
+
+            if (isVirtual && event.endDateTime === undefined) {
+                const endDateTime = computeEndDateTime(event.date, event.time);
+                if (endDateTime) {
+                    await ctx.db.patch(event._id, { endDateTime, virtual: true }); // Also set virtual: true
+                    updatedCount++;
+                }
+            }
+        }
+        return { updatedCount };
+    },
+});
+
+export const debugVirtualEvents = query({
+    args: {},
+    handler: async (ctx) => {
+        const events = await ctx.db.query("events").collect();
+        return events.map(e => ({
+            id: e._id,
+            title: e.title,
+            date: e.date,
+            time: e.time,
+            virtual: e.virtual,
+            type: e.type,
+            location: e.location,
+            endDateTime: e.endDateTime
+        }));
+    }
 });
 

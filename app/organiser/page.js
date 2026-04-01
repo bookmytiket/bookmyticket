@@ -633,6 +633,8 @@ function OrganiserPanel() {
     const updateStaffMutation = useMutation(api.staff.updateStaff);
     const deleteStaffMutation = useMutation(api.staff.deleteStaff);
     const staffAccounts = useQuery(api.staff.list, { organiserId: effectiveEmail }) || EMPTY_ARRAY;
+    const rawInternalMeetingPortalEnabled = useQuery(api.systemConfig.getConfig, { key: "internal_meeting_portal_enabled" });
+    const internalMeetingPortalEnabled = rawInternalMeetingPortalEnabled !== undefined ? (typeof rawInternalMeetingPortalEnabled === "string" ? JSON.parse(rawInternalMeetingPortalEnabled) : rawInternalMeetingPortalEnabled) : true;
     const validateAndLogScanMutation = useMutation(api.pwaScans.validateAndLogScan);
 
     const [events, setEvents] = useState([]);
@@ -821,7 +823,10 @@ function OrganiserPanel() {
         eventStatus: "Active", isFeature: "Yes", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
-        meetingUrl: "", earlyBirdDiscount: "disable",
+        meetingUrl: "",
+        meetingType: "internal",
+        externalMeetingUrl: "",
+        earlyBirdDiscount: "disable",
         layoutType: "stage",
     });
     const [postEvent, setPostEvent] = useState(getInitialPostEvent());
@@ -1048,6 +1053,8 @@ function OrganiserPanel() {
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
             status: postEvent.eventStatus || "Active",
+            meetingType: postEvent.meetingType || "internal",
+            externalMeetingUrl: postEvent.externalMeetingUrl || undefined,
             description: postEvent.description || undefined,
             rows: isSeating ? categories.reduce((sum, c) => sum + (Number(c.rows) || 0), 0) : undefined,
             cols: isSeating ? (Number(postEvent.cols) || 10) : undefined,
@@ -2275,7 +2282,7 @@ function OrganiserPanel() {
         const renderTabContent = () => {
             const renderToggle = (label, field, options) => (
                 <div className="mb-6">
-                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
                         {options.map((opt) => {
                             const isActive = postEvent[field] === opt.value;
@@ -2409,7 +2416,7 @@ function OrganiserPanel() {
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
                 <div className={`mb-6 ${fullWidth ? "col-span-2" : "col-span-1"}`}>
-                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="relative flex items-center">
                         {type === "date" ? (
                             <CalendarPicker 
@@ -2462,7 +2469,7 @@ function OrganiserPanel() {
 
                 return (
                     <div className="mb-6 col-span-1">
-                        <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">{label}*</label>
+                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
                         <CustomSelect 
                             value={postEvent[field] || ""}
                             options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.name || opt.label || String(opt) }))}
@@ -2750,7 +2757,7 @@ function OrganiserPanel() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                     {/* Thumbnail Image */}
                                     <div>
-                                        <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
                                         <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
                                             <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                                 {postEvent.bannerPreview ? (
@@ -2758,7 +2765,7 @@ function OrganiserPanel() {
                                                 ) : <ImageIcon size={28} className="text-slate-300" />}
                                             </div>
                                             <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                                <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
+                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
                                                 <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2766,7 +2773,7 @@ function OrganiserPanel() {
                                     </div>
                                     {/* Gallery Images Snippet */}
                                     <div>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Gallery Images</label>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Gallery Images</label>
                                         <div onClick={() => galleryInputRef.current?.click()} style={{ border: `1px dashed ${t.border}`, borderRadius: "8px", padding: "12px", backgroundColor: t.bg, cursor: "pointer", minHeight: "100px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                                             {(postEvent.galleryPreviews || []).slice(0, 3).map((src, idx) => (
                                                 <img key={idx} src={src} alt="G" style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "4px" }} />
@@ -2797,7 +2804,7 @@ function OrganiserPanel() {
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "end" }}>
                                     {renderToggle("Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
                                     <div style={{ marginBottom: "20px" }}>
-                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Price (INR) *</label>
+                                        <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Price (INR) *</label>
                                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                                             <input type="number" value={postEvent.price || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, price: e.target.value }))} disabled={postEvent.ticketsAreFree} style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: `1px solid ${t.border}`, backgroundColor: postEvent.ticketsAreFree ? "#f1f5f9" : t.bg, color: t.textMain, fontSize: "13px" }} />
                                             <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: t.textMain, cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -2808,7 +2815,30 @@ function OrganiserPanel() {
                                     {renderToggle("Early Bird*", "earlyBirdDiscount", [{ label: "Off", value: "disable" }, { label: "On", value: "enable" }])}
                                 </div>
 
-                                {renderInput("Meeting Url*", "meetingUrl", "url", "Enter Meeting Url", true)}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px", alignItems: "start" }}>
+                                    <div style={{ flex: 1 }}>
+                                        {renderToggle("Meeting Type*", "meetingType", [
+                                            ...(internalMeetingPortalEnabled ? [{ label: "Platform Meeting", value: "internal" }] : []),
+                                            { label: "External Link", value: "external" }
+                                        ])}
+                                        {!internalMeetingPortalEnabled && (
+                                            <div style={{ marginTop: "4px", padding: "8px", backgroundColor: "#fff7ed", border: "1px solid #ffedd5", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                <AlertCircle size={14} style={{ color: "#f97316" }} />
+                                                <span style={{ fontSize: "10px", fontWeight: 700, color: "#9a3412", textTransform: "uppercase" }}>Internal Portal Disabled by Admin</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        {postEvent.meetingType === "external" || !internalMeetingPortalEnabled ? (
+                                            renderInput("External Meeting Link*", "externalMeetingUrl", "url", "e.g. https://zoom.us/j/...", true)
+                                        ) : (
+                                            <div style={{ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px dashed #e2e8f0", display: "flex", alignItems: "center", gap: "10px", marginTop: "24px" }}>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "full", backgroundColor: "#22c55e", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
+                                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Safe Platform Meeting Link will be auto-generated</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "12px" }}>
                                     {renderInput("Event Title*", "title", "text", "Enter Event Name")}
@@ -2816,7 +2846,7 @@ function OrganiserPanel() {
                                 </div>
 
                                 <div style={{ marginBottom: "16px" }}>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textMain }}>Description*</label>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Description*</label>
                                     <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={4} style={{ width: "100%", padding: "12px", border: `1px solid ${t.border}`, borderRadius: "4px", backgroundColor: t.bg, color: t.textMain, fontSize: "13px", resize: "vertical", outline: "none" }} />
                                 </div>
 
@@ -2847,7 +2877,7 @@ function OrganiserPanel() {
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                                 {/* Thumbnail Image */}
                                 <div>
-                                    <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
                                     <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
                                         <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                             {postEvent.bannerPreview ? (
@@ -2946,7 +2976,7 @@ function OrganiserPanel() {
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
                                     <div>
-                                        <h4 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Ticketing & Seating</h4>
+                                        <h4 className="text-2xl font-black text-slate-500 tracking-tighter uppercase italic">Ticketing & Seating</h4>
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Configure event capacity and layout</p>
                                     </div>
                                     <div className="w-full md:w-64">
@@ -2971,7 +3001,7 @@ function OrganiserPanel() {
 
                                         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
                                             <div className="flex items-center justify-between mb-8">
-                                                <p className="text-[11px] font-black tracking-widest text-slate-900 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
+                                                <p className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
                                                 <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
                                                     <Plus size={14} /> Add Category
                                                 </button>
@@ -3030,7 +3060,7 @@ function OrganiserPanel() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
                                         {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
                                         <div className="mb-6">
-                                            <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
+                                            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
                                             <div className="flex bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
                                                 <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-300 disabled:bg-slate-50 disabled:text-slate-400" />
                                                 <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-black uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
@@ -3043,7 +3073,7 @@ function OrganiserPanel() {
                             </div>
 
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
-                                <label className="block text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
+                                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
                                 <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 shadow-inner resize-y leading-relaxed" />
                             </div>
 
