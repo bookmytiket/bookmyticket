@@ -131,6 +131,20 @@ export default function SignInPage() {
     const [loading, setLoading] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
     const [loginError, setLoginError] = useState("");
+    const [userIp, setUserIp] = useState("Unknown IP");
+
+    useEffect(() => {
+        const fetchIp = async () => {
+            try {
+                const res = await fetch("https://api.ipify.org?format=json");
+                const data = await res.json();
+                setUserIp(data.ip || "Unknown IP");
+            } catch (err) {
+                console.error("Could not fetch user IP:", err);
+            }
+        };
+        fetchIp();
+    }, []);
 
     const [signupName, setSignupName] = useState("");
     const [signupEmail, setSignupEmail] = useState("");
@@ -186,7 +200,12 @@ export default function SignInPage() {
         const hashed = await hashPassword(password);
         // 1. Unified login check via auth.login mutation for all roles (User, Admin, Staff, Organiser)
         try {
-            const res = await loginMutation({ identifier: id, password: hashed });
+            const res = await loginMutation({ 
+                identifier: id, 
+                password: hashed,
+                ip: userIp,
+                userAgent: typeof window !== "undefined" ? window.navigator.userAgent : "Unknown"
+            });
             if (res.success) {
                 if (res.needsOtp) {
                     setOtpEmail(res.email);

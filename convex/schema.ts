@@ -641,5 +641,13 @@ export default defineSchema({
         text: v.string(),
         timestamp: v.number(),
     }).index("by_meetingId", ["meetingId"]),
+
+    failedLoginAttempts: defineTable({
+        identifier: v.string(),
+        ip: v.string(),
+        userAgent: v.string(),
+        timestamp: v.number(),
+    }).index("by_identifier", ["identifier"]),
 });
+
 

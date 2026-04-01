@@ -288,9 +288,33 @@ export const verifyOTPAndCreateAccount = mutation({
 });
 
 export const login = mutation({
-    args: { identifier: v.string(), password: v.string() }, // password is hashed
+    args: { 
+        identifier: v.string(), 
+        password: v.string(),
+        ip: v.optional(v.string()),
+        userAgent: v.optional(v.string()),
+    }, // password is hashed
     handler: async (ctx, args) => {
         const identifier = args.identifier.trim().toLowerCase();
+        const ip = args.ip || "Unknown IP";
+        const userAgent = args.userAgent || "Unknown Device";
+        const timestamp = Date.now();
+
+        const logFailedAttempt = async () => {
+            await ctx.db.insert("failedLoginAttempts", {
+                identifier,
+                ip,
+                userAgent,
+                timestamp,
+            });
+            // Schedule the security alert action
+            await ctx.scheduler.runAfter(0, api.securityActions.sendFailedLoginAlert, {
+                identifier,
+                ip,
+                userAgent,
+                timestamp,
+            });
+        };
 
         // 1. PRIORITY: Check Admins table first (by username OR email)
         const teamMemberByUsername = await ctx.db
@@ -305,13 +329,17 @@ export const login = mutation({
 
         const teamMember = teamMemberByUsername || teamMemberByEmail;
 
-        if (teamMember && teamMember.password === args.password) {
-            if (teamMember.status === "Inactive") {
-                throw new Error("Account is inactive.");
+        if (teamMember) {
+            if (teamMember.password === args.password) {
+                if (teamMember.status === "Inactive") {
+                    throw new Error("Account is inactive.");
+                }
+                await ctx.db.patch(teamMember._id, { lastLogin: Date.now() });
+                const activeRole = teamMember.role === "Admin" ? "admin" : "admin_team";
+                return { success: true, role: activeRole, data: teamMember };
+            } else {
+                await logFailedAttempt();
             }
-            await ctx.db.patch(teamMember._id, { lastLogin: Date.now() });
-            const activeRole = teamMember.role === "Admin" ? "admin" : "admin_team";
-            return { success: true, role: activeRole, data: teamMember };
         }
 
         // 2. PRIORITY: Check Staff table
@@ -320,8 +348,12 @@ export const login = mutation({
             .withIndex("by_email", (q) => q.eq("email", identifier))
             .unique();
 
-        if (staff && staff.password === args.password) {
-            return { success: true, role: "staff", data: staff };
+        if (staff) {
+            if (staff.password === args.password) {
+                return { success: true, role: "staff", data: staff };
+            } else {
+                await logFailedAttempt();
+            }
         }
 
         // 3. PRIORITY: Check Organisers table — must come before Users
@@ -332,11 +364,15 @@ export const login = mutation({
             .withIndex("by_userId", (q) => q.eq("userId", identifier))
             .unique();
 
-        if (organiser && organiser.password === args.password) {
-            if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
-                return { success: false, error: "Account is restricted." };
+        if (organiser) {
+            if (organiser.password === args.password) {
+                if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
+                    return { success: false, error: "Account is restricted." };
+                }
+                return { success: true, role: "organiser", data: organiser };
+            } else {
+                await logFailedAttempt();
             }
-            return { success: true, role: "organiser", data: organiser };
         }
 
         // 4. Check Users table last — triggers OTP for regular users
@@ -349,13 +385,17 @@ export const login = mutation({
             .withIndex("by_username", (q) => q.eq("username", identifier))
             .unique();
 
-        if (user && user.password === args.password) {
-            if (user.status === "Banned" || user.status === "Inactive") {
-                throw new Error("Account is restricted.");
+        if (user) {
+            if (user.password === args.password) {
+                if (user.status === "Banned" || user.status === "Inactive") {
+                    throw new Error("Account is restricted.");
+                }
+                // Trigger login OTP for regular users
+                await internalSendOTP(ctx, user.email, "login");
+                return { success: true, needsOtp: true, email: user.email };
+            } else {
+                await logFailedAttempt();
             }
-            // Trigger login OTP for regular users
-            await internalSendOTP(ctx, user.email, "login");
-            return { success: true, needsOtp: true, email: user.email };
         }
 
         return { success: false, error: "Invalid username / email or password." };
@@ -417,5 +457,41 @@ export const verifyLoginOTP = mutation({
         throw new Error("User not found");
     },
 });
+
+export const getRecentFailedAttempts = query({
+    args: { identifier: v.string(), since: v.number() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("failedLoginAttempts")
+            .withIndex("by_identifier", (q) => q.eq("identifier", args.identifier))
+            .filter((q) => q.gte(q.field("timestamp"), args.since))
+            .collect();
+    },
+});
+
+export const getUserByIdentifier = query({
+    args: { identifier: v.string() },
+    handler: async (ctx, args) => {
+        const identifier = args.identifier.trim().toLowerCase();
+        
+        // Check all roles
+        const admin = await ctx.db.query("admins").withIndex("by_username", (q) => q.eq("username", identifier)).unique()
+                      || await ctx.db.query("admins").withIndex("by_email", (q) => q.eq("email", identifier)).unique();
+        if (admin) return admin;
+
+        const staff = await ctx.db.query("staff").withIndex("by_email", (q) => q.eq("email", identifier)).unique();
+        if (staff) return staff;
+
+        const organiser = await ctx.db.query("organisers").withIndex("by_userId", (q) => q.eq("userId", identifier)).unique();
+        if (organiser) return { ...organiser, email: organiser.userId };
+
+        const user = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", identifier)).unique()
+                     || await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", identifier)).unique();
+        if (user) return user;
+
+        return null;
+    },
+});
+
 
 

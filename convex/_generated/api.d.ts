@@ -38,6 +38,7 @@ import type * as policies from "../policies.js";
 import type * as promotions from "../promotions.js";
 import type * as pwaScans from "../pwaScans.js";
 import type * as removeDuplicatePages from "../removeDuplicatePages.js";
+import type * as securityActions from "../securityActions.js";
 import type * as seed from "../seed.js";
 import type * as seedMehendi from "../seedMehendi.js";
 import type * as seoSettings from "../seoSettings.js";
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   promotions: typeof promotions;
   pwaScans: typeof pwaScans;
   removeDuplicatePages: typeof removeDuplicatePages;
+  securityActions: typeof securityActions;
   seed: typeof seed;
   seedMehendi: typeof seedMehendi;
   seoSettings: typeof seoSettings;
