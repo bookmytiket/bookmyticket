@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
-import { HOME_EVENTS, HERO_BANNER_SLIDES } from '../data/homeEvents';
+import { HOME_EVENTS, HERO_BANNER_SLIDES, BRAND_COUPONS } from '../data/homeEvents';
 import { Colors } from '../theme/Theme';
 import ComingSoonSection from '../components/ComingSoonSection';
 import CouponCard from '../components/CouponCard';
@@ -21,6 +21,33 @@ const DEFAULT_CATEGORIES = [
   { name: "Theatre", icon: "mask" },
   { name: "Music", icon: "mic" },
   { name: "Workshop", icon: "build" },
+];
+
+const SERVICE_CATEGORIES = [
+  {
+    name: "Mehendi Artists",
+    slug: "mehendi-artists",
+    icon: "flower-outline",
+    description: "Traditional & modern henna designs.",
+    color: "#f84464",
+    gradient: ["#f84464", "#ff7eb3"],
+  },
+  {
+    name: "Photographers",
+    slug: "photographers",
+    icon: "camera-outline",
+    description: "Capture your precious moments.",
+    color: "#a855f7",
+    gradient: ["#a855f7", "#da77f2"],
+  },
+  {
+    name: "Makeup Artists",
+    slug: "makeup-artists",
+    icon: "sparkles-outline",
+    description: "Stunning bridal & party makeovers.",
+    color: "#c026d3",
+    gradient: ["#c026d3", "#f783ac"],
+  },
 ];
 
 function FeaturedSection({ title, events, onEventPress }) {
@@ -53,8 +80,12 @@ export default function HomeScreen() {
         const parts = dt.split(/[-/]/);
         dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
-      const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
       
+      if (dt.includes('T') || dt.includes(' ')) {
+        const d = new Date(dt.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+      }
+
       let normalizedTime = "23:59";
       if (timeStr) {
         let t = String(timeStr).trim().toUpperCase();
@@ -70,7 +101,7 @@ export default function HomeScreen() {
         }
       }
       
-      const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+      const eventDate = new Date(`${dt}T${normalizedTime}`);
       return isNaN(eventDate.getTime()) ? null : eventDate;
     } catch (_) { return null; }
   };
@@ -78,6 +109,12 @@ export default function HomeScreen() {
   const convexCategories = useQuery(api.homeSettings.getCategories);
   const convexBanners = useQuery(api.homeSettings.getBannerSlides);
   const convexCoupons = useQuery(api.branding.getHomeCoupons) || [];
+  const allCoupons = useMemo(() => {
+    return [...convexCoupons, ...(BRAND_COUPONS || []).map(c => ({
+      ...c,
+      _id: c.title || c._id, // Local ID fallback
+    }))];
+  }, [convexCoupons]);
   
   const [bannerIndex, setBannerIndex] = useState(0);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
@@ -152,12 +189,14 @@ export default function HomeScreen() {
   }, [displayEvents]);
 
   const filteredEvents = useMemo(() => {
-    if (!selectedCity) return activeEvents;
+    if (!selectedCity || selectedCity === "All Cities") return activeEvents;
     return activeEvents.filter(e =>
       e.virtual === true ||
+      !e.city ||
       (e.city && e.city.toLowerCase() === selectedCity.toLowerCase()) ||
       (e.district && e.district.toLowerCase() === selectedCity.toLowerCase()) ||
-      (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase()))
+      (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase())) ||
+      (e.venue && e.venue.toLowerCase().includes(selectedCity.toLowerCase()))
     );
   }, [activeEvents, selectedCity]);
 
@@ -197,7 +236,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {convexCoupons.length > 0 && (
+        {allCoupons.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Exclusive </Text>
@@ -205,8 +244,8 @@ export default function HomeScreen() {
             </View>
             <FlatList
               horizontal
-              data={convexCoupons}
-              keyExtractor={(item) => item._id}
+              data={allCoupons}
+              keyExtractor={(item, index) => item._id || String(index)}
               renderItem={({ item }) => <CouponCard coupon={item} onPress={() => setSelectedCoupon(item)} />}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
@@ -244,6 +283,31 @@ export default function HomeScreen() {
       <FeaturedSection title="Explore Popular Events" events={popular} onEventPress={handleEventPress} />
       <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
       <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
+      
+      {/* Professional Services Section */}
+      <View style={[styles.section, { marginBottom: 20 }]}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Professional Services</Text>
+            <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>Top rated artists for your occasions</Text>
+          </View>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+          {SERVICE_CATEGORIES.map((cat, idx) => (
+            <TouchableOpacity 
+              key={idx} 
+              style={[styles.serviceCard, { borderColor: cat.color }]} 
+              onPress={() => alert(`Navigating to ${cat.name}`)}
+            >
+              <View style={[styles.serviceIconWrap, { backgroundColor: cat.color }]}>
+                <Text style={{ fontSize: 28 }}>{cat.icon === 'flower-outline' ? '🌸' : cat.icon === 'camera-outline' ? '📸' : '✨'}</Text>
+              </View>
+              <Text style={styles.serviceTitle}>{cat.name}</Text>
+              <Text style={styles.serviceDesc} numberOfLines={2}>{cat.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
       {filteredEvents.length === 0 && virtual.length === 0 && (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
@@ -357,5 +421,38 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  serviceCard: {
+    width: 240,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  serviceIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    opacity: 0.9,
+  },
+  serviceTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  serviceDesc: {
+    color: '#64748b',
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

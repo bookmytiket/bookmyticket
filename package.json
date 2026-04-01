@@ -17,6 +17,7 @@
     "convex": "^1.32.0",
     "country-state-city": "^3.2.1",
     "dotenv": "^17.3.1",
+    "expo": "^55.0.9",
     "face-api.js": "^0.20.0",
     "framer-motion": "^12.34.3",
     "gsap": "^3.14.2",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.2.0",
+    "@types/react": "~19.2.10",
     "autoprefixer": "^10.4.27",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",

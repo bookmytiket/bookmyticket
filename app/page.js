@@ -19,14 +19,14 @@ import Sponsors from '@/components/Sponsors';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
-import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS, BRAND_COUPONS } from '@/app/data/homeEvents';
-import { eventMatchesCategory } from '@/app/utils/categoryMatch';
+import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS, BRAND_COUPONS } from './data/homeEvents';
+import { eventMatchesCategory } from './utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
-import { isVirtualEvent } from '@/app/utils/eventUtils';
+import { isVirtualEvent } from './utils/eventUtils';
 
 function TicketCard({ event }) {
   return (

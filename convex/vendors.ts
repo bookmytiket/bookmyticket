@@ -150,3 +150,41 @@ export const getStats = query({
         };
     },
 });
+
+export const getActiveVendors = query({
+    args: {},
+    handler: async (ctx) => {
+        const vendorProfiles = await ctx.db.query("vendorProfiles").collect();
+        const results = [];
+        for (const profile of vendorProfiles) {
+            const org = await ctx.db
+                .query("organisers")
+                .withIndex("by_userId", (q) => q.eq("userId", profile.organiserId))
+                .unique();
+            
+            if (org) {
+                const reviews = await ctx.db
+                    .query("vendorReviews")
+                    .withIndex("by_vendorId", (q) => q.eq("vendorId", profile.organiserId))
+                    .collect();
+                    
+                const avgRating = reviews.length > 0
+                    ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
+                    : 0;
+
+                results.push({
+                    id: org.userId,
+                    name: org.name,
+                    category: profile.category,
+                    bio: profile.bio || "",
+                    portfolio: profile.portfolio || [],
+                    pricing: profile.pricing || [],
+                    advancedSettings: profile.advancedSettings || {},
+                    rating: avgRating,
+                    reviewsCount: reviews.length
+                });
+            }
+        }
+        return results;
+    }
+});

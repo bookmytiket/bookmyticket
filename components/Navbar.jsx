@@ -124,7 +124,8 @@ const POPULAR_CITIES_BY_COUNTRY = {
 
 const EVENT_CATEGORIES = [
   "Concert", "Sports", "Comedy", "Theatre", "Music",
-  "Workshop", "Festival", "Conference", "Exhibition", "Other",
+  "Workshop", "Festival", "Conference", "Exhibition", 
+  "Mehendi Artist", "Photographer/Studio", "Makeup Artist", "Other",
 ];
 
 import { useAuth } from "./AuthContext";
@@ -1099,7 +1100,7 @@ export default function Navbar() {
 
                     <div className="org-row">
                       <div className="org-field">
-                        <label htmlFor="cat">Event Category <span>*</span></label>
+                        <label htmlFor="cat">Category <span>*</span></label>
                         <select id="cat" required {...field("category")}>
                           <option value="">Select a category</option>
                           {EVENT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}

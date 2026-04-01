@@ -398,52 +398,67 @@ export default function ArtistProfilePage() {
                             </div>
 
                             <div className="p-6">
-                                <div className="w-full h-[150px] bg-black rounded-xl overflow-hidden mb-6 relative shadow-inner">
-                                    <img src={coverPhoto} className="w-full h-full object-cover opacity-80" alt="Cover" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                                        <span className="text-white font-black text-lg truncate pr-10">{organiser.name}</span>
+                                <div className="mb-6 pb-4 border-b border-slate-50 flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Booking with</span>
+                                        <h3 className="text-[22px] font-black text-black tracking-tight leading-none uppercase italic">{organiser.name}</h3>
+                                    </div>
+                                    <div className="w-12 h-12 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                                        <img src={coverPhoto} className="w-full h-full object-cover" alt="Profile" />
                                     </div>
                                 </div>
 
                                 <form onSubmit={handleBooking} className="space-y-5">
                                     
                                     <div className="relative">
-                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block px-1">Choose Package</label>
+                                        <label className="text-[11px] font-black text-black uppercase tracking-widest mb-1.5 block px-1">Choose Package</label>
                                         <div 
                                             onClick={() => setIsPackageDropdownOpen(!isPackageDropdownOpen)}
-                                            className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer shadow-sm
-                                                ${selectedPackage ? 'border-[#FF5A5F] bg-[#FF5A5F]/[0.02]' : 'border-slate-100 hover:border-slate-200 bg-slate-50'}`}
+                                            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer shadow-sm
+                                                ${selectedPackage ? 'border-black bg-white ring-4 ring-black/5' : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'}`}
                                         >
                                             <div className="flex flex-col">
-                                                <span className="text-[15px] font-black text-[#111827] tracking-tight">
-                                                    {selectedPackage ? selectedPackage.name : 'Select a Service'}
+                                                <span className="text-[15px] font-black text-black tracking-tight uppercase italic leading-none">
+                                                    {selectedPackage ? selectedPackage.name : 'Select a Service Tier'}
                                                 </span>
+                                                {selectedPackage?.type && <span className="text-[10px] font-bold text-black opacity-40 uppercase tracking-widest mt-1">{selectedPackage.type}</span>}
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                {selectedPackage && <span className="text-[16px] font-black text-[#FF5A5F]">₹ {selectedPackage.price}</span>}
-                                                <svg className={`w-4 h-4 text-slate-400 transition-transform ${isPackageDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                {selectedPackage && <span className="text-[18px] font-black text-black">₹{selectedPackage.price}</span>}
+                                                <svg className={`w-5 h-5 text-black transition-transform ${isPackageDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                             </div>
                                         </div>
 
+                                        {/* Dropdown Menu */}
                                         {isPackageDropdownOpen && (
-                                            <div className="absolute top-[calc(100%+8px)] left-0 w-full z-[120] bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="max-h-[200px] overflow-y-auto py-2">
+                                            <div className="absolute top-[calc(100%+8px)] left-0 w-full z-[120] bg-white border-2 border-slate-100 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="max-h-[280px] overflow-y-auto">
                                                     {pricing.map((pkg, i) => (
-                                                        <div key={i} onClick={() => { setSelectedPackage(pkg); setIsPackageDropdownOpen(false); }} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors border-b last:border-0 border-slate-100">
+                                                        <div 
+                                                            key={i} 
+                                                            onClick={() => { setSelectedPackage(pkg); setIsPackageDropdownOpen(false); }} 
+                                                            className="px-6 py-4 hover:bg-slate-50 cursor-pointer transition-colors border-b last:border-0 border-slate-50 group"
+                                                        >
                                                             <div className="flex justify-between items-center">
-                                                                <span className="text-[13px] font-bold text-[#111827]">{pkg.name}</span>
-                                                                <span className="text-[13px] font-black text-[#FF5A5F]">₹ {pkg.price}</span>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[14px] font-black text-black uppercase italic group-hover:text-pink-600 transition-colors">{pkg.name || "Standard Package"}</span>
+                                                                    <span className="text-[10px] font-bold text-black opacity-30 uppercase tracking-widest">{pkg.type || "Service"}</span>
+                                                                </div>
+                                                                <span className="text-[16px] font-black text-black group-hover:scale-110 transition-transform">₹{pkg.price}</span>
                                                             </div>
                                                         </div>
                                                     ))}
+                                                    {pricing.length === 0 && <div className="p-6 text-center text-[12px] font-bold text-slate-400">No packages available</div>}
                                                 </div>
                                             </div>
                                         )}
+
+
                                     </div>
 
                                     {/* Address Field */}
                                     <div>
-                                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block px-1">Event Address</label>
+                                        <label className="text-[11px] font-black text-black uppercase tracking-widest mb-1.5 block px-1">Event Address</label>
                                         <textarea 
                                             required
                                             value={formData.address}
@@ -468,8 +483,8 @@ export default function ArtistProfilePage() {
 
                                     <div className="pt-4 border-t border-slate-100">
                                         <div className="flex justify-between items-center mb-6">
-                                            <span className="font-extrabold text-[#111827] text-[18px]">Total Price</span>
-                                            <span className="font-black text-[#FF5A5F] text-[20px]">₹ {selectedPackage?.price || 0}</span>
+                                            <span className="font-extrabold text-black text-[18px]">Total Price</span>
+                                            <span className="font-black text-black text-[20px]">₹ {selectedPackage?.price || 0}</span>
                                         </div>
 
                                         <button 

@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Script from 'next/script';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import CustomerAdPopup from '@/components/CustomerAdPopup';

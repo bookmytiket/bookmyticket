@@ -7,15 +7,24 @@ import { api } from '../../convex/_generated/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
-import { ScrollView, Modal, Image } from 'react-native';
+import { ScrollView, Modal, Image, Alert } from 'react-native';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation();
   const [selectedTicket, setSelectedTicket] = React.useState(null);
 
-  const bookings = useQuery(api.bookings.getBookings) || [];
-  const userBookings = bookings.filter(b => b.userId === user?.identifier);
+  const eventBookingsList = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+  const vendorBookingsList = useQuery(api.vendorBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+
+  const userBookings = [
+    ...(eventBookingsList || []),
+    ...(vendorBookingsList || [])
+  ].sort((a, b) => {
+    const dateA = a.bookingDate || a._creationTime;
+    const dateB = b.bookingDate || b._creationTime;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
 
   if (!user) {
     return (
@@ -85,15 +94,15 @@ export default function ProfileScreen() {
               >
                 <View style={styles.bookingIcon}>
                   <Ionicons 
-                    name={booking.status === 'Cancelled' ? "close-circle" : (booking.scanned ? "checkmark-circle" : "ticket")} 
+                    name={booking.status === 'Cancelled' ? "close-circle" : (booking.scanned ? "checkmark-circle" : (booking.isVendorBooking ? "sparkles" : "ticket"))} 
                     size={24} 
-                    color={booking.status === 'Cancelled' ? Colors.error : Colors.secondary} 
+                    color={booking.status === 'Cancelled' ? Colors.error : (booking.isVendorBooking ? '#ec4899' : Colors.secondary)} 
                   />
                 </View>
                 <View style={styles.bookingInfo}>
                   <Text style={styles.eventName}>{booking.eventName}</Text>
                   <Text style={styles.bookingDetails}>
-                    {booking.ticketCount} Seats • ₹{booking.totalPrice}
+                    {booking.isVendorBooking ? 'Service Session' : `${booking.ticketCount} Seats`} • ₹{booking.totalPrice}
                   </Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
@@ -146,14 +155,20 @@ export default function ProfileScreen() {
             <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
             <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?._id}</Text>
             
-            {(selectedTicket?.meetingUrl || selectedTicket?.eventType === "Online") && (
+            {(selectedTicket?.meetingUrl || selectedTicket?.eventType === "Online" || selectedTicket?.virtual) && (
               <TouchableOpacity 
                 style={[styles.joinBtn, { marginTop: 20 }]} 
                 onPress={() => {
-                  const url = selectedTicket.meetingUrl || "";
-                  if (url) {
-                    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+                  const url = selectedTicket.meetingUrl;
+                  const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                  
+                  if (!url || isInternal) {
+                    Alert.alert("Notice", "Meeting has not started yet. Please check back later.");
+                    return;
                   }
+                  
+                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `http://localhost:3000/${url}`;
+                  Linking.openURL(target).catch(err => console.error("Couldn't load page", err));
                 }}
               >
                 <LinearGradient

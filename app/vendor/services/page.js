@@ -47,11 +47,21 @@ export default function ServicesPage() {
             name: "", 
             price: 0, 
             description: "", 
-            features: [],
+            features: [""],
             type: "Bridal Package", 
             duration: "",
             allowBulkBooking: false
         }]);
+    };
+
+    const handleAddStandardTiers = () => {
+        const standardTiers = [
+            { name: "Basic", price: 1999, description: "Essential services for a simple look.", features: ["Single Hand", "Standard Henna", "2 Hours Service"], type: "Standard Package", duration: "2 hrs", allowBulkBooking: false },
+            { name: "Silver", price: 3999, description: "Enhanced services with more details.", features: ["Both Hands (Front)", "Detailed Arabic Designs", "3 Hours Service"], type: "Premium Package", duration: "3 hrs", allowBulkBooking: false },
+            { name: "Gold", price: 7999, description: "Professional-grade bridal services.", features: ["Full Hands (Front & Back)", "Rajasthani Traditional", "5 Hours Service", "Stones/Glitter Add-on"], type: "Bridal Package", duration: "5 hrs", allowBulkBooking: false },
+            { name: "Platinum", price: 14999, description: "The ultimate luxury experience.", features: ["Full Hands & Feet", "Portrait Work", "Premium Organic Henna", "Full Day Coverage", "Express Drying"], type: "Bridal Package", duration: "Full Day", allowBulkBooking: false }
+        ];
+        setPricing([...pricing, ...standardTiers]);
     };
 
     const handleRemovePackage = (index) => {
@@ -198,15 +208,26 @@ export default function ServicesPage() {
                         <div className="w-1.5 h-6 bg-purple-600 rounded-full"></div>
                         <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Service Tiers</h3>
                     </div>
-                    <button 
-                        onClick={handleAddPackage}
-                        className="flex items-center space-x-3 text-pink-500 hover:text-pink-600 transition-all group"
-                    >
-                        <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-sm">
-                            <Plus size={18} />
-                        </div>
-                        <span className="text-xs font-black uppercase tracking-[0.2em]">Add Tier</span>
-                    </button>
+                    <div className="flex items-center gap-6">
+                        <button 
+                            onClick={handleAddStandardTiers}
+                            className="flex items-center space-x-3 text-purple-600 hover:text-purple-700 transition-all group"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-purple-50 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-all shadow-sm">
+                                <Sparkles size={18} />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Add Standard Tiers</span>
+                        </button>
+                        <button 
+                            onClick={handleAddPackage}
+                            className="flex items-center space-x-3 text-pink-500 hover:text-pink-600 transition-all group"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-pink-50 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-sm">
+                                <Plus size={18} />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Add Custom Tier</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -22,9 +22,11 @@ import {
     Briefcase
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
     const { user, loading } = useAuth();
+    const router = useRouter();
     const vendorId = getVendorAccountKey(user);
     const [mounted, setMounted] = React.useState(false);
 

@@ -73,8 +73,12 @@ export default function EventsScreen() {
           const parts = dt.split(/[-/]/);
           dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
-        const normalizedDate = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
         
+        if (dt.includes('T') || dt.includes(' ')) {
+          const d = new Date(dt.replace(' ', 'T'));
+          return isNaN(d.getTime()) ? null : d;
+        }
+
         let normalizedTime = "23:59";
         if (timeStr) {
           let t = String(timeStr).trim().toUpperCase();
@@ -90,7 +94,7 @@ export default function EventsScreen() {
           }
         }
         
-        const eventDate = new Date(`${normalizedDate}T${normalizedTime}`);
+        const eventDate = new Date(`${dt}T${normalizedTime}`);
         return isNaN(eventDate.getTime()) ? null : eventDate;
       } catch (_) { return null; }
     };
@@ -105,12 +109,14 @@ export default function EventsScreen() {
 
     // 3. City Filter Sync (Broad matching + Virtual always shown)
     let filteredResults = active;
-    if (selectedCity) {
+    if (selectedCity && selectedCity !== "All Cities") {
       filteredResults = active.filter(e => 
         e.virtual === true ||
+        !e.city ||
         (e.city && e.city.toLowerCase() === selectedCity.toLowerCase()) ||
         (e.district && e.district.toLowerCase() === selectedCity.toLowerCase()) ||
-        (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase()))
+        (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase())) ||
+        (e.venue && e.venue.toLowerCase().includes(selectedCity.toLowerCase()))
       );
     }
 
