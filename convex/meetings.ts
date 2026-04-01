@@ -226,6 +226,20 @@ export const createForEvent = mutation({
         description: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
+        // Idempotency: Check if a meeting already exists for this event
+        const existingMeeting = await ctx.db.query("meetings")
+            .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+            .first();
+        
+        if (existingMeeting) {
+            // Ensure the event table also has this link
+            const event = await ctx.db.get(args.eventId);
+            if (event && !event.meetingUrl) {
+                await ctx.db.patch(args.eventId, { meetingUrl: existingMeeting.meetingLink });
+            }
+            return existingMeeting.meetingLink;
+        }
+
         // Generate 9-digit numeric code
         const meetingLink = Math.floor(100000000 + Math.random() * 900000000).toString();
         await ctx.db.insert("meetings", {

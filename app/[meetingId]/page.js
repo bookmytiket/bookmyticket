@@ -54,7 +54,7 @@ export default function MeetingRoom() {
         peerCount, mediaError, retryMedia 
     } = useWebRTC(
         meeting?._id, 
-        myParticipantId || userId,
+        isJoined ? myParticipantId : null,
         name || "Guest"
     );
 

@@ -109,6 +109,21 @@ export const createEvent = mutation({
     handler: async (ctx, args) => {
         const eventId = await ctx.db.insert("events", args);
         
+        // Workflow Automation: If this is an online event, create a meeting link immediately.
+        const isVirtual = args.virtual || 
+                         args.type?.toLowerCase() === "online" || 
+                         args.location?.toLowerCase().includes("online") ||
+                         args.title?.toLowerCase().includes("online meeting");
+        
+        if (isVirtual) {
+            await ctx.scheduler.runAfter(0, api.meetings.createForEvent, {
+                eventId,
+                title: args.title,
+                creatorId: args.organiserId,
+                description: args.description || `Session for ${args.title}`
+            });
+        }
+        
         // Trigger notifications as a background action
         const organiser = await ctx.db
             .query("organisers")

@@ -10,6 +10,7 @@ const STUN_SERVERS = {
         { urls: "stun:stun2.l.google.com:19302" },
         { urls: "stun:stun3.l.google.com:19302" },
         { urls: "stun:stun4.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" },
     ],
 };
 
@@ -96,6 +97,27 @@ export function useWebRTC(meetingId, userId, name) {
             Object.values(pcs.current).forEach(pc => pc.close());
         };
     }, []);
+
+    // 1.5. Clean Identity Switch (Fixes Mobile Black Screen)
+    // When userId changes (lobby -> joined), reset all connections to avoid stale signaling
+    useEffect(() => {
+        if (!userId) return;
+        
+        console.log("Switching identity or re-initializing with ID:", userId);
+        
+        // Close all existing PeerConnections
+        Object.keys(pcs.current).forEach(id => {
+            pcs.current[id].close();
+            delete pcs.current[id];
+        });
+        
+        // Clear remote streams/queues to force fresh handshake
+        setRemoteStreams({});
+        setPeerCount(0);
+        iceQueues.current = {};
+        processedSignals.current = new Set();
+        
+    }, [userId]);
 
     // Helper: Drain ICE Candidate Queue
     const drainIceQueue = useCallback(async (remoteUserId) => {
