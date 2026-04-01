@@ -26,6 +26,11 @@ export function useWebRTC(meetingId, userId, name) {
     const [connectionStates, setConnectionStates] = useState({}); // { userId: connectionState }
     const screenStreamRef = useRef(null);
 
+    // Standard WebRTC State Machine (Prevents Glare/Blinking)
+    const makingOffer = useRef({}); // { userId: boolean }
+    const isSettingRemoteDescription = useRef({}); // { userId: boolean }
+    const ignoreOffer = useRef({}); // { userId: boolean }
+
     const sendSignal = useMutation(api.meetings.sendSignal);
     const signals = useQuery(
         api.meetings.getSignals,
@@ -140,10 +145,15 @@ export function useWebRTC(meetingId, userId, name) {
     const createPeerConnection = useCallback((remoteUserId, remoteName, isInitiator) => {
         if (pcs.current[remoteUserId]) return pcs.current[remoteUserId];
 
-        console.log(`Creating PeerConnection for ${remoteName} (${remoteUserId}), initiator: ${isInitiator}`);
+        console.log(`Creating Hardened PeerConnection for ${remoteName} (${remoteUserId}), initiator: ${isInitiator}`);
         const pc = new RTCPeerConnection(STUN_SERVERS);
         pcs.current[remoteUserId] = pc;
         iceQueues.current[remoteUserId] = [];
+        
+        // Initialize state machine for this participant
+        makingOffer.current[remoteUserId] = false;
+        isSettingRemoteDescription.current[remoteUserId] = false;
+        ignoreOffer.current[remoteUserId] = false;
 
         // Add local tracks BEFORE creating offer
         if (localStreamRef.current) {
@@ -166,13 +176,17 @@ export function useWebRTC(meetingId, userId, name) {
 
         pc.ontrack = (event) => {
             console.log(`Received track from ${remoteName}:`, event.track.kind);
-            // Ensure we have a stream, even if event.streams is empty
             const stream = event.streams[0] || new MediaStream([event.track]);
             
-            setRemoteStreams(prev => ({
-                ...prev,
-                [remoteUserId]: { stream, name: remoteName }
-            }));
+            // Anti-Flicker: Only update if the stream or principal track has changed
+            setRemoteStreams(prev => {
+                const current = prev[remoteUserId];
+                if (current && current.stream.id === stream.id) return prev;
+                return {
+                    ...prev,
+                    [remoteUserId]: { stream, name: remoteName }
+                };
+            });
             setPeerCount(Object.keys(pcs.current).length);
         };
 
@@ -194,21 +208,22 @@ export function useWebRTC(meetingId, userId, name) {
         };
 
         pc.onnegotiationneeded = async () => {
-            if (isInitiator) {
-                try {
-                    console.log(`Negotiation needed for ${remoteName}, creating offer...`);
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    sendSignal({
-                        meetingId,
-                        senderId: userId, // This is our unique participantId
-                        receiverId: remoteUserId, // This is their unique participantId
-                        type: "offer",
-                        data: JSON.stringify(offer),
-                    });
-                } catch (err) {
-                    console.error("Error during negotiation:", err);
-                }
+            try {
+                makingOffer.current[remoteUserId] = true;
+                const offer = await pc.createOffer();
+                if (pc.signalingState !== "stable") return;
+                await pc.setLocalDescription(offer);
+                sendSignal({
+                    meetingId,
+                    senderId: userId,
+                    receiverId: remoteUserId,
+                    type: "offer",
+                    data: JSON.stringify(pc.localDescription),
+                });
+            } catch (err) {
+                console.error("Negotiation failed:", err);
+            } finally {
+                makingOffer.current[remoteUserId] = false;
             }
         };
 
@@ -270,33 +285,45 @@ export function useWebRTC(meetingId, userId, name) {
             try {
                 if (type === "offer") {
                     const offer = JSON.parse(data);
-                    console.log(`Processing offer from ${remoteName}`);
+                    const offerCollision = makingOffer.current[senderId] || pc.signalingState !== "stable";
+                    
+                    ignoreOffer.current[senderId] = !isInitiator && offerCollision;
+                    if (ignoreOffer.current[senderId]) {
+                        console.log(`Ignoring offer collision from ${remoteName}`);
+                        return;
+                    }
+
+                    isSettingRemoteDescription.current[senderId] = true;
                     await pc.setRemoteDescription(new RTCSessionDescription(offer));
+                    isSettingRemoteDescription.current[senderId] = false;
+
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
+                    
                     sendSignal({
                         meetingId,
                         senderId: userId,
                         receiverId: senderId,
                         type: "answer",
-                        data: JSON.stringify(answer),
+                        data: JSON.stringify(pc.localDescription),
                     });
                     await drainIceQueue(senderId);
                 } else if (type === "answer") {
                     const answer = JSON.parse(data);
-                    console.log(`Processing answer from ${remoteName}`);
                     await pc.setRemoteDescription(new RTCSessionDescription(answer));
                     await drainIceQueue(senderId);
                 } else if (type === "ice-candidate") {
                     const candidate = JSON.parse(data);
-                    if (pc.remoteDescription) {
+                    try {
                         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                    } else {
-                        iceQueues.current[senderId].push(candidate);
+                    } catch (err) {
+                        if (!ignoreOffer.current[senderId]) {
+                            iceQueues.current[senderId].push(candidate);
+                        }
                     }
                 }
             } catch (err) {
-                console.error(`Error processing signal ${type} from ${senderId}:`, err);
+                console.error(`Error processing signal from ${senderId}:`, err);
             }
         });
     }, [signals, localStream, activeParticipants, createPeerConnection, meetingId, userId, sendSignal, drainIceQueue]);

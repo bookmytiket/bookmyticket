@@ -103,6 +103,25 @@ export default function MeetingRoom() {
         return `${h}:${m}:${s}`;
     };
 
+    // Global Audio Context Auto-Resume on first interaction
+    useEffect(() => {
+        const resumeAudio = () => {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') ctx.resume();
+            }
+            window.removeEventListener('click', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+        };
+        window.addEventListener('click', resumeAudio);
+        window.addEventListener('touchstart', resumeAudio);
+        return () => {
+            window.removeEventListener('click', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+        };
+    }, []);
+
     const handleJoin = async () => {
         if (!meeting) return;
         if (!name.trim()) setName("Guest");
@@ -207,13 +226,21 @@ export default function MeetingRoom() {
 
         useEffect(() => {
             if (videoRef.current && stream) {
-                if (videoRef.current.srcObject !== stream) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.play().catch(e => {
-                        console.warn("Video play error:", e);
-                        setTimeout(() => videoRef.current?.play(), 1000);
-                    });
+                const video = videoRef.current;
+                if (video.srcObject !== stream) {
+                    video.srcObject = stream;
+                    // Safari stability fix: Explicitly load before play
+                    video.load();
                 }
+                
+                const playVideo = () => {
+                    video.play().catch(e => {
+                        console.warn("Retrying video play...", e);
+                        // Recursive retry for mobile auto-play blocks
+                        setTimeout(playVideo, 1000);
+                    });
+                };
+                playVideo();
             }
         }, [stream]);
 
