@@ -136,6 +136,11 @@ export default function MeetingRoom() {
         }
     };
 
+    const handleToggleAudio = () => {
+        const newState = toggleAudio();
+        setAudioEnabled(newState);
+    };
+
     const handleToggleVideo = async () => {
         if (!localStream?.getVideoTracks()[0]) {
             setIsRetrying(true);
@@ -146,9 +151,8 @@ export default function MeetingRoom() {
                 setIsRetrying(false);
             }
         } else {
-            const newState = !videoEnabled;
+            const newState = toggleVideo();
             setVideoEnabled(newState);
-            toggleVideo();
         }
     };
 
@@ -306,28 +310,33 @@ export default function MeetingRoom() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     className="relative z-10 w-full max-w-4xl bg-white border border-slate-200 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col md:flex-row"
                 >
-                    {/* Left side: Cinematic Video Feed */}
-                    <div className="flex-1 p-6 md:p-8 md:pr-4">
-                        <div className="w-full h-full min-h-[250px] md:min-h-[400px] rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative shadow-inner">
+                    {/* Left side: Standard Square Video Feed */}
+                    <div className="flex-[1.2] p-6 md:p-10">
+                        <div className="w-full aspect-square md:aspect-video rounded-[2rem] bg-slate-100 border border-slate-200 overflow-hidden relative shadow-2xl group">
                              {videoEnabled && localStream && hasVideo ? (
-                                 renderVideoElement(isScreenSharing ? screenStream : localStream, true)
+                                 <StableVideo 
+                                    stream={localStream}
+                                    isLocal={true}
+                                    isScreenSharing={isScreenSharing}
+                                    className="w-full h-full"
+                                    videoClasses="object-cover"
+                                 />
                              ) : (
-                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
-                                         <VideoOff size={28} className="text-slate-300" />
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-50">
+                                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl">
+                                         <VideoOff size={32} className="text-slate-200" />
                                      </div>
-                                     <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Camera Off</span>
+                                     <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Camera Off</span>
                                  </div>
                              )}
 
-                             {/* Floating Media Controls overlaid on the video preview */}
                              <div className="absolute bottom-6 left-0 right-0 flex gap-4 justify-center pointer-events-none">
                                 <button 
-                                    onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
+                                    onClick={handleToggleAudio}
                                     className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg border pointer-events-auto backdrop-blur-md ${
                                         audioEnabled 
                                             ? 'bg-black/50 border-white/10 hover:bg-black/70 text-white' 
-                                            : 'bg-red-500 border-red-500 hover:bg-red-600 text-white'
+                                            : 'bg-red-500 border-red-500 hover:bg-red-600 text-white shadow-xl'
                                     }`}
                                 >
                                     {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
@@ -419,71 +428,77 @@ export default function MeetingRoom() {
                             </div>
                         </div>
 
-                        {/* Video Stage (Edges-to-Edges on Mobile) */}
-                        <div className="flex-1 relative lg:rounded-2xl overflow-hidden bg-slate-950 lg:border lg:border-slate-200 shadow-inner flex items-center justify-center">
-                            {mainStageId === (myParticipantId || userId) ? (
-                                <div className="w-full h-full relative">
-                                    {videoEnabled && localStream && hasVideo ? (
-                                        <>
-                                            {renderVideoElement(isScreenSharing ? screenStream : localStream, true)}
-                                            
-                                            {/* PICTURE-IN-PICTURE SELF VIEW (Always show camera if sharing screen) */}
-                                            {isScreenSharing && videoEnabled && localStream && (
-                                                <div className="absolute bottom-4 right-4 w-32 sm:w-48 aspect-video rounded-xl overflow-hidden border-2 border-white shadow-2xl z-30 bg-slate-900 group-hover:scale-110 transition-transform duration-300">
-                                                    <StableVideo 
-                                                        stream={localStream}
-                                                        isLocal={true}
-                                                        isScreenSharing={false}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[8px] font-black uppercase text-white tracking-widest">
-                                                        You (Live)
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center flex-col bg-white">
-                                            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center border border-slate-100 mb-4 shadow-sm">
-                                                <VideoOff size={28} />
-                                            </div>
-                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Camera Off</span>
+                        {/* Standard Meeting Grid (Zoom/Teams Style for Mobile) */}
+                        <div className="flex-1 lg:rounded-2xl overflow-hidden bg-slate-950 flex flex-col relative">
+                            {/* The Dynamic Grid Container */}
+                            <div className={`flex-1 grid gap-1 sm:gap-2 p-1 sm:p-2 ${
+                                (Object.keys(remoteStreams).length + (videoEnabled ? 1 : 0) + (isScreenSharing ? 1 : 0)) <= 1 ? 'grid-cols-1' :
+                                (Object.keys(remoteStreams).length + (videoEnabled ? 1 : 0) + (isScreenSharing ? 1 : 0)) === 2 ? 'grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1' :
+                                'grid-cols-2'
+                            } auto-rows-fr overflow-y-auto custom-scrollbar`}>
+                                
+                                {/* 0. Screen Share Tile (Priority full width) */}
+                                {isScreenSharing && screenStream && (
+                                    <div className="col-span-full relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border-2 border-blue-500 shadow-2xl aspect-video sm:aspect-auto">
+                                        <StableVideo 
+                                            stream={screenStream}
+                                            isLocal={true}
+                                            isScreenSharing={true}
+                                            className="w-full h-full"
+                                            videoClasses="object-contain"
+                                        />
+                                        <div className="absolute top-2 left-2 bg-blue-600 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black uppercase text-white tracking-widest border border-white/20">
+                                            Your Screen
                                         </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="w-full h-full relative">
-                                    {remoteStreams[mainStageId] ? (
-                                        renderVideoElement(remoteStreams[mainStageId].stream, false)
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-white">
-                                            <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-500 rounded-full animate-spin" />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Nametag & Connection Status */}
-                            <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-                                <div className="flex items-center gap-2">
-                                    <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] text-slate-700 font-bold uppercase tracking-widest shadow-sm">
-                                        {mainStageId === (myParticipantId || userId) ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
-                                    </div>
-                                    {mainStageId === (myParticipantId || userId) && !audioEnabled && (
-                                        <div className="bg-red-50 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-sm border border-red-200 text-red-500">
-                                            <MicOff size={14} />
-                                        </div>
-                                    )}
-                                </div>
-                                {mainStageId !== (myParticipantId || userId) && connectionStates[mainStageId] && (
-                                    <div className={`self-start px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                                        connectionStates[mainStageId] === 'connected' ? 'bg-green-50 border-green-200 text-green-600' :
-                                        connectionStates[mainStageId] === 'connecting' ? 'bg-amber-50 border-amber-200 text-amber-600 animate-pulse' :
-                                        'bg-red-50 border-red-200 text-red-500'
-                                    }`}>
-                                        {connectionStates[mainStageId]}
                                     </div>
                                 )}
+
+                                {/* 1. Your Camera Tile */}
+                                {videoEnabled && (
+                                    <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border border-white/5 shadow-2xl aspect-square sm:aspect-auto">
+                                        {localStream && hasVideo ? (
+                                            <StableVideo 
+                                                stream={localStream}
+                                                isLocal={true}
+                                                isScreenSharing={isScreenSharing}
+                                                className="w-full h-full"
+                                                videoClasses="object-cover"
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
+                                                <div className="w-12 h-12 bg-slate-700/50 rounded-full flex items-center justify-center text-slate-500 mb-2">
+                                                    <VideoOff size={20} />
+                                                </div>
+                                                <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">You (Off)</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-bold text-white flex items-center border border-white/10">
+                                            You {!audioEnabled && <MicOff size={10} className="text-red-400 ml-1.5" />}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 2. Remote Tiles */}
+                                {Object.entries(remoteStreams).map(([peerId, { stream, name }]) => (
+                                    <div key={peerId} className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border border-white/5 shadow-2xl aspect-square sm:aspect-auto">
+                                        <StableVideo 
+                                            stream={stream}
+                                            isLocal={false}
+                                            isScreenSharing={false}
+                                            className="w-full h-full"
+                                            videoClasses="object-cover"
+                                        />
+                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-bold text-white flex items-center border border-white/10 max-w-[80%]">
+                                            <span className="truncate uppercase tracking-wider">{name}</span>
+                                            {stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && <MicOff size={10} className="text-red-400 ml-1.5" />}
+                                        </div>
+                                        {connectionStates[peerId] && connectionStates[peerId] !== 'connected' && (
+                                            <div className="absolute top-2 right-2 bg-amber-500/80 backdrop-blur-md px-2 py-0.5 rounded text-[7px] font-black text-white uppercase tracking-tighter shadow-lg">
+                                                {connectionStates[peerId]}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -577,14 +592,11 @@ export default function MeetingRoom() {
                                 Leave
                             </button>
                         </div>
-                    </div>
-
-                    {/* Mobile Floating Controls (Glassmorphism) */}
-                    <div className="lg:hidden fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-50">
+                    </div>                     <div className="lg:hidden fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-50">
                         <button 
-                            onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
+                            onClick={handleToggleAudio}
                             className={`p-3 rounded-full transition-all ${
-                                audioEnabled ? 'text-white' : 'bg-red-500 text-white'
+                                audioEnabled ? 'text-white' : 'bg-red-500 text-white shadow-md shadow-red-500/30'
                             }`}
                         >
                             {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
@@ -593,7 +605,7 @@ export default function MeetingRoom() {
                             onClick={handleToggleVideo}
                             disabled={isRetrying}
                             className={`p-3 rounded-full transition-all ${
-                                videoEnabled && hasVideo ? 'text-white' : 'bg-red-500 text-white'
+                                videoEnabled && hasVideo ? 'text-white' : 'bg-red-500 text-white shadow-md shadow-red-500/30'
                             }`}
                         >
                             {isRetrying ? (
