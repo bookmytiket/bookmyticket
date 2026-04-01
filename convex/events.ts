@@ -199,6 +199,35 @@ export const updateEvent = mutation({
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
         await ctx.db.patch(id, updates);
+
+        // Workflow Resiliency: If this is an online event but no meeting exists, create one.
+        const event = await ctx.db.get(id);
+        if (!event) return;
+
+        const isVirtual = event.virtual || 
+                         event.type?.toLowerCase() === "online" || 
+                         event.location?.toLowerCase().includes("online") ||
+                         event.title?.toLowerCase().includes("online meeting");
+        
+        if (isVirtual) {
+            const existingMeeting = await ctx.db.query("meetings")
+                .withIndex("by_eventId", (q) => q.eq("eventId", id))
+                .first();
+            
+            if (!existingMeeting) {
+                const organiser = await ctx.db
+                    .query("organisers")
+                    .withIndex("by_userId", (q) => q.eq("userId", event.organiserId))
+                    .unique();
+
+                await ctx.scheduler.runAfter(0, api.meetings.createForEvent, {
+                    eventId: id,
+                    title: event.title,
+                    creatorId: event.organiserId,
+                    description: event.description || `Session for ${event.title}`
+                });
+            }
+        }
     },
 });
 

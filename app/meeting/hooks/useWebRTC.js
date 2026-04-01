@@ -21,6 +21,8 @@ export function useWebRTC(meetingId, userId, name) {
     const iceQueues = useRef({}); // { userId: RTCIceCandidate[] }
     const processedSignals = useRef(new Set());
     const [peerCount, setPeerCount] = useState(0);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const screenStreamRef = useRef(null);
 
     const sendSignal = useMutation(api.meetings.sendSignal);
     const signals = useQuery(
@@ -297,11 +299,71 @@ export function useWebRTC(meetingId, userId, name) {
         return false;
     }, [localStream, getMedia]);
 
+    const toggleScreenShare = useCallback(async () => {
+        if (!localStream) return false;
+
+        if (isScreenSharing && screenStreamRef.current) {
+            // Stop screen share
+            screenStreamRef.current.getTracks().forEach(t => t.stop());
+            screenStreamRef.current = null;
+            
+            // Revert back to camera track for all peers
+            const videoTrack = localStream.getVideoTracks()[0];
+            Object.values(pcs.current).forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender && videoTrack) {
+                    sender.replaceTrack(videoTrack).catch(console.error);
+                }
+            });
+            setIsScreenSharing(false);
+            return false;
+        }
+
+        try {
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            screenStreamRef.current = screenStream;
+            
+            const screenTrack = screenStream.getVideoTracks()[0];
+            
+            // Listen to browser's native "Stop Sharing" button
+            screenTrack.onended = () => {
+                screenStreamRef.current = null;
+                const videoTrack = localStream?.getVideoTracks()[0];
+                if (videoTrack) {
+                    Object.values(pcs.current).forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) {
+                            sender.replaceTrack(videoTrack).catch(console.error);
+                        }
+                    });
+                }
+                setIsScreenSharing(false);
+            };
+
+            // Replace track for all existing connections
+            Object.values(pcs.current).forEach(pc => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(screenTrack).catch(console.error);
+                }
+            });
+            
+            setIsScreenSharing(true);
+            return true;
+        } catch (err) {
+            console.error("Screen share error:", err);
+            return false;
+        }
+    }, [localStream, isScreenSharing]);
+
     return {
         localStream,
         remoteStreams,
         toggleAudio,
         toggleVideo,
+        toggleScreenShare,
+        isScreenSharing,
+        screenStream: screenStreamRef.current,
         mediaError,
         peerCount: Object.keys(remoteStreams).length,
         retryMedia: getMedia

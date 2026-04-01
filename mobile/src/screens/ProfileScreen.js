@@ -104,6 +104,36 @@ export default function ProfileScreen() {
                   <Text style={styles.bookingDetails}>
                     {booking.isVendorBooking ? 'Service Session' : `${booking.ticketCount} Seats`} • ₹{booking.totalPrice}
                   </Text>
+                  
+                  {(booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
+                    <TouchableOpacity 
+                      style={styles.inlineJoinBtn} 
+                      onPress={() => {
+                        const url = booking.meetingUrl;
+                        // Identify if the URL is exclusively for organisers/admin/vendors
+                        const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                        
+                        if (!url || isInternal) {
+                          Alert.alert("Notice", "Meeting has not started yet or the link is still being prepared. Please check back in a few minutes.");
+                          return;
+                        }
+                        
+                        const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.vercel.app';
+                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
+                        Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
+                      }}
+                    >
+                      <LinearGradient
+                        colors={['#059669', '#10b981']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.inlineJoinGradient}
+                      >
+                        <Ionicons name="videocam" size={14} color="#fff" />
+                        <Text style={styles.inlineJoinText}>Join Now</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
                   <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
@@ -163,12 +193,13 @@ export default function ProfileScreen() {
                   const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
                   
                   if (!url || isInternal) {
-                    Alert.alert("Notice", "Meeting has not started yet. Please check back later.");
+                    Alert.alert("Notice", "Meeting has not started yet or the link is still being prepared. Please check back in a few minutes.");
                     return;
                   }
                   
-                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `http://localhost:3000/${url}`;
-                  Linking.openURL(target).catch(err => console.error("Couldn't load page", err));
+                  const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.vercel.app';
+                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
+                  Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                 }}
               >
                 <LinearGradient
@@ -363,6 +394,24 @@ const styles = StyleSheet.create({
   joinBtnText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '800',
+  },
+  inlineJoinBtn: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  inlineJoinGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  inlineJoinText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '800',
   },
 });

@@ -4,11 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { Linking, Alert } from 'react-native';
 
 export default function WebHeader() {
   const { user, logout, selectedCity } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const navigation = useNavigation();
+
+  const userBookings = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip") || [];
+  const activeMeeting = userBookings.find(b => (b.virtual || b.eventType === "Online" || b.meetingUrl) && b.status !== 'Cancelled');
 
   const isStaff = user?.role === 'staff';
 
@@ -55,6 +61,29 @@ export default function WebHeader() {
                 <Ionicons name="person-outline" size={20} color={Colors.text} />
                 <Text style={styles.menuItemText}>Profile</Text>
               </TouchableOpacity>
+              
+              {activeMeeting && (
+                <TouchableOpacity 
+                  style={[styles.menuItem, { backgroundColor: '#f0fdf4' }]} 
+                  onPress={() => {
+                    setMenuVisible(false);
+                    const url = activeMeeting.meetingUrl;
+                    const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
+                    
+                    if (!url || isInternal) {
+                      Alert.alert("Notice", "Meeting has not started yet or the link is still being prepared. Please check back in a few minutes.");
+                      return;
+                    }
+                    
+                    const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.vercel.app';
+                    const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
+                    Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
+                  }}
+                >
+                  <Ionicons name="videocam" size={20} color="#059669" />
+                  <Text style={[styles.menuItemText, { color: '#059669' }]}>Join Session</Text>
+                </TouchableOpacity>
+              )}
               
               <TouchableOpacity 
                 style={styles.menuItem}

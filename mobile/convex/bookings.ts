@@ -20,13 +20,31 @@ export const getBookings = query({
                     if (user) userName = user.name;
                 }
 
+                const isVirtual = event?.virtual || 
+                                 event?.type?.toLowerCase() === "online" || 
+                                 event?.location?.toLowerCase().includes("online") ||
+                                 event?.title?.toLowerCase().includes("online meeting");
+
+                let resolvedUrl = event?.meetingUrl || null;
+
+                if (validEventId && isVirtual) {
+                    const meeting = await ctx.db.query("meetings")
+                        .withIndex("by_eventId", (q) => q.eq("eventId", validEventId))
+                        .order("desc")
+                        .first();
+                    if (meeting && meeting.meetingLink) {
+                        resolvedUrl = meeting.meetingLink;
+                    }
+                }
+
                 return {
                     ...booking,
                     eventName: event && event.title ? event.title : "Static Event",
                     eventType: event && event.type ? event.type : "Physical",
-                    meetingUrl: event && event.meetingUrl ? event.meetingUrl : null,
+                    meetingUrl: resolvedUrl,
                     customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
                     userName: userName || "Guest User",
+                    virtual: !!isVirtual,
                 };
             })
         );
@@ -51,13 +69,31 @@ export const getBookingById = query({
             if (user) userName = user.name;
         }
 
+        const isVirtual = event?.virtual || 
+                        event?.type?.toLowerCase() === "online" || 
+                        event?.location?.toLowerCase().includes("online") ||
+                        event?.title?.toLowerCase().includes("online meeting");
+
+        let resolvedUrl = event?.meetingUrl || null;
+
+        if (validEventId && isVirtual) {
+            const meeting = await ctx.db.query("meetings")
+                .withIndex("by_eventId", (q) => q.eq("eventId", validEventId))
+                .order("desc")
+                .first();
+            if (meeting && meeting.meetingLink) {
+                resolvedUrl = meeting.meetingLink;
+            }
+        }
+
         return {
             ...booking,
             eventName: event && "title" in event ? event.title : "Static Event",
             eventType: event && "type" in event ? event.type : "Physical",
-            meetingUrl: event && "meetingUrl" in event ? event.meetingUrl : null,
+            meetingUrl: resolvedUrl,
             location: event && "location" in event ? event.location : "TBA",
             userName: userName || "Guest User",
+            virtual: !!isVirtual,
         };
     },
 });
@@ -273,12 +309,15 @@ export const getByUser = query({
                 // RESILIENCY: If meetingUrl is missing or points to organiser/admin dashboard (common misconfig),
                 // attempt to find the correct 9-digit code in the meetings table.
                 const isInternal = resolvedUrl?.toLowerCase().includes("organiser") || resolvedUrl?.toLowerCase().includes("admin") || resolvedUrl?.toLowerCase().includes("vendor");
-                if (validEventId && (isVirtual) && (!resolvedUrl || isInternal)) {
+                if (validEventId && (isVirtual)) {
                     const meeting = await ctx.db.query("meetings")
                         .withIndex("by_eventId", (q) => q.eq("eventId", validEventId))
                         .order("desc")
                         .first();
-                    if (meeting) {
+                    
+                    // If we found a formal meeting record, always use its 9-digit code
+                    // as it's the most reliable participant joining path.
+                    if (meeting && meeting.meetingLink) {
                         resolvedUrl = meeting.meetingLink;
                     }
                 }

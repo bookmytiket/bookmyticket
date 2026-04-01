@@ -9,9 +9,18 @@ import { useWebRTC } from "@/app/meeting/hooks/useWebRTC";
 import { 
     Mic, MicOff, Video, VideoOff, ScreenShare, Share, 
     MessageSquare, Users, PhoneOff, Settings, MoreVertical, 
-    Maximize, Shield, Lock, Send, X, ChevronRight, Layout
+    Maximize, Shield, Lock, Send, X, ChevronRight, Layout,
+    Volume2, Cpu, Zap, Radio, Palette,
+    LayoutDashboard, Calendar, Search, Clock, Bell, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const THEMES = {
+    organiser: "from-blue-600 via-indigo-900/80 to-slate-950",
+    slate: "from-slate-900 via-slate-800/20 to-black",
+    forest: "from-emerald-950 via-teal-900/10 to-slate-950",
+    sunset: "from-slate-950 via-rose-900/10 to-orange-950/20"
+};
 
 export default function MeetingRoom() {
     const { meetingId: meetingLink } = useParams();
@@ -27,33 +36,40 @@ export default function MeetingRoom() {
 
     const [isJoined, setIsJoined] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
-    const [name, setName] = useState(user?.fullName || user?.name || "Guest");
+    const [name, setName] = useState(user?.fullName || user?.name || "");
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
-    const [activeSidebar, setActiveSidebar] = useState(null); // 'chat' or 'participants'
+    const [activeSidebar, setActiveSidebar] = useState(null); 
     const [chatInput, setChatInput] = useState("");
-    const [elapsed, setElapsed] = useState(0); // seconds
+    const [elapsed, setElapsed] = useState(0); 
     const chatEndRef = useRef(null);
-    const screenStreamRef = useRef(null);
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
+
     const guestId = React.useMemo(() => `guest-${Math.random().toString(36).substr(2, 5)}`, []);
     const userId = user?.email || guestId;
 
-    const { localStream, remoteStreams, toggleAudio, toggleVideo, peerCount, mediaError, retryMedia } = useWebRTC(
+    const { 
+        localStream, remoteStreams, toggleAudio, toggleVideo, 
+        toggleScreenShare, isScreenSharing, screenStream,
+        peerCount, mediaError, retryMedia 
+    } = useWebRTC(
         meeting?._id, 
         userId,
-        name
+        name || "Guest"
     );
 
     const localVideoRef = useRef(null);
     const hasVideo = localStream?.getVideoTracks().length > 0;
 
-    // Sync local stream with video element
+    const [mainStageId, setMainStageId] = useState(userId);
+    const [theme, setTheme] = useState("organiser");
+    const [showThemeSelector, setShowThemeSelector] = useState(false);
+
+    // Sync local video
     useEffect(() => {
-        if (localVideoRef.current && localStream && videoEnabled && hasVideo) {
-            localVideoRef.current.srcObject = localStream;
+        if (localVideoRef.current && (localStream || screenStream) && hasVideo) {
+            localVideoRef.current.srcObject = isScreenSharing && screenStream ? screenStream : localStream;
         }
-    }, [localStream, videoEnabled, isJoined, hasVideo]);
+    }, [localStream, videoEnabled, isJoined, hasVideo, isScreenSharing, screenStream]);
 
     useEffect(() => {
         if (activeSidebar === 'chat') {
@@ -61,12 +77,20 @@ export default function MeetingRoom() {
         }
     }, [messages, activeSidebar]);
 
-    // Real meeting timer
     useEffect(() => {
         if (!isJoined) return;
         const interval = setInterval(() => setElapsed(s => s + 1), 1000);
         return () => clearInterval(interval);
     }, [isJoined]);
+
+    // Auto switch main stage to the first remote user when they join, if you're currently staring at yourself
+    useEffect(() => {
+        if (mainStageId === userId && !isScreenSharing && Object.keys(remoteStreams).length > 0) {
+           setMainStageId(Object.keys(remoteStreams)[0]);
+        } else if (mainStageId !== userId && !remoteStreams[mainStageId]) {
+           setMainStageId(userId);
+        }
+    }, [remoteStreams, isScreenSharing, userId, mainStageId]);
 
     const formatElapsed = (secs) => {
         const h = Math.floor(secs / 3600).toString().padStart(2, '0');
@@ -75,27 +99,10 @@ export default function MeetingRoom() {
         return `${h}:${m}:${s}`;
     };
 
-    const handleScreenShare = async () => {
-        if (isScreenSharing) {
-            screenStreamRef.current?.getTracks().forEach(t => t.stop());
-            screenStreamRef.current = null;
-            setIsScreenSharing(false);
-            return;
-        }
-        try {
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            screenStreamRef.current = screenStream;
-            screenStream.getVideoTracks()[0].onended = () => setIsScreenSharing(false);
-            setIsScreenSharing(true);
-        } catch (err) {
-            console.error("Screen share error:", err);
-        }
-    };
-
     const handleJoin = async () => {
         if (!meeting) return;
+        if (!name.trim()) setName("Guest");
         
-        // Resume AudioContext on user interaction to unblock audio playback
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
@@ -108,9 +115,8 @@ export default function MeetingRoom() {
 
         await joinMeeting({
             meetingId: meeting._id,
-            userId: userId, // Use the stable userId computed at line 40
-            name,
-            // role: strictly compare creatorId. If creatorId is missing or doesn't match, it's a participant.
+            userId: userId, 
+            name: name || "Guest",
             role: (meeting.creatorId && user?.email && meeting.creatorId === user?.email) ? "host" : "participant",
         });
         setIsJoined(true);
@@ -141,14 +147,17 @@ export default function MeetingRoom() {
         }
     };
 
+    const handleToggleScreenShare = async () => {
+        const isNowSharing = await toggleScreenShare();
+        if (isNowSharing) {
+            setMainStageId(userId); // Focus on yourself to see the screen share
+        }
+    };
+
     const handleLeave = async () => {
         if (meeting) {
-            await leaveMeeting({
-                meetingId: meeting._id,
-                userId: userId,
-            });
+            await leaveMeeting({ meetingId: meeting._id, userId: userId });
         }
-        // Redirect bases on role
         if (user?.role === "organiser" || user?.role === "admin") {
             router.push("/organiser");
         } else {
@@ -162,102 +171,270 @@ export default function MeetingRoom() {
         await sendMessage({
             meetingId: meeting._id,
             senderId: userId,
-            senderName: name,
+            senderName: name || "Guest",
             text: chatInput,
         });
         setChatInput("");
     };
 
+    // ----------------------------------------------------
+    // STABLE VIDEO COMPONENT (Fixes Blinking Bug)
+    // ----------------------------------------------------
+    const StableVideo = ({ stream, isLocal, isScreenSharing, isBackdrop = false, className = "" }) => {
+        const videoRef = useRef(null);
+
+        useEffect(() => {
+            if (videoRef.current && stream) {
+                if (videoRef.current.srcObject !== stream) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(e => console.warn("Video play error:", e));
+                }
+            }
+        }, [stream]);
+
+        return (
+            <video 
+                ref={videoRef}
+                autoPlay 
+                playsInline
+                muted={isLocal || isBackdrop}
+                className={className}
+                style={{ transform: (isLocal && !isScreenSharing) ? 'scaleX(-1)' : 'none' }}
+            />
+        );
+    };
+
+    // Generic Video Element Renderer
+    const renderVideoElement = (stream, isLocal, extraClasses = "") => {
+        return (
+            <div className={`relative w-full h-full overflow-hidden flex items-center justify-center ${extraClasses}`}>
+                {/* Cinematic Ambient Backdrop */}
+                <StableVideo 
+                    stream={stream}
+                    isLocal={isLocal}
+                    isScreenSharing={isScreenSharing}
+                    isBackdrop={true}
+                    className="absolute inset-0 w-full h-full object-cover filter blur-3xl opacity-40 scale-125 saturate-200 pointer-events-none"
+                />
+                
+                {/* Foreground crisp video */}
+                <StableVideo 
+                    stream={stream}
+                    isLocal={isLocal}
+                    isScreenSharing={isScreenSharing}
+                    className="relative z-10 w-full h-full object-contain drop-shadow-2xl"
+                />
+            </div>
+        );
+    };
+
     if (authLoading || meeting === undefined) {
         return (
-            <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
             </div>
         );
     }
 
     if (!meeting) {
         return (
-            <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4 text-center" style={{ fontFamily: "'Figtree', 'Inter', sans-serif" }}>
-                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.3-4.3"/><path d="M9.5 15.5 18 7"/><path d="M4.5 9a5.5 5.5 0 1 0 11 0 5.5 5.5 0 1 0-11 0Z"/></svg>
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
+                <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-6">
+                    <Shield size={32} />
                 </div>
-                <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Meeting Not Found</h1>
-                <p className="text-slate-600 mb-8 max-w-sm">The meeting code <strong>{meetingLink}</strong> is invalid or the meeting has ended.</p>
-                <Link href="/" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95">
-                    Back to Home
+                <h1 className="text-3xl font-extrabold text-white mb-3">Meeting Not Found</h1>
+                <p className="text-slate-400 mb-8 max-w-sm">The meeting code <strong>{meetingLink}</strong> is invalid or has ended.</p>
+                <Link href="/" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-all shadow-lg active:scale-95">
+                    Return Home
                 </Link>
             </div>
         );
     }
 
+    // ----------------------------------------------------
+    // PRE-JOIN SCREEN (Streamlined Entry)
+    // ----------------------------------------------------
     if (!isJoined) {
         return (
-            <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4" style={{ fontFamily: "'Figtree', 'Inter', sans-serif" }}>
+            <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-[#f8fafc]">
+                {/* Background Video Blur Layer */}
+                <div className="absolute inset-0 opacity-[0.05] filter blur-3xl scale-110 pointer-events-none">
+                     {(videoEnabled || isScreenSharing) && localStream && hasVideo && renderVideoElement(isScreenSharing ? screenStream : localStream, true)}
+                </div>
+                
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/80 border border-slate-100 overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className="relative z-10 w-full max-w-4xl bg-white border border-slate-200 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col md:flex-row"
                 >
-                    <div className="flex flex-col lg:flex-row">
-                        {/* Left: Video Preview */}
-                        <div className="flex-1 bg-slate-50 p-8 lg:p-10 flex flex-col gap-6">
-                            {/* Camera Preview */}
-                            <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden relative shadow-inner">
-                                {videoEnabled && localStream && hasVideo ? (
-                                    <video 
-                                        autoPlay 
-                                        muted 
-                                        playsInline
-                                        ref={(el) => {
-                                            localVideoRef.current = el;
-                                            if (el && localStream) {
-                                                el.srcObject = localStream;
-                                                el.play().catch(() => {});
-                                            }
-                                        }}
-                                        className="w-full h-full object-cover scale-x-[-1]"
-                                    />
-                                ) : (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center relative">
-                                            <VideoOff size={28} className="text-white/40" />
-                                            {mediaError && (
-                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center ring-2 ring-slate-900">
-                                                    <Shield size={10} className="text-white" />
+                    {/* Left side: Cinematic Video Feed */}
+                    <div className="flex-1 p-6 md:p-8 md:pr-4">
+                        <div className="w-full h-full min-h-[250px] md:min-h-[400px] rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative shadow-inner">
+                             {videoEnabled && localStream && hasVideo ? (
+                                 renderVideoElement(isScreenSharing ? screenStream : localStream, true)
+                             ) : (
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                         <VideoOff size={28} className="text-slate-300" />
+                                     </div>
+                                     <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Camera Off</span>
+                                 </div>
+                             )}
+
+                             {/* Floating Media Controls overlaid on the video preview */}
+                             <div className="absolute bottom-6 left-0 right-0 flex gap-4 justify-center pointer-events-none">
+                                <button 
+                                    onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg border pointer-events-auto backdrop-blur-md ${
+                                        audioEnabled 
+                                            ? 'bg-black/50 border-white/10 hover:bg-black/70 text-white' 
+                                            : 'bg-red-500 border-red-500 hover:bg-red-600 text-white'
+                                    }`}
+                                >
+                                    {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+                                </button>
+                                <button 
+                                    onClick={handleToggleVideo}
+                                    disabled={isRetrying}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg border pointer-events-auto backdrop-blur-md ${
+                                        videoEnabled && hasVideo
+                                            ? 'bg-black/50 border-white/10 hover:bg-black/70 text-white'
+                                            : 'bg-red-500 border-red-500 hover:bg-red-600 text-white'
+                                    }`}
+                                >
+                                    {isRetrying ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        videoEnabled && hasVideo ? <Video size={24} /> : <VideoOff size={24} />
+                                    )}
+                                </button>
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* Right side: Event details & Join Meeting */}
+                    <div className="w-full md:w-[380px] p-6 md:p-10 md:pl-6 flex flex-col items-center justify-center">
+                        <Link href="/">
+                            <img 
+                                src="/logo.png" 
+                                alt="BookMyTicket" 
+                                className="h-16 md:h-20 object-contain mb-8 hover:scale-105 transition-transform" 
+                            />
+                        </Link>
+                        <h1 className="text-2xl font-black text-slate-900 text-center mb-1">{meeting.title}</h1>
+                        <p className="text-sm text-slate-500 font-semibold mb-8 text-center">{peerCount} joining</p>
+
+                        <input 
+                            type="text" 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter your display name"
+                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 mb-8 text-sm font-bold transition-all text-center placeholder:text-slate-400"
+                        />
+
+                        <button 
+                            onClick={handleJoin}
+                            className="w-full py-4 text-white rounded-[1.25rem] font-black uppercase tracking-widest text-sm transition-all shadow-[0_10px_30px_-10px_rgba(59,130,246,0.5)] active:scale-[0.98] hover:shadow-[0_10px_30px_-10px_rgba(59,130,246,0.7)] mt-auto md:mt-0"
+                            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
+                        >
+                            Join Meeting
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
+
+    // ----------------------------------------------------
+    // IN-MEETING SCREEN (Dashboard UI Mode)
+    // ----------------------------------------------------
+    // IN-MEETING SCREEN (Dashboard UI Mode - Organiser Panel Style)
+    // ----------------------------------------------------
+    return (
+        <div className={`flex h-screen bg-gradient-to-br transition-all duration-1000 ${THEMES[theme]} font-sans text-slate-800 selection:bg-blue-500/20 overflow-hidden`}>
+            {/* MAIN CONTENT AREA (Now Entirely Clean with Dynamic Background) */}
+            <main className="flex-1 flex flex-col min-w-0">
+                {/* DASHBOARD BODY (Meeting Logic) */}
+                <div className="flex-1 p-4 sm:p-6 lg:p-10 overflow-hidden flex flex-col lg:flex-row gap-8 items-stretch relative">
+                    
+                    {/* PRIMARY WHITE CARD: Meeting Stage */}
+                    <div className="flex-[2] bg-white rounded-3xl border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 sm:p-8 flex flex-col relative overflow-hidden group backdrop-blur-sm">
+                        <div className="flex items-center justify-between mb-6 shrink-0">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">{meeting.title}</h2>
+                                    <div className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg text-xs font-semibold shadow-sm">
+                                        Active • {formatElapsed(elapsed)}
+                                    </div>
+                                </div>
+                                <p className="text-[13px] font-medium text-slate-400 mt-1 uppercase tracking-widest">Virtual Environment Management</p>
+                            </div>
+                        </div>
+
+                        {/* Video Stage */}
+                        <div className="flex-1 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner flex items-center justify-center">
+                            {mainStageId === userId ? (
+                                <div className="w-full h-full relative">
+                                    {videoEnabled && localStream && hasVideo ? (
+                                        <>
+                                            {renderVideoElement(isScreenSharing ? screenStream : localStream, true)}
+                                            
+                                            {/* PICTURE-IN-PICTURE SELF VIEW (Always show camera if sharing screen) */}
+                                            {isScreenSharing && videoEnabled && localStream && (
+                                                <div className="absolute bottom-4 right-4 w-32 sm:w-48 aspect-video rounded-xl overflow-hidden border-2 border-white shadow-2xl z-30 bg-slate-900 group-hover:scale-110 transition-transform duration-300">
+                                                    <StableVideo 
+                                                        stream={localStream}
+                                                        isLocal={true}
+                                                        isScreenSharing={false}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-[8px] font-black uppercase text-white tracking-widest">
+                                                        You (Live)
+                                                    </div>
                                                 </div>
                                             )}
-                                        </div>
-                                        {mediaError ? (
-                                            <div className="text-center px-6 space-y-2">
-                                                <p className={`text-sm font-bold ${mediaError === 'camera_busy_audio_only' ? 'text-amber-400' : 'text-red-400'}`}>
-                                                    {mediaError === 'camera_busy_audio_only' ? '🎧 Audio Only Mode' : '🚫 Camera Blocked'}
-                                                </p>
-                                                <p className="text-white/40 text-xs leading-relaxed max-w-[220px] mx-auto">
-                                                    Close other browser tabs using the camera, then click the camera button below.
-                                                </p>
+                                        </>
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center flex-col bg-white">
+                                            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center border border-slate-100 mb-4 shadow-sm">
+                                                <VideoOff size={28} />
                                             </div>
-                                        ) : (
-                                            <p className="text-white/20 text-xs font-semibold uppercase tracking-widest">Camera Off</p>
-                                        )}
-                                    </div>
-                                )}
-                                {/* Name tag overlay */}
-                                {name && (
-                                    <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/10">
-                                        {name}
+                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Camera Off</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="w-full h-full relative">
+                                    {remoteStreams[mainStageId] ? (
+                                        renderVideoElement(remoteStreams[mainStageId].stream, false)
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-white">
+                                            <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-500 rounded-full animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Nametag */}
+                            <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
+                                <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] text-slate-700 font-bold uppercase tracking-widest shadow-sm">
+                                    {mainStageId === userId ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
+                                </div>
+                                {mainStageId === userId && !audioEnabled && (
+                                    <div className="bg-red-50 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-sm border border-red-200 text-red-500">
+                                        <MicOff size={14} />
                                     </div>
                                 )}
                             </div>
+                        </div>
 
-                            {/* Media Controls */}
-                            <div className="flex items-center justify-center gap-3">
+                        {/* Dashboard Controls */}
+                        <div className="mt-8 flex justify-between items-center bg-transparent relative">
+                            <div className="flex gap-3">
                                 <button 
                                     onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm border ${
-                                        audioEnabled 
-                                            ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' 
-                                            : 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-200'
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border shadow-sm ${
+                                        audioEnabled ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300' : 'bg-red-500 border-red-500 text-white shadow-red-200'
                                     }`}
                                 >
                                     {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
@@ -265,392 +442,215 @@ export default function MeetingRoom() {
                                 <button 
                                     onClick={handleToggleVideo}
                                     disabled={isRetrying}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm border ${
-                                        videoEnabled && hasVideo
-                                            ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                            : 'bg-slate-800 border-slate-700 text-white/60'
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border shadow-sm ${
+                                        videoEnabled && hasVideo ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300' : 'bg-red-500 border-red-500 text-white shadow-red-200'
                                     }`}
                                 >
                                     {isRetrying ? (
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                                     ) : (
                                         videoEnabled && hasVideo ? <Video size={20} /> : <VideoOff size={20} />
                                     )}
                                 </button>
-                                {mediaError && (
-                                    <button
-                                        onClick={handleRetry}
-                                        disabled={isRetrying}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                                <div className="w-px h-8 bg-slate-200 my-auto mx-2" />
+                                <button 
+                                    onClick={() => setActiveSidebar(activeSidebar === 'chat' ? null : 'chat')}
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border shadow-sm ${
+                                        activeSidebar === 'chat' ? 'bg-blue-600 border-blue-600 text-white shadow-blue-200' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300'
+                                    }`}
+                                >
+                                    <MessageSquare size={20} />
+                                </button>
+                                <button 
+                                    onClick={() => setActiveSidebar(activeSidebar === 'participants' ? null : 'participants')}
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border shadow-sm ${
+                                        activeSidebar === 'participants' ? 'bg-blue-600 border-blue-600 text-white shadow-blue-200' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300'
+                                    }`}
+                                >
+                                    <Users size={20} />
+                                </button>
+                                <div className="w-px h-8 bg-slate-200 my-auto mx-2" />
+                                <button 
+                                    onClick={handleToggleScreenShare}
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border shadow-sm ${
+                                        isScreenSharing ? 'bg-gradient-to-br from-blue-500 to-purple-600 border-transparent text-white shadow-blue-200' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300'
+                                    }`}
+                                >
+                                    <ScreenShare size={20} />
+                                </button>
+                                
+                                {/* Theme Switcher Button */}
+                                <div className="relative">
+                                    <button 
+                                        onClick={() => setShowThemeSelector(!showThemeSelector)}
+                                        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all border bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-blue-300 shadow-sm`}
                                     >
-                                        {isRetrying ? (
-                                            <><div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" /> Searching...</>
-                                        ) : (
-                                            <><Shield size={14} /> Retry Camera</>
-                                        )}
+                                        <Palette size={20} />
                                     </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Right: Meeting Info & Controls */}
-                        <div className="w-full lg:w-[380px] p-8 lg:p-10 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-100">
-                            <div>
-                                {/* Header */}
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
-                                        <Video size={22} className="text-white" />
-                                    </div>
-                                    <div>
-                                        <h1 className="text-xl font-black text-slate-900 leading-tight tracking-tight">Join Meeting</h1>
-                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest truncate max-w-[200px]">{meeting.title}</p>
-                                    </div>
+                                    <AnimatePresence>
+                                        {showThemeSelector && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute bottom-full mb-4 left-0 bg-white border border-slate-200 rounded-2xl p-2 shadow-2xl z-50 min-w-[140px]"
+                                            >
+                                                {Object.keys(THEMES).map(t => (
+                                                    <button 
+                                                        key={t} 
+                                                        onClick={() => { setTheme(t); setShowThemeSelector(false); }} 
+                                                        className={`w-full px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.1em] rounded-xl transition-all text-left ${theme === t ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
-
-                                {/* Meeting Info Cards */}
-                                <div className="space-y-3 mb-8">
-                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <Users size={16} className="text-slate-400 shrink-0" />
-                                        <div>
-                                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Participants</p>
-                                            <p className="text-sm font-bold text-slate-700">{peerCount} already inside</p>
-                                        </div>
-                                    </div>
-                                    {meeting.description && (
-                                        <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                            <MessageSquare size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                                            <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{meeting.description}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Guest Name Input */}
-                                {!user && (
-                                    <div className="mb-6">
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Your display name</label>
-                                        <input 
-                                            type="text" 
-                                            value={name} 
-                                            onChange={(e) => setName(e.target.value)}
-                                            placeholder="Enter your name..."
-                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300 transition-all text-sm font-semibold placeholder:text-slate-300"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Hardware Warning */}
-                                {mediaError && (
-                                    <div className={`p-4 rounded-2xl border mb-6 flex gap-3 ${
-                                        mediaError === 'camera_busy_audio_only' 
-                                            ? 'bg-amber-50 border-amber-200' 
-                                            : 'bg-red-50 border-red-200'
-                                    }`}>
-                                        <Shield size={16} className={`shrink-0 mt-0.5 ${mediaError === 'camera_busy_audio_only' ? 'text-amber-500' : 'text-red-500'}`} />
-                                        <div>
-                                            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${mediaError === 'camera_busy_audio_only' ? 'text-amber-600' : 'text-red-600'}`}>
-                                                {mediaError === 'camera_busy_audio_only' ? 'Camera Busy' : 'Hardware Blocked'}
-                                            </p>
-                                            <p className="text-xs text-slate-500 leading-relaxed">
-                                                {mediaError === 'camera_busy_audio_only'
-                                                    ? 'Another tab is using your camera. Close it and click "Retry Camera".'
-                                                    : 'All camera access is blocked. Close camera apps and try again.'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* Join Button */}
                             <button 
-                                onClick={handleJoin}
-                                className="w-full py-5 rounded-2xl text-white text-sm font-black tracking-widest uppercase transition-all active:scale-[0.98] hover:opacity-90"
-                                style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', boxShadow: '0 20px 40px -12px rgba(99,102,241,0.4)' }}
+                                onClick={handleLeave}
+                                className="h-12 sm:h-14 px-6 sm:px-8 bg-red-600 hover:bg-red-700 text-white rounded-2xl flex items-center justify-center gap-3 transition-all font-black tracking-widest uppercase text-xs shadow-lg shadow-red-600/20 active:scale-95"
                             >
-                                Join Now
+                                <PhoneOff size={18} />
+                                Leave
                             </button>
                         </div>
                     </div>
-                </motion.div>
-            </div>
-        );
-    }
 
-    return (
-        <div className="h-screen bg-black text-white flex flex-col overflow-hidden selection:bg-blue-500/30">
-            {mediaError && (
-                <div className={`${mediaError === 'camera_busy_audio_only' ? 'bg-amber-600' : 'bg-red-600'} text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 text-center relative z-50 flex items-center justify-center gap-4`}>
-                    {mediaError === 'camera_busy_audio_only' ? 'Audio-only: Close other tabs using your camera, then click the camera icon' : 'Spectator Mode: All camera access blocked'}
-                    <button 
-                        onClick={handleRetry}
-                        disabled={isRetrying}
-                        className={`px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[8px] border border-white/20 transition-all font-black uppercase tracking-widest flex items-center gap-2 ${
-                            isRetrying ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                    >
-                        {isRetrying ? 'Searching...' : 'Retry Hardware'}
-                    </button>
-                </div>
-            )}
-            {/* Header */}
-            <div className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-md z-10">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <Video size={18} strokeWidth={3} className="text-white" />
-                    </div>
-                    <div>
-                        <h2 className="text-sm font-black italic tracking-tighter uppercase leading-none">{meeting.title}</h2>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{peerCount + 1} Participants</span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="hidden sm:flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-tighter">Live Connection</span>
-                    </div>
-                    <button className="p-2.5 rounded-xl hover:bg-white/5 text-slate-400 transition-all">
-                        <Maximize size={20} />
-                    </button>
-                    <button className="p-2.5 rounded-xl hover:bg-white/5 text-slate-400 transition-all">
-                        <Settings size={20} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
-                <div className="flex-1 relative bg-black p-1 flex items-center justify-center">
-                    <div className={`grid gap-2 w-full h-full transition-all duration-500 ${
-                        Object.keys(remoteStreams).length === 0 ? 'grid-cols-1' :
-                        Object.keys(remoteStreams).length === 1 ? 'grid-cols-2' :
-                        Object.keys(remoteStreams).length <= 4 ? 'grid-cols-2 grid-rows-2' :
-                        'grid-cols-3'
-                    }`}>
-                         {/* Local Video */}
-                         <div className="relative group bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden ring-4 ring-transparent hover:ring-blue-500/30 transition-all shadow-2xl">
-                             {(videoEnabled || isScreenSharing) && localStream && hasVideo ? (
-                                 <video 
-                                     autoPlay 
-                                     muted 
-                                     playsInline
-                                     ref={localVideoRef}
-                                     className="w-full h-full object-cover scale-x-[-1]"
-                                 />
-                             ) : (
-                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 bg-slate-950">
-                                     <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
-                                         <VideoOff className="opacity-40" />
-                                     </div>
-                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">
-                                         {mediaError === 'camera_busy_audio_only' ? 'Audio-only Mode' : 'Video Disabled'}
-                                     </span>
-                                 </div>
-                             )}
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                             <div className="absolute bottom-6 left-6 flex items-center gap-3">
-                                 <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
-                                     You ({meeting.creatorId && user?.email && meeting.creatorId === user?.email ? "Host" : "Participant"})
-                                 </span>
-                                 {!audioEnabled && (
-                                    <motion.div 
-                                        initial={{ scale: 0 }} 
-                                        animate={{ scale: 1 }} 
-                                        className="p-2 rounded-full bg-red-500/80 backdrop-blur-sm text-white shadow-lg"
-                                    >
-                                        <MicOff size={14} />
-                                    </motion.div>
-                                 )}
-                             </div>
-                         </div>
-
-                        {/* Remote Videos */}
-                        {Object.entries(remoteStreams).map(([peerId, { stream, name }]) => (
-                            <div key={peerId} className="relative group bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden ring-4 ring-transparent hover:ring-blue-500/30 transition-all shadow-2xl">
-                                <video 
-                                    autoPlay 
-                                    playsInline
-                                    ref={el => { 
-                                        if(el && stream) {
-                                            el.srcObject = stream;
-                                            // Handle potential browser autoplay blocks
-                                            el.play().catch(err => {
-                                                console.warn(`Audio/Video play failed for ${name}:`, err);
-                                            });
-                                        }
-                                    }}
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                                <div className="absolute bottom-6 left-6 flex items-center gap-3">
-                                    <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-black italic uppercase tracking-widest px-4 py-2 rounded-xl border border-white/10">
-                                        {name} {meeting.creatorId && peerId === meeting.creatorId ? "(Host)" : ""}
-                                    </span>
-                                    {/* Muted indicator for remote participant */}
-                                    {stream && stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && (
-                                        <div className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-red-500 shadow-lg border border-red-500/20">
-                                            <MicOff size={14} />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Sidebars */}
-                <AnimatePresence>
-                    {activeSidebar && (
-                        <motion.div 
-                            initial={{ x: 400 }}
-                            animate={{ x: 0 }}
-                            exit={{ x: 400 }}
-                            className="w-[400px] border-l border-white/5 bg-slate-950/80 backdrop-blur-2xl z-20 flex flex-col"
-                        >
-                            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between">
-                                <h3 className="text-sm font-black italic uppercase tracking-widest text-blue-400">
-                                    {activeSidebar === 'chat' ? 'Meeting Chat' : 'Participants'}
-                                </h3>
-                                <button onClick={() => setActiveSidebar(null)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500"><X size={20} /></button>
-                            </div>
-
-                            {activeSidebar === 'chat' && (
-                                <>
-                                    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
-                                        {messages?.map((msg) => (
-                                            <div key={msg._id} className={`flex flex-col ${msg.senderId === user?.email ? 'items-end' : 'items-start'}`}>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 px-1">
-                                                    {msg.senderId === user?.email ? 'You' : msg.senderName} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                                <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm font-bold ${
-                                                    msg.senderId === user?.email 
-                                                    ? 'bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/10' 
-                                                    : 'bg-white/5 text-slate-200 border border-white/5 rounded-tl-none'
-                                                }`}>
-                                                    {msg.text}
-                                                </div>
+                    {/* TOGGLEABLE INTERACTION PANEL CARD */}
+                    <AnimatePresence mode="wait">
+                        {activeSidebar && (
+                            <motion.div 
+                                initial={{ opacity: 0, x: 20, width: 0 }}
+                                animate={{ opacity: 1, x: 0, width: "100%", maxWidth: "400px" }}
+                                exit={{ opacity: 0, x: 20, width: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className="flex-1 min-w-[320px] bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col h-[600px] lg:h-auto overflow-hidden p-6 gap-6 backdrop-blur-sm relative z-40"
+                            >
+                                {activeSidebar === 'participants' ? (
+                                    <>
+                                        <div className="flex items-center justify-between shrink-0">
+                                            <h3 className="text-[17px] font-bold text-slate-800 tracking-tight">Active Participants</h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest">{peerCount + 1} LIVE</div>
+                                                <Users size={16} className="text-slate-400" />
                                             </div>
-                                        ))}
-                                        <div ref={chatEndRef} />
-                                    </div>
-                                    <form onSubmit={handleSendMessage} className="p-6 bg-black/40 border-t border-white/5">
-                                        <div className="relative group">
-                                            <input 
-                                                type="text" 
-                                                value={chatInput}
-                                                onChange={(e) => setChatInput(e.target.value)}
-                                                placeholder="Type a message..."
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-6 pr-14 text-sm font-bold placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 transition-all"
-                                            />
-                                            <button 
-                                                type="submit"
-                                                className="absolute right-3 top-3 w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
-                                            >
-                                                <Send size={16} fill="white" />
-                                            </button>
                                         </div>
-                                    </form>
-                                </>
-                            )}
 
-                            {activeSidebar === 'participants' && (
-                                <div className="flex-1 overflow-y-auto p-6">
-                                    <div className="space-y-4">
-                                        {participants?.map((p) => (
-                                            <div key={p._id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center font-black italic text-lg shadow-lg">
-                                                        {p.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-sm font-black italic tracking-tighter uppercase leading-none mb-1">{p.name}</h4>
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{p.role}</span>
+                                        {/* Participants List */}
+                                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                                            {/* Local User - Restored so it shows when sharing */}
+                                            {(mainStageId !== userId || isScreenSharing) && (
+                                                <div 
+                                                    onClick={() => setMainStageId(userId)}
+                                                    className="w-full aspect-video rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 hover:border-blue-300 cursor-pointer transition-all relative group shadow-sm bg-slate-900"
+                                                >
+                                                    {videoEnabled && localStream && hasVideo ? (
+                                                            <StableVideo 
+                                                                stream={localStream}
+                                                                isLocal={true}
+                                                                isScreenSharing={false}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300"><VideoOff size={24} /></div>
+                                                    )}
+                                                    <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-bold text-slate-700 flex items-center border border-slate-100 shadow-sm">
+                                                        You {!audioEnabled && <MicOff size={10} className="text-red-500 ml-1.5" />}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button className="p-2 hover:bg-red-500/20 text-slate-500 hover:text-red-500 rounded-xl transition-all"><X size={16} /></button>
-                                                    <button className="p-2 hover:bg-blue-500/20 text-slate-500 hover:text-blue-500 rounded-xl transition-all"><MicOff size={16} /></button>
+                                            )}
+
+                                            {/* Remote Users */}
+                                            <AnimatePresence>
+                                                {Object.entries(remoteStreams).filter(([id]) => id !== mainStageId).map(([peerId, { stream, name }]) => (
+                                                    <div
+                                                        key={peerId}
+                                                        onClick={() => setMainStageId(peerId)}
+                                                        className="w-full aspect-video rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 hover:border-blue-300 cursor-pointer transition-all relative group shadow-sm"
+                                                    >
+                                                        {renderVideoElement(stream, false)}
+                                                        <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-bold text-slate-700 flex items-center max-w-[90%] border border-slate-100 shadow-sm">
+                                                            <span className="truncate uppercase tracking-wider">{name}</span>
+                                                            {stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && <MicOff size={10} className="text-red-500 ml-1.5 shrink-0" />}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                    </>
+                                ) : (
+                                    /* Chat Strip */
+                                    <div className="flex flex-col h-full shrink-0 overflow-hidden">
+                                        <div className="pb-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-500 flex items-center justify-center border border-pink-100">
+                                                    <MessageSquare size={14} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xs font-bold text-slate-800 tracking-tight">Team Chat</h3>
+                                                    <p className="text-[10px] font-semibold text-slate-500 tracking-wider">Live interaction mode</p>
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto py-4 space-y-4 bg-transparent min-h-0 custom-scrollbar">
+                                            {messages?.map((msg) => (
+                                                <div key={msg._id} className={`flex flex-col ${msg.senderId === user?.email ? 'items-end' : 'items-start'}`}>
+                                                    <div className={`max-w-[95%] px-3.5 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed border shadow-sm ${
+                                                        msg.senderId === user?.email 
+                                                        ? 'bg-blue-600 text-white rounded-tr-sm border-transparent' 
+                                                        : 'bg-white border-slate-200 text-slate-700 rounded-tl-sm'
+                                                    }`}>
+                                                        {msg.text}
+                                                    </div>
+                                                    <span className={`text-[9px] font-bold text-slate-400 mt-1 px-1 ${msg.senderId === user?.email ? 'text-right' : 'text-left'}`}>
+                                                        {msg.senderId === user?.email ? 'You' : msg.senderName} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            <div ref={chatEndRef} />
+                                        </div>
+                                        <form onSubmit={handleSendMessage} className="pt-3 border-t border-slate-100 shrink-0">
+                                            <div className="relative flex items-center">
+                                                <input 
+                                                    type="text" 
+                                                    value={chatInput}
+                                                    onChange={(e) => setChatInput(e.target.value)}
+                                                    placeholder="Type something..."
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                                                />
+                                                <button 
+                                                    type="submit"
+                                                    className="absolute right-1.5 w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-all shadow-sm"
+                                                >
+                                                    <Send size={12} fill="white" />
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-
-            {/* Bottom Controls */}
-            <div className="h-24 bg-black/80 backdrop-blur-3xl border-t border-white/5 flex items-center justify-between px-10 z-30">
-                <div className="hidden lg:flex items-center gap-6">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Time Elapsed</span>
-                        <span className="text-sm font-black font-mono tracking-widest italic">00:42:15</span>
-                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
+            </main>
 
-                <div className="flex items-center gap-4 md:gap-6">
-                    {/* Media Toggles */}
-                    <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-[2rem] border border-white/5">
-                        <button 
-                            onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500 text-white shadow-lg shadow-red-500/20 ring-4 ring-red-500/10'}`}
-                        >
-                            {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
-                        </button>
-                        <button 
-                            onClick={handleToggleVideo}
-                            disabled={isRetrying}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all relative ${videoEnabled ? 'bg-white text-black shadow-white/20 ring-4 ring-white/10' : 'bg-white/5 hover:bg-white/10 text-white'}`}
-                        >
-                            {isRetrying ? (
-                                <div className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
-                            ) : (
-                                videoEnabled ? <Video size={24} /> : <VideoOff size={24} />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                        <button className="w-14 h-14 bg-white/5 border border-white/10 hover:bg-white/10 rounded-full flex items-center justify-center transition-all group">
-                            <ScreenShare size={24} className="text-slate-300 group-hover:text-white" />
-                        </button>
-                        <button 
-                            onClick={() => setActiveSidebar(activeSidebar === 'chat' ? null : 'chat')}
-                            className={`w-14 h-14 border rounded-full flex items-center justify-center transition-all relative ${activeSidebar === 'chat' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'}`}
-                        >
-                            <MessageSquare size={24} />
-                            {activeSidebar !== 'chat' && <div className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full ring-2 ring-black" />}
-                        </button>
-                        <button 
-                            onClick={() => setActiveSidebar(activeSidebar === 'participants' ? null : 'participants')}
-                            className={`w-14 h-14 border rounded-full flex items-center justify-center transition-all ${activeSidebar === 'participants' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'}`}
-                        >
-                            <Users size={24} />
-                        </button>
-                    </div>
-
-                    <div className="w-[1px] h-10 bg-white/10 mx-2" />
-
-                    <button 
-                        onClick={handleLeave}
-                        className="h-14 px-8 bg-red-600 hover:bg-red-500 text-white rounded-[1.5rem] flex items-center justify-center gap-3 transition-all font-black tracking-widest uppercase shadow-xl shadow-red-500/20"
-                    >
-                        <PhoneOff size={20} />
-                        <span className="hidden sm:inline">End Meeting</span>
-                    </button>
-                </div>
-
-                <div className="hidden lg:flex items-center gap-6">
-                   <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Signal Quality</span>
-                        <div className="flex gap-1">
-                            {[1,2,3,4].map(i => <div key={i} className={`w-1.5 h-3 rounded-full ${i <= 3 ? 'bg-emerald-500' : 'bg-white/10'}`} />)}
-                        </div>
-                   </div>
-                </div>
-            </div>
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: #e2e8f0;
+                    border-radius: 4px;
+                }
+            `}</style>
         </div>
     );
 }
+
