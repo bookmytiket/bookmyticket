@@ -9,10 +9,10 @@ import { Colors } from '../theme/Theme';
 export default function PaymentScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { bookingId, total } = route.params || {};
+  const { bookingId, total, success } = route.params || {};
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(success || false);
 
   const booking = useQuery(api.bookings.getBookingById, bookingId ? { id: bookingId } : 'skip');
   const confirmBooking = useMutation(api.bookings.confirmBooking);

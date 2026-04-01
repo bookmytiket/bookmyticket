@@ -13,6 +13,8 @@ import ManagementScreen from '../screens/ManagementScreen';
 import LocationScreen from '../screens/LocationScreen';
 import BecomeOrganiserScreen from '../screens/BecomeOrganiserScreen';
 import SeatingScreen from '../screens/SeatingScreen';
+import ServiceVendorsScreen from '../screens/ServiceVendorsScreen';
+import ServiceDetailScreen from '../screens/ServiceDetailScreen';
 
 import { Colors } from '../theme/Theme';
 import WebHeader from './WebHeader';
@@ -87,6 +89,16 @@ export default function AppNavigator() {
         <Stack.Screen
           name="BecomeOrganiser"
           component={BecomeOrganiserScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ServiceVendors"
+          component={ServiceVendorsScreen}
+          options={{ title: 'Our Artists' }}
+        />
+        <Stack.Screen
+          name="ServiceDetail"
+          component={ServiceDetailScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

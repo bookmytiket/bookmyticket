@@ -44,7 +44,23 @@ export default defineSchema({
             date: v.string(),
             time: v.string(),
         }))),
-        layoutType: v.optional(v.string()), // 'stage', 'ground', 'rate'
+        layoutType: v.optional(v.string()), // 'stage', 'ground', 'rate', 'block'
+        seatMapBackgroundUrl: v.optional(v.string()),
+        blocks: v.optional(v.array(v.object({
+            id: v.string(),
+            name: v.string(),
+            x: v.number(),
+            y: v.number(),
+            width: v.number(),
+            height: v.number(),
+            rows: v.number(),
+            cols: v.number(),
+            category: v.string(),
+            color: v.optional(v.string()),
+            rowNaming: v.optional(v.string()), // 'numeric' | 'alphabetic'
+            startNumber: v.optional(v.number()),
+            numberingDirection: v.optional(v.string()), // 'ltr' | 'rtl'
+        }))),
     }),
 
     bookings: defineTable({
@@ -94,29 +110,43 @@ export default defineSchema({
         userId: v.string(), // acts as email/username
         password: v.optional(v.string()),
         name: v.string(),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
+        category: v.optional(v.string()), // Mehendi Artist, Photographer, etc.
         kycStatus: v.optional(v.string()),
         walletBalance: v.optional(v.number()),
         kycDetails: v.optional(
             v.object({
-                category: v.string(),
-                panNumber: v.string(),
+                category: v.optional(v.string()),
+                panNumber: v.optional(v.string()),
                 socialMediaLink: v.optional(v.string()),
-                hasITR: v.boolean(),
-                fullName: v.string(),
-                email: v.string(),
-                mobile: v.string(),
+                hasITR: v.optional(v.boolean()),
+                fullName: v.optional(v.string()),
+                email: v.optional(v.string()),
+                mobile: v.optional(v.string()),
                 alternateNumber: v.optional(v.string()),
-                designation: v.string(),
-                city: v.string(),
+                designation: v.optional(v.string()),
+                city: v.optional(v.string()),
+                address: v.optional(v.string()),
                 websiteLink: v.optional(v.string()),
-                hasOSTIN: v.boolean(),
-                panFile: v.string(),
-                chequeFile: v.string(),
-                aadharFile: v.string(),
+                hasOSTIN: v.optional(v.boolean()),
+                gstin: v.optional(v.string()),
+                panFile: v.optional(v.string()),
+                chequeFile: v.optional(v.string()),
+                aadharFile: v.optional(v.string()),
+                beneficiaryName: v.optional(v.string()),
+                accountType: v.optional(v.string()),
+                bankName: v.optional(v.string()),
+                accountNumber: v.optional(v.string()),
+                ifscCode: v.optional(v.string()),
                 agreementAccepted: v.boolean(),
             })
         ),
-    }).index("by_userId", ["userId"]),
+    }).index("by_userId", ["userId"])
+      .index("by_kycStatus", ["kycStatus"])
+      .index("by_category", ["category"]),
 
     organiserRequests: defineTable({
         firstName: v.string(),
@@ -144,12 +174,16 @@ export default defineSchema({
     }),
 
     users: defineTable({
-        name: v.string(),
+        fullName: v.optional(v.string()), // Compatibility with old 'name'
+        name: v.optional(v.string()),     // Compatibility with old 'name'
         email: v.string(),
+        phone: v.optional(v.string()),    // Added for WhatsApp notifications
         username: v.optional(v.string()),
         password: v.string(),
         role: v.string(), // 'user'
-        createdAt: v.string(),
+        status: v.optional(v.string()),
+        lastLogin: v.optional(v.number()),
+        createdAt: v.union(v.number(), v.string()),
     }).index("by_email", ["email"]).index("by_username", ["username"]),
 
     passwordResetTokens: defineTable({
@@ -207,6 +241,9 @@ export default defineSchema({
         user: v.string(),
         pass: v.string(), // store as string, handle encryption/security if needed
         from: v.string(),
+        fromName: v.optional(v.string()),
+        encryption: v.optional(v.string()), // "TLS", "SSL", "None"
+        authMethod: v.optional(v.string()), // "App Password", "Basic Authentication", "None"
         updatedAt: v.number(),
     }),
 
@@ -254,6 +291,7 @@ export default defineSchema({
         name: v.string(),
         logoColor: v.string(),
         logoUrl: v.string(),
+        siteUrl: v.optional(v.string()),
         updatedAt: v.number(),
     }),
 
@@ -278,7 +316,7 @@ export default defineSchema({
         url: v.optional(v.string()),
         order: v.number(),
         updatedAt: v.number(),
-    }),
+    }).index("by_order", ["order"]),
 
     subnavItems: defineTable({
         label: v.string(),
@@ -347,4 +385,257 @@ export default defineSchema({
         organiserId: v.string(), // ID or email of the organiser who created this staff
         createdAt: v.number(),
     }).index("by_email", ["email"]).index("by_organiserId", ["organiserId"]),
+
+    admins: defineTable({
+        fullName: v.string(),
+        username: v.string(),
+        password: v.string(), // store hashed
+        email: v.string(),
+        role: v.string(), // "Admin", "Developer", "Tester", "Support"
+        status: v.string(), // "Active", "Inactive"
+        lastLogin: v.optional(v.number()),
+        createdAt: v.number(),
+    }).index("by_username", ["username"]).index("by_email", ["email"]),
+
+    otps: defineTable({
+        email: v.string(),
+        code: v.string(),
+        expires: v.number(),
+        purpose: v.string(), // "signup" | "login"
+    }).index("by_email", ["email"]),
+
+    brandJourneySteps: defineTable({
+        id: v.string(), // e.g., "setup"
+        number: v.string(), // e.g., "STEP 1"
+        title: v.string(),
+        subtitle: v.string(),
+        description: v.string(),
+        icon: v.string(), // Lucide icon name string
+        bgColor: v.string(),
+        tabColor: v.string(),
+        borderColor: v.string(),
+        image: v.string(), // Emoji or storage ID
+        features: v.array(v.object({
+            name: v.string(),
+            icon: v.string(),
+            desc: v.string(),
+        })),
+        order: v.number(),
+    }).index("by_order", ["order"]),
+
+    brandingPageConfig: defineTable({
+        key: v.string(), // e.g., "hero_title"
+        value: v.any(),
+    }).index("by_key", ["key"]),
+
+    coupons: defineTable({
+        brandId: v.string(),
+        title: v.string(),
+        description: v.string(),
+        redemptionMethod: v.string(), // "In-Store", "Online"
+        discountType: v.string(), // "Percentage", "Flat"
+        discountValue: v.number(),
+        couponCode: v.optional(v.string()), // e.g. "PAYTMHOTEL10"
+        redirectUrl: v.optional(v.string()), // Where user goes after "Redeem Now"
+        howToRedeem: v.optional(v.string()),
+        termsAndConditions: v.optional(v.string()),
+        bannerUrl: v.optional(v.string()),
+        logoUrl: v.optional(v.string()),
+        brandName: v.optional(v.string()),
+        startDate: v.number(),
+        endDate: v.number(),
+        usageLimit: v.optional(v.number()),
+        status: v.string(), // "Active", "Draft", "Paused"
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandStores: defineTable({
+        brandId: v.string(),
+        name: v.string(),
+        address: v.string(),
+        city: v.string(),
+        state: v.string(),
+        zip: v.string(),
+        staffEmails: v.optional(v.array(v.string())),
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandKYC: defineTable({
+        brandId: v.string(),
+        orgName: v.string(),
+        address: v.string(),
+        city: v.string(),
+        state: v.string(),
+        zip: v.string(),
+        gstNumber: v.string(),
+        panNumber: v.string(),
+        orgLogoUrl: v.optional(v.string()),
+        status: v.string(), // "Pending", "Verified", "Rejected"
+        updatedAt: v.number(),
+    }).index("by_brandId", ["brandId"]),
+
+    brandAnalytics: defineTable({
+        brandId: v.string(),
+        couponId: v.optional(v.id("coupons")),
+        action: v.string(), // "View", "Scan", "Redeem"
+        timestamp: v.number(),
+        metadata: v.optional(v.any()), // e.g., user agent, location
+    }).index("by_brandId", ["brandId"]).index("by_couponId", ["couponId"]),
+
+    brandSubscriptions: defineTable({
+        brandId: v.string(),
+        planType: v.string(), // "Monthly" | "Yearly"
+        amountPaid: v.number(),
+        startDate: v.number(),
+        endDate: v.number(),
+        status: v.string(), // "active" | "expired"
+    }).index("by_brandId", ["brandId"]).index("by_status", ["status"]),
+
+    brandBanners: defineTable({
+        brandId: v.string(),
+        imageUrl: v.string(),
+        redirectUrl: v.string(),
+        isActive: v.boolean(),
+        createdAt: v.number(),
+    }).index("by_brandId", ["brandId"]).index("by_isActive", ["isActive"]),
+
+    subscribers: defineTable({
+        email: v.string(),
+        phone: v.optional(v.string()),
+        status: v.string(), // "Active" | "Unsubscribed"
+        createdAt: v.number(),
+    }).index("by_email", ["email"]),
+
+    whatsappSettings: defineTable({
+        provider: v.string(), // e.g. "Twilio"
+        accountSid: v.optional(v.string()),
+        authToken: v.optional(v.string()),
+        fromNumber: v.optional(v.string()), // e.g. "whatsapp:+14155238886"
+        apiKey: v.optional(v.string()),     // for other providers
+        isActive: v.boolean(),
+        updatedAt: v.number(),
+    }),
+
+    adPopups: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        imageStorageId: v.optional(v.id("_storage")),
+        redirectUrl: v.optional(v.string()),
+        ctaText: v.optional(v.string()),       // e.g. "Shop Now", "Book Now"
+        bgColor: v.optional(v.string()),        // fallback gradient color
+        badgeText: v.optional(v.string()),      // e.g. "🔥 Limited Offer"
+        isActive: v.boolean(),
+        showEveryMinutes: v.number(),           // re-show interval (e.g. 30 = every 30 min)
+        createdAt: v.number(),
+    }).index("by_isActive", ["isActive"]),
+
+    vendorProfiles: defineTable({
+        organiserId: v.string(), // Reference to organiser userId (email)
+        category: v.string(), // "Mehendi Artist", "Photographer/Studio", "Makeup Artist"
+        bio: v.optional(v.string()),
+        portfolio: v.optional(v.array(v.object({
+            url: v.string(),
+            type: v.string(), // "image" | "video"
+            category: v.optional(v.string()),
+            beforeAfter: v.optional(v.boolean()),
+        }))),
+        pricing: v.optional(v.any()), // Dynamic per category
+        availability: v.optional(v.any()), // Calendar/Slot data
+        blockedDates: v.optional(v.array(v.string())),
+        advancedSettings: v.optional(v.any()), // Tags, Team, Equipment, Brands
+        updatedAt: v.number(),
+    }).index("by_organiserId", ["organiserId"]),
+
+    vendorBookings: defineTable({
+        vendorId: v.string(), // Reference to organiser userId
+        userId: v.string(), // Reference to user email
+        serviceType: v.string(), // "Bridal", "Party", "Event", etc.
+        bookingDate: v.string(), // "YYYY-MM-DD"
+        bookingTime: v.optional(v.string()), // "HH:MM"
+        status: v.string(), // "pending", "confirmed", "completed", "cancelled"
+        totalAmount: v.number(),
+        customerDetails: v.object({
+            name: v.string(),
+            phone: v.string(),
+            email: v.string(),
+            address: v.optional(v.string()),
+        }),
+        remarks: v.optional(v.string()),
+        rescheduleDate: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_vendorId", ["vendorId"]).index("by_userId", ["userId"]).index("by_status", ["status"]),
+
+    chatRooms: defineTable({
+        participants: v.array(v.string()), // Array of user/vendor emails
+        lastMessage: v.optional(v.string()),
+        lastMessageAt: v.number(),
+        bookingId: v.optional(v.id("vendorBookings")),
+    }).index("by_lastMessageAt", ["lastMessageAt"]),
+
+    chatMessages: defineTable({
+        roomId: v.id("chatRooms"),
+        senderId: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+    }).index("by_roomId", ["roomId"]),
+
+    vendorReviews: defineTable({
+        vendorId: v.string(),
+        userId: v.string(),
+        rating: v.number(), // 1-5
+        comment: v.string(),
+        response: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_vendorId", ["vendorId"]),
+
+    meetings: defineTable({
+        title: v.string(),
+        description: v.optional(v.string()),
+        creatorId: v.string(), // organiser or user email
+        status: v.string(), // "scheduled", "live", "ended"
+        startTime: v.optional(v.number()),
+        endTime: v.optional(v.number()),
+        password: v.optional(v.string()),
+        meetingLink: v.string(), // unique slug/id
+        eventId: v.optional(v.id("events")),
+        settings: v.object({
+            lobby: v.boolean(),
+            muteOnJoin: v.boolean(),
+            videoOffOnJoin: v.boolean(),
+            chatEnabled: v.boolean(),
+            screenShareEnabled: v.boolean(),
+        }),
+        createdAt: v.number(),
+    }).index("by_creatorId", ["creatorId"])
+      .index("by_meetingLink", ["meetingLink"])
+      .index("by_eventId", ["eventId"]),
+
+    meetingParticipants: defineTable({
+        meetingId: v.id("meetings"),
+        userId: v.string(), // email
+        name: v.string(),
+        role: v.string(), // "host", "participant"
+        status: v.string(), // "waiting", "joined", "left"
+        joinedAt: v.optional(v.number()),
+        leftAt: v.optional(v.number()),
+    }).index("by_meetingId", ["meetingId"]).index("by_userId", ["userId"]),
+
+    signals: defineTable({
+        meetingId: v.id("meetings"),
+        senderId: v.string(), // participant id (email)
+        receiverId: v.optional(v.string()), // target participant id (email), null for broadcast
+        type: v.string(), // "offer", "answer", "ice-candidate"
+        data: v.string(), // stringified JSON
+        timestamp: v.number(),
+    }).index("by_meetingId", ["meetingId"]).index("by_receiverId", ["receiverId"]),
+
+    meetingMessages: defineTable({
+        meetingId: v.id("meetings"),
+        senderId: v.string(),
+        senderName: v.string(),
+        text: v.string(),
+        timestamp: v.number(),
+    }).index("by_meetingId", ["meetingId"]),
 });
+

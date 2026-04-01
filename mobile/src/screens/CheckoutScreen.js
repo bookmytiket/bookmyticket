@@ -85,7 +85,13 @@ export default function CheckoutScreen() {
       }
 
       const bookingId = await createBooking(bookingData);
-      navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event });
+      
+      if (total === 0) {
+        // Free booking confirmed immediately
+        navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event, success: true });
+      } else {
+        navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event });
+      }
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Could not create booking. Please try again.');
@@ -99,6 +105,8 @@ export default function CheckoutScreen() {
       </View>
     );
   }
+
+  const isFree = total === 0;
 
   return (
     <ScrollView style={styles.container}>
@@ -160,12 +168,15 @@ export default function CheckoutScreen() {
         </View>
         <View style={[styles.row, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalVal}>₹{total.toFixed(0)}</Text>
+          <Text style={styles.totalVal}>{isFree ? 'FREE' : `₹${total.toFixed(0)}`}</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
-        <Text style={styles.confirmBtnText}>Proceed to Payment</Text>
+      <TouchableOpacity 
+        style={[styles.confirmBtn, isFree && { backgroundColor: '#10b981', shadowColor: '#10b981' }]} 
+        onPress={handleConfirm}
+      >
+        <Text style={styles.confirmBtnText}>{isFree ? 'Confirm Free Booking' : 'Proceed to Payment'}</Text>
       </TouchableOpacity>
       <View style={{ height: 40 }} />
     </ScrollView>

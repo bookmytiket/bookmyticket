@@ -16,6 +16,7 @@ export default function EventsScreen() {
   const route = useRoute();
   const { selectedCity } = useAuth();
   const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
+  const convexMeetings = useQuery(api.meetings.listAll) ?? [];
   const convexCategories = useQuery(api.homeSettings.getCategories) ?? [];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(route.params?.category || 'All');
@@ -31,15 +32,29 @@ export default function EventsScreen() {
   }, [route.params?.category]);
 
   const events = useMemo(() => {
+    const combined = [
+      ...(convexEvents || []),
+      ...(convexMeetings || []).map(m => ({
+        ...m,
+        type: "Meeting",
+        virtual: true,
+        location: "Online Meeting"
+      }))
+    ];
+
     // 1. Normalization Sync with HomeScreen
-    const fromConvex = (convexEvents || []).filter(Boolean).map((ev, idx) => {
+    const fromConvex = combined.filter(Boolean).map((ev, idx) => {
       const loc = ev?.location || ev?.venue || ev?.address || "Venue";
       const isVirtual = ev?.virtual === true || 
+               ev?.virtual === "true" ||
                String(ev?.type || '').toLowerCase().includes("online") || 
                String(ev?.type || '').toLowerCase().includes("virtual") ||
                loc.toLowerCase().includes("online") ||
                loc.toLowerCase().includes("virtual") ||
-               String(ev?.title || '').toLowerCase().includes("online meeting");
+               loc.toLowerCase().includes("zoom") ||
+               loc.toLowerCase().includes("meet") ||
+               String(ev?.title || '').toLowerCase().includes("online meeting") ||
+               String(ev?.title || '').toLowerCase().includes("virtual event");
       return {
         ...ev,
         id: ev?._id || ev?.id || `convex-list-${idx}`,
@@ -104,6 +119,10 @@ export default function EventsScreen() {
       if (!ev) return false;
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
       if (!eventDate) return true;
+
+      // Ensure virtual events/meetings from the portal aren't hidden by strict date checks
+      if (ev.virtual === true || ev.virtual === "true") return true; 
+
       return eventDate >= now;
     });
 

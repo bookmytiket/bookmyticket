@@ -1,4 +1,19 @@
-export const HOME_EVENTS = [];
+export const HOME_EVENTS = [
+  {
+    id: "virtual-1",
+    title: "Mastering React Native: Online Workshop",
+    img: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80",
+    date: "2026-06-15",
+    time: "10:00 AM",
+    location: "Online (Zoom)",
+    type: "Virtual",
+    price: 499,
+    category: "Workshop",
+    featured: true,
+    trending: true,
+    virtual: true
+  }
+];
 
 export const HERO_BANNER_SLIDES = [
   { id: 1, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=1200&h=480&fit=crop', title: 'Live Events & Experiences', sub: 'Book tickets for concerts, sports & more' },

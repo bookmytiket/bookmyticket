@@ -10,6 +10,7 @@ import { Colors } from '../theme/Theme';
 import ComingSoonSection from '../components/ComingSoonSection';
 import CouponCard from '../components/CouponCard';
 import CouponOverlay from '../components/CouponOverlay';
+import { Ionicons } from '@expo/vector-icons';
 import CustomerAdPopup from '../components/CustomerAdPopup';
 
 const { width } = Dimensions.get('window');
@@ -106,6 +107,8 @@ export default function HomeScreen() {
     } catch (_) { return null; }
   };
   const convexEvents = useQuery(api.events.getActiveEvents);
+  const convexMeetings = useQuery(api.meetings.listAll) || [];
+  const convexVendors = useQuery(api.vendors.getActiveVendors);
   const convexCategories = useQuery(api.homeSettings.getCategories);
   const convexBanners = useQuery(api.homeSettings.getBannerSlides);
   const convexCoupons = useQuery(api.branding.getHomeCoupons) || [];
@@ -130,7 +133,18 @@ export default function HomeScreen() {
   // Display data logic: Favor Convex, fallback to static/defaults
   const displayBanners = (convexBanners && convexBanners.length > 0) ? convexBanners : HERO_BANNER_SLIDES;
   const displayCategories = (convexCategories && convexCategories.length > 0) ? convexCategories : DEFAULT_CATEGORIES;
-  const displayEvents = convexEvents || [];
+  
+  // Merge regular events and standalone meetings
+  const displayEvents = useMemo(() => {
+    const events = convexEvents || [];
+    const meetings = (convexMeetings || []).map(m => ({
+      ...m,
+      type: "Meeting",
+      virtual: true, // Meetings are always virtual in this context
+      location: "Online Meeting"
+    }));
+    return [...events, ...meetings];
+  }, [convexEvents, convexMeetings]);
 
   // Auto-rotate banners
   useEffect(() => {
@@ -146,11 +160,15 @@ export default function HomeScreen() {
     const fromConvex = (displayEvents || []).filter(Boolean).map((ev, idx) => {
       const loc = ev?.location || ev?.venue || ev?.address || "Venue";
       const isVirtual = ev?.virtual === true || 
+               ev?.virtual === "true" ||
                String(ev?.type || '').toLowerCase().includes("online") || 
                String(ev?.type || '').toLowerCase().includes("virtual") ||
                loc.toLowerCase().includes("online") ||
                loc.toLowerCase().includes("virtual") ||
-               String(ev?.title || '').toLowerCase().includes("online meeting");
+               loc.toLowerCase().includes("zoom") ||
+               loc.toLowerCase().includes("meet") ||
+               String(ev?.title || '').toLowerCase().includes("online meeting") ||
+               String(ev?.title || '').toLowerCase().includes("virtual event");
       return {
         ...ev,
         id: ev?._id || ev?.id || `convex-${idx}`,
@@ -184,6 +202,11 @@ export default function HomeScreen() {
       if (!ev) return false;
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
       if (!eventDate) return true; // Keep if invalid parse to avoid hiding valid events
+
+      // Ensure virtual events/meetings from the portal aren't hidden by strict date checks
+      // allowing them to show even if the date is slightly in the past or missing
+      if (ev.virtual === true || ev.virtual === "true") return true; 
+
       return eventDate >= now;
     });
   }, [displayEvents]);
@@ -287,25 +310,52 @@ export default function HomeScreen() {
       {/* Professional Services Section */}
       <View style={[styles.section, { marginBottom: 20 }]}>
         <View style={styles.sectionHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.sectionTitle}>Professional Services</Text>
             <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>Top rated artists for your occasions</Text>
           </View>
+          <TouchableOpacity onPress={() => navigation.navigate('ServiceVendors', { category: 'All' })}>
+            <Text style={{ color: '#F43F5E', fontWeight: '700', fontSize: 14 }}>View All →</Text>
+          </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-          {SERVICE_CATEGORIES.map((cat, idx) => (
-            <TouchableOpacity 
-              key={idx} 
-              style={[styles.serviceCard, { borderColor: cat.color }]} 
-              onPress={() => alert(`Navigating to ${cat.name}`)}
-            >
-              <View style={[styles.serviceIconWrap, { backgroundColor: cat.color }]}>
-                <Text style={{ fontSize: 28 }}>{cat.icon === 'flower-outline' ? '🌸' : cat.icon === 'camera-outline' ? '📸' : '✨'}</Text>
-              </View>
-              <Text style={styles.serviceTitle}>{cat.name}</Text>
-              <Text style={styles.serviceDesc} numberOfLines={2}>{cat.description}</Text>
-            </TouchableOpacity>
-          ))}
+          {convexVendors && convexVendors.length > 0 ? (
+            convexVendors.map((vendor) => (
+              <TouchableOpacity 
+                key={vendor.id} 
+                style={styles.vendorCard} 
+                onPress={() => navigation.navigate('ServiceDetail', { vendorId: vendor.id })}
+              >
+                <Image 
+                  source={{ uri: vendor.portfolio?.[0]?.url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop' }} 
+                  style={styles.vendorImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.vendorInfo}>
+                  <Text style={styles.vendorCategory}>{vendor.category}</Text>
+                  <Text style={styles.vendorName} numberOfLines={1}>{vendor.name}</Text>
+                  <View style={styles.ratingRow}>
+                     <Ionicons name="star" size={12} color="#fbbf24" style={{ marginRight: 4 }} />
+                     <Text style={styles.ratingText}>{vendor.rating > 0 ? vendor.rating.toFixed(1) : "New"}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            SERVICE_CATEGORIES.map((cat, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.serviceCard, { borderColor: cat.color }]} 
+                onPress={() => navigation.navigate('ServiceVendors', { category: cat.name })}
+              >
+                <View style={[styles.serviceIconWrap, { backgroundColor: cat.color }]}>
+                  <Text style={{ fontSize: 28 }}>{cat.icon === 'flower-outline' ? '🌸' : cat.icon === 'camera-outline' ? '📸' : '✨'}</Text>
+                </View>
+                <Text style={styles.serviceTitle}>{cat.name}</Text>
+                <Text style={styles.serviceDesc} numberOfLines={2}>{cat.description}</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
       </View>
       {filteredEvents.length === 0 && virtual.length === 0 && (
@@ -443,6 +493,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
     opacity: 0.9,
+  },
+  vendorCard: {
+    width: 200,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    marginRight: 16,
+  },
+  vendorImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#f1f5f9',
+  },
+  vendorInfo: {
+    padding: 12,
+  },
+  vendorName: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  vendorCategory: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#F43F5E',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
   },
   serviceTitle: {
     fontSize: 18,

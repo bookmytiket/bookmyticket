@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 export const getBookings = query({
     args: {},
@@ -114,9 +115,11 @@ export const createBooking = mutation({
         // Update Organiser Wallet ONLY if status is 'Confirmed'
         if (args.status === 'Confirmed') {
             const validEventId = ctx.db.normalizeId("events", args.eventId);
-            if (validEventId !== null) {
-                const event = (await ctx.db.get(validEventId)) as any;
-                if (event && event.organiserId) {
+            const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+            let eventName = "Event";
+            if (event) {
+                eventName = event.title || "Event";
+                if (event.organiserId) {
                     const organiser = (await ctx.db
                         .query("organisers")
                         .filter((q) => q.eq(q.field("userId"), event.organiserId))
@@ -129,6 +132,40 @@ export const createBooking = mutation({
                     }
                 }
             }
+            const branding = await ctx.db.query("siteBranding").first();
+            const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+            let brandLogo = branding?.logoUrl || "/logo.png";
+            if (brandLogo.startsWith("/")) {
+                brandLogo = `${siteUrl}${brandLogo}`;
+            }
+            const brandNameDisplay = branding?.name || "BookMyTicket";
+
+            // Send Email Confirmation
+            const targetEmail = args.customerDetails?.email || args.userId;
+            await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                to: targetEmail,
+                subject: `Booking Confirmed: ${eventName}`,
+                html: `
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+                        <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
+                        <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
+                        <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${args.ticketCount}</strong> ticket(s) for:</p>
+                        <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
+                        <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${args.totalPrice}</strong></p>
+                        
+                        ${(event && (event as any).virtual) ? `
+                        <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
+                            <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
+                            <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
+                            <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
+                            <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
+                        </div>
+                        ` : ''}
+
+                        <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
+                    </div>
+                `,
+            });
         }
 
         return bookingId;
@@ -145,21 +182,60 @@ export const confirmBooking = mutation({
 
         // Update Organiser Wallet
         const validEventId = ctx.db.normalizeId("events", booking.eventId);
+        let eventName = "Event";
         if (validEventId !== null) {
             const event = (await ctx.db.get(validEventId)) as any;
-            if (event && event.organiserId) {
-                const organiser = (await ctx.db
-                    .query("organisers")
-                    .filter((q) => q.eq(q.field("userId"), event.organiserId))
-                    .unique()) as any;
-
-                if (organiser) {
-                    await ctx.db.patch(organiser._id, {
-                        walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
-                    });
+            if (event) {
+                eventName = event.title || "Event";
+                if (event.organiserId) {
+                    const organiser = (await ctx.db
+                        .query("organisers")
+                        .filter((q) => q.eq(q.field("userId"), event.organiserId))
+                        .unique()) as any;
+    
+                        if (organiser) {
+                            await ctx.db.patch(organiser._id, {
+                                walletBalance: (organiser.walletBalance || 0) + booking.totalPrice,
+                            });
+                        }
                 }
             }
         }
+
+        const branding = await ctx.db.query("siteBranding").first();
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo.startsWith("/")) {
+            brandLogo = `${siteUrl}${brandLogo}`;
+        }
+        const brandNameDisplay = branding?.name || "BookMyTicket";
+
+        // Send Email Confirmation
+        const targetEmail = booking.customerDetails?.email || booking.userId;
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: targetEmail,
+            subject: `Booking Confirmed: ${eventName}`,
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px;">
+                    <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
+                    <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${booking.ticketCount}</strong> ticket(s) for:</p>
+                    <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
+                    <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${booking.totalPrice}</strong></p>
+                    
+                    ${(event && (event as any).virtual) ? `
+                    <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
+                        <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
+                        <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
+                        <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
+                        <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
+                    </div>
+                    ` : ''}
+
+                    <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
+                </div>
+            `,
+        });
     },
 });
 
@@ -171,5 +247,50 @@ export const updateBooking = mutation({
             patch.status = "Scanned";
         }
         await ctx.db.patch(id, patch);
+    },
+});
+
+export const getByUser = query({
+    args: { userId: v.string() },
+    handler: async (ctx, args) => {
+        const bookings = await ctx.db
+            .query("bookings")
+            .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+            .collect();
+
+        return Promise.all(
+            bookings.map(async (booking) => {
+                const validEventId = ctx.db.normalizeId("events", booking.eventId);
+                const event = validEventId !== null ? (await ctx.db.get(validEventId)) as any : null;
+
+                const isVirtual = event?.virtual || 
+                                 event?.type?.toLowerCase() === "online" || 
+                                 event?.location?.toLowerCase().includes("online") ||
+                                 event?.title?.toLowerCase().includes("online meeting");
+
+                let resolvedUrl = event?.meetingUrl || null;
+
+                // RESILIENCY: If meetingUrl is missing or points to organiser/admin dashboard (common misconfig),
+                // attempt to find the correct 9-digit code in the meetings table.
+                const isInternal = resolvedUrl?.toLowerCase().includes("organiser") || resolvedUrl?.toLowerCase().includes("admin") || resolvedUrl?.toLowerCase().includes("vendor");
+                if (validEventId && (isVirtual) && (!resolvedUrl || isInternal)) {
+                    const meeting = await ctx.db.query("meetings")
+                        .withIndex("by_eventId", (q) => q.eq("eventId", validEventId))
+                        .order("desc")
+                        .first();
+                    if (meeting) {
+                        resolvedUrl = meeting.meetingLink;
+                    }
+                }
+
+                return {
+                    ...booking,
+                    eventName: event?.title || "Event Ticket",
+                    eventType: event?.type || "Physical",
+                    meetingUrl: resolvedUrl,
+                    virtual: !!isVirtual,
+                };
+            })
+        );
     },
 });

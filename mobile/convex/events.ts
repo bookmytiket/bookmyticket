@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 export const getActiveEvents = query({
     args: {},
@@ -88,9 +89,42 @@ export const createEvent = mutation({
             time: v.string(),
         }))),
         layoutType: v.optional(v.string()),
+        seatMapBackgroundUrl: v.optional(v.string()),
+        blocks: v.optional(v.array(v.object({
+            id: v.string(),
+            name: v.string(),
+            x: v.number(),
+            y: v.number(),
+            width: v.number(),
+            height: v.number(),
+            rows: v.number(),
+            cols: v.number(),
+            category: v.string(),
+            color: v.optional(v.string()),
+            rowNaming: v.optional(v.string()),
+            startNumber: v.optional(v.number()),
+            numberingDirection: v.optional(v.string()),
+        }))),
     },
     handler: async (ctx, args) => {
-        return await ctx.db.insert("events", args);
+        const eventId = await ctx.db.insert("events", args);
+        
+        // Trigger notifications as a background action
+        const organiser = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", args.organiserId))
+            .unique();
+
+        await ctx.scheduler.runAfter(0, api.notificationActions.sendEventCreationNotifications, {
+            eventId,
+            title: args.title,
+            organiserName: organiser?.name || "An Organiser",
+            date: args.date,
+            location: args.location,
+            imageUrl: args.img || args.bannerPreview,
+        });
+
+        return eventId;
     },
 });
 
@@ -145,6 +179,22 @@ export const updateEvent = mutation({
             time: v.string(),
         }))),
         layoutType: v.optional(v.string()),
+        seatMapBackgroundUrl: v.optional(v.string()),
+        blocks: v.optional(v.array(v.object({
+            id: v.string(),
+            name: v.string(),
+            x: v.number(),
+            y: v.number(),
+            width: v.number(),
+            height: v.number(),
+            rows: v.number(),
+            cols: v.number(),
+            category: v.string(),
+            color: v.optional(v.string()),
+            rowNaming: v.optional(v.string()),
+            startNumber: v.optional(v.number()),
+            numberingDirection: v.optional(v.string()),
+        }))),
     },
     handler: async (ctx, args) => {
         const { id, ...updates } = args;
