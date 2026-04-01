@@ -46,19 +46,8 @@ export const join = mutation({
         role: v.string(),
     },
     handler: async (ctx, args) => {
-        // CLEANUP: Ensure no duplicate entries for this user in this meeting
-        const duplicateParticipants = await ctx.db
-            .query("meetingParticipants")
-            .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
-            .filter((q) => q.eq(q.field("userId"), args.userId))
-            .collect();
-        
-        // If there are existing records, delete them to ensure a fresh, single session
-        if (duplicateParticipants.length > 0) {
-            for (const p of duplicateParticipants) {
-                await ctx.db.delete(p._id);
-            }
-        }
+        // ALLOW MULTIPLE DEVICES: We no longer delete existing participants with the same userId.
+        // Each device join creates a unique session. 
 
         return await ctx.db.insert("meetingParticipants", {
             meetingId: args.meetingId,

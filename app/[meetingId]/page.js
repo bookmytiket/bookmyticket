@@ -42,6 +42,7 @@ export default function MeetingRoom() {
     const [activeSidebar, setActiveSidebar] = useState(null); 
     const [chatInput, setChatInput] = useState("");
     const [elapsed, setElapsed] = useState(0); 
+    const [myParticipantId, setMyParticipantId] = useState(null);
     const chatEndRef = useRef(null);
 
     const guestId = React.useMemo(() => `guest-${Math.random().toString(36).substr(2, 5)}`, []);
@@ -53,14 +54,14 @@ export default function MeetingRoom() {
         peerCount, mediaError, retryMedia 
     } = useWebRTC(
         meeting?._id, 
-        userId,
+        myParticipantId || userId,
         name || "Guest"
     );
 
     const localVideoRef = useRef(null);
     const hasVideo = localStream?.getVideoTracks().length > 0;
 
-    const [mainStageId, setMainStageId] = useState(userId);
+    const [mainStageId, setMainStageId] = useState(null);
     const [theme, setTheme] = useState("organiser");
     const [showThemeSelector, setShowThemeSelector] = useState(false);
 
@@ -85,12 +86,15 @@ export default function MeetingRoom() {
 
     // Auto switch main stage to the first remote user when they join, if you're currently staring at yourself
     useEffect(() => {
-        if (mainStageId === userId && !isScreenSharing && Object.keys(remoteStreams).length > 0) {
+        const myId = myParticipantId || userId;
+        if ((!mainStageId || mainStageId === myId) && !isScreenSharing && Object.keys(remoteStreams).length > 0) {
            setMainStageId(Object.keys(remoteStreams)[0]);
-        } else if (mainStageId !== userId && !remoteStreams[mainStageId]) {
-           setMainStageId(userId);
+        } else if (mainStageId && mainStageId !== myId && !remoteStreams[mainStageId]) {
+           setMainStageId(myId);
+        } else if (!mainStageId) {
+           setMainStageId(myId);
         }
-    }, [remoteStreams, isScreenSharing, userId, mainStageId]);
+    }, [remoteStreams, isScreenSharing, userId, mainStageId, myParticipantId]);
 
     const formatElapsed = (secs) => {
         const h = Math.floor(secs / 3600).toString().padStart(2, '0');
@@ -113,12 +117,13 @@ export default function MeetingRoom() {
             console.warn("Could not resume AudioContext:", e);
         }
 
-        await joinMeeting({
+        const pId = await joinMeeting({
             meetingId: meeting._id,
             userId: userId, 
             name: name || "Guest",
             role: (meeting.creatorId && user?.email && meeting.creatorId === user?.email) ? "host" : "participant",
         });
+        setMyParticipantId(pId);
         setIsJoined(true);
     };
 
@@ -373,7 +378,7 @@ export default function MeetingRoom() {
 
                         {/* Video Stage */}
                         <div className="flex-1 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner flex items-center justify-center">
-                            {mainStageId === userId ? (
+                            {mainStageId === (myParticipantId || userId) ? (
                                 <div className="w-full h-full relative">
                                     {videoEnabled && localStream && hasVideo ? (
                                         <>
@@ -418,9 +423,9 @@ export default function MeetingRoom() {
                             {/* Nametag */}
                             <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
                                 <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] text-slate-700 font-bold uppercase tracking-widest shadow-sm">
-                                    {mainStageId === userId ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
+                                    {mainStageId === (myParticipantId || userId) ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
                                 </div>
-                                {mainStageId === userId && !audioEnabled && (
+                                {mainStageId === (myParticipantId || userId) && !audioEnabled && (
                                     <div className="bg-red-50 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-sm border border-red-200 text-red-500">
                                         <MicOff size={14} />
                                     </div>
@@ -543,9 +548,9 @@ export default function MeetingRoom() {
                                         {/* Participants List */}
                                         <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
                                             {/* Local User - Restored so it shows when sharing */}
-                                            {(mainStageId !== userId || isScreenSharing) && (
+                                            {(mainStageId !== (myParticipantId || userId) || isScreenSharing) && (
                                                 <div 
-                                                    onClick={() => setMainStageId(userId)}
+                                                    onClick={() => setMainStageId(myParticipantId || userId)}
                                                     className="w-full aspect-video rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 hover:border-blue-300 cursor-pointer transition-all relative group shadow-sm bg-slate-900"
                                                 >
                                                     {videoEnabled && localStream && hasVideo ? (

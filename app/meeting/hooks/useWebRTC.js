@@ -143,7 +143,9 @@ export function useWebRTC(meetingId, userId, name) {
 
         pc.ontrack = (event) => {
             console.log(`Received track from ${remoteName}:`, event.track.kind);
-            const [stream] = event.streams;
+            // Ensure we have a stream, even if event.streams is empty
+            const stream = event.streams[0] || new MediaStream([event.track]);
+            
             setRemoteStreams(prev => ({
                 ...prev,
                 [remoteUserId]: { stream, name: remoteName }
@@ -171,8 +173,8 @@ export function useWebRTC(meetingId, userId, name) {
                     await pc.setLocalDescription(offer);
                     sendSignal({
                         meetingId,
-                        senderId: userId,
-                        receiverId: remoteUserId,
+                        senderId: userId, // This is our unique participantId
+                        receiverId: remoteUserId, // This is their unique participantId
                         type: "offer",
                         data: JSON.stringify(offer),
                     });
@@ -190,17 +192,17 @@ export function useWebRTC(meetingId, userId, name) {
         if (!activeParticipants || !localStream) return;
 
         activeParticipants.forEach(participant => {
-            if (participant.userId !== userId && !pcs.current[participant.userId]) {
-                // If I am already in and a new person joins, we decide who initiates
-                // Order: Smaller userId initiates (Fixed mesh logic)
-                const isInitiator = userId < participant.userId;
-                createPeerConnection(participant.userId, participant.name, isInitiator);
+            // Using participant._id for uniqueness across devices
+            if (participant._id !== userId && !pcs.current[participant._id]) {
+                // Determine initiator based on ID comparison (Lexicographical)
+                const isInitiator = userId < participant._id;
+                createPeerConnection(participant._id, participant.name, isInitiator);
             }
         });
 
         // Cleanup stale connections
         Object.keys(pcs.current).forEach(pId => {
-            if (!activeParticipants.find(p => p.userId === pId)) {
+            if (!activeParticipants.find(p => p._id === pId)) {
                 pcs.current[pId].close();
                 delete pcs.current[pId];
                 delete iceQueues.current[pId];
@@ -226,9 +228,10 @@ export function useWebRTC(meetingId, userId, name) {
             processedSignals.current.add(signal._id);
 
             const { senderId, type, data } = signal;
-            const remoteParticipant = activeParticipants?.find(p => p.userId === senderId);
+            // Find participant by their unique _id (stored as senderId in signal)
+            const remoteParticipant = activeParticipants?.find(p => p._id === senderId);
             const remoteName = remoteParticipant?.name || "Guest";
-
+            
             let pc = pcs.current[senderId];
             if (!pc && (type === "offer" || type === "ice-candidate")) {
                 pc = createPeerConnection(senderId, remoteName, false);
