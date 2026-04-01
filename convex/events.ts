@@ -354,3 +354,90 @@ export const debugVirtualEvents = query({
     }
 });
 
+export const getMeetingAccess = query({
+    args: { eventId: v.id("events"), userId: v.optional(v.string()) },
+    handler: async (ctx, args) => {
+        const event = await ctx.db.get(args.eventId);
+        if (!event) return { status: "not_found" };
+
+        const isVirtual = event.virtual || 
+                         event.type?.toLowerCase() === "online" || 
+                         event.location?.toLowerCase().includes("online") ||
+                         event.title?.toLowerCase().includes("online meeting");
+
+        if (!isVirtual) return { status: "not_virtual" };
+
+        const now = Date.now();
+        const endTs = event.endDateTime || computeEndDateTime(event.date, event.time) || 0;
+        
+        // Calculate dynamic meeting status
+        let meetingStatus: "upcoming" | "live" | "expired" = "live";
+        if (endTs && now > endTs) {
+            meetingStatus = "expired";
+        } else {
+            const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
+            const startTs = endTs - DEFAULT_DURATION_MS;
+            
+            if (now < startTs) {
+                meetingStatus = "upcoming";
+            } else {
+                meetingStatus = "live";
+            }
+        }
+
+        const eventDetails = {
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            time: event.time,
+            img: event.img || event.bannerPreview
+        };
+
+        if (meetingStatus === "expired") {
+            return { status: "expired", meetingStatus, eventDetails };
+        }
+
+        let isBooked = false;
+        if (args.userId) {
+            const uid = args.userId;
+            const booking = await ctx.db.query("bookings")
+                .withIndex("by_userId", (q) => q.eq("userId", uid))
+                .filter((q) => q.eq(q.field("eventId"), String(args.eventId)))
+                .filter((q) => 
+                    q.or(
+                        q.eq(q.field("status"), "Confirmed"),
+                        q.eq(q.field("status"), "Paid"),
+                        q.eq(q.field("status"), "Scanned")
+                    )
+                )
+                .first();
+            isBooked = !!booking;
+        }
+
+        let url = null;
+        if (isBooked) {
+            url = event.meetingType === "external" ? event.externalMeetingUrl : event.meetingUrl;
+            
+            if (event.meetingType !== "external") {
+                const meeting = await ctx.db.query("meetings")
+                    .withIndex("by_eventId", (q) => q.eq("eventId", args.eventId))
+                    .order("desc")
+                    .first();
+                
+                if (meeting && meeting.meetingLink) {
+                    url = meeting.meetingLink;
+                }
+            }
+        }
+
+        return { 
+            status: isBooked ? "success" : "not_booked",
+            meetingStatus,
+            url: url || null, 
+            type: event.meetingType || "internal",
+            eventDetails
+        };
+    },
+});
+
+

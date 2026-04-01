@@ -5,9 +5,12 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Video, Calendar, ArrowRight, Heart, Zap } from "lucide-react";
 import { isVirtualEvent } from "@/app/utils/eventUtils";
+import JoinNowButton from "./JoinNowButton";
+import { useRouter } from "next/navigation";
 
 function VirtualCard({ event }) {
     const [wished, setWished] = useState(false);
+    const router = useRouter();
     
     // Check if event is free
     const isFree = !event.price || event.price === 0 || 
@@ -15,8 +18,8 @@ function VirtualCard({ event }) {
                   event.seatCategories?.every(c => c.isFree);
 
     return (
-        <Link
-            href={`/events/detail?id=${event._id}`}
+        <div
+            onClick={() => router.push(`/events/detail?id=${event._id}`)}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
             <article
@@ -119,22 +122,16 @@ function VirtualCard({ event }) {
                                 {isFree ? "FREE" : `₹${event.price || event.normalTicketPrice || 0}`}
                             </span>
                         </div>
-                        <div 
-                          style={{ 
-                            padding: "8px 16px",
-                            borderRadius: "14px", 
-                            background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)",
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                            color: "#fff", boxShadow: "0 8px 16px -4px rgba(248, 68, 164, 0.5)"
-                          }}
-                        >
-                            <span style={{ fontSize: "12px", fontWeight: 900 }}>BOOK EVENT</span>
-                            <ArrowRight size={18} strokeWidth={3} />
+                        <div onClick={e => e.stopPropagation()}>
+                            <JoinNowButton 
+                                eventId={event._id} 
+                                className="!px-4 !py-2 !rounded-xl !text-[11px]" 
+                            />
                         </div>
                     </div>
                 </div>
             </article>
-        </Link>
+        </div>
     );
 }
 
