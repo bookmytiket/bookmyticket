@@ -108,11 +108,17 @@ export default function MeetingRoom() {
         if (!name.trim()) setName("Guest");
         
         try {
+            // Aggressive Safari Audio Recovery
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
                 const ctx = new AudioContext();
                 if (ctx.state === 'suspended') await ctx.resume();
             }
+            // Explicitly unmute all audio elements
+            document.querySelectorAll('video').forEach(v => {
+                v.muted = false;
+                v.play().catch(() => {});
+            });
         } catch (e) {
             console.warn("Could not resume AudioContext:", e);
         }
@@ -428,16 +434,16 @@ export default function MeetingRoom() {
                             </div>
                         </div>
 
-                        {/* Standard Meeting Grid (Zoom/Teams Style for Mobile) */}
-                        <div className="flex-1 lg:rounded-2xl overflow-hidden bg-slate-950 flex flex-col relative">
-                            {/* The Dynamic Grid Container */}
+                        {/* Standard Meeting Grid (Zoom/Teams/Meet Style Mobile Redesign) */}
+                        <div className="flex-1 lg:rounded-2xl overflow-hidden bg-slate-950 flex flex-col relative min-h-0">
+                            {/* The Dynamic Grid Container - ALWAYS includes local + remotes */}
                             <div className={`flex-1 grid gap-1 sm:gap-2 p-1 sm:p-2 ${
-                                (Object.keys(remoteStreams).length + (videoEnabled ? 1 : 0) + (isScreenSharing ? 1 : 0)) <= 1 ? 'grid-cols-1' :
-                                (Object.keys(remoteStreams).length + (videoEnabled ? 1 : 0) + (isScreenSharing ? 1 : 0)) === 2 ? 'grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1' :
+                                (Object.keys(remoteStreams).length + 1) <= 1 ? 'grid-cols-1' :
+                                (Object.keys(remoteStreams).length + 1) === 2 ? 'grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1' :
                                 'grid-cols-2'
                             } auto-rows-fr overflow-y-auto custom-scrollbar`}>
                                 
-                                {/* 0. Screen Share Tile (Priority full width) */}
+                                {/* 0. Screen Share Tile (Priority full width if active) */}
                                 {isScreenSharing && screenStream && (
                                     <div className="col-span-full relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border-2 border-blue-500 shadow-2xl aspect-video sm:aspect-auto">
                                         <StableVideo 
@@ -453,30 +459,28 @@ export default function MeetingRoom() {
                                     </div>
                                 )}
 
-                                {/* 1. Your Camera Tile */}
-                                {videoEnabled && (
-                                    <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border border-white/5 shadow-2xl aspect-square sm:aspect-auto">
-                                        {localStream && hasVideo ? (
-                                            <StableVideo 
-                                                stream={localStream}
-                                                isLocal={true}
-                                                isScreenSharing={isScreenSharing}
-                                                className="w-full h-full"
-                                                videoClasses="object-cover"
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
-                                                <div className="w-12 h-12 bg-slate-700/50 rounded-full flex items-center justify-center text-slate-500 mb-2">
-                                                    <VideoOff size={20} />
-                                                </div>
-                                                <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">You (Off)</span>
+                                {/* 1. Your Camera Tile (ALWAYS PRESENT TO MAINTAIN GRID STABILITY) */}
+                                <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-slate-900 border border-white/5 shadow-2xl aspect-square sm:aspect-auto group">
+                                    {videoEnabled && localStream && hasVideo ? (
+                                        <StableVideo 
+                                            stream={localStream}
+                                            isLocal={true}
+                                            isScreenSharing={isScreenSharing}
+                                            className="w-full h-full"
+                                            videoClasses="object-cover"
+                                        />
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-700/40 rounded-full flex items-center justify-center text-slate-400 mb-3 border border-slate-600/30 shadow-inner">
+                                                <Users size={32} />
                                             </div>
-                                        )}
-                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-bold text-white flex items-center border border-white/10">
-                                            You {!audioEnabled && <MicOff size={10} className="text-red-400 ml-1.5" />}
+                                            <span className="text-[10px] sm:text-xs font-black uppercase text-slate-500 tracking-[0.2em]">You</span>
                                         </div>
+                                    )}
+                                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl text-[10px] font-bold text-white flex items-center border border-white/10 shadow-lg">
+                                        You {!audioEnabled && <MicOff size={11} className="text-red-400 ml-2" />}
                                     </div>
-                                )}
+                                </div>
 
                                 {/* 2. Remote Tiles */}
                                 {Object.entries(remoteStreams).map(([peerId, { stream, name }]) => (
@@ -488,12 +492,12 @@ export default function MeetingRoom() {
                                             className="w-full h-full"
                                             videoClasses="object-cover"
                                         />
-                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-bold text-white flex items-center border border-white/10 max-w-[80%]">
+                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl text-[10px] font-bold text-white flex items-center border border-white/10 max-w-[85%] shadow-lg">
                                             <span className="truncate uppercase tracking-wider">{name}</span>
-                                            {stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && <MicOff size={10} className="text-red-400 ml-1.5" />}
+                                            {stream.getAudioTracks()?.length > 0 && !stream.getAudioTracks()[0].enabled && <MicOff size={11} className="text-red-400 ml-2 shrink-0" />}
                                         </div>
                                         {connectionStates[peerId] && connectionStates[peerId] !== 'connected' && (
-                                            <div className="absolute top-2 right-2 bg-amber-500/80 backdrop-blur-md px-2 py-0.5 rounded text-[7px] font-black text-white uppercase tracking-tighter shadow-lg">
+                                            <div className="absolute top-2 right-2 bg-amber-500/90 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase tracking-tighter shadow-xl border border-white/20">
                                                 {connectionStates[peerId]}
                                             </div>
                                         )}
