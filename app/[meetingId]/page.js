@@ -51,7 +51,7 @@ export default function MeetingRoom() {
     const { 
         localStream, remoteStreams, toggleAudio, toggleVideo, 
         toggleScreenShare, isScreenSharing, screenStream,
-        peerCount, mediaError, retryMedia 
+        peerCount, mediaError, connectionStates, retryMedia 
     } = useWebRTC(
         meeting?._id, 
         isJoined ? myParticipantId : null,
@@ -183,29 +183,50 @@ export default function MeetingRoom() {
     };
 
     // ----------------------------------------------------
-    // STABLE VIDEO COMPONENT (Fixes Blinking Bug)
+    // STABLE VIDEO COMPONENT (Fixes Blinking & Mobile Auto-Play Bug)
     // ----------------------------------------------------
     const StableVideo = ({ stream, isLocal, isScreenSharing, isBackdrop = false, className = "" }) => {
         const videoRef = useRef(null);
+        // Force remote video to start muted for Mobile Auto-Play compliance.
+        const [isMuted, setIsMuted] = useState(isLocal || isBackdrop || !isLocal);
 
         useEffect(() => {
             if (videoRef.current && stream) {
                 if (videoRef.current.srcObject !== stream) {
                     videoRef.current.srcObject = stream;
-                    videoRef.current.play().catch(e => console.warn("Video play error:", e));
+                    videoRef.current.play().catch(e => {
+                        console.warn("Video play error:", e);
+                        // If it fails, it's likely a mobile autoplay block.
+                        // We are already muted, but let's try one more second later.
+                        setTimeout(() => videoRef.current?.play(), 1000);
+                    });
                 }
             }
         }, [stream]);
 
+        const handleClick = () => {
+            if (!isLocal && isMuted) {
+                setIsMuted(false);
+            }
+        };
+
         return (
-            <video 
-                ref={videoRef}
-                autoPlay 
-                playsInline
-                muted={isLocal || isBackdrop}
-                className={className}
-                style={{ transform: (isLocal && !isScreenSharing) ? 'scaleX(-1)' : 'none' }}
-            />
+            <div className={`relative ${className}`} onClick={handleClick}>
+                <video 
+                    ref={videoRef}
+                    autoPlay 
+                    playsInline
+                    muted={isMuted}
+                    className="w-full h-full object-contain"
+                    style={{ transform: (isLocal && !isScreenSharing) ? 'scaleX(-1)' : 'none' }}
+                />
+                {!isLocal && isMuted && !isBackdrop && (
+                    <button className="absolute inset-0 flex items-center justify-center bg-black/40 text-white gap-2 pointer-events-none group-hover:pointer-events-auto">
+                        <Volume2 size={24} />
+                        <span className="text-[10px] font-black uppercase tracking-widest bg-black px-3 py-1.5 rounded-full border border-white/20">Click to Unmute</span>
+                    </button>
+                )}
+            </div>
         );
     };
 
@@ -227,7 +248,7 @@ export default function MeetingRoom() {
                     stream={stream}
                     isLocal={isLocal}
                     isScreenSharing={isScreenSharing}
-                    className="relative z-10 w-full h-full object-contain drop-shadow-2xl"
+                    className="relative z-10 w-full h-full object-cover md:object-contain drop-shadow-2xl"
                 />
             </div>
         );
@@ -360,11 +381,11 @@ export default function MeetingRoom() {
             {/* MAIN CONTENT AREA (Now Entirely Clean with Dynamic Background) */}
             <main className="flex-1 flex flex-col min-w-0">
                 {/* DASHBOARD BODY (Meeting Logic) */}
-                <div className="flex-1 p-4 sm:p-6 lg:p-10 overflow-hidden flex flex-col lg:flex-row gap-8 items-stretch relative">
+                <div className="flex-1 lg:p-10 overflow-hidden flex flex-col lg:flex-row gap-8 items-stretch relative">
                     
-                    {/* PRIMARY WHITE CARD: Meeting Stage */}
-                    <div className="flex-[2] bg-white rounded-3xl border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 sm:p-8 flex flex-col relative overflow-hidden group backdrop-blur-sm">
-                        <div className="flex items-center justify-between mb-6 shrink-0">
+                    {/* PRIMARY WHITE CARD: Meeting Stage (Immersive on Mobile) */}
+                    <div className="flex-[3] bg-transparent lg:bg-white lg:rounded-3xl lg:border lg:border-slate-200/50 lg:shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-0 lg:p-8 flex flex-col relative overflow-hidden group lg:backdrop-blur-sm">
+                        <div className="hidden lg:flex items-center justify-between mb-6 shrink-0">
                             <div>
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">{meeting.title}</h2>
@@ -376,8 +397,8 @@ export default function MeetingRoom() {
                             </div>
                         </div>
 
-                        {/* Video Stage */}
-                        <div className="flex-1 relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner flex items-center justify-center">
+                        {/* Video Stage (Edges-to-Edges on Mobile) */}
+                        <div className="flex-1 relative lg:rounded-2xl overflow-hidden bg-slate-950 lg:border lg:border-slate-200 shadow-inner flex items-center justify-center">
                             {mainStageId === (myParticipantId || userId) ? (
                                 <div className="w-full h-full relative">
                                     {videoEnabled && localStream && hasVideo ? (
@@ -420,21 +441,32 @@ export default function MeetingRoom() {
                                 </div>
                             )}
 
-                            {/* Nametag */}
-                            <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
-                                <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] text-slate-700 font-bold uppercase tracking-widest shadow-sm">
-                                    {mainStageId === (myParticipantId || userId) ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
+                            {/* Nametag & Connection Status */}
+                            <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl text-[10px] text-slate-700 font-bold uppercase tracking-widest shadow-sm">
+                                        {mainStageId === (myParticipantId || userId) ? (isScreenSharing ? "Your Screen" : `You (${name})`) : remoteStreams[mainStageId]?.name || "Guest"}
+                                    </div>
+                                    {mainStageId === (myParticipantId || userId) && !audioEnabled && (
+                                        <div className="bg-red-50 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-sm border border-red-200 text-red-500">
+                                            <MicOff size={14} />
+                                        </div>
+                                    )}
                                 </div>
-                                {mainStageId === (myParticipantId || userId) && !audioEnabled && (
-                                    <div className="bg-red-50 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-sm border border-red-200 text-red-500">
-                                        <MicOff size={14} />
+                                {mainStageId !== (myParticipantId || userId) && connectionStates[mainStageId] && (
+                                    <div className={`self-start px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                                        connectionStates[mainStageId] === 'connected' ? 'bg-green-50 border-green-200 text-green-600' :
+                                        connectionStates[mainStageId] === 'connecting' ? 'bg-amber-50 border-amber-200 text-amber-600 animate-pulse' :
+                                        'bg-red-50 border-red-200 text-red-500'
+                                    }`}>
+                                        {connectionStates[mainStageId]}
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Dashboard Controls */}
-                        <div className="mt-8 flex justify-between items-center bg-transparent relative">
+                        {/* Dashboard Controls (Hidden on Mobile, replaced by floating bar) */}
+                        <div className="hidden lg:flex mt-8 justify-between items-center bg-transparent relative">
                             <div className="flex gap-3">
                                 <button 
                                     onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
@@ -525,6 +557,55 @@ export default function MeetingRoom() {
                         </div>
                     </div>
 
+                    {/* Mobile Floating Controls (Glassmorphism) */}
+                    <div className="lg:hidden fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-50">
+                        <button 
+                            onClick={() => { setAudioEnabled(!audioEnabled); toggleAudio(); }}
+                            className={`p-3 rounded-full transition-all ${
+                                audioEnabled ? 'text-white' : 'bg-red-500 text-white'
+                            }`}
+                        >
+                            {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
+                        </button>
+                        <button 
+                            onClick={handleToggleVideo}
+                            disabled={isRetrying}
+                            className={`p-3 rounded-full transition-all ${
+                                videoEnabled && hasVideo ? 'text-white' : 'bg-red-500 text-white'
+                            }`}
+                        >
+                            {isRetrying ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                videoEnabled && hasVideo ? <Video size={20} /> : <VideoOff size={20} />
+                            )}
+                        </button>
+                        <div className="w-px h-6 bg-white/10 mx-1" />
+                        <button 
+                            onClick={() => setActiveSidebar(activeSidebar === 'chat' ? null : 'chat')}
+                            className={`p-3 rounded-full transition-all ${
+                                activeSidebar === 'chat' ? 'text-blue-400' : 'text-white'
+                            }`}
+                        >
+                            <MessageSquare size={20} />
+                        </button>
+                        <button 
+                            onClick={() => setActiveSidebar(activeSidebar === 'participants' ? null : 'participants')}
+                            className={`p-3 rounded-full transition-all ${
+                                activeSidebar === 'participants' ? 'text-blue-400' : 'text-white'
+                            }`}
+                        >
+                            <Users size={20} />
+                        </button>
+                        <div className="w-px h-6 bg-white/10 mx-1" />
+                        <button 
+                            onClick={handleLeave}
+                            className="p-3 bg-red-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
+                        >
+                            <PhoneOff size={20} />
+                        </button>
+                    </div>
+
                     {/* TOGGLEABLE INTERACTION PANEL CARD */}
                     <AnimatePresence mode="wait">
                         {activeSidebar && (
@@ -533,7 +614,7 @@ export default function MeetingRoom() {
                                 animate={{ opacity: 1, x: 0, width: "100%", maxWidth: "400px" }}
                                 exit={{ opacity: 0, x: 20, width: 0 }}
                                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                                className="flex-1 min-w-[320px] bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col h-[600px] lg:h-auto overflow-hidden p-6 gap-6 backdrop-blur-sm relative z-40"
+                                className="fixed lg:relative inset-x-4 bottom-28 lg:inset-auto lg:flex-1 lg:min-w-[320px] lg:max-w-[400px] bg-white lg:bg-white/80 rounded-3xl border border-slate-200 shadow-2xl lg:shadow-none flex flex-col h-[450px] lg:h-auto overflow-hidden p-6 gap-6 backdrop-blur-xl lg:backdrop-blur-sm relative z-40"
                             >
                                 {activeSidebar === 'participants' ? (
                                     <>

@@ -23,6 +23,7 @@ export function useWebRTC(meetingId, userId, name) {
     const processedSignals = useRef(new Set());
     const [peerCount, setPeerCount] = useState(0);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [connectionStates, setConnectionStates] = useState({}); // { userId: connectionState }
     const screenStreamRef = useRef(null);
 
     const sendSignal = useMutation(api.meetings.sendSignal);
@@ -177,6 +178,11 @@ export function useWebRTC(meetingId, userId, name) {
 
         pc.onconnectionstatechange = () => {
             console.log(`Connection state with ${remoteName}: ${pc.connectionState}`);
+            setConnectionStates(prev => ({
+                ...prev,
+                [remoteUserId]: pc.connectionState
+            }));
+
             if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
                 setRemoteStreams(prev => {
                     const next = { ...prev };
@@ -211,7 +217,7 @@ export function useWebRTC(meetingId, userId, name) {
 
     // 2. Sync with Participants
     useEffect(() => {
-        if (!activeParticipants || !localStream) return;
+        if (!activeParticipants || !localStream || !userId) return;
 
         activeParticipants.forEach(participant => {
             // Using participant._id for uniqueness across devices
@@ -240,7 +246,7 @@ export function useWebRTC(meetingId, userId, name) {
 
     // 3. Robust Signaling Loop
     useEffect(() => {
-        if (!signals || !localStream) return;
+        if (!signals || !localStream || !userId) return;
 
         // Sort signals by timestamp to ensure correct order (Offer -> Answer -> ICE)
         const sortedSignals = [...signals].sort((a, b) => a.timestamp - b.timestamp);
@@ -391,6 +397,7 @@ export function useWebRTC(meetingId, userId, name) {
         screenStream: screenStreamRef.current,
         mediaError,
         peerCount: Object.keys(remoteStreams).length,
+        connectionStates,
         retryMedia: getMedia
     };
 }
