@@ -185,10 +185,15 @@ export default function MeetingRoom() {
     // ----------------------------------------------------
     // STABLE VIDEO COMPONENT (Fixes Blinking & Mobile Auto-Play Bug)
     // ----------------------------------------------------
-    const StableVideo = ({ stream, isLocal, isScreenSharing, isBackdrop = false, className = "" }) => {
+    const StableVideo = ({ stream, isLocal, isScreenSharing, isBackdrop = false, className = "", videoClasses = "" }) => {
         const videoRef = useRef(null);
         // Force remote video to start muted for Mobile Auto-Play compliance.
-        const [isMuted, setIsMuted] = useState(isLocal || isBackdrop || !isLocal);
+        const [isMuted, setIsMuted] = useState(true);
+
+        useEffect(() => {
+            // Local video doesn't need to be muted by browser policy, but we might want it for feedback
+            setIsMuted(isLocal || isBackdrop || !isLocal);
+        }, [isLocal, isBackdrop]);
 
         useEffect(() => {
             if (videoRef.current && stream) {
@@ -196,34 +201,41 @@ export default function MeetingRoom() {
                     videoRef.current.srcObject = stream;
                     videoRef.current.play().catch(e => {
                         console.warn("Video play error:", e);
-                        // If it fails, it's likely a mobile autoplay block.
-                        // We are already muted, but let's try one more second later.
                         setTimeout(() => videoRef.current?.play(), 1000);
                     });
                 }
             }
         }, [stream]);
 
-        const handleClick = () => {
+        const handleClick = (e) => {
+            // Attempt to resume audio context on any video click
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') ctx.resume();
+            }
+
             if (!isLocal && isMuted) {
                 setIsMuted(false);
             }
         };
 
         return (
-            <div className={`relative ${className}`} onClick={handleClick}>
+            <div className={`relative overflow-hidden ${className}`} onClick={handleClick}>
                 <video 
                     ref={videoRef}
                     autoPlay 
                     playsInline
                     muted={isMuted}
-                    className="w-full h-full object-contain"
+                    className={`w-full h-full ${videoClasses || 'object-contain'}`}
                     style={{ transform: (isLocal && !isScreenSharing) ? 'scaleX(-1)' : 'none' }}
                 />
                 {!isLocal && isMuted && !isBackdrop && (
                     <button className="absolute inset-0 flex items-center justify-center bg-black/40 text-white gap-2 pointer-events-none group-hover:pointer-events-auto">
                         <Volume2 size={24} />
-                        <span className="text-[10px] font-black uppercase tracking-widest bg-black px-3 py-1.5 rounded-full border border-white/20">Click to Unmute</span>
+                        <div className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-black px-3 py-1.5 rounded-full border border-white/20">Tap to Unmute</span>
+                        </div>
                     </button>
                 )}
             </div>
@@ -248,7 +260,8 @@ export default function MeetingRoom() {
                     stream={stream}
                     isLocal={isLocal}
                     isScreenSharing={isScreenSharing}
-                    className="relative z-10 w-full h-full object-cover md:object-contain drop-shadow-2xl"
+                    className="relative z-10 w-full h-full drop-shadow-2xl"
+                    videoClasses="object-cover md:object-contain"
                 />
             </div>
         );
@@ -377,7 +390,16 @@ export default function MeetingRoom() {
     // IN-MEETING SCREEN (Dashboard UI Mode - Organiser Panel Style)
     // ----------------------------------------------------
     return (
-        <div className={`flex h-screen bg-gradient-to-br transition-all duration-1000 ${THEMES[theme]} font-sans text-slate-800 selection:bg-blue-500/20 overflow-hidden`}>
+        <div 
+            onClick={() => {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    if (ctx.state === 'suspended') ctx.resume();
+                }
+            }}
+            className={`flex h-[100dvh] bg-gradient-to-br transition-all duration-1000 ${THEMES[theme]} font-sans text-slate-800 selection:bg-blue-500/20 overflow-hidden relative`}
+        >
             {/* MAIN CONTENT AREA (Now Entirely Clean with Dynamic Background) */}
             <main className="flex-1 flex flex-col min-w-0">
                 {/* DASHBOARD BODY (Meeting Logic) */}
