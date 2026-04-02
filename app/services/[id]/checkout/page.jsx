@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import CheckoutFooterBar from '@/components/CheckoutFooterBar';
 
 const PRESET_PLANS = [
     { name: "Basic Plan", price: 5000, type: "Entry Level" },
@@ -609,6 +610,9 @@ export default function ServiceCheckoutPage() {
                 </div>
             )}
 
+            {/* Dynamic Checkout Footer */}
+            <CheckoutFooterBar />
+            
             <Footer />
         </main>
     );

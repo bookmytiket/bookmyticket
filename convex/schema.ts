@@ -642,6 +642,17 @@ export default defineSchema({
         timestamp: v.number(),
     }).index("by_meetingId", ["meetingId"]),
 
+    checkoutFooters: defineTable({
+        title: v.string(),
+        description: v.string(),
+        iconName: v.string(),
+        redirectUrl: v.optional(v.string()),
+        actionType: v.string(), // "redirect" or "modal"
+        modalContent: v.optional(v.string()),
+        isActive: v.boolean(),
+        order: v.number(),
+    }).index("by_order", ["order"]).index("by_isActive", ["isActive"]),
+
     failedLoginAttempts: defineTable({
         identifier: v.string(),
         ip: v.string(),

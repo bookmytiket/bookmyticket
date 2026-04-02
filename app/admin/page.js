@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
+import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -1340,6 +1341,7 @@ function AdminHomePage() {
                                 <SidebarItem id="branding_partners" label="Branding Partners" icon={Shield} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
                                 <SidebarItem id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
                                 <SidebarItem id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
+                                <SidebarItem id="checkout_footer" label="Checkout Footer" icon={LayoutGrid} active={activeTab === "checkout_footer"} onClick={() => setActiveTab("checkout_footer")} />
 
                                 <SidebarGroupTitle title="Administration" />
                                 <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
@@ -4851,6 +4853,8 @@ function AdminHomePage() {
                             </div>
                         </div>
                     )}
+
+                    {activeTab === "checkout_footer" && <AdminCheckoutFooter theme={theme} t={t} />}
 
                 </main>
             </div>

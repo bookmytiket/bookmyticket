@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Image, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useNavigation } from '@react-navigation/native';
@@ -48,13 +49,24 @@ const SERVICE_CATEGORIES = [
   },
 ];
 
-function FeaturedSection({ title, events, onEventPress }) {
+function FeaturedSection({ title, subtitle, events, onEventPress, gradientColors = [Colors.secondary, Colors.accent] }) {
   if (!events?.length) return null;
+  const words = title.split(' ');
+  const lastWord = words.pop();
+  const firstPart = words.join(' ');
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title.split(' ')[0]} </Text>
-        <Text style={[styles.sectionTitle, { color: Colors.secondary }]}>{title.split(' ').slice(1).join(' ')}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>
+            {firstPart} <Text style={{ color: gradientColors[0] }}>{lastWord}</Text>
+          </Text>
+          {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
+        </View>
+        <TouchableOpacity onPress={() => {}}>
+          <Text style={styles.viewAllText}>View All →</Text>
+        </TouchableOpacity>
       </View>
       <FlatList
         horizontal
@@ -241,11 +253,15 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* 0) Hero Banners */}
         <View style={styles.hero}>
           {currentBanner ? (
             <>
               <Image source={{ uri: currentBanner.img }} style={styles.heroImage} resizeMode="cover" />
-              <View style={styles.heroOverlay} />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                style={styles.heroOverlay}
+              />
               <View style={styles.heroContent}>
                 <Text style={styles.heroTitle} numberOfLines={2}>{currentBanner.title || "Live Events & Experiences"}</Text>
                 <Text style={styles.heroSub} numberOfLines={1}>{currentBanner.sub || "Book tickets for concerts, sports & more"}</Text>
@@ -256,11 +272,47 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Video Hero Placeholder */}
+        <View style={styles.videoHeroPlaceholder}>
+          <LinearGradient
+            colors={['#1e293b', '#0f172a']}
+            style={styles.videoHeroGradient}
+          >
+            <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.4)" />
+            <Text style={styles.videoHeroText}>Watch Event Highlights</Text>
+          </LinearGradient>
+        </View>
+
+        {/* Subnav Marquee (Categories) */}
+        <View style={styles.marqueeContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.marqueeList}
+          >
+            {displayCategories.map((item, idx) => (
+              <TouchableOpacity 
+                key={item._id || idx} 
+                style={styles.marqueeItem}
+                onPress={() => navigation.navigate('Events', { category: item.name })}
+              >
+                <Text style={styles.marqueeText}>{item.name}</Text>
+                <View style={styles.marqueeDot} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Top Trending Offers (Coupons) */}
         {allCoupons.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Exclusive </Text>
-              <Text style={[styles.sectionTitle, { color: Colors.primary }]}>Brand Offers</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>
+                  Top Trending <Text style={{ color: Colors.secondary }}>Offers</Text>
+                </Text>
+                <Text style={styles.sectionSubtitle}>Grab these limited time deals!</Text>
+              </View>
             </View>
             <FlatList
               horizontal
@@ -273,131 +325,162 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Join by Code Quick Action */}
-        <View style={styles.quickActionContainer}>
-          <TouchableOpacity 
-            style={styles.joinCodeBtn}
-            onPress={() => navigation.navigate('MeetingPortal')}
-          >
-            <LinearGradient
-              colors={['#3b82f6', '#2563eb']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.joinCodeGradient}
-            >
-              <View style={styles.joinCodeContent}>
-                <View style={styles.joinCodeIconWrap}>
-                  <Ionicons name="keypad" size={20} color="#fff" />
-                </View>
-                <View>
-                  <Text style={styles.joinCodeTitle}>Join with Code</Text>
-                  <Text style={styles.joinCodeSub}>Have a meeting ID? Enter it here</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
+        {/* Recently Viewed */}
+        <FeaturedSection 
+          title="Recently Viewed" 
+          events={(recentlyViewed || []).filter(ev => {
+            if (!ev) return false;
+            const eventDate = parseEventDate(ev.date, ev.time);
+            if (!eventDate) return true;
+            return eventDate >= new Date();
+          })} 
+          onEventPress={handleEventPress} 
+        />
+
+        {/* Featured Events */}
+        <FeaturedSection title="Featured Events" events={featured} onEventPress={handleEventPress} />
+
+        {/* Coming Soon */}
+        <ComingSoonSection events={filteredEvents} onEventPress={handleEventPress} />
+
+        {/* Popular Events */}
+        <FeaturedSection 
+          title="Explore Popular" 
+          subtitle="Top trending events in your area"
+          events={popular} 
+          onEventPress={handleEventPress} 
+        />
+
+        {/* Exclusive Events */}
+        <FeaturedSection 
+          title="Exclusive Experiences" 
+          subtitle="One-of-a-kind events for members"
+          events={exclusive} 
+          onEventPress={handleEventPress} 
+          gradientColors={['#c026d3', '#a855f7']}
+        />
+
+        {/* Virtual Highlights */}
+        {virtual.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Virtual <Text style={{ color: '#3b82f6' }}>Highlights</Text></Text>
+                <Text style={styles.sectionSubtitle}>Immersive online experiences</Text>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Events', { category: 'Virtual' })}>
+                <Text style={styles.viewAllText}>View Online →</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              horizontal
+              data={virtual}
+              keyExtractor={(item) => String(item._id || item.id)}
+              renderItem={({ item }) => <EventCard event={item} onPress={handleEventPress} />}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            />
+          </View>
+        )}
+
+        {/* Professional Services */}
+        <View style={styles.servicesSection}>
+          <View style={styles.sectionHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Professional <Text style={{ color: '#F43F5E' }}>Services</Text></Text>
+              <Text style={styles.sectionSubtitle}>Exquisite talent for your big day</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('ServiceVendors', { category: 'All' })}>
+              <Text style={styles.viewAllText}>View All →</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.servicesGrid}>
+            {SERVICE_CATEGORIES.map((cat, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.serviceCategoryCard, { width: (width - 48 - 12) / 2 }]} 
+                onPress={() => navigation.navigate('ServiceVendors', { category: cat.name })}
+              >
+                <View style={styles.serviceImageContainer}>
+                   <Image 
+                     source={{ uri: cat.name === 'Mehendi Artist' ? 'https://images.unsplash.com/photo-1766100465798-c323de2860c7?q=80&w=400&auto=format&fit=crop' : 
+                                  cat.name === 'Photographer' ? 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400' :
+                                  'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400' }} 
+                     style={styles.serviceCategoryImage}
+                   />
+                   <View style={[styles.serviceIconBadge, { backgroundColor: cat.color }]}>
+                      <Ionicons name={cat.icon} size={18} color="#fff" />
+                   </View>
+                </View>
+                <View style={styles.serviceCategoryInfo}>
+                  <Text style={styles.serviceCategoryName}>{cat.name}</Text>
+                  <Text style={styles.serviceCategoryCount}>Explore Experts</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.categoriesSection}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.categoriesList}
-          >
-          {displayCategories.map((item, idx) => (
-            <TouchableOpacity 
-              key={item._id || idx} 
-              style={styles.categoryBadge}
-              onPress={() => navigation.navigate('Events', { category: item.name })}
-            >
-              <Text style={styles.categoryText}>{item.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <FeaturedSection title="Recently Viewed" events={(recentlyViewed || []).filter(ev => {
-        if (!ev) return false;
-        const eventDate = parseEventDate(ev.date, ev.time);
-        if (!eventDate) return true;
-        return eventDate >= new Date();
-      })} onEventPress={handleEventPress} />
-
-      <FeaturedSection title="Featured Events" events={featured} onEventPress={handleEventPress} />
-      
-      {/* Virtual Highlights */}
-      {virtual.length > 0 && (
+        {/* Featured Organisers */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sectionTitle}>Virtual <Text style={{ color: '#3b82f6' }}>Highlights</Text></Text>
-              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>Immersive online experiences</Text>
+              <Text style={styles.sectionTitle}>Featured <Text style={{ color: Colors.secondary }}>Organisers</Text></Text>
+              <Text style={styles.sectionSubtitle}>Follow your favourite event creators</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Events', { category: 'Virtual' })}>
-              <Text style={{ color: '#3b82f6', fontWeight: '700', fontSize: 13 }}>View Online →</Text>
-            </TouchableOpacity>
           </View>
-          <FlatList
-            horizontal
-            data={virtual}
-            keyExtractor={(item) => String(item._id || item.id)}
-            renderItem={({ item }) => <EventCard event={item} onPress={handleEventPress} />}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalList}
-          />
-        </View>
-      )}
-
-      <ComingSoonSection events={filteredEvents} onEventPress={handleEventPress} />
-      
-      {/* Professional Services Section */}
-      <View style={styles.servicesSection}>
-        <View style={styles.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Professional <Text style={{ color: '#F43F5E' }}>Services</Text></Text>
-            <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, fontWeight: '500' }}>Exquisite talent for your big day</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate('ServiceVendors', { category: 'All' })}>
-            <Text style={{ color: '#64748b', fontWeight: '700', fontSize: 13 }}>View All →</Text>
-          </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {[1,2,3,4].map(idx => (
+              <View key={idx} style={styles.organiserCircle}>
+                <View style={styles.organiserAvatar}>
+                  <Ionicons name="business" size={24} color="#64748b" />
+                </View>
+                <Text style={styles.organiserName}>Partner {idx}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
 
-        <View style={styles.servicesGrid}>
-          {SERVICE_CATEGORIES.map((cat, idx) => (
-            <TouchableOpacity 
-              key={idx} 
-              style={[styles.serviceCategoryCard, { width: (width - 48 - 12) / 2 }]} 
-              onPress={() => navigation.navigate('ServiceVendors', { category: cat.name })}
-            >
-              <View style={styles.serviceImageContainer}>
-                 <Image 
-                   source={{ uri: cat.name === 'Mehendi Artist' ? 'https://images.unsplash.com/photo-1766100465798-c323de2860c7?q=80&w=400&auto=format&fit=crop' : 
-                                cat.name === 'Photographer' ? 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400' :
-                                'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400' }} 
-                   style={styles.serviceCategoryImage}
-                 />
-                 <View style={[styles.serviceIconBadge, { backgroundColor: cat.color }]}>
-                    <Ionicons name={cat.icon} size={18} color="#fff" />
-                 </View>
+        {/* Sponsors */}
+        <View style={[styles.section, { marginBottom: 32 }]}>
+          <View style={styles.sectionHeader}>
+             <Text style={styles.sectionTitle}>Our <Text style={{ color: '#64748b' }}>Sponsors</Text></Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {[1,2,3].map(idx => (
+              <View key={idx} style={styles.sponsorLogo}>
+                 <Text style={styles.sponsorText}>SPONSOR</Text>
               </View>
-              <View style={styles.serviceCategoryInfo}>
-                <Text style={styles.serviceCategoryName}>{cat.name}</Text>
-                <Text style={styles.serviceCategoryCount}>Explore Experts</Text>
-              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Subscription Banner */}
+        <View style={styles.subscriptionCard}>
+          <LinearGradient
+            colors={['#f84464', '#c026d3']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.subscriptionGradient}
+          >
+            <Text style={styles.subTitle}>Ready for your next adventure?</Text>
+            <Text style={styles.subText}>Subscribe to get the latest event updates and exclusive offers directly in your inbox.</Text>
+            <TouchableOpacity style={styles.subBtn}>
+              <Text style={styles.subBtnText}>Subscribe Now</Text>
             </TouchableOpacity>
-          ))}
+          </LinearGradient>
         </View>
-      </View>
-      {filteredEvents.length === 0 && virtual.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
-          <Text style={styles.emptySub}>We couldn't find any events matching your current location. Try switching cities or check back later!</Text>
-          <TouchableOpacity style={styles.changeLocationBtn} onPress={() => navigation.navigate('Location')}>
-            <Text style={styles.changeLocationText}>Change Location</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
+        {filteredEvents.length === 0 && virtual.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>No Events Found in {selectedCity}</Text>
+            <Text style={styles.emptySub}>We couldn't find any events matching your current location. Try switching cities or check back later!</Text>
+            <TouchableOpacity style={styles.changeLocationBtn} onPress={() => navigation.navigate('Location')}>
+              <Text style={styles.changeLocationText}>Change Location</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       <CouponOverlay 
@@ -421,41 +504,99 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   heroContent: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 40,
     left: 24,
     right: 24,
   },
   heroTitle: {
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: '900',
     color: '#fff',
     marginBottom: 8,
-    lineHeight: 40,
-    letterSpacing: -1,
+    lineHeight: 44,
+    letterSpacing: -1.5,
   },
-  heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
+  heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
   bannerPlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0f172a',
   },
+  videoHeroPlaceholder: {
+    height: 180,
+    marginHorizontal: 16,
+    marginTop: 24,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  videoHeroGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  videoHeroText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  marqueeContainer: {
+    paddingVertical: 20,
+    backgroundColor: '#fff',
+  },
+  marqueeList: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  marqueeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  marqueeText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1e293b',
+    textTransform: 'uppercase',
+    letterSpacing: -0.5,
+  },
+  marqueeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.secondary,
+    marginLeft: 20,
+  },
   section: { marginTop: 40, paddingHorizontal: 0 },
   sectionHeader: { 
     flexDirection: 'row', 
-    alignItems: 'center', 
+    alignItems: 'flex-end', 
     paddingHorizontal: 24, 
-    marginBottom: 16 
+    marginBottom: 24 
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '900',
     color: '#111827',
-    letterSpacing: -0.8,
+    letterSpacing: -1,
+    lineHeight: 32,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  viewAllText: {
+    color: '#64748b',
+    fontWeight: '700',
+    fontSize: 13,
   },
   horizontalList: { gap: 16, paddingLeft: 24, paddingRight: 24 },
   categoriesSection: { marginTop: 20 },
@@ -472,6 +613,84 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
+  },
+  organiserCircle: {
+    alignItems: 'center',
+    width: 100,
+  },
+  organiserAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 8,
+  },
+  organiserName: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  sponsorLogo: {
+    width: 140,
+    height: 70,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  sponsorText: {
+    color: '#cbd5e1',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+  subscriptionCard: {
+    margin: 24,
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#f84464',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  subscriptionGradient: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  subTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  subText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  subBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginTop: 24,
+  },
+  subBtnText: {
+    color: '#f84464',
+    fontWeight: '900',
+    fontSize: 15,
   },
   emptyContainer: {
     padding: 40,
@@ -503,6 +722,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  servicesSection: { marginTop: 40, paddingHorizontal: 0 },
   serviceCard: {
     width: 240,
     backgroundColor: '#fff',

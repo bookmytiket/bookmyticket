@@ -133,9 +133,17 @@ export const createEvent = mutation({
         if (args.meetingType === "internal") {
             const rawConfig = await ctx.db
                 .query("systemConfig")
-                .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
-                .unique();
-            const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+                .filter((q) => q.eq(q.field("key"), "internal_meeting_portal_enabled"))
+                .first();
+            
+            let isEnabled = true;
+            if (rawConfig) {
+                try {
+                    isEnabled = typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : !!rawConfig.value;
+                } catch (e) {
+                    isEnabled = !!rawConfig.value;
+                }
+            }
             if (!isEnabled) {
                 throw new Error("Internal Meeting Portal is currently disabled by administrator.");
             }
@@ -166,7 +174,7 @@ export const createEvent = mutation({
         const organiser = await ctx.db
             .query("organisers")
             .withIndex("by_userId", (q) => q.eq("userId", args.organiserId))
-            .unique();
+            .first();
 
         await ctx.scheduler.runAfter(0, api.notificationActions.sendEventCreationNotifications, {
             eventId,
@@ -259,9 +267,17 @@ export const updateEvent = mutation({
         if (updates.meetingType === "internal") {
             const rawConfig = await ctx.db
                 .query("systemConfig")
-                .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
-                .unique();
-            const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+                .filter((q) => q.eq(q.field("key"), "internal_meeting_portal_enabled"))
+                .first();
+            
+            let isEnabled = true;
+            if (rawConfig) {
+                try {
+                    isEnabled = typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : !!rawConfig.value;
+                } catch (e) {
+                    isEnabled = !!rawConfig.value;
+                }
+            }
             if (!isEnabled) {
                 throw new Error("Internal Meeting Portal is currently disabled by administrator.");
             }

@@ -113,7 +113,15 @@ export default function SignInScreen() {
             index: 0,
             routes: [{ name: 'MainTabs', params: { screen: 'Dashboard' } }],
           });
-        } else if (!selectedCity) {
+          return;
+        } 
+        
+        if (res.role === 'organiser') {
+           setError('Please log in through the Web Portal. Mobile access is currently not available for organisers.');
+           return;
+        }
+
+        if (!selectedCity) {
           navigation.navigate('Location');
         } else {
           navigation.goBack();
@@ -139,6 +147,19 @@ export default function SignInScreen() {
     try {
       const res = await verifyLoginOTP(loginEmail, otpCode);
       if (res.success) {
+        if (res.role === 'staff') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs', params: { screen: 'Dashboard' } }],
+          });
+          return;
+        }
+        
+        if (res.role === 'organiser') {
+           setError('Please log in through the Web Portal. Mobile access is currently not available for organisers.');
+           return;
+        }
+
         if (!selectedCity) {
           navigation.navigate('Location');
         } else {

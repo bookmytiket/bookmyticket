@@ -44,6 +44,7 @@ export const getBookings = query({
                     meetingUrl: resolvedUrl,
                     customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
                     userName: userName || "Guest User",
+                    organiserId: event?.organiserId || null,
                     virtual: !!isVirtual,
                 };
             })

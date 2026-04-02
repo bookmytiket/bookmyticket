@@ -64,7 +64,7 @@ export const getKYC = query({
     return await ctx.db
       .query("brandKYC")
       .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId!))
-      .unique();
+      .first();
   },
 });
 
@@ -280,7 +280,7 @@ export const updateKYC = mutation({
     const existing = await ctx.db
       .query("brandKYC")
       .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
-      .unique();
+      .first();
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -314,7 +314,7 @@ export const registerPartner = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .filter((q) => q.eq(q.field("code"), args.code))
       .filter((q) => q.eq(q.field("purpose"), "signup"))
-      .unique();
+      .first();
 
     if (!otpEntry || otpEntry.expires < Date.now()) {
       throw new Error("Invalid or expired OTP");
@@ -365,8 +365,8 @@ export const verifyKYC = mutation({
     const kyc = await ctx.db
       .query("brandKYC")
       .withIndex("by_brandId", (q) => q.eq("brandId", args.brandId))
-      .unique();
-
+      .first();
+    
     if (!kyc) throw new Error("KYC record not found");
 
     await ctx.db.patch(kyc._id, {
@@ -392,11 +392,11 @@ export const getConfigPrices = query({
     handler: async (ctx) => {
         const monthlyDoc = await ctx.db
             .query("systemConfig")
-            .withIndex("by_key", (q) => q.eq("key", "brand_banner_monthly_price"))
+            .filter((q) => q.eq(q.field("key"), "brand_banner_monthly_price"))
             .first();
         const yearlyDoc = await ctx.db
             .query("systemConfig")
-            .withIndex("by_key", (q) => q.eq("key", "brand_banner_yearly_price"))
+            .filter((q) => q.eq(q.field("key"), "brand_banner_yearly_price"))
             .first();
 
         const monthlyPrice = monthlyDoc ? Number(monthlyDoc.value) : 999;
@@ -415,7 +415,7 @@ export const updatePricing = mutation({
         const setConfig = async (key: string, value: any) => {
             const existing = await ctx.db
                 .query("systemConfig")
-                .withIndex("by_key", (q) => q.eq("key", key))
+                .filter((q) => q.eq(q.field("key"), key))
                 .first();
             if (existing) {
                 await ctx.db.patch(existing._id, { value });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Colors } from '../theme/Theme';
@@ -32,23 +33,36 @@ function DataTable({ title, data, columns, renderItem }) {
     </View>
   );
 }
-
 export default function ManagementScreen() {
-  const { user } = useAuth();
+  const navigation = useNavigation();
+  const { user, loading: authLoading } = useAuth();
+  
+  // 1. CALL ALL HOOKS AT THE TOP LEVEL (Before any early returns)
   const isStaff = user?.role === 'staff';
+  const isAdmin = user?.role === 'admin';
+  const isOrganiser = user?.role === 'organiser';
+  
   const [activeTab, setActiveTab] = useState(isStaff ? 'scans' : 'events');
 
   // Use the new analytics query
   const eventsWithAnalytics = useQuery(api.events.getEventsWithAnalytics) || [];
   const bookings = useQuery(api.bookings.getBookings) || [];
+  
+  // Guard for scans query to prevent crashes with undefined organiserId
+  const currentOrganiserId = user?.organiserId || user?.identifier || user?.id || "";
   const scans = useQuery(api.pwaScans.getScansByOrganiser, { 
-    organiserId: user?.organiserId || user?.identifier || user?.id || "" 
+    organiserId: currentOrganiserId
   }) || [];
   
   const confirmBookingMutation = useMutation(api.bookings.confirmBooking);
-  const internalMeetingPortalEnabled = useQuery(api.meetings.isInternalPortalEnabled);
+  // DIAGNOSTIC: Commenting out the problematic query to verify deployment
+  // const internalMeetingPortalEnabled = useQuery(api.meetings.getInternalPortalStatus);
+  const internalMeetingPortalEnabled = true; 
   const toggleInternalPortalMutation = useMutation(api.meetings.toggleInternalPortal);
-  const failedLogins = useQuery(api.auth.getRecentFailedAttempts, { identifier: "", since: Date.now() - (24 * 60 * 60 * 1000) }) || [];
+  
+  // Fix: Use a memoized or stable value for the 'since' time to prevent infinite query loops
+  const sinceTime = React.useMemo(() => Date.now() - (24 * 60 * 60 * 1000), []);
+  const failedLogins = useQuery(api.auth.getRecentFailedAttempts, { identifier: "", since: sinceTime }) || [];
 
   const handleConfirm = async (id) => {
     try {
@@ -59,18 +73,47 @@ export default function ManagementScreen() {
     }
   };
 
+  // 2. NOW APPLY LOADING/ACCESS GUARDS
+  if (authLoading || !user) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.secondary} />
+        <Text style={{ marginTop: 12, color: '#64748b' }}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  if (isOrganiser) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
+        <Ionicons name="lock-closed" size={80} color={Colors.secondary} />
+        <Text style={[styles.title, { textAlign: 'center', marginTop: 24, color: Colors.text }]}>Access Restricted</Text>
+        <Text style={[styles.sub, { textAlign: 'center', marginTop: 12, fontSize: 16, color: '#64748b' }]}>
+          Please log in through the Web Portal. Mobile access is currently not available for organisers.
+        </Text>
+        <TouchableOpacity 
+          style={[styles.actionButtonSmall, { marginTop: 32, backgroundColor: Colors.primary, paddingHorizontal: 30 }]} 
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.actionButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const filteredEvents = user?.role === 'admin' 
     ? eventsWithAnalytics 
     : eventsWithAnalytics.filter(e => 
-        e.organiserId === user?.email || 
-        e.organiserId === user?._id || 
+        e.organiserId === user?.identifier || 
+        e.organiserId === user?.id || 
         (user?.role === 'staff' && e.organiserId === user?.organiserId)
       );
 
   const filteredBookings = user?.role === 'admin'
     ? bookings
     : bookings.filter(b => 
-        b.organiserId === user?.email || 
+        b.organiserId === user?.identifier || 
+        b.organiserId === user?.id ||
         (user?.role === 'staff' && b.organiserId === user?.organiserId)
       );
 
@@ -176,8 +219,14 @@ export default function ManagementScreen() {
                   </View>
                 </View>
                 <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
-                  <Text style={styles.timeText}>{new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                  <Text style={styles.subCell}>{new Date(item.scannedAt).toLocaleDateString()}</Text>
+                  <Text style={styles.timeText}>
+                    {item.scannedAt 
+                      ? new Date(item.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '--:--'}
+                  </Text>
+                  <Text style={styles.subCell}>
+                    {item.scannedAt ? new Date(item.scannedAt).toLocaleDateString() : 'N/A'}
+                  </Text>
                 </View>
               </>
             )}

@@ -61,6 +61,13 @@ export function AuthProvider({ children }) {
           return { success: true, needsOtp: true, email: result.email };
         }
 
+        if (result.role === 'organiser') {
+          return { 
+            success: false, 
+            error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
+          };
+        }
+
         // Extremely safe extraction of user data
         const userData = result.data || {};
         const authUser = { 
@@ -97,6 +104,13 @@ export function AuthProvider({ children }) {
       console.log('[DEBUG] OTP Verification result:', JSON.stringify(result));
       
       if (result && result.success) {
+        if (result.role === 'organiser') {
+          return { 
+            success: false, 
+            error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
+          };
+        }
+
         // Safe extraction of user data
         const userData = result.data || {};
         const authUser = { 
@@ -107,6 +121,10 @@ export function AuthProvider({ children }) {
         };
         
         console.log('[DEBUG] OTP AuthUser created:', JSON.stringify(authUser));
+
+        if (result.role === 'staff' && userData.organiserId) {
+          authUser.organiserId = userData.organiserId;
+        }
 
         setUser(authUser);
         await AsyncStorage.setItem('user', JSON.stringify(authUser));
@@ -125,16 +143,23 @@ export function AuthProvider({ children }) {
 
   const addToRecentlyViewed = useCallback((event) => {
     if (!event) return;
+    const eventId = String(event.id || event._id);
     setRecentlyViewed(prev => {
+      // Guard: If the event is already the first one, don't update state to avoid render loops
+      if (prev.length > 0 && String(prev[0].id) === eventId) {
+        return prev;
+      }
+      
       const item = { 
-        id: event.id || event._id, 
+        id: eventId, 
         title: event.title, 
         img: event.img || event.bannerPreview, 
         date: event.date, 
         location: event.location || event.venue || event.address,
         virtual: event.virtual
       };
-      const filtered = prev.filter(e => String(e.id) !== String(item.id));
+      
+      const filtered = prev.filter(e => String(e.id) !== eventId);
       return [item, ...filtered].slice(0, 10);
     });
   }, []);

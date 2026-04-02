@@ -8,6 +8,7 @@ import { Calendar, MapPin, Video, CheckCircle2, Ticket } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 import TicketTemplate from '@/components/TicketTemplate';
+import CheckoutFooterBar from '@/components/CheckoutFooterBar';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
@@ -415,6 +416,10 @@ export default function CheckoutClient({ id }) {
                     </div>
                 </div>
             </div>
+            
+            {/* Dynamic Checkout Footer */}
+            <CheckoutFooterBar />
+            
         </main>
     );
 }

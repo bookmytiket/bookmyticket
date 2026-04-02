@@ -249,12 +249,20 @@ export const createForEvent = mutation({
     },
     handler: async (ctx, args) => {
         // Check if internal meeting portal is enabled
+        // Check if internal meeting portal is enabled
         const rawConfig = await ctx.db
             .query("systemConfig")
-            .withIndex("by_key", (q) => q.eq("key", "internal_meeting_portal_enabled"))
-            .unique();
+            .filter((q) => q.eq(q.field("key"), "internal_meeting_portal_enabled"))
+            .first();
         
-        const isEnabled = rawConfig ? (typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : rawConfig.value) : true;
+        let isEnabled = true;
+        if (rawConfig) {
+            try {
+                isEnabled = typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : !!rawConfig.value;
+            } catch (e) {
+                isEnabled = !!rawConfig.value;
+            }
+        }
         if (!isEnabled) {
             throw new Error("Internal Meeting Portal is currently disabled by administrator.");
         }
@@ -370,5 +378,55 @@ export const getVirtualEvents = query({
             )
             .collect();
         return events.filter((e) => !e.status || e.status === "Active");
+    },
+});
+
+// ── Admin Settings ─────────────────────────────────────────────────────────
+
+export const getInternalPortalStatus = query({
+    args: {},
+    handler: async (ctx) => {
+        try {
+            const rawConfig = await ctx.db
+                .query("systemConfig")
+                .filter((q) => q.eq(q.field("key"), "internal_meeting_portal_enabled"))
+                .first();
+            
+            if (!rawConfig) return true;
+            return typeof rawConfig.value === "string" ? JSON.parse(rawConfig.value) : !!rawConfig.value;
+        } catch (e) {
+            console.error("getInternalPortalStatus error:", e);
+            return true;
+        }
+    },
+});
+
+export const toggleInternalPortal = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const existing = await ctx.db
+            .query("systemConfig")
+            .filter((q) => q.eq(q.field("key"), "internal_meeting_portal_enabled"))
+            .first();
+        
+        let currentValue = true;
+        if (existing) {
+            try {
+                currentValue = typeof existing.value === "string" ? JSON.parse(existing.value) : !!existing.value;
+            } catch (e) {
+                currentValue = !!existing.value;
+            }
+        }
+        const newValue = !currentValue;
+
+        if (existing) {
+            await ctx.db.patch(existing._id, { value: JSON.stringify(newValue) });
+        } else {
+            await ctx.db.insert("systemConfig", { 
+                key: "internal_meeting_portal_enabled", 
+                value: JSON.stringify(newValue) 
+            });
+        }
+        return newValue;
     },
 });

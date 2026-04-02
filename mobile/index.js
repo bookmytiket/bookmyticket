@@ -9,14 +9,8 @@ if (!g.crypto) {
 }
 
 // React native get random values polyfills g.crypto.getRandomValues automatically.
-// Make crypto globally available directly.
 if (typeof crypto === 'undefined') {
-  // Provide explicit access 
-  Object.defineProperty(g, 'crypto', {
-    get() {
-      return g.crypto;
-    }
-  });
+  g.crypto = g.crypto || {};
 }
 
 import { Buffer } from 'buffer';

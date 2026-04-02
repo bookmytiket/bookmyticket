@@ -203,11 +203,9 @@ export default function EventsScreen() {
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <View style={styles.cardWrapper}>
-            <EventCard event={item} onPress={handleEventPress} compact />
+            <EventCard event={item} onPress={handleEventPress} layout="list" />
           </View>
         )}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -250,9 +248,9 @@ const styles = StyleSheet.create({
   activeCategoryBtn: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
   categoryText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
   activeCategoryText: { color: '#ffffff' },
-  list: { padding: 16, paddingBottom: 40 },
+  list: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 16 },
   row: { justifyContent: 'space-between' },
-  cardWrapper: { width: '48.5%', marginBottom: 16 },
+  cardWrapper: { width: '100%', marginBottom: 12 },
   emptyContainer: { alignItems: 'center', marginTop: 80 },
   emptyText: { fontSize: 18, color: '#94a3b8', fontWeight: '700', marginTop: 16 },
   clearBtn: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: '#f1f5f9' },
