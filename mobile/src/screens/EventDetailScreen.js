@@ -44,6 +44,11 @@ export default function EventDetailScreen() {
     return getEventById(eventId, convexEvents);
   }, [eventId, routeEvent, convexEvents]);
 
+  const access = useQuery(api.events.getMeetingAccess, {
+    eventId: event?._id || event?.id,
+    userId: user?.email || undefined
+  });
+
   React.useEffect(() => {
     if (event) {
       addToRecentlyViewed(event);
@@ -94,9 +99,30 @@ export default function EventDetailScreen() {
         </View>
         <Text style={styles.price}>₹{Number(event.price)}</Text>
         <Text style={styles.desc}>{event.description}</Text>
-        <TouchableOpacity style={styles.bookBtn} onPress={handleBookNow}>
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
+        
+        {access?.status === "success" ? (
+          <TouchableOpacity 
+            style={[styles.bookBtn, { backgroundColor: '#3b82f6' }]} 
+            onPress={() => navigation.navigate('MeetingWaitingRoom', { eventId: String(event.id) })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="videocam" size={20} color="#fff" />
+              <Text style={styles.bookBtnText}>
+                {access.meetingStatus === 'live' ? 'Join Meeting Now' : 'Enter Waiting Room'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.bookBtn, access?.meetingStatus === 'expired' && styles.disabledBtn]} 
+            onPress={handleBookNow}
+            disabled={access?.meetingStatus === 'expired'}
+          >
+            <Text style={styles.bookBtnText}>
+              {access?.meetingStatus === 'expired' ? 'Event Expired' : 'Book Now'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScrollView>
   );
@@ -116,5 +142,6 @@ const styles = StyleSheet.create({
   price: { fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 12, marginBottom: 16 },
   desc: { fontSize: 15, color: '#4b5563', lineHeight: 24, marginBottom: 24 },
   bookBtn: { backgroundColor: '#F43F5E', padding: 16, borderRadius: 12, alignItems: 'center' },
+  disabledBtn: { backgroundColor: '#94a3b8' },
   bookBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
 });

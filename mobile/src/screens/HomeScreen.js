@@ -26,28 +26,25 @@ const DEFAULT_CATEGORIES = [
 
 const SERVICE_CATEGORIES = [
   {
-    name: "Mehendi Artists",
-    slug: "mehendi-artists",
-    icon: "flower-outline",
-    description: "Traditional & modern henna designs.",
+    name: "Mehendi Artist",
+    slug: "mehendi-artist",
+    icon: "brush-outline",
+    description: "Creative painters & designers.",
     color: "#f84464",
-    gradient: ["#f84464", "#ff7eb3"],
   },
   {
-    name: "Photographers",
-    slug: "photographers",
+    name: "Photographer",
+    slug: "photographer",
     icon: "camera-outline",
-    description: "Capture your precious moments.",
+    description: "Expert event photography.",
     color: "#a855f7",
-    gradient: ["#a855f7", "#da77f2"],
   },
   {
-    name: "Makeup Artists",
-    slug: "makeup-artists",
+    name: "Makeup Artist",
+    slug: "makeup-artist",
     icon: "sparkles-outline",
-    description: "Stunning bridal & party makeovers.",
+    description: "Bridal & party makeovers.",
     color: "#c026d3",
-    gradient: ["#c026d3", "#f783ac"],
   },
 ];
 
@@ -276,6 +273,32 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Join by Code Quick Action */}
+        <View style={styles.quickActionContainer}>
+          <TouchableOpacity 
+            style={styles.joinCodeBtn}
+            onPress={() => navigation.navigate('MeetingPortal')}
+          >
+            <LinearGradient
+              colors={['#3b82f6', '#2563eb']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.joinCodeGradient}
+            >
+              <View style={styles.joinCodeContent}>
+                <View style={styles.joinCodeIconWrap}>
+                  <Ionicons name="keypad" size={20} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.joinCodeTitle}>Join with Code</Text>
+                  <Text style={styles.joinCodeSub}>Have a meeting ID? Enter it here</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.categoriesSection}>
           <ScrollView 
             horizontal 
@@ -302,61 +325,69 @@ export default function HomeScreen() {
       })} onEventPress={handleEventPress} />
 
       <FeaturedSection title="Featured Events" events={featured} onEventPress={handleEventPress} />
+      
+      {/* Virtual Highlights */}
+      {virtual.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Virtual <Text style={{ color: '#3b82f6' }}>Highlights</Text></Text>
+              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>Immersive online experiences</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('Events', { category: 'Virtual' })}>
+              <Text style={{ color: '#3b82f6', fontWeight: '700', fontSize: 13 }}>View Online →</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            horizontal
+            data={virtual}
+            keyExtractor={(item) => String(item._id || item.id)}
+            renderItem={({ item }) => <EventCard event={item} onPress={handleEventPress} />}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+        </View>
+      )}
+
       <ComingSoonSection events={filteredEvents} onEventPress={handleEventPress} />
-      <FeaturedSection title="Explore Popular Events" events={popular} onEventPress={handleEventPress} />
-      <FeaturedSection title="Exclusive Events" events={exclusive} onEventPress={handleEventPress} />
-      <FeaturedSection title="Virtual Events" events={virtual} onEventPress={handleEventPress} />
       
       {/* Professional Services Section */}
-      <View style={[styles.section, { marginBottom: 20 }]}>
+      <View style={styles.servicesSection}>
         <View style={styles.sectionHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Professional Services</Text>
-            <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>Top rated artists for your occasions</Text>
+            <Text style={styles.sectionTitle}>Professional <Text style={{ color: '#F43F5E' }}>Services</Text></Text>
+            <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, fontWeight: '500' }}>Exquisite talent for your big day</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('ServiceVendors', { category: 'All' })}>
-            <Text style={{ color: '#F43F5E', fontWeight: '700', fontSize: 14 }}>View All →</Text>
+            <Text style={{ color: '#64748b', fontWeight: '700', fontSize: 13 }}>View All →</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-          {convexVendors && convexVendors.length > 0 ? (
-            convexVendors.map((vendor) => (
-              <TouchableOpacity 
-                key={vendor.id} 
-                style={styles.vendorCard} 
-                onPress={() => navigation.navigate('ServiceDetail', { vendorId: vendor.id })}
-              >
-                <Image 
-                  source={{ uri: vendor.portfolio?.[0]?.url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop' }} 
-                  style={styles.vendorImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.vendorInfo}>
-                  <Text style={styles.vendorCategory}>{vendor.category}</Text>
-                  <Text style={styles.vendorName} numberOfLines={1}>{vendor.name}</Text>
-                  <View style={styles.ratingRow}>
-                     <Ionicons name="star" size={12} color="#fbbf24" style={{ marginRight: 4 }} />
-                     <Text style={styles.ratingText}>{vendor.rating > 0 ? vendor.rating.toFixed(1) : "New"}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            SERVICE_CATEGORIES.map((cat, idx) => (
-              <TouchableOpacity 
-                key={idx} 
-                style={[styles.serviceCard, { borderColor: cat.color }]} 
-                onPress={() => navigation.navigate('ServiceVendors', { category: cat.name })}
-              >
-                <View style={[styles.serviceIconWrap, { backgroundColor: cat.color }]}>
-                  <Text style={{ fontSize: 28 }}>{cat.icon === 'flower-outline' ? '🌸' : cat.icon === 'camera-outline' ? '📸' : '✨'}</Text>
-                </View>
-                <Text style={styles.serviceTitle}>{cat.name}</Text>
-                <Text style={styles.serviceDesc} numberOfLines={2}>{cat.description}</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </ScrollView>
+
+        <View style={styles.servicesGrid}>
+          {SERVICE_CATEGORIES.map((cat, idx) => (
+            <TouchableOpacity 
+              key={idx} 
+              style={[styles.serviceCategoryCard, { width: (width - 48 - 12) / 2 }]} 
+              onPress={() => navigation.navigate('ServiceVendors', { category: cat.name })}
+            >
+              <View style={styles.serviceImageContainer}>
+                 <Image 
+                   source={{ uri: cat.name === 'Mehendi Artist' ? 'https://images.unsplash.com/photo-1766100465798-c323de2860c7?q=80&w=400&auto=format&fit=crop' : 
+                                cat.name === 'Photographer' ? 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400' :
+                                'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400' }} 
+                   style={styles.serviceCategoryImage}
+                 />
+                 <View style={[styles.serviceIconBadge, { backgroundColor: cat.color }]}>
+                    <Ionicons name={cat.icon} size={18} color="#fff" />
+                 </View>
+              </View>
+              <View style={styles.serviceCategoryInfo}>
+                <Text style={styles.serviceCategoryName}>{cat.name}</Text>
+                <Text style={styles.serviceCategoryCount}>Explore Experts</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
       {filteredEvents.length === 0 && virtual.length === 0 && (
         <View style={styles.emptyContainer}>
@@ -544,5 +575,107 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 13,
     lineHeight: 18,
+  },
+  quickActionContainer: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  joinCodeBtn: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  joinCodeGradient: {
+    padding: 20,
+  },
+  joinCodeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  joinCodeIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinCodeTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  joinCodeSub: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  servicesSection: { marginTop: 40, paddingHorizontal: 0 },
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  serviceCategoryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 3,
+    marginBottom: 4,
+  },
+  serviceImageContainer: {
+    width: '100%',
+    height: 120,
+    position: 'relative',
+  },
+  serviceCategoryImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f8fafc',
+  },
+  serviceIconBadge: {
+    position: 'absolute',
+    bottom: -16,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  serviceCategoryInfo: {
+    padding: 16,
+    paddingTop: 20,
+  },
+  serviceCategoryName: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  serviceCategoryCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
   },
 });

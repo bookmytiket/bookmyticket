@@ -75,14 +75,13 @@ export default function PopularEvents({ events }) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "30px" }}>
                     <div>
                         <h2 id="popular-events-heading" style={{
-                            fontSize: "32px",
+                            fontSize: "28px",
                             fontWeight: 900,
                             color: "#111827",
                             margin: 0,
-                            letterSpacing: "-0.05em",
-                            lineHeight: 1,
-                            fontFamily: "var(--font-heading)",
-                            position: "relative"
+                            letterSpacing: "-0.04em",
+                            lineHeight: 1.1,
+                            fontFamily: "var(--font-heading)"
                         }}>
                             Explore Popular <span style={{
                                 background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
@@ -90,18 +89,8 @@ export default function PopularEvents({ events }) {
                                 WebkitTextFillColor: 'transparent',
                                 display: 'inline-block'
                             }}>Events</span>
-                            {/* Theme Underline */}
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '-8px',
-                                left: 0,
-                                width: '60px',
-                                height: '4px',
-                                background: '#fde047',
-                                borderRadius: '4px'
-                            }} />
                         </h2>
-                        <p style={{ fontSize: "14px", color: "#6b7280", margin: "6px 0 0", fontWeight: 500 }}>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: "4px 0 0", fontWeight: 500 }}>
                             Discover what everyone is talking about
                         </p>
                     </div>

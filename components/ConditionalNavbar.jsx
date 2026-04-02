@@ -11,6 +11,7 @@ export default function ConditionalNavbar() {
 
     if (
         isMeetingRoute ||
+        pathname === '/services' ||
         pathname?.startsWith("/admin") ||
         pathname?.startsWith("/organiser") ||
         pathname?.startsWith("/vendor") ||

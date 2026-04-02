@@ -23,35 +23,42 @@ export default function ServiceVendorsScreen() {
   // Normalize category name for query (e.g., "Mehendi Artists" vs "mehendi-artists")
   const displayCategory = category || "Professional Services";
   
-  // Use listByCategory if category is provided, else get all active vendors
-  const vendors = useQuery(api.vendors.getActiveVendors);
+  // Use listByCategory for the selected category
+  const vendors = useQuery(api.vendors.listByCategory, { 
+    category: category === "All" ? "" : category 
+  });
   
-  // Filter locally by category if needed (until listByCategory is fully optimized for all slugs)
-  const filteredVendors = vendors?.filter(v => 
-    !category || v.category?.toLowerCase() === category.toLowerCase() || 
-    category.toLowerCase().includes(v.category?.toLowerCase())
-  ) || [];
+  const filteredVendors = vendors || [];
 
   const renderVendorCard = ({ item }) => (
     <TouchableOpacity 
       style={styles.card}
       onPress={() => navigation.navigate('ServiceDetail', { vendorId: item.id })}
     >
-      <View className="flex-row items-center p-4">
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Image 
           source={{ uri: item.portfolio?.[0]?.url || 'https://images.unsplash.com/photo-1596704017254-9b1210630b65?w=500' }} 
           style={styles.avatar}
         />
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.category}>{item.category} Professional</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.category}>{item.category}</Text>
+              <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+            </View>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={12} color="#fbbf24" style={{ marginRight: 2 }} />
+              <Text style={styles.ratingText}>{item.rating > 0 ? item.rating.toFixed(1) : "New"}</Text>
+            </View>
+          </View>
+          
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>{item.rating?.toFixed(1) || "4.8"}</Text>
-            <Text style={styles.reviewsText}>({item.reviewsCount || 0} reviews)</Text>
+            <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
+            <Text style={styles.verifiedText}>Verified Professional</Text>
+            <Text style={styles.separator}>•</Text>
+            <Text style={styles.reviewsText}>{item.reviewsCount || 0} reviews</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
       </View>
       
       {item.bio ? (
@@ -59,13 +66,21 @@ export default function ServiceVendorsScreen() {
       ) : null}
       
       <View style={styles.footer}>
-        <Text style={styles.priceLabel}>Starting from</Text>
-        <Text style={styles.priceValue}>₹{item.pricing?.[0]?.price || "1999"}</Text>
+        <View>
+          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.priceValue}>₹{item.pricing?.[0]?.price || "1,999"}</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.viewProfileBtn}
+          onPress={() => navigation.navigate('ServiceDetail', { vendorId: item.id })}
+        >
+          <Text style={styles.viewProfileText}>View Profile</Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
-  if (!vendors) {
+  if (vendors === undefined) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.secondary} />
@@ -105,7 +120,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'between',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
@@ -123,7 +138,7 @@ const styles = StyleSheet.create({
   list: { padding: 16, gap: 16 },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#f1f5f9',
@@ -132,32 +147,55 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
     elevation: 2,
-    padding: 12,
+    padding: 16,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
+    width: 80,
+    height: 80,
+    borderRadius: 18,
     backgroundColor: '#f1f5f9',
   },
   info: { flex: 1, marginLeft: 16 },
   name: { fontSize: 18, fontWeight: '900', color: Colors.black, marginBottom: 2 },
-  category: { fontSize: 12, fontWeight: '700', color: Colors.secondary, textTransform: 'uppercase' },
+  category: { fontSize: 10, fontWeight: '800', color: Colors.secondary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+  },
+  ratingText: { fontSize: 12, fontWeight: '900', color: '#92400e' },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  ratingText: { fontSize: 13, fontWeight: '800', color: Colors.black, marginLeft: 4 },
-  reviewsText: { fontSize: 12, fontWeight: '500', color: Colors.textMuted, marginLeft: 4 },
-  bio: { fontSize: 13, color: '#64748b', lineHeight: 18, marginVertical: 8, paddingHorizontal: 4 },
+  verifiedText: { fontSize: 12, fontWeight: '600', color: '#059669', marginLeft: 4 },
+  separator: { marginHorizontal: 6, color: '#cbd5e1' },
+  reviewsText: { fontSize: 12, fontWeight: '500', color: '#64748b' },
+  bio: { fontSize: 13, color: '#64748b', lineHeight: 18, marginVertical: 12 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 4,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#f8fafc',
   },
-  priceLabel: { fontSize: 11, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase' },
-  priceValue: { fontSize: 18, fontWeight: '900', color: Colors.black },
+  priceLabel: { fontSize: 11, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' },
+  priceValue: { fontSize: 20, fontWeight: '900', color: Colors.black },
+  viewProfileBtn: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  viewProfileText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '900', color: Colors.black, marginTop: 16, marginBottom: 8 },

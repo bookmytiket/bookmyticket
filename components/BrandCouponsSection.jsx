@@ -145,10 +145,24 @@ export default function BrandCouponsSection({ coupons, title = "Exclusive Brand 
                   Partner Deals
                 </span>
               </div>
-              <h2 style={{ fontSize: 26, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.2 }}>
-                {title}
+              <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0, letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
+                {(() => {
+                  const words = title.split(' ');
+                  const last = words.pop();
+                  return (
+                    <>
+                      {words.join(' ')}{words.length > 0 ? ' ' : ''}
+                      <span style={{
+                        background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        display: 'inline-block'
+                      }}>{last}</span>
+                    </>
+                  );
+                })()}
               </h2>
-              <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4, margin: 0 }}>
+              <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: 4, margin: 0, fontWeight: 500 }}>
                 {subtitle}
               </p>
             </div>

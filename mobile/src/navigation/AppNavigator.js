@@ -15,6 +15,8 @@ import BecomeOrganiserScreen from '../screens/BecomeOrganiserScreen';
 import SeatingScreen from '../screens/SeatingScreen';
 import ServiceVendorsScreen from '../screens/ServiceVendorsScreen';
 import ServiceDetailScreen from '../screens/ServiceDetailScreen';
+import MeetingPortalScreen from '../screens/MeetingPortalScreen';
+import MeetingWaitingRoomScreen from '../screens/MeetingWaitingRoomScreen';
 
 import { Colors } from '../theme/Theme';
 import WebHeader from './WebHeader';
@@ -99,6 +101,16 @@ export default function AppNavigator() {
         <Stack.Screen
           name="ServiceDetail"
           component={ServiceDetailScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MeetingPortal"
+          component={MeetingPortalScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MeetingWaitingRoom"
+          component={MeetingWaitingRoomScreen}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

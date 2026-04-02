@@ -46,6 +46,9 @@ export default function ManagementScreen() {
   }) || [];
   
   const confirmBookingMutation = useMutation(api.bookings.confirmBooking);
+  const internalMeetingPortalEnabled = useQuery(api.meetings.isInternalPortalEnabled);
+  const toggleInternalPortalMutation = useMutation(api.meetings.toggleInternalPortal);
+  const failedLogins = useQuery(api.auth.getRecentFailedAttempts, { identifier: "", since: Date.now() - (24 * 60 * 60 * 1000) }) || [];
 
   const handleConfirm = async (id) => {
     try {
@@ -180,6 +183,51 @@ export default function ManagementScreen() {
             )}
           />
         );
+      case 'admin':
+        return (
+          <ScrollView>
+            <View style={styles.adminCard}>
+              <View style={styles.adminCardHeader}>
+                <Ionicons name="settings" size={24} color={Colors.secondary} />
+                <Text style={styles.adminCardTitle}>System Configuration</Text>
+              </View>
+              <View style={styles.configRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.configLabel}>Internal Meeting Portal</Text>
+                  <Text style={styles.configSub}>Allow users to join internal WebRTC meetings</Text>
+                </View>
+                <TouchableOpacity 
+                  style={[styles.toggleBtn, internalMeetingPortalEnabled ? styles.toggleOn : styles.toggleOff]}
+                  onPress={() => toggleInternalPortalMutation()}
+                >
+                  <Text style={styles.toggleText}>{internalMeetingPortalEnabled ? 'ENABLED' : 'DISABLED'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <DataTable 
+              title="Failed Logins (24h)"
+              data={failedLogins}
+              columns={[
+                { label: 'Identifier', flex: 1.5 },
+                { label: 'Device / IP', flex: 2 },
+                { label: 'Time', flex: 1, align: 'right' },
+              ]}
+              renderItem={(item) => (
+                <>
+                  <View style={{ flex: 1.5 }}>
+                    <Text style={styles.cell} numberOfLines={1}>{item.identifier}</Text>
+                    <Text style={styles.subCell}>{item.ip}</Text>
+                  </View>
+                  <Text style={[styles.subCell, { flex: 2 }]} numberOfLines={2}>{item.userAgent}</Text>
+                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                    <Text style={styles.timeText}>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                  </View>
+                </>
+              )}
+            />
+          </ScrollView>
+        );
       default:
         return null;
     }
@@ -218,6 +266,15 @@ export default function ManagementScreen() {
           <Ionicons name="scan-circle" size={20} color={activeTab === 'scans' ? Colors.secondary : Colors.textMuted} />
           <Text style={[styles.tabText, activeTab === 'scans' && styles.activeTabText]}>Live Scans</Text>
         </TouchableOpacity>
+        {user?.role === 'admin' && (
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'admin' && styles.activeTab]}
+            onPress={() => setActiveTab('admin')}
+          >
+            <Ionicons name="shield-half" size={20} color={activeTab === 'admin' ? Colors.secondary : Colors.textMuted} />
+            <Text style={[styles.tabText, activeTab === 'admin' && styles.activeTabText]}>Admin</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {renderContent()}
@@ -309,5 +366,15 @@ const styles = StyleSheet.create({
   },
   actionButtonText: { color: '#fff', fontSize: 11, fontWeight: '900' },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 60, fontSize: 15, fontWeight: '600' },
+  adminCard: { backgroundColor: '#fff', margin: 16, borderRadius: 24, padding: 20, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+  adminCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 12 },
+  adminCardTitle: { fontSize: 18, fontWeight: '900', color: Colors.text },
+  configRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  configLabel: { fontSize: 15, fontWeight: '800', color: Colors.text },
+  configSub: { fontSize: 12, color: '#94a3b8', marginTop: 2, fontWeight: '600' },
+  toggleBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  toggleOn: { backgroundColor: '#dcfce7' },
+  toggleOff: { backgroundColor: '#fee2e2' },
+  toggleText: { fontSize: 10, fontWeight: '900', color: Colors.text },
 });
 

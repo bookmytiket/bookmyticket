@@ -15,13 +15,20 @@ export const getByOrganiserId = query({
 export const listByCategory = query({
     args: { category: v.string() },
     handler: async (ctx, args) => {
+        const cat = args.category.toLowerCase();
+        
+        // Find organisers by matching category (flexible match)
         const organisers = await ctx.db
             .query("organisers")
-            .filter((q) => q.eq(q.field("category"), args.category))
             .collect();
             
+        const filteredOrganisers = organisers.filter(org => {
+            const orgCat = (org.category || "").toLowerCase();
+            return orgCat.includes(cat) || cat.includes(orgCat);
+        });
+            
         const results = [];
-        for (const org of organisers) {
+        for (const org of filteredOrganisers) {
             const profile = await ctx.db
                 .query("vendorProfiles")
                 .withIndex("by_organiserId", (q) => q.eq("organiserId", org.userId))
@@ -38,7 +45,7 @@ export const listByCategory = query({
 
             if (profile) {
                 results.push({
-                    id: org.userId, // We use the email/userId as the public ID for now
+                    id: org.userId, 
                     name: org.name,
                     category: profile.category,
                     bio: profile.bio || "",
@@ -52,6 +59,60 @@ export const listByCategory = query({
         }
         return results;
     }
+});
+
+// Paginated version: returns { vendors, total } for a given category + page
+export const listByCategoryPaginated = query({
+    args: {
+        category: v.string(),
+        page: v.number(),      // 1-based
+        pageSize: v.number(),  // items per page, e.g. 16
+    },
+    handler: async (ctx, args) => {
+        const cat = args.category.toLowerCase();
+
+        // Use by_category index when possible for efficiency
+        const organisers = await ctx.db.query("organisers").collect();
+        const filtered = organisers.filter(org => {
+            const orgCat = (org.category || "").toLowerCase();
+            return orgCat.includes(cat) || cat.includes(orgCat);
+        });
+
+        const total = filtered.length;
+        const start = (args.page - 1) * args.pageSize;
+        const pageOrgs = filtered.slice(start, start + args.pageSize);
+
+        const vendors = [];
+        for (const org of pageOrgs) {
+            const profile = await ctx.db
+                .query("vendorProfiles")
+                .withIndex("by_organiserId", (q) => q.eq("organiserId", org.userId))
+                .unique();
+
+            const reviews = await ctx.db
+                .query("vendorReviews")
+                .withIndex("by_vendorId", (q) => q.eq("vendorId", org.userId))
+                .collect();
+
+            const avgRating = reviews.length > 0
+                ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
+                : 0;
+
+            vendors.push({
+                id: org.userId,
+                name: org.name,
+                category: profile?.category || org.category || "",
+                bio: profile?.bio || "",
+                portfolio: profile?.portfolio || [],
+                pricing: profile?.pricing || [],
+                advancedSettings: profile?.advancedSettings || {},
+                rating: avgRating,
+                reviewsCount: reviews.length,
+            });
+        }
+
+        return { vendors, total };
+    },
 });
 
 export const getFullProfile = query({

@@ -459,18 +459,47 @@ export default function Home() {
             <VirtualEvents events={normalizedOrgEvents} />
 
             {/* Professional Services Section */}
-            <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '60px 20px' }}>
+            <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
                 <div>
-                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.02em' }}>Professional Services</h2>
-                  <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>Top rated artists and studios for your special occasions</p>
+                  <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
+                    Professional <span style={{
+                      background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      display: 'inline-block'
+                    }}>Services</span>
+                  </h2>
+                  <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>Top rated artists and studios for your special occasions</p>
                 </div>
-                <Link href="/services" style={{ color: '#f84464', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>View All Services →</Link>
+                <Link href="/services" style={{ 
+                  padding: '12px 24px',
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  color: '#0f172a', 
+                  fontWeight: 700, 
+                  fontSize: '14px', 
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#f84464';
+                  e.currentTarget.style.color = '#f84464';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.color = '#0f172a';
+                }}
+                >
+                  View All Services →
+                </Link>
               </div>
               <ServiceCategories />
             </section>
 
-            {/* Branding & Others */}
+             {/* Branding & Others */}
             <div style={{ width: '100%' }}>
               <FeaturedOrganisers organisers={eventPartners} />
             </div>
