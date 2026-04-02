@@ -13,6 +13,8 @@ import CouponCard from '../components/CouponCard';
 import CouponOverlay from '../components/CouponOverlay';
 import { Ionicons } from '@expo/vector-icons';
 import CustomerAdPopup from '../components/CustomerAdPopup';
+import VideoHeroBanner from '../components/VideoHeroBanner';
+
 
 const { width } = Dimensions.get('window');
 
@@ -253,35 +255,10 @@ export default function HomeScreen() {
   return (
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* 0) Hero Banners */}
-        <View style={styles.hero}>
-          {currentBanner ? (
-            <>
-              <Image source={{ uri: currentBanner.img }} style={styles.heroImage} resizeMode="cover" />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.8)']}
-                style={styles.heroOverlay}
-              />
-              <View style={styles.heroContent}>
-                <Text style={styles.heroTitle} numberOfLines={2}>{currentBanner.title || "Live Events & Experiences"}</Text>
-                <Text style={styles.heroSub} numberOfLines={1}>{currentBanner.sub || "Book tickets for concerts, sports & more"}</Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.bannerPlaceholder}><ActivityIndicator color="#fff" /></View>
-          )}
-        </View>
+        {/* 0) Video Hero Banner (Mirrors Web) */}
+        <VideoHeroBanner />
 
-        {/* Video Hero Placeholder */}
-        <View style={styles.videoHeroPlaceholder}>
-          <LinearGradient
-            colors={['#1e293b', '#0f172a']}
-            style={styles.videoHeroGradient}
-          >
-            <Ionicons name="play-circle" size={48} color="rgba(255,255,255,0.4)" />
-            <Text style={styles.videoHeroText}>Watch Event Highlights</Text>
-          </LinearGradient>
-        </View>
+        {/* Subnav Marquee (Categories) */}
 
         {/* Subnav Marquee (Categories) */}
         <View style={styles.marqueeContainer}>
@@ -495,57 +472,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
-  hero: {
-    height: 240,
-    width,
-    position: 'relative',
-    backgroundColor: '#0f172a',
-  },
-  heroImage: { width: '100%', height: '100%' },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroContent: {
-    position: 'absolute',
-    bottom: 40,
-    left: 24,
-    right: 24,
-  },
-  heroTitle: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 8,
-    lineHeight: 44,
-    letterSpacing: -1.5,
-  },
-  heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
-  bannerPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0f172a',
-  },
-  videoHeroPlaceholder: {
-    height: 180,
-    marginHorizontal: 16,
-    marginTop: 24,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  videoHeroGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  videoHeroText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
   marqueeContainer: {
     paddingVertical: 20,
     backgroundColor: '#fff',
