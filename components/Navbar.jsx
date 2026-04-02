@@ -129,6 +129,7 @@ const EVENT_CATEGORIES = [
 ];
 
 import { useAuth } from "./AuthContext";
+import LocationSelectionModal from "./LocationSelectionModal";
 
 const ALL_CITIES_BY_COUNTRY = {
   "India": ["Coimbatore", "Chennai", "Salem", "Madurai", "Trichy", "Tirupur", "Erode", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Kolkata", "Delhi", "Gurgaon", "Noida", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kochi", "Thiruvananthapuram", "Chandigarh", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Ludhiana", "Agra", "Nashik", "Rajkot", "Varanasi", "Srinagar", "Amritsar", "Aurangabad", "Solapur"],
@@ -194,54 +195,7 @@ export default function Navbar() {
   };
 
 
-  /* Location modal states */
-  const [locSearch, setLocSearch] = useState("");
-  const [activeCountry, setActiveCountry] = useState("India");
-  const [showOtherCities, setShowOtherCities] = useState(false);
-  const [geoLoading, setGeoLoading] = useState(false);
-
-  // country-state-city states
-  const [selCountry, setSelCountry] = useState("");
-  const [selCountryCode, setSelCountryCode] = useState("");
-  const [selState, setSelState] = useState("");
-  const [selStateCode, setSelStateCode] = useState("");
-  const [selCity, setSelCity] = useState("");
-
-  const handleGeoLocation = () => {
-    setGeoLoading(true);
-    if (!("geolocation" in navigator)) {
-      setGeoLoading(false);
-      alert("Geolocation is not supported by your browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-            { headers: { "Accept-Language": "en", "User-Agent": "BookMyTicket/1.0" } }
-          );
-          const data = await res.json();
-          const addr = data?.address || {};
-          const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || addr.state || data?.name || "Your location";
-          const country = (addr.country || "").trim();
-          updateCity(city);
-          if (country && COUNTRIES.some((c) => c.label === country)) setActiveCountry(country);
-          setLocOpen(false);
-        } catch {
-          updateCity("Coimbatore");
-          setLocOpen(false);
-        }
-        setGeoLoading(false);
-      },
-      (err) => {
-        setGeoLoading(false);
-        alert("Location permission denied or unavailable. Please search manually.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
+  /* Organiser modal */
 
   /* Organiser modal */
   const [orgOpen, setOrgOpen] = useState(false);
@@ -327,7 +281,7 @@ export default function Navbar() {
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between' }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick}>
-            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "60px" : "70px", width: "auto", display: "block", transition: "height 0.3s ease" }} />
+            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "50px" : "60px", width: "auto", display: "block", transition: "height 0.3s ease" }} />
           </Link>
 
 
@@ -855,206 +809,13 @@ export default function Navbar() {
 
 
 
-      {
-        locOpen && (
-          <div className="modal-backdrop" onClick={() => selectedCity && setLocOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="loc-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
-              <div className="mobile-handle show-mobile"></div>
-              {selectedCity && (
-                <button className="loc-close-x" onClick={() => setLocOpen(false)}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              )}
-
-              <h2 className="loc-title" style={{ marginTop: '10px' }}>Select Your Location to Continue</h2>
-
-              <div className="loc-search-group" style={{ marginBottom: '24px' }}>
-                <div className="loc-search-box">
-                  <svg className="loc-icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                  <input
-                    className="loc-input"
-                    placeholder="Search For A Location..."
-                    value={locSearch}
-                    onChange={(e) => setLocSearch(e.target.value)}
-                    autoFocus
-                  />
-                  {locSearch && (
-                    <button className="loc-search-clear-mini" onClick={() => setLocSearch("")} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  )}
-                </div>
-                <div className="loc-gps-divider"></div>
-                <button
-                  className={`loc-gps-target ${geoLoading ? 'animating' : ''}`}
-                  onClick={handleGeoLocation}
-                  disabled={geoLoading}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <line x1="12" y1="1" x2="12" y2="5"></line>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="1" y1="12" x2="5" y2="12"></line>
-                    <line x1="19" y1="12" x2="23" y2="12"></line>
-                  </svg>
-                </button>
-              </div>
-
-              <div className="loc-country-tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px', padding: '0 4px' }}>
-                {COUNTRIES.map((c) => (
-                  <button
-                    key={c.label}
-                    className={`loc-tab${activeCountry === c.label ? " active" : ""}`}
-                    onClick={() => setActiveCountry(c.label)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      border: activeCountry === c.label ? '1px solid #6366f1' : '1px solid #e2e8f0',
-                      backgroundColor: activeCountry === c.label ? '#eef2ff' : '#fff',
-                      color: activeCountry === c.label ? '#6366f1' : '#64748b',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <span>{c.flag}</span>
-                    <span>{c.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginBottom: '24px' }}></div>
-
-              <p className="loc-section-label">Popular Cities</p>
-
-              <div className="loc-cities-grid" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(4, 1fr)', 
-                gap: '12px',
-                padding: '0 4px'
-              }}>
-                {(POPULAR_CITIES_BY_COUNTRY[activeCountry] || []).map((city) => (
-                  <button
-                    key={city.name}
-                    className={`loc-city-card${selectedCity === city.name ? " active" : ""}`}
-                    onClick={() => { updateCity(city.name); setLocOpen(false); }}
-                    style={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '8px 4px',
-                      borderRadius: '12px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div className="loc-city-icon-wrap" style={{ 
-                      width: '100%',
-                      aspectRatio: '1/1',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: '#f8fafc', 
-                      borderRadius: '12px',
-                      border: selectedCity === city.name ? '1.5px solid #6366f1' : '1px solid #f1f5f9',
-                      padding: '10px'
-                    }}>
-                      <span className="loc-city-svg" style={{ color: selectedCity === city.name ? '#6366f1' : '#94a3b8' }}>{CITY_ICONS[city.iconId] || CITY_ICONS.Generic}</span>
-                    </div>
-                    <span className="loc-city-name" style={{ 
-                      color: selectedCity === city.name ? "#6366f1" : "#475569", 
-                      fontWeight: selectedCity === city.name ? "700" : "500", 
-                      fontSize: '11px',
-                      textAlign: 'center',
-                      lineHeight: '1.2'
-                    }}>{city.name}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ height: '1px', background: '#f1f5f9', width: '100%', marginTop: '32px', marginBottom: '24px' }}></div>
-
-              <div className="loc-others-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  padding: '14px 24px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  width: '100%',
-                  backgroundColor: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-                }} onClick={() => setShowOtherCities(!showOtherCities)}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>Events in other cities</span>
-                  <svg className={`loc-chevron-down ${showOtherCities ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" style={{ transition: 'transform 0.3s', transform: showOtherCities ? 'rotate(180deg)' : 'rotate(0)' }}><polyline points="6 9 12 15 18 9" /></svg>
-                </div>
-
-                {showOtherCities && (
-                  <div className="loc-select-group">
-                    <select
-                      className="loc-select-input"
-                      value={selCountry}
-                      onChange={(e) => {
-                        const code = Country.getAllCountries().find(c => c.name === e.target.value)?.isoCode || "";
-                        setSelCountry(e.target.value);
-                        setSelCountryCode(code);
-                        setSelState("");
-                        setSelStateCode("");
-                        setSelCity("");
-                      }}
-                    >
-                      <option value="">Select Country</option>
-                      {Country.getAllCountries().map(c => <option key={c.isoCode} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <select
-                      className="loc-select-input"
-                      value={selState}
-                      disabled={!selCountryCode}
-                      onChange={(e) => {
-                        const code = State.getStatesOfCountry(selCountryCode).find(s => s.name === e.target.value)?.isoCode || "";
-                        setSelState(e.target.value);
-                        setSelStateCode(code);
-                        setSelCity("");
-                      }}
-                    >
-                      <option value="">Select State</option>
-                      {selCountryCode && State.getStatesOfCountry(selCountryCode).map(s => <option key={s.isoCode} value={s.name}>{s.name}</option>)}
-                    </select>
-                    <select
-                      className="loc-select-input"
-                      value={selCity}
-                      disabled={!selStateCode}
-                      onChange={(e) => {
-                        setSelCity(e.target.value);
-                        updateCity(e.target.value, { country: selCountry, state: selState, city: e.target.value });
-                        setLocOpen(false);
-                        setShowOtherCities(false);
-                      }}
-                    >
-                      <option value="">Select City</option>
-                      {selCountryCode && selStateCode && City.getCitiesOfState(selCountryCode, selStateCode).map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ paddingBottom: '32px' }}></div>
-            </div>
-          </div>
-        )
-      }
+      <LocationSelectionModal
+        isOpen={locOpen}
+        onClose={() => setLocOpen(false)}
+        selectedCity={selectedCity}
+        updateCity={updateCity}
+        allowClose={!!selectedCity}
+      />
 
       {
         orgOpen && (

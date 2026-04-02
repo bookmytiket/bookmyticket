@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useQuery, useConvex } from "convex/react";
+import { useQuery, useConvex, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { isServiceProvider } from "@/app/data/serviceCategories";
 
@@ -68,12 +68,27 @@ export function AuthProvider({ children }) {
         return () => window.removeEventListener("storage", handleStorageChange);
     }, [router]);
 
-    const updateCity = (city, hierarchy = null) => {
+    const syncLocation = useMutation(api.userSettings.updateLocation);
+
+    const updateCity = async (city, hierarchy = null) => {
         setSelectedCity(city);
         localStorage.setItem("selectedCity", city);
         if (hierarchy) {
             setLocationHierarchy(hierarchy);
             localStorage.setItem("locationHierarchy", JSON.stringify(hierarchy));
+        }
+
+        // Sync to backend if user is logged in
+        if (user?.identifier) {
+            try {
+                await syncLocation({ 
+                    userId: user.identifier, 
+                    city, 
+                    hierarchy: hierarchy || undefined 
+                });
+            } catch (err) {
+                console.error("Failed to sync location to backend:", err);
+            }
         }
     };
 

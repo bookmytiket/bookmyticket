@@ -10,7 +10,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState('');
+  const [locationHierarchy, setLocationHierarchy] = useState(null);
   const convex = useConvex();
+
 
   useEffect(() => {
     loadStoredUser();
@@ -24,6 +26,8 @@ export function AuthProvider({ children }) {
       }
       const storedCity = await AsyncStorage.getItem('selectedCity');
       if (storedCity) setSelectedCity(storedCity);
+      const storedHierarchy = await AsyncStorage.getItem('locationHierarchy');
+      if (storedHierarchy) setLocationHierarchy(JSON.parse(storedHierarchy));
     } catch (err) {
       console.error('Error loading stored user:', err);
       await AsyncStorage.removeItem('user');
@@ -32,10 +36,30 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateCity = useCallback(async (city) => {
+  const updateCity = useCallback(async (city, hierarchy = null) => {
     setSelectedCity(city);
+    setLocationHierarchy(hierarchy);
     await AsyncStorage.setItem('selectedCity', city);
-  }, []);
+    if (hierarchy) {
+      await AsyncStorage.setItem('locationHierarchy', JSON.stringify(hierarchy));
+    } else {
+      await AsyncStorage.removeItem('locationHierarchy');
+    }
+
+    // Sync with backend if user is logged in
+    if (user?.identifier) {
+      try {
+        await convex.mutation(api.userSettings.updateLocation, {
+          userId: user.identifier,
+          city: city,
+          hierarchy: hierarchy || undefined
+        });
+      } catch (err) {
+        console.error('Failed to sync location to backend:', err);
+      }
+    }
+  }, [user, convex]);
+
 
   const login = useCallback(async (identifier, password, manualRole, userData = null) => {
     // 1. Admin login remains local/hardcoded for now
@@ -176,10 +200,12 @@ export function AuthProvider({ children }) {
     logout,
     loading,
     selectedCity,
+    locationHierarchy,
     updateCity,
     recentlyViewed,
     addToRecentlyViewed
-  }), [user, login, verifyLoginOTP, logout, loading, selectedCity, updateCity, recentlyViewed, addToRecentlyViewed]);
+  }), [user, login, verifyLoginOTP, logout, loading, selectedCity, locationHierarchy, updateCity, recentlyViewed, addToRecentlyViewed]);
+
 
   return (
     <AuthContext.Provider value={value}>

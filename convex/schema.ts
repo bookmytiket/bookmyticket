@@ -186,6 +186,15 @@ export default defineSchema({
         role: v.string(), // 'user'
         status: v.optional(v.string()),
         lastLogin: v.optional(v.number()),
+        selectedCity: v.optional(v.string()),
+        locationHierarchy: v.optional(v.object({
+            country: v.optional(v.string()),
+            state: v.optional(v.string()),
+            district: v.optional(v.string()),
+            city: v.optional(v.string()),
+            lat: v.optional(v.number()),
+            lng: v.optional(v.number()),
+        })),
         createdAt: v.union(v.number(), v.string()),
     }).index("by_email", ["email"]).index("by_username", ["username"]),
 

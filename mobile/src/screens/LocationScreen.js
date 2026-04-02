@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,94 +8,253 @@ import {
   TextInput,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Keyboard,
+  StatusBar
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import { Colors } from '../theme/Theme';
+import { COUNTRIES, POPULAR_CITIES } from '../data/locationData';
 
-const CITIES = [
-  { name: 'Bengaluru', icon: 'business-outline' },
-  { name: 'Mumbai', icon: 'location-outline' },
-  { name: 'Delhi', icon: 'trail-sign-outline' },
-  { name: 'Chennai', icon: 'sunny-outline' },
-  { name: 'Hyderabad', icon: 'home-outline' },
-  { name: 'Coimbatore', icon: 'map-outline' },
-  { name: 'Kochi', icon: 'boat-outline' },
-  { name: 'Kolkata', icon: 'color-palette-outline' },
-];
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function LocationScreen({ navigation }) {
-  const { selectedCity, updateCity } = useAuth();
+  const { selectedCity, updateCity, locationHierarchy } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [activeCountry, setActiveCountry] = useState("India");
 
-  const filteredCities = CITIES.filter(city =>
-    city.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchInputRef = useRef(null);
 
-  const handleSelectCity = (cityName) => {
-    updateCity(cityName);
-    navigation.goBack();
+  // Photon API Autocomplete
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length > 1) {
+        setLoading(true);
+        try {
+          const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=8`);
+          const data = await res.json();
+          const suggestions = data.features.map(f => ({
+            id: f.properties.osm_id + "-" + Math.random(),
+            name: f.properties.name,
+            state: f.properties.state,
+            country: f.properties.country,
+            display: `${f.properties.name}${f.properties.state ? `, ${f.properties.state}` : ''}, ${f.properties.country}`,
+            lat: f.geometry.coordinates[1],
+            lng: f.geometry.coordinates[0]
+          }));
+          setResults(suggestions);
+        } catch (err) {
+          console.error('Search error:', err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setResults([]);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleDetectLocation = async () => {
+    setGeoLoading(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+      const data = await res.json();
+      const addr = data?.address || {};
+      const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || 'Detected Location';
+      
+      updateCity(city, {
+        city: city,
+        lat: latitude,
+        lng: longitude,
+        country: addr.country,
+        state: addr.state
+      });
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to detect location');
+    } finally {
+      setGeoLoading(false);
+    }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+  const getCityIcon = (iconName, isActive) => {
+    const color = isActive ? '#6366f1' : '#94a3b8';
+    switch (iconName) {
+      case 'Bengaluru': return <MaterialCommunityIcons name="office-building" size={36} color={color} />;
+      case 'Mumbai': return <MaterialCommunityIcons name="bridge" size={36} color={color} />;
+      case 'Delhi': return <FontAwesome5 name="fort-awesome" size={30} color={color} />;
+      case 'Chennai': return <MaterialCommunityIcons name="castle" size={36} color={color} />;
+      case 'Coimbatore': return <MaterialCommunityIcons name="clock-outline" size={36} color={color} />;
+      case 'Hyderabad': return <MaterialCommunityIcons name="mosque" size={36} color={color} />;
+      default: return <MaterialCommunityIcons name="city-variant-outline" size={36} color={color} />;
+    }
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={26} color="#94a3b8" />
         </TouchableOpacity>
-        <Text style={styles.title}>Select Location</Text>
-        <View style={{ width: 40 }} />
-      </View>
+        <Text style={styles.headerTitle}>Select Your Location</Text>
+        <View style={{ width: 26 }} />
+    </View>
+  );
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={Colors.textLight} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for a city..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={Colors.textLight}
-        />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <Text style={styles.sectionTitle}>Popular Cities</Text>
-        <View style={styles.grid}>
-          {filteredCities.map((city) => (
-            <TouchableOpacity
-              key={city.name}
-              style={[
-                styles.cityCard,
-                selectedCity === city.name && styles.activeCityCard,
-              ]}
-              onPress={() => handleSelectCity(city.name)}
-            >
-              <View style={[
-                styles.iconWrap,
-                selectedCity === city.name && styles.activeIconWrap
-              ]}>
-                <Ionicons 
-                  name={city.icon} 
-                  size={24} 
-                  color={selectedCity === city.name ? '#fff' : Colors.textLight} 
-                />
-              </View>
-              <Text style={[
-                styles.cityName,
-                selectedCity === city.name && styles.activeCityName
-              ]}>
-                {city.name}
-              </Text>
+  const renderSearch = () => (
+    <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, searchQuery.length > 0 && styles.searchBarActive]}>
+            <Ionicons name="search" size={20} color="#f84464" style={styles.searchIcon} />
+            <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                placeholder="Search For A Location..."
+                placeholderTextColor="#94a3b8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color="#cbd5e1" />
+                </TouchableOpacity>
+            )}
+            <View style={styles.vDivider} />
+            <TouchableOpacity onPress={handleDetectLocation} disabled={geoLoading}>
+                {geoLoading ? (
+                    <ActivityIndicator size="small" color="#f84464" />
+                ) : (
+                    <MaterialCommunityIcons name="target" size={22} color="#f84464" />
+                )}
             </TouchableOpacity>
-          ))}
         </View>
-      </ScrollView>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" />
+        {renderHeader()}
+        {renderSearch()}
+
+        <View style={styles.content}>
+            {/* Search Results Overlay */}
+            {searchQuery.length > 1 && (
+                <View style={styles.resultsOverlay}>
+                    {loading ? (
+                        <ActivityIndicator style={{ marginTop: 20 }} color="#f84464" />
+                    ) : (
+                        <FlatList
+                            data={results}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity 
+                                    style={styles.resultItem}
+                                    onPress={() => {
+                                        updateCity(item.name, { city: item.name, state: item.state, country: item.country, lat: item.lat, lng: item.lng });
+                                        navigation.goBack();
+                                    }}
+                                >
+                                    <Ionicons name="location-sharp" size={20} color="#f84464" style={styles.resultIcon} />
+                                    <View>
+                                        <Text style={styles.resultName}>{item.name}</Text>
+                                        <Text style={styles.resultDisplay}>{item.display}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={() => !loading && <Text style={styles.emptyText}>No locations found</Text>}
+                        />
+                    )}
+                </View>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {/* Country Tabs */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.countryTabs}>
+                    {COUNTRIES.map(c => (
+                        <TouchableOpacity 
+                            key={c.label} 
+                            style={[styles.countryTab, activeCountry === c.label && styles.activeCountryTab]}
+                            onPress={() => setActiveCountry(c.label)}
+                        >
+                            <Text style={styles.countryFlag}>{c.flag}</Text>
+                            <Text style={[styles.countryLabel, activeCountry === c.label && styles.activeCountryLabel]}>{c.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                <Text style={styles.sectionTitle}>Popular Cities</Text>
+                
+                <View style={styles.citiesGrid}>
+                    {(POPULAR_CITIES[activeCountry] || POPULAR_CITIES["India"]).map(city => {
+                        const isActive = selectedCity === city.name;
+                        return (
+                            <TouchableOpacity 
+                                key={city.name} 
+                                style={styles.cityCard}
+                                onPress={() => {
+                                    updateCity(city.name);
+                                    navigation.goBack();
+                                }}
+                            >
+                                <View style={[styles.cityIconBox, isActive && styles.activeCityIconBox]}>
+                                    {getCityIcon(city.icon, isActive)}
+                                </View>
+                                <Text style={[styles.cityName, isActive && styles.activeCityName]}>{city.name}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+
+                {/* Events in other cities */}
+                <TouchableOpacity style={styles.otherCitiesBtn}>
+                    <Ionicons name="location-outline" size={22} color="#f84464" />
+                    <Text style={styles.otherCitiesText}>Events in other cities</Text>
+                    <Ionicons name="chevron-down" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+
+                {/* Footer illustration placeholder */}
+                <View style={styles.footerWrap}>
+                    <View style={styles.illustration}>
+                         {/* Simple representation of the cityscape */}
+                        <View style={styles.illusBarWrap}>
+                            <View style={[styles.illusBar, { height: 40, width: 30 }]} />
+                            <View style={[styles.illusBar, { height: 60, width: 25 }]} />
+                            <View style={[styles.illusBar, { height: 80, width: 45 }]} />
+                            <View style={[styles.illusBar, { height: 50, width: 35 }]} />
+                            <View style={[styles.illusBar, { height: 100, width: 50 }]} />
+                        </View>
+                        <View style={styles.illusFloor} />
+                        <View style={styles.illusPinWrap}>
+                            <Ionicons name="location" size={70} color="#f84464" />
+                            <View style={styles.illusPinDot} />
+                        </View>
+                    </View>
+                </View>
+            </ScrollView>
+        </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#fff',
   },
@@ -103,98 +262,233 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    marginTop: Platform.OS === 'android' ? 30 : 0,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  backBtn: {
-    padding: 8,
+  closeBtn: {
+    padding: 2,
   },
-  title: {
+  headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    fontWeight: '800',
+    color: '#1e293b',
   },
   searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    zIndex: 10,
+  },
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    margin: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    height: 48,
+    height: 54,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 15,
+  },
+  searchBarActive: {
+    borderColor: '#6366f1',
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    height: '100%',
+  },
+  vDivider: {
+    width: 1.5,
+    height: 24,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 12,
   },
   content: {
     flex: 1,
+    position: 'relative',
+  },
+  resultsOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    maxHeight: 400,
+    zIndex: 100,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  resultIcon: {
+    marginRight: 15,
+  },
+  resultName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  resultDisplay: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  emptyText: {
+    padding: 20,
+    textAlign: 'center',
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  countryTabs: {
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 25,
+  },
+  countryTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
+    marginRight: 10,
+  },
+  activeCountryTab: {
+    borderColor: '#6366f1',
+    backgroundColor: '#eef2ff',
+  },
+  countryFlag: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  countryLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  activeCountryLabel: {
+    color: '#6366f1',
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textLight,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#64748b',
+    paddingHorizontal: 20,
+    marginBottom: 15,
   },
-  grid: {
+  citiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    marginBottom: 20,
   },
   cityCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    borderRadius: 16,
-    padding: 16,
+    width: (SCREEN_WIDTH - 24) / 4,
     alignItems: 'center',
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    marginBottom: 20,
   },
-  activeCityCard: {
-    borderColor: Colors.primary,
-    backgroundColor: '#fff',
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  cityIconBox: {
+    width: '85%',
+    aspectRatio: 1.1,
     backgroundColor: '#f8fafc',
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: '#f1f5f9',
   },
-  activeIconWrap: {
-    backgroundColor: Colors.primary,
+  activeCityIconBox: {
+    borderColor: '#6366f1',
+    backgroundColor: '#eef2ff',
+    borderWidth: 2,
   },
   cityName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    textAlign: 'center',
   },
   activeCityName: {
-    color: Colors.primary,
-    fontWeight: '700',
+    color: '#6366f1',
   },
+  otherCitiesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    marginBottom: 40,
+  },
+  otherCitiesText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#475569',
+    marginLeft: 12,
+  },
+  footerWrap: {
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  illustration: {
+    width: '100%',
+    height: 140,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  illusBarWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+    opacity: 0.4,
+  },
+  illusBar: {
+    backgroundColor: '#cbd5e1',
+    borderRadius: 4,
+  },
+  illusFloor: {
+    width: '90%',
+    height: 2,
+    backgroundColor: '#f1f5f9',
+    marginTop: -1,
+  },
+  illusPinWrap: {
+    position: 'absolute',
+    bottom: 0,
+    alignItems: 'center',
+    shadowColor: '#f84464',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  illusPinDot: {
+    position: 'absolute',
+    top: 18,
+    width: 14,
+    height: 14,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  }
 });
