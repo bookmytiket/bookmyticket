@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -214,7 +215,15 @@ export default function LocationScreen({ navigation }) {
                                 }}
                             >
                                 <View style={[styles.cityIconBox, isActive && styles.activeCityIconBox]}>
-                                    {getCityIcon(city.icon, isActive)}
+                                    {city.image ? (
+                                        <Image 
+                                            source={city.image} 
+                                            style={styles.cityImage}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        getCityIcon(city.icon, isActive)
+                                    )}
                                 </View>
                                 <Text style={[styles.cityName, isActive && styles.activeCityName]}>{city.name}</Text>
                             </TouchableOpacity>
@@ -222,28 +231,28 @@ export default function LocationScreen({ navigation }) {
                     })}
                 </View>
 
-                {/* Events in other cities */}
-                <TouchableOpacity style={styles.otherCitiesBtn}>
-                    <Ionicons name="location-outline" size={22} color="#f84464" />
-                    <Text style={styles.otherCitiesText}>Events in other cities</Text>
-                    <Ionicons name="chevron-down" size={18} color="#94a3b8" />
-                </TouchableOpacity>
-
-                {/* Footer illustration placeholder */}
+                {/* Footer Premium Illustration with Logo */}
                 <View style={styles.footerWrap}>
                     <View style={styles.illustration}>
-                         {/* Simple representation of the cityscape */}
+                         {/* Refined Skyline Illustration using subtle Views */}
                         <View style={styles.illusBarWrap}>
-                            <View style={[styles.illusBar, { height: 40, width: 30 }]} />
+                            <View style={[styles.illusBar, { height: 35, width: 28 }]} />
+                            <View style={[styles.illusBar, { height: 50, width: 22 }]} />
+                            <View style={[styles.illusBar, { height: 75, width: 40 }]} />
+                            <View style={[styles.illusBar, { height: 45, width: 32 }]} />
+                            <View style={[styles.illusBar, { height: 90, width: 45 }]} />
                             <View style={[styles.illusBar, { height: 60, width: 25 }]} />
-                            <View style={[styles.illusBar, { height: 80, width: 45 }]} />
-                            <View style={[styles.illusBar, { height: 50, width: 35 }]} />
-                            <View style={[styles.illusBar, { height: 100, width: 50 }]} />
+                            <View style={[styles.illusBar, { height: 40, width: 30 }]} />
                         </View>
                         <View style={styles.illusFloor} />
-                        <View style={styles.illusPinWrap}>
-                            <Ionicons name="location" size={70} color="#f84464" />
-                            <View style={styles.illusPinDot} />
+                        
+                        {/* Branded Logo Overlay */}
+                        <View style={styles.brandOverlay}>
+                            <Image 
+                                source={require('../../assets/logo.png')} 
+                                style={styles.footerLogo}
+                                resizeMode="contain"
+                            />
                         </View>
                     </View>
                 </View>
@@ -356,7 +365,6 @@ const styles = StyleSheet.create({
   },
   countryTabs: {
     paddingHorizontal: 20,
-    gap: 10,
     marginBottom: 25,
   },
   countryTab: {
@@ -387,72 +395,66 @@ const styles = StyleSheet.create({
     color: '#6366f1',
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#64748b',
+    color: '#94a3b8',
     paddingHorizontal: 20,
     marginBottom: 15,
   },
   citiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 10,
   },
   cityCard: {
-    width: (SCREEN_WIDTH - 24) / 4,
+    width: (SCREEN_WIDTH - 32) / 4,
     alignItems: 'center',
     marginBottom: 20,
   },
   cityIconBox: {
-    width: '85%',
-    aspectRatio: 1.1,
+    width: '82%',
+    aspectRatio: 1,
     backgroundColor: '#f8fafc',
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     borderWidth: 1.5,
     borderColor: '#f1f5f9',
+    overflow: 'hidden',
   },
   activeCityIconBox: {
     borderColor: '#6366f1',
-    backgroundColor: '#eef2ff',
     borderWidth: 2,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  cityImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.9,
   },
   cityName: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: '800',
+    color: '#64748b',
     textAlign: 'center',
   },
   activeCityName: {
     color: '#6366f1',
   },
-  otherCitiesBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    marginBottom: 40,
-  },
-  otherCitiesText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#475569',
-    marginLeft: 12,
-  },
   footerWrap: {
     paddingBottom: 40,
+    marginTop: 20,
     alignItems: 'center',
   },
   illustration: {
     width: '100%',
-    height: 140,
+    height: 120,
     justifyContent: 'flex-end',
     alignItems: 'center',
     position: 'relative',
@@ -460,12 +462,12 @@ const styles = StyleSheet.create({
   illusBarWrap: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 4,
-    opacity: 0.4,
+    opacity: 0.25,
   },
   illusBar: {
-    backgroundColor: '#cbd5e1',
-    borderRadius: 4,
+    backgroundColor: '#94a3b8',
+    borderRadius: 5,
+    marginHorizontal: 2.5,
   },
   illusFloor: {
     width: '90%',
@@ -473,22 +475,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     marginTop: -1,
   },
-  illusPinWrap: {
+  brandOverlay: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 30,
     alignItems: 'center',
-    shadowColor: '#f84464',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
+    width: '100%',
   },
-  illusPinDot: {
-    position: 'absolute',
-    top: 18,
-    width: 14,
-    height: 14,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+  footerLogo: {
+    width: 140,
+    height: 45,
+    opacity: 0.8,
   }
 });

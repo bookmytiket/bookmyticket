@@ -212,7 +212,7 @@ export const deleteMeeting = mutation({
         const participants = await ctx.db
             .query("meetingParticipants")
             .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
-            .collect();
+            .take(500);
         for (const p of participants) {
             await ctx.db.delete(p._id);
         }
@@ -221,7 +221,7 @@ export const deleteMeeting = mutation({
         const signals = await ctx.db
             .query("signals")
             .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
-            .collect();
+            .take(500);
         for (const s of signals) {
             await ctx.db.delete(s._id);
         }
@@ -230,7 +230,7 @@ export const deleteMeeting = mutation({
         const messages = await ctx.db
             .query("meetingMessages")
             .withIndex("by_meetingId", (q) => q.eq("meetingId", args.meetingId))
-            .collect();
+            .take(500);
         for (const m of messages) {
             await ctx.db.delete(m._id);
         }

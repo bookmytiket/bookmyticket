@@ -10,14 +10,14 @@ export const COUNTRIES = [
 
 export const POPULAR_CITIES = {
     "India": [
-        { name: "Bengaluru", icon: "Bengaluru" }, 
-        { name: "Chennai", icon: "Chennai" }, 
-        { name: "Coimbatore", icon: "Coimbatore" }, 
-        { name: "Hyderabad", icon: "Hyderabad" },
-        { name: "Kochi", icon: "Generic" }, 
-        { name: "Kolkata", icon: "Generic" }, 
-        { name: "New Delhi", icon: "Delhi" }, 
-        { name: "Mumbai", icon: "Mumbai" },
+        { name: "Bengaluru", icon: "Bengaluru", image: require('../../assets/locations/Bengaluru.jpg') }, 
+        { name: "Chennai", icon: "Chennai", image: require('../../assets/locations/Chennai.png') }, 
+        { name: "Coimbatore", icon: "Coimbatore", image: require('../../assets/locations/Coimbatore.jpg') }, 
+        { name: "Hyderabad", icon: "Hyderabad", image: require('../../assets/locations/Hyderabad.png') },
+        { name: "Kochi", icon: "Kochi", image: require('../../assets/locations/Kochi.png') }, 
+        { name: "Kolkata", icon: "Kolkata", image: require('../../assets/locations/Kolkata.jpeg') }, 
+        { name: "New Delhi", icon: "Delhi", image: require('../../assets/locations/NewDelhi.png') }, 
+        { name: "Mumbai", icon: "Mumbai", image: require('../../assets/locations/Mumbai.png') },
     ],
     "UAE": [
         { name: "Dubai", icon: "Generic" }, 

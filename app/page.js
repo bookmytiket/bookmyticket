@@ -160,7 +160,14 @@ export default function Home() {
       .filter(ev => {
         const eventDate = parseEventDate(ev.date, ev.time);
         if (!eventDate) return true;
-        return eventDate >= now;
+        
+        // Show all events from today onwards, ignoring time for today's events
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const evDateOnly = new Date(eventDate);
+        evDateOnly.setHours(0, 0, 0, 0);
+        
+        return evDateOnly >= today;
       })
       .map((ev, idx) => {
         const loc = ev.location || ev.venue || ev.address || "Venue";
@@ -199,14 +206,35 @@ export default function Home() {
 
     // 0. Filter by Selected City
     if (selectedCity && selectedCity !== "All Cities") {
-      results = results.filter(ev =>
-        ev.virtual === true ||
-        !ev.city || // Show events with no city data as global/TBA
-        (ev.city.toLowerCase() === selectedCity.toLowerCase()) ||
-        (ev.district && ev.district.toLowerCase() === selectedCity.toLowerCase()) ||
-        (ev.location && ev.location.toLowerCase().includes(selectedCity.toLowerCase())) ||
-        (ev.venue && ev.venue.toLowerCase().includes(selectedCity.toLowerCase()))
-      );
+      const cityLower = selectedCity.toLowerCase();
+      // Expanded city map for common variations
+      const cityVariations = {
+        'bengaluru': ['bangalore', 'bengaluru'],
+        'bangalore': ['bangalore', 'bengaluru'],
+        'new delhi': ['delhi', 'new delhi', 'ncr'],
+        'delhi': ['delhi', 'new delhi', 'ncr'],
+        'mumbai': ['bombay', 'mumbai'],
+        'chennai': ['madras', 'chennai'],
+        'kochi': ['cochin', 'kochi'],
+      };
+      
+      const targetCities = cityVariations[cityLower] || [cityLower];
+
+      results = results.filter(ev => {
+        if (ev.virtual === true) return true;
+        
+        const evCity = (ev.city || '').toLowerCase();
+        const evLoc = (ev.location || '').toLowerCase();
+        const evVenue = (ev.venue || '').toLowerCase();
+        const evDistrict = (ev.district || '').toLowerCase();
+
+        return targetCities.some(tc => 
+          evCity.includes(tc) || 
+          evDistrict.includes(tc) || 
+          evLoc.includes(tc) || 
+          evVenue.includes(tc)
+        ) || !ev.city; // Show if city info is missing (Global)
+      });
     }
 
     // 1. Filter by Search Query
@@ -225,11 +253,15 @@ export default function Home() {
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
 
-    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     results = results.filter(ev => {
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
       if (!eventDate) return true;
-      return eventDate >= now;
+      
+      const evDateOnly = new Date(eventDate);
+      evDateOnly.setHours(0, 0, 0, 0);
+      return evDateOnly >= today;
     });
     return results;
   }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);

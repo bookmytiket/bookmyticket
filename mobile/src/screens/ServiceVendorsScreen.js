@@ -18,10 +18,10 @@ import { Colors } from '../theme/Theme';
 export default function ServiceVendorsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { category } = route.params || {};
+  const { category = "All" } = route.params || {};
   
-  // Normalize category name for query (e.g., "Mehendi Artists" vs "mehendi-artists")
-  const displayCategory = category || "Professional Services";
+  // Normalize category name for query
+  const displayCategory = category === "All" ? "Professional Services" : category;
   
   // Use listByCategory for the selected category
   const vendors = useQuery(api.vendors.listByCategory, { 

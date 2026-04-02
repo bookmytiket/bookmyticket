@@ -5,9 +5,9 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
-import { HOME_EVENTS } from '../data/homeEvents';
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
+import { parseEventDate } from '../utils/eventUtils';
 
 const CATEGORIES = ["All", "Concert", "Sports", "Comedy", "Theatre", "Music", "Workshop"];
 
@@ -42,9 +42,23 @@ export default function EventsScreen() {
       }))
     ];
 
+    const now = new Date();
+
     // 1. Normalization Sync with HomeScreen
     const fromConvex = combined.filter(Boolean).map((ev, idx) => {
       const loc = ev?.location || ev?.venue || ev?.address || "Venue";
+      const isMeeting = ev?.type === "Meeting";
+
+      // Fix "TBA" for meetings
+      let dateStr = ev?.date;
+      let timeStr = ev?.time;
+
+      if (isMeeting && !dateStr && ev?.createdAt) {
+        const d = new Date(ev.createdAt);
+        dateStr = d.toLocaleDateString('en-GB');
+        timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      }
+
       const isVirtual = ev?.virtual === true || 
                ev?.virtual === "true" ||
                String(ev?.type || '').toLowerCase().includes("online") || 
@@ -55,88 +69,83 @@ export default function EventsScreen() {
                loc.toLowerCase().includes("meet") ||
                String(ev?.title || '').toLowerCase().includes("online meeting") ||
                String(ev?.title || '').toLowerCase().includes("virtual event");
+
       return {
         ...ev,
         id: ev?._id || ev?.id || `convex-list-${idx}`,
         title: ev?.title || "Event",
         img: ev?.img || ev?.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
-        rawDate: ev?.date,
-        rawTime: ev?.time,
-        date: [ev?.date, ev?.time].filter(Boolean).join(" ") || "TBA",
+        rawDate: dateStr,
+        rawTime: timeStr,
+        date: [dateStr, timeStr].filter(Boolean).join(" ") || "TBA",
         location: loc,
         virtual: isVirtual,
+        isMeeting,
       };
     });
 
-    const fromHome = (HOME_EVENTS || []).filter(Boolean).map(h => ({ 
-      ...h, 
-      id: String(h.id),
-      rawDate: h.date,
-      rawTime: h.time
-    }));
-    const eventMap = new Map();
-    fromConvex.forEach(e => { if (e?.id) eventMap.set(String(e.id), e); });
-    fromHome.forEach(h => { if (h?.id && !eventMap.has(String(h.id))) eventMap.set(String(h.id), h); });
+    // 2. Expiration & De-duplication Logic
+    const eventIds = new Set(fromConvex.filter(e => !e.isMeeting).map(e => String(e._id || e.id)));
 
-    const merged = Array.from(eventMap.values());
-    // 2. Expiry Filter Sync
-    const parseEventDate = (dateStr, timeStr) => {
-      if (!dateStr) return null;
-      try {
-        let dt = String(dateStr).trim();
-        if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
-          const parts = dt.split(/[-/]/);
-          dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        
-        if (dt.includes('T') || dt.includes(' ')) {
-          const d = new Date(dt.replace(' ', 'T'));
-          return isNaN(d.getTime()) ? null : d;
-        }
-
-        let normalizedTime = "23:59";
-        if (timeStr) {
-          let t = String(timeStr).trim().toUpperCase();
-          const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
-          if (ampmMatch) {
-            let [_, hours, mins = "00", ampm] = ampmMatch;
-            hours = parseInt(hours);
-            if (ampm === "PM" && hours < 12) hours += 12;
-            if (ampm === "AM" && hours === 12) hours = 0;
-            normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
-          } else {
-            normalizedTime = t.includes(':') ? t : `${t}:00`;
-          }
-        }
-        
-        const eventDate = new Date(`${dt}T${normalizedTime}`);
-        return isNaN(eventDate.getTime()) ? null : eventDate;
-      } catch (_) { return null; }
-    };
-
-    const now = new Date();
-    const active = merged.filter(ev => {
+    const active = fromConvex.filter(ev => {
       if (!ev) return false;
+
+      // Duplicate Check
+      if (ev.isMeeting && ev.eventId && eventIds.has(String(ev.eventId))) return false;
+
+      // 1. Precise expiration check using Convex endDateTime
+      if (ev.endDateTime && now.getTime() > ev.endDateTime) return false;
+
+      // 24-hour expiration for standalone meetings
+      if (ev.isMeeting && !ev.endDateTime && ev.createdAt) {
+          const expirationTime = ev.createdAt + (24 * 60 * 60 * 1000); 
+          if (now.getTime() > expirationTime) return false;
+      }
+
+      // 2. Fallback to parseEventDate logic
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
-      if (!eventDate) return true;
+      if (!eventDate) return true; 
 
-      // Ensure virtual events/meetings from the portal aren't hidden by strict date checks
-      if (ev.virtual === true || ev.virtual === "true") return true; 
+      // Matches Web Portal: Today onwards
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const evDateOnly = new Date(eventDate);
+      evDateOnly.setHours(0, 0, 0, 0);
 
-      return eventDate >= now;
+      return evDateOnly >= today;
     });
 
-    // 3. City Filter Sync (Broad matching + Virtual always shown)
+    // 3. City Filter Sync (Consistent with Web)
     let filteredResults = active;
     if (selectedCity && selectedCity !== "All Cities") {
-      filteredResults = active.filter(e => 
-        e.virtual === true ||
-        !e.city ||
-        (e.city && e.city.toLowerCase() === selectedCity.toLowerCase()) ||
-        (e.district && e.district.toLowerCase() === selectedCity.toLowerCase()) ||
-        (e.location && e.location.toLowerCase().includes(selectedCity.toLowerCase())) ||
-        (e.venue && e.venue.toLowerCase().includes(selectedCity.toLowerCase()))
-      );
+        const cityLower = selectedCity.toLowerCase();
+        const cityVariations = {
+          'bengaluru': ['bangalore', 'bengaluru'],
+          'bangalore': ['bangalore', 'bengaluru'],
+          'new delhi': ['delhi', 'new delhi', 'ncr'],
+          'delhi': ['delhi', 'new delhi', 'ncr'],
+          'mumbai': ['bombay', 'mumbai'],
+          'chennai': ['madras', 'chennai'],
+          'kochi': ['cochin', 'kochi'],
+          'coimbatore': ['coimbatore', 'pollachi', 'tiruppur'],
+        };
+        
+        const targetCities = cityVariations[cityLower] || [cityLower];
+
+        filteredResults = active.filter(e => {
+            if (e.virtual === true) return true;
+            const evCity = (e.city || '').toLowerCase();
+            const evLoc = (e.location || '').toLowerCase();
+            const evVenue = (e.venue || '').toLowerCase();
+            const evDistrict = (e.district || '').toLowerCase();
+
+            return targetCities.some(tc => 
+                evCity.includes(tc) || 
+                evDistrict.includes(tc) || 
+                evLoc.includes(tc) || 
+                evVenue.includes(tc)
+            ) || !e.city;
+        });
     }
 
     // 4. Search Query Filter
@@ -156,7 +165,7 @@ export default function EventsScreen() {
     }
 
     return filteredResults;
-  }, [convexEvents, selectedCity, searchQuery, selectedCategory]);
+  }, [convexEvents, convexMeetings, selectedCity, searchQuery, selectedCategory]);
 
   const handleEventPress = (event) => {
     navigation.navigate('EventDetail', { eventId: String(event._id || event.id), event });

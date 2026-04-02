@@ -4,24 +4,21 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '../utils/feeBreakdown';
-import { HOME_EVENTS } from '../data/homeEvents';
 import CheckoutFooterBar from '../components/CheckoutFooterBar';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop';
 
 function getEventById(id, convexEvents) {
   const sid = String(id);
-  const fromHome = (HOME_EVENTS || []).find((e) => String(e.id) === sid);
   const fromConvex = (convexEvents || []).find((e) => String(e._id) === sid || String(e.id) === sid);
-  const raw = fromHome || fromConvex;
-  if (!raw) return null;
+  if (!fromConvex) return null;
   return {
-    ...raw,
-    id: raw._id || raw.id,
-    title: raw.title || 'Event',
-    date: raw.date || 'TBA',
-    location: raw.location || raw.venue || raw.address || 'Venue',
-    price: raw.price ?? raw.normalTicketPrice ?? 499,
+    ...fromConvex,
+    id: fromConvex._id || fromConvex.id,
+    title: fromConvex.title || 'Event',
+    date: fromConvex.date || 'TBA',
+    location: fromConvex.location || fromConvex.venue || fromConvex.address || 'Venue',
+    price: fromConvex.price ?? fromConvex.normalTicketPrice ?? 499,
   };
 }
 
