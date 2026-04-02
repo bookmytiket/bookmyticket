@@ -184,13 +184,48 @@ export default function LocationSelectionModal({
                 marginBottom: '24px' 
             }}>
                 {(POPULAR_CITIES[activeCountry] || POPULAR_CITIES["India"]).map(city => (
-                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-3px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                        <div style={{ width: '100%', aspectRatio: '1/1', backgroundColor: '#f8fafc', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: selectedCity === city.name ? '2px solid #4f46e5' : '1px solid #f1f5f9', transition: 'all 0.2s', boxShadow: selectedCity === city.name ? '0 8px 16px -4px rgba(79, 70, 229, 0.15)' : 'none', color: selectedCity === city.name ? '#4f46e5' : '#94a3b8' }}>
-                            <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {LANDMARK_ICONS[city.icon]?.(selectedCity === city.name ? "#4f46e5" : "#94a3b8") || LANDMARK_ICONS.Generic()}
-                            </div>
+                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        const img = e.currentTarget.querySelector('img');
+                        if (img) img.style.transform = 'scale(1.1)';
+                    }} onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        const img = e.currentTarget.querySelector('img');
+                        if (img) img.style.transform = 'scale(1)';
+                    }}>
+                        <div style={{ 
+                            width: '100%', 
+                            aspectRatio: '1/1', 
+                            backgroundColor: '#f8fafc', 
+                            borderRadius: '14px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            border: selectedCity === city.name ? '2.5px solid #4f46e5' : '1.5px solid #f1f5f9', 
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+                            boxShadow: selectedCity === city.name ? '0 12px 24px -8px rgba(79, 70, 229, 0.4)' : 'none', 
+                            overflow: 'hidden',
+                            position: 'relative'
+                        }}>
+                            {city.img ? (
+                                <img 
+                                    src={city.img} 
+                                    alt={city.name} 
+                                    style={{ 
+                                        width: '100%', 
+                                        height: '100%', 
+                                        objectFit: 'cover', 
+                                        transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        opacity: 0.95
+                                    }} 
+                                />
+                            ) : (
+                                <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: selectedCity === city.name ? '#4f46e5' : '#94a3b8' }}>
+                                    {LANDMARK_ICONS[city.icon]?.(selectedCity === city.name ? "#4f46e5" : "#94a3b8") || LANDMARK_ICONS.Generic()}
+                                </div>
+                            )}
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: selectedCity === city.name ? '#4f46e5' : '#64748b', textAlign: 'center' }}>{city.name}</span>
+                        <span style={{ fontSize: '12.5px', fontWeight: 800, color: selectedCity === city.name ? '#4f46e5' : '#475569', textAlign: 'center', marginTop: '2px' }}>{city.name}</span>
                     </button>
                 ))}
             </div>
