@@ -179,12 +179,12 @@ export default function LocationSelectionModal({
             <p style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '16px' }}>Popular Cities</p>
             <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(8, 1fr)', 
-                gap: '10px', 
+                gridTemplateColumns: 'repeat(4, 1fr)', 
+                gap: '12px', 
                 marginBottom: '24px' 
             }}>
                 {(POPULAR_CITIES[activeCountry] || POPULAR_CITIES["India"]).map(city => (
-                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => {
+                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: '100%' }} onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-3px)';
                         const img = e.currentTarget.querySelector('img');
                         if (img) img.style.transform = 'scale(1.1)';
@@ -197,7 +197,7 @@ export default function LocationSelectionModal({
                             width: '100%', 
                             aspectRatio: '1/1', 
                             backgroundColor: '#f8fafc', 
-                            borderRadius: '14px', 
+                            borderRadius: '16px', 
                             display: 'flex', 
                             alignItems: 'center', 
                             justifyContent: 'center', 
@@ -205,7 +205,8 @@ export default function LocationSelectionModal({
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
                             boxShadow: selectedCity === city.name ? '0 12px 24px -8px rgba(79, 70, 229, 0.4)' : 'none', 
                             overflow: 'hidden',
-                            position: 'relative'
+                            position: 'relative',
+                            padding: city.img ? '0' : '12px'
                         }}>
                             {city.img ? (
                                 <img 
@@ -220,12 +221,12 @@ export default function LocationSelectionModal({
                                     }} 
                                 />
                             ) : (
-                                <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: selectedCity === city.name ? '#4f46e5' : '#94a3b8' }}>
+                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: selectedCity === city.name ? '#4f46e5' : '#94a3b8' }}>
                                     {LANDMARK_ICONS[city.icon]?.(selectedCity === city.name ? "#4f46e5" : "#94a3b8") || LANDMARK_ICONS.Generic()}
                                 </div>
                             )}
                         </div>
-                        <span style={{ fontSize: '12.5px', fontWeight: 800, color: selectedCity === city.name ? '#4f46e5' : '#475569', textAlign: 'center', marginTop: '2px' }}>{city.name}</span>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: selectedCity === city.name ? '#4f46e5' : '#475569', textAlign: 'center', marginTop: '4px', width: '100%', display: 'block' }}>{city.name}</span>
                     </button>
                 ))}
             </div>

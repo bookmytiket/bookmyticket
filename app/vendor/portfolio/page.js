@@ -426,30 +426,30 @@ export default function PortfolioPage() {
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
-                    className={`py-44 flex flex-col items-center justify-center text-center space-y-10 bg-white rounded-[4rem] border-2 border-dashed transition-all duration-500 shadow-inner ${
+                    className={`py-20 lg:py-44 px-6 lg:px-10 flex flex-col items-center justify-center text-center space-y-8 lg:space-y-10 bg-white rounded-[2rem] lg:rounded-[4rem] border-2 border-dashed transition-all duration-500 shadow-inner ${
                         isDragging ? 'border-pink-500 bg-pink-50/30 scale-[0.98]' : 'border-slate-100'
                     }`}
                 >
                     <div className="relative group">
-                        <div className={`absolute inset-0 bg-pink-500 blur-[80px] transition-opacity ${isDragging ? 'opacity-30' : 'opacity-10'}`}></div>
-                        <div className={`relative w-32 h-32 rounded-[3rem] flex items-center justify-center transition-all duration-700 border ${
+                        <div className={`absolute inset-0 bg-pink-500 blur-[60px] lg:blur-[80px] transition-opacity ${isDragging ? 'opacity-30' : 'opacity-10'}`}></div>
+                        <div className={`relative w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] lg:rounded-[3rem] flex items-center justify-center transition-all duration-700 border ${
                             isDragging ? 'bg-pink-500 text-white scale-110 border-pink-400 rotate-12' : 'bg-slate-50 text-slate-200 border-slate-100'
                         }`}>
-                            <ImageIcon size={56} className={isDragging ? 'animate-bounce' : ''} />
+                            <ImageIcon size={40} className={isDragging ? 'animate-bounce' : 'lg:size-56'} />
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                        <h3 className="text-xl lg:text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
                             {isDragging ? 'Release Masterpiece' : 'Digital Canvas Emits Void'}
                         </h3>
-                        <p className="text-slate-400 max-w-sm mx-auto text-sm font-medium leading-relaxed">
+                        <p className="text-slate-400 max-w-sm mx-auto text-xs lg:text-sm font-medium leading-relaxed">
                             {isDragging ? 'Drop your files here to initiate the exhibition.' : 'Your portfolio is currently blank. Drag and drop high-fidelity visual evidence here to increase conversions.'}
                         </p>
                     </div>
                     {!isDragging && (
                         <button 
                             onClick={() => fileInputRef.current.click()}
-                            className="bg-slate-900 text-white px-12 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.4em] hover:bg-pink-500 transition-all shadow-3xl shadow-slate-900/20 italic"
+                            className="bg-slate-900 text-white px-8 lg:px-12 py-4 lg:py-5 rounded-[2rem] lg:rounded-[2.5rem] font-black text-[9px] lg:text-[10px] uppercase tracking-[0.3em] lg:tracking-[0.4em] hover:bg-pink-500 transition-all shadow-3xl shadow-slate-900/20 italic"
                         >
                             Select Your Masterpiece
                         </button>

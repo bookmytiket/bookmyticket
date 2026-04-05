@@ -72,13 +72,14 @@ export default function ManagementScreen() {
   const [newPkg, setNewPkg] = useState({ label: '', description: '', price: '' });
 
   // Queries
+  const vendorId = user?.identifier || "";
   const eventsWithAnalytics = useQuery(api.events.getEventsWithAnalytics) || [];
   const bookings = useQuery(api.bookings.getBookings) || [];
-  const vendorBookings = useQuery(api.vendorBookings.list, { vendorId: user?.identifier || "" }) || [];
+  const vendorBookings = useQuery(api.vendorBookings.list, { vendorId }) || [];
   const organiserEvents = useQuery(api.events.getOrganiserEvents, { organiserId: vendorId }) || [];
-  const reviews = useQuery(api.vendorReviews.getVendorReviews, { vendorId: vendorId }) || [];
-  const vendorStats = useQuery(api.vendors.getStats, { vendorId: user?.identifier || "" });
-  const vendorProfile = useQuery(api.vendors.getByOrganiserId, { organiserId: user?.identifier || "" });
+  const reviews = useQuery(api.vendorReviews.getVendorReviews, { vendorId }) || [];
+  const vendorStats = useQuery(api.vendors.getStats, { vendorId });
+  const vendorProfile = useQuery(api.vendors.getByOrganiserId, { organiserId: vendorId });
   
   const updateProfile = useMutation(api.vendors.updateProfile);
   const respondToReview = useMutation(api.vendorReviews.respondToReview);
@@ -135,10 +136,33 @@ export default function ManagementScreen() {
     }
   };
 
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.name?.split(' ')[0] || "",
+    lastName: user?.name?.split(' ')[1] || "",
+    bio: vendorProfile?.bio || "",
+    category: vendorProfile?.category || user?.category || "",
+    phone: user?.phone || "",
+    address: ""
+  });
+
+  useEffect(() => {
+    if (vendorProfile || user) {
+      setProfileForm({
+        firstName: user?.name?.split(' ')[0] || "",
+        lastName: user?.name?.split(' ')[1] || "",
+        bio: vendorProfile?.bio || "",
+        category: vendorProfile?.category || user?.category || "",
+        phone: user?.phone || "",
+        address: "" // We'll fetch this from KYC if needed
+      });
+    }
+  }, [vendorProfile, user]);
+
   const handleUpdateProfile = async (updates) => {
     try {
       await updateVendorProfile({ organiserId: user?.identifier || "", ...updates });
       Alert.alert('Success', 'Profile updated successfully');
+      setActiveTab('hub');
     } catch (err) {
       Alert.alert('Error', 'Failed to update profile');
     }
@@ -637,6 +661,94 @@ export default function ManagementScreen() {
             </View>
           </View>
         );
+      case 'profile_edit':
+        return (
+          <ScrollView style={{ flex: 1, padding: 20 }}>
+            <TouchableOpacity onPress={() => setActiveTab('hub')} style={[styles.backToHub, { paddingLeft: 0 }]}>
+              <Ionicons name="arrow-back" size={20} color={Colors.secondary} />
+              <Text style={styles.backToHubText}>Discard Changes</Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.tableTitle, { marginBottom: 24 }]}>Edit Professional Profile</Text>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>First Name</Text>
+              <TextInput 
+                style={styles.inputField}
+                value={profileForm.firstName}
+                onChangeText={(val) => setProfileForm({ ...profileForm, firstName: val })}
+                placeholder="Enter your first name"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Last Name</Text>
+              <TextInput 
+                style={styles.inputField}
+                value={profileForm.lastName}
+                onChangeText={(val) => setProfileForm({ ...profileForm, lastName: val })}
+                placeholder="Enter your last name"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Professional Category</Text>
+              <TextInput 
+                style={styles.inputField}
+                value={profileForm.category}
+                onChangeText={(val) => setProfileForm({ ...profileForm, category: val })}
+                placeholder="e.g. Mehendi Artist, Photographer"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Contact Phone</Text>
+              <TextInput 
+                style={styles.inputField}
+                value={profileForm.phone}
+                onChangeText={(val) => setProfileForm({ ...profileForm, phone: val })}
+                placeholder="Your business phone"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Professional Bio</Text>
+              <TextInput 
+                style={[styles.inputField, { height: 120, textAlignVertical: 'top', paddingTop: 12 }]}
+                value={profileForm.bio}
+                onChangeText={(val) => setProfileForm({ ...profileForm, bio: val })}
+                placeholder="Tell your clients about your expertise, experience and style..."
+                multiline
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Business Address</Text>
+              <TextInput 
+                style={styles.inputField}
+                value={profileForm.address}
+                onChangeText={(val) => setProfileForm({ ...profileForm, address: val })}
+                placeholder="e.g. Studio 42, MG Road, Bangalore"
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={styles.saveProfileBtn}
+              onPress={() => handleUpdateProfile({
+                name: `${profileForm.firstName} ${profileForm.lastName}`.trim(),
+                bio: profileForm.bio,
+                category: profileForm.category,
+                phone: profileForm.phone,
+                address: profileForm.address
+              })}
+            >
+              <Text style={styles.saveProfileBtnText}>Save Professional Profile</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        );
       case 'hub':
         return (
           <View style={styles.hubContainer}>
@@ -691,7 +803,7 @@ export default function ManagementScreen() {
                 <Text style={styles.wideTitle}>Professional Profile</Text>
                 <Text style={styles.wideSub}>Update your artist bio, category, and verified contact details to attract more clients.</Text>
               </View>
-              <TouchableOpacity style={styles.wideActionBtn} onPress={() => Alert.alert('Edit Profile', 'Profile editor opening soon.')}>
+              <TouchableOpacity style={styles.wideActionBtn} onPress={() => setActiveTab('profile_edit')}>
                  <Text style={styles.wideActionBtnText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -1011,5 +1123,16 @@ const styles = StyleSheet.create({
   editBtnSmall: { marginTop: 4, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: '#f1f5f9', borderRadius: 6 },
   editBtnText: { fontSize: 10, fontWeight: '800', color: Colors.secondary },
   inputField: { flex: 1, height: 45, backgroundColor: '#f1f5f9', borderRadius: 12, paddingHorizontal: 16, fontSize: 14, fontWeight: '600', color: Colors.text, borderWidth: 1, borderColor: '#e2e8f0' },
+  statBanner: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 24, padding: 24, marginBottom: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, alignItems: 'center' },
+  statBannerLeft: { flex: 1, alignItems: 'center' },
+  statBannerRight: { flex: 1, alignItems: 'center' },
+  vDivider: { width: 1, height: 40, backgroundColor: '#f1f5f9' },
+  statValueBig: { fontSize: 32, fontWeight: '900', color: Colors.secondary },
+  statValueMed: { fontSize: 24, fontWeight: '900', color: Colors.text },
+  statLabelSub: { fontSize: 10, fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginTop: 4 },
+  formGroup: { marginBottom: 20 },
+  formLabel: { fontSize: 11, fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
+  saveProfileBtn: { backgroundColor: Colors.secondary, padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 12, elevation: 4, shadowColor: Colors.secondary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  saveProfileBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 });
 

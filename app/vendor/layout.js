@@ -163,18 +163,18 @@ export default function VendorLayout({ children }) {
                     <div className="flex items-center space-x-4 lg:space-x-8">
                         <button 
                             onClick={toggleSidebar}
-                            className="p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm shrink-0"
+                            className="p-2.5 sm:p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm shrink-0"
                         >
-                            <Menu size={22} />
+                            <Menu size={20} />
                         </button>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2.5 mb-0.5">
-                                <div className="w-1 h-3.5 bg-pink-500 rounded-full hidden sm:block"></div>
-                                <h1 className="text-lg lg:text-2xl font-black text-slate-900 tracking-tighter uppercase italic truncate">
+                                <div className="w-1 h-3.5 bg-pink-500 rounded-full hidden xs:block"></div>
+                                <h1 className="text-[16px] sm:text-lg lg:text-2xl font-black text-slate-900 tracking-tighter uppercase italic truncate">
                                     {navigation.find(n => n.href === pathname)?.name || "Dashboard"}
                                 </h1>
                             </div>
-                            <p className="text-[8px] lg:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] sm:ml-3.5 truncate">Artist Management Hub</p>
+                            <p className="text-[7px] lg:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] xs:ml-3.5 truncate">Artist Management Hub</p>
                         </div>
                     </div>
 
@@ -202,7 +202,7 @@ export default function VendorLayout({ children }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
+                <main className="flex-1 p-4 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
                     <VendorErrorBoundary>
                         <div className="max-w-[1500px] mx-auto">
                             {children}
