@@ -15,20 +15,25 @@ export const getByOrganiserId = query({
 export const listByCategory = query({
     args: { category: v.string() },
     handler: async (ctx, args) => {
-        const cat = args.category.toLowerCase();
+        const targetCat = args.category.trim();
+        let organisers;
         
-        // Find organisers by matching category (flexible match)
-        const organisers = await ctx.db
-            .query("organisers")
-            .collect();
-            
-        const filteredOrganisers = organisers.filter(org => {
-            const orgCat = (org.category || "").toLowerCase();
-            return orgCat.includes(cat) || cat.includes(orgCat);
-        });
+        if (targetCat === "" || targetCat === "All Services") {
+            const allOrgs = await ctx.db.query("organisers").collect();
+            // Filter for professional service roles (excluding generic organisers if needed)
+            organisers = allOrgs.filter(org => 
+                org.category && 
+                org.category !== "Event Organiser"
+            );
+        } else {
+            organisers = await ctx.db
+                .query("organisers")
+                .withIndex("by_category", (q) => q.eq("category", targetCat))
+                .collect();
+        }
             
         const results = [];
-        for (const org of filteredOrganisers) {
+        for (const org of organisers) {
             const profile = await ctx.db
                 .query("vendorProfiles")
                 .withIndex("by_organiserId", (q) => q.eq("organiserId", org.userId))
@@ -69,18 +74,25 @@ export const listByCategoryPaginated = query({
         pageSize: v.number(),  // items per page, e.g. 16
     },
     handler: async (ctx, args) => {
-        const cat = args.category.toLowerCase();
+        const targetCat = args.category.trim();
+        let organisers;
 
-        // Use by_category index when possible for efficiency
-        const organisers = await ctx.db.query("organisers").collect();
-        const filtered = organisers.filter(org => {
-            const orgCat = (org.category || "").toLowerCase();
-            return orgCat.includes(cat) || cat.includes(orgCat);
-        });
+        if (targetCat === "" || targetCat === "All Services") {
+            const allOrgs = await ctx.db.query("organisers").collect();
+            organisers = allOrgs.filter(org => 
+                org.category && 
+                org.category !== "Event Organiser"
+            );
+        } else {
+            organisers = await ctx.db
+                .query("organisers")
+                .withIndex("by_category", (q) => q.eq("category", targetCat))
+                .collect();
+        }
 
-        const total = filtered.length;
+        const total = organisers.length;
         const start = (args.page - 1) * args.pageSize;
-        const pageOrgs = filtered.slice(start, start + args.pageSize);
+        const pageOrgs = organisers.slice(start, start + args.pageSize);
 
         const vendors = [];
         for (const org of pageOrgs) {
@@ -167,15 +179,24 @@ export const updateProfile = mutation({
                 ...updates,
                 updatedAt: Date.now(),
             });
-            return existing._id;
         } else {
-            const id = await ctx.db.insert("vendorProfiles", {
+            await ctx.db.insert("vendorProfiles", {
                 organiserId,
                 ...updates,
                 updatedAt: Date.now(),
             });
-            return id;
         }
+
+        // Sync category to organisers table to maintain single source of truth for filtering
+        const org = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", organiserId))
+            .unique();
+        if (org) {
+            await ctx.db.patch(org._id, { category: updates.category });
+        }
+        
+        return organiserId;
     },
 });
 

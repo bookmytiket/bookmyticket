@@ -6,6 +6,7 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
 import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
+import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -627,7 +628,8 @@ function AdminHomePage() {
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
     const isProfService = (cat) => {
         const c = String(cat || "").trim().toLowerCase();
-        return c.includes("mehandi") || c.includes("mehendi") || c.includes("photograph") || c.includes("makeup") || c.includes("artist") || c.includes("personal service");
+        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering"];
+        return serviceKeywords.some(keyword => c.includes(keyword));
     };
 
     const mappedOrganizers = useMemo(() => {
@@ -1254,6 +1256,7 @@ function AdminHomePage() {
                                     <div className="mt-1 space-y-1">
                                         {[
                                             { label: "Hero Banner", id: "hero" },
+                                            { label: "Mobile Banners", id: "mobile_banners" },
                                             { label: "Video Banner", id: "video_banner" },
                                             { label: "Site Branding", id: "site_branding" },
                                             { label: "Featured Events", id: "events_settings" },
@@ -1291,7 +1294,7 @@ function AdminHomePage() {
                                             { label: "KYC Pending", id: "kyc_pending" },
                                             { label: "KYC Verified", id: "kyc_verified" },
                                             { label: "Banned", id: "banned_org" },
-                                            { label: "Requests", id: "org_requests" },
+                                            { label: "Organiser Requests", id: "org_requests" },
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
@@ -1308,7 +1311,7 @@ function AdminHomePage() {
                                 {isServicesOpen && (
                                     <div className="mt-1 space-y-1">
                                         {[
-                                            { label: "Requests", id: "service_requests" },
+                                            { label: "Professional Service Requests", id: "service_requests" },
                                             { label: "Active Users", id: "service_active" },
                                             { label: "Banned Users", id: "service_banned" },
                                         ].map(sub => (
@@ -2887,7 +2890,7 @@ function AdminHomePage() {
                     {activeTab === "org_requests" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Organiser Requests</h3>
+                                <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Event Organiser Requests</h3>
                             </div>
                             <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -2943,7 +2946,7 @@ function AdminHomePage() {
                     {activeTab === "service_requests" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Service Provider Requests</h3>
+                                <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Professional Service Requests</h3>
                             </div>
                             <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -2953,24 +2956,45 @@ function AdminHomePage() {
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
                                             <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {serviceRequests.map((req) => (
+                                        {convexOrganiserRequests.filter(req => isProfService(req.category)).map((req) => (
                                             <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{req.firstName} {req.lastName}</td>
-                                                <td style={{ padding: "12px" }}>{req.email}</td>
-                                                <td style={{ padding: "12px" }}>{req.category}</td>
-                                                <td style={{ padding: "12px" }}>{req.phone}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{req.firstName} {req.lastName}</td>
+                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.email}</td>
+                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.category}</td>
+                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.phone}</td>
                                                 <td style={{ padding: "12px" }}>
-                                                    <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
+                                                    <span style={{
+                                                        padding: "4px 10px",
+                                                        borderRadius: "20px",
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        backgroundColor:
+                                                            req.status === 'Approved' ? '#22c55e15' :
+                                                                req.status === 'Rejected' ? '#ef444415' : '#f9731615',
+                                                        color:
+                                                            req.status === 'Approved' ? '#22c55e' :
+                                                                req.status === 'Rejected' ? '#ef4444' : '#f97316'
+                                                    }}>
+                                                        {req.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    {req.status === 'Pending' && (
+                                                        <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
-                                {serviceRequests.length === 0 && <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No pending service requests</div>}
+                                {convexOrganiserRequests.filter(req => isProfService(req.category)).length === 0 && (
+                                    <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No professional service requests found.</div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -4855,6 +4879,7 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "checkout_footer" && <AdminCheckoutFooter theme={theme} t={t} />}
+                    {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
 
                 </main>
             </div>

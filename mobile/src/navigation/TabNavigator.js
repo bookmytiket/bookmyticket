@@ -21,6 +21,19 @@ function TabIcon({ name, focused, color }) {
 export default function TabNavigator() {
   const { user } = useAuth();
   const isOrganiserOrStaff = user?.role === 'organiser' || user?.role === 'staff';
+  
+  const isServiceProvider = (category) => {
+    if (!category) return false;
+    const c = String(category).trim().toLowerCase();
+    return c.includes("mehandi") || 
+           c.includes("mehendi") || 
+           c.includes("photograph") || 
+           c.includes("makeup") || 
+           c.includes("artist") || 
+           c.includes("personal service");
+  };
+
+  const isVendor = isServiceProvider(user?.category);
 
   return (
     <Tab.Navigator
@@ -75,7 +88,14 @@ export default function TabNavigator() {
           name="Dashboard"
           component={ManagementScreen}
           options={{
-            tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'grid' : 'grid-outline', focused, color }),
+            tabBarLabel: isVendor ? 'Artist Hub' : 'Dashboard',
+            tabBarIcon: ({ focused, color }) => TabIcon({ 
+                name: isVendor 
+                    ? (focused ? 'briefcase' : 'briefcase-outline') 
+                    : (focused ? 'grid' : 'grid-outline'), 
+                focused, 
+                color 
+            }),
           }}
         />
       )}

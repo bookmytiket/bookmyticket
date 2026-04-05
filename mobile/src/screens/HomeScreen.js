@@ -11,7 +11,7 @@ import { Colors } from '../theme/Theme';
 import ComingSoonSection from '../components/ComingSoonSection';
 import CouponCard from '../components/CouponCard';
 import CouponOverlay from '../components/CouponOverlay';
-import VideoHeroBanner from '../components/VideoHeroBanner';
+import SequentialVideoBanner from '../components/SequentialVideoBanner';
 import { parseEventDate } from '../utils/eventUtils';
 import { Ionicons } from '@expo/vector-icons';
 import CustomerAdPopup from '../components/CustomerAdPopup';
@@ -97,7 +97,20 @@ export default function HomeScreen() {
   };
 
 
-  const { selectedCity, loading, recentlyViewed } = useAuth();
+  const { user, selectedCity, loading, recentlyViewed } = useAuth();
+  
+  const isServiceProvider = (category) => {
+    if (!category) return false;
+    const c = String(category).trim().toLowerCase();
+    return c.includes("mehandi") || 
+           c.includes("mehendi") || 
+           c.includes("photograph") || 
+           c.includes("makeup") || 
+           c.includes("artist") || 
+           c.includes("personal service");
+  };
+
+  const isVendor = isServiceProvider(user?.category);
 
   useEffect(() => {
     if (!loading && !selectedCity) {
@@ -267,7 +280,37 @@ export default function HomeScreen() {
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* 1) Video Hero Banner (Top) */}
-        <VideoHeroBanner />
+        <SequentialVideoBanner />
+
+        {/* Vendor Quick Access - Visible only for professionals */}
+        {isVendor && (
+          <View style={styles.vendorQuickAccess}>
+            <LinearGradient
+              colors={['#0f172a', '#1e293b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.vendorGradient}
+            >
+              <View style={styles.vendorHeader}>
+                <View style={styles.vendorIconBadge}>
+                  <Ionicons name="briefcase" size={20} color="#fbbf24" />
+                </View>
+                <View style={styles.vendorInfo}>
+                  <Text style={styles.vendorSub}>Artist Portal</Text>
+                  <Text style={styles.vendorTitle}>Welcome back, {user?.name || 'Professional'}</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.vendorBtn}
+                onPress={() => navigation.navigate('Management')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.vendorBtnText}>GO TO DASHBOARD</Text>
+                <Ionicons name="chevron-forward" size={16} color="#fbbf24" />
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        )}
 
         {/* 2) Hero Banner (Image Slideshow - Below Video) */}
         {displayBanners.length > 0 && (
@@ -513,6 +556,68 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
+  vendorQuickAccess: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  vendorGradient: {
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  vendorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  vendorIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  vendorInfo: {
+    flex: 1,
+  },
+  vendorSub: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  vendorTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  vendorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 4,
+  },
+  vendorBtnText: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
   heroBannerContainer: {
     paddingHorizontal: 20,
     marginTop: 20,

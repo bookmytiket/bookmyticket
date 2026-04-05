@@ -282,6 +282,45 @@ export const verifyCredentials = query({
     },
 });
 
+export const verifyVendorCredentials = query({
+    args: { identifier: v.string(), password: v.string() },
+    handler: async (ctx, args) => {
+        const identifier = args.identifier.trim().toLowerCase();
+        const organiser = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", identifier))
+            .unique();
+
+        const isServiceProvider = (category?: string) => {
+            if (!category) return false;
+            const c = category.trim().toLowerCase();
+            return c.includes("mehandi") || 
+                   c.includes("mehendi") || 
+                   c.includes("photograph") || 
+                   c.includes("makeup") || 
+                   c.includes("artist") || 
+                   c.includes("personal service");
+        };
+
+        if (organiser && organiser.password === args.password) {
+            if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
+                return { success: false, error: "Account is restricted." };
+            }
+            
+            const cat = (organiser.category || "").toLowerCase();
+            const kycCat = (organiser.kycDetails?.category || "").toLowerCase();
+            
+            if (!isServiceProvider(cat) && !isServiceProvider(kycCat)) {
+                return { success: false, error: "Access restricted: Professional Service account required." };
+            }
+
+            return { success: true, organiser };
+        }
+
+        return { success: false, error: "Invalid email/username or password." };
+    },
+});
+
 export const cleanupDuplicates = mutation({
     args: {},
     handler: async (ctx) => {

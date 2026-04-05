@@ -668,6 +668,17 @@ export default defineSchema({
         userAgent: v.string(),
         timestamp: v.number(),
     }).index("by_identifier", ["identifier"]),
+
+    mobileVideoBanners: defineTable({
+        type: v.string(), // "video" | "image"
+        mediaUrl: v.string(),
+        storageId: v.optional(v.id("_storage")),
+        title: v.optional(v.string()),
+        order: v.number(),
+        isActive: v.boolean(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_isActive", ["isActive"]).index("by_order", ["order"]),
 });
 
 

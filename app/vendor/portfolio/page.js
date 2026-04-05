@@ -121,6 +121,7 @@ export default function PortfolioPage() {
     const { user } = useAuth();
     const vendorId = getVendorAccountKey(user);
     const [uploading, setUploading] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
 
     const profile = useQuery(
@@ -154,14 +155,13 @@ export default function PortfolioPage() {
         setShowUploadConfig(true);
     };
 
-    const handleUpload = async () => {
-        if (pendingFiles.length === 0) return;
-
+    const handleUpload = async (filesToUpload = pendingFiles) => {
+        if (!filesToUpload || filesToUpload.length === 0) return;
         setUploading(true);
         setShowUploadConfig(false);
         try {
             const newPhotos = [];
-            for (const file of pendingFiles) {
+            for (const file of filesToUpload) {
                 const postUrl = await generateUploadUrl();
                 const result = await fetch(postUrl, {
                     method: "POST",
@@ -169,7 +169,6 @@ export default function PortfolioPage() {
                     body: file,
                 });
                 const { storageId } = await result.json();
-
                 newPhotos.push({
                     url: storageId,
                     type: file.type.startsWith("video") ? "video" : "image",
@@ -179,7 +178,6 @@ export default function PortfolioPage() {
                     beforeAfter: uploadConfig.beforeAfter
                 });
             }
-
             await updateProfile({
                 organiserId: vendorId,
                 category: profile?.category || "Unknown",
@@ -191,6 +189,16 @@ export default function PortfolioPage() {
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const onDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            setPendingFiles(files);
+            setShowUploadConfig(true);
         }
     };
 
@@ -414,23 +422,38 @@ export default function PortfolioPage() {
             </div>
 
             {portfolio.length === 0 && (
-                <div className="py-44 flex flex-col items-center justify-center text-center space-y-10 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 shadow-inner">
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={onDrop}
+                    className={`py-44 flex flex-col items-center justify-center text-center space-y-10 bg-white rounded-[4rem] border-2 border-dashed transition-all duration-500 shadow-inner ${
+                        isDragging ? 'border-pink-500 bg-pink-50/30 scale-[0.98]' : 'border-slate-100'
+                    }`}
+                >
                     <div className="relative group">
-                        <div className="absolute inset-0 bg-pink-500 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                        <div className="relative w-32 h-32 rounded-[3rem] bg-slate-50 flex items-center justify-center text-slate-200 border border-slate-100 shadow-xl group-hover:scale-110 transition-transform duration-700">
-                            <ImageIcon size={56} className="group-hover:text-pink-500 transition-colors" />
+                        <div className={`absolute inset-0 bg-pink-500 blur-[80px] transition-opacity ${isDragging ? 'opacity-30' : 'opacity-10'}`}></div>
+                        <div className={`relative w-32 h-32 rounded-[3rem] flex items-center justify-center transition-all duration-700 border ${
+                            isDragging ? 'bg-pink-500 text-white scale-110 border-pink-400 rotate-12' : 'bg-slate-50 text-slate-200 border-slate-100'
+                        }`}>
+                            <ImageIcon size={56} className={isDragging ? 'animate-bounce' : ''} />
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Digital Canvas Emits Void</h3>
-                        <p className="text-slate-400 max-w-sm mx-auto text-sm font-medium leading-relaxed">Your portfolio is currently blank. High-performing artists often maintain at least 15 active showcase items.</p>
+                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                            {isDragging ? 'Release Masterpiece' : 'Digital Canvas Emits Void'}
+                        </h3>
+                        <p className="text-slate-400 max-w-sm mx-auto text-sm font-medium leading-relaxed">
+                            {isDragging ? 'Drop your files here to initiate the exhibition.' : 'Your portfolio is currently blank. Drag and drop high-fidelity visual evidence here to increase conversions.'}
+                        </p>
                     </div>
-                    <button 
-                        onClick={() => fileInputRef.current.click()}
-                        className="bg-slate-900 text-white px-12 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.4em] hover:bg-pink-500 transition-all shadow-3xl shadow-slate-900/20 italic"
-                    >
-                        Select Your Masterpiece
-                    </button>
+                    {!isDragging && (
+                        <button 
+                            onClick={() => fileInputRef.current.click()}
+                            className="bg-slate-900 text-white px-12 py-5 rounded-[2.5rem] font-black text-[10px] uppercase tracking-[0.4em] hover:bg-pink-500 transition-all shadow-3xl shadow-slate-900/20 italic"
+                        >
+                            Select Your Masterpiece
+                        </button>
+                    )}
                 </div>
             )}
 

@@ -28,7 +28,7 @@ export default function VendorLayout({ children }) {
     const { user, loading, logout } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -67,13 +67,21 @@ export default function VendorLayout({ children }) {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex">
+            {/* Backdrop for mobile */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 lg:hidden transition-opacity duration-300"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside 
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl shadow-slate-200/50`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
             >
                 <div className="flex flex-col h-full font-figtree">
                     {/* Header */}
-                    <div className="h-20 flex items-center px-6 border-b border-slate-50 bg-white">
+                    <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50 bg-white">
                         <Link href="/" className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-pink-500/20">
                                 B
@@ -82,6 +90,12 @@ export default function VendorLayout({ children }) {
                                 BookMyTicket
                             </span>
                         </Link>
+                        <button 
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="p-2 ml-auto text-slate-400 hover:text-pink-500 lg:hidden transition-colors"
+                        >
+                            <X size={20} strokeWidth={3} />
+                        </button>
                     </div>
                     {/* Side Sub-Header (Service Role) */}
                     <div className="px-6 py-6 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
@@ -103,6 +117,7 @@ export default function VendorLayout({ children }) {
                                 <Link
                                     key={item.name}
                                     href={item.href}
+                                    onClick={() => setIsSidebarOpen(false)}
                                     className={`flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all duration-400 group relative ${
                                         isActive 
                                             ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' 
@@ -142,44 +157,44 @@ export default function VendorLayout({ children }) {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 font-figtree">
+            <div className="flex-1 flex flex-col min-w-0 font-figtree lg:h-screen">
                 {/* Top Header - Glassmorphism Light */}
-                <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
-                    <div className="flex items-center space-x-8">
+                <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-12">
+                    <div className="flex items-center space-x-4 lg:space-x-8">
                         <button 
                             onClick={toggleSidebar}
-                            className="p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
+                            className="p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm shrink-0"
                         >
                             <Menu size={22} />
                         </button>
-                        <div>
+                        <div className="min-w-0">
                             <div className="flex items-center gap-2.5 mb-0.5">
-                                <div className="w-1 h-3.5 bg-pink-500 rounded-full"></div>
-                                <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                <div className="w-1 h-3.5 bg-pink-500 rounded-full hidden sm:block"></div>
+                                <h1 className="text-lg lg:text-2xl font-black text-slate-900 tracking-tighter uppercase italic truncate">
                                     {navigation.find(n => n.href === pathname)?.name || "Dashboard"}
                                 </h1>
                             </div>
-                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-3.5">Artist Management Hub</p>
+                            <p className="text-[8px] lg:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] sm:ml-3.5 truncate">Artist Management Hub</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-8">
-                        <div className="hidden md:flex flex-col items-end mr-4">
+                    <div className="flex items-center space-x-4 lg:space-x-8 shrink-0">
+                        <div className="hidden lg:flex flex-col items-end mr-4">
                              <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Core Status</div>
                              <div className="text-[10px] font-black text-emerald-500 uppercase flex items-center gap-2 mt-1">
                                  <CheckCircle size={12} strokeWidth={3} /> 
                                  <span className="tracking-[0.2em]">Operational</span>
                              </div>
                         </div>
-                        <button className="p-3.5 rounded-[1.2rem] bg-white border border-slate-100 text-slate-300 hover:text-slate-900 hover:border-pink-500/30 transition-all shadow-sm relative group overflow-hidden">
+                        <button className="p-3 lg:p-3.5 rounded-[1.2rem] bg-white border border-slate-100 text-slate-300 hover:text-slate-900 hover:border-pink-500/30 transition-all shadow-sm relative group overflow-hidden">
                             <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Sparkles size={8} className="text-yellow-400" />
                             </div>
                             <Bell size={20} strokeWidth={2.5} />
                             <span className="absolute top-3.5 right-3.5 w-2 h-2 bg-pink-500 rounded-full ring-4 ring-white shadow-lg"></span>
                         </button>
-                        <div className="h-12 w-12 rounded-[1.2rem] bg-gradient-to-br from-pink-500 to-purple-600 p-0.5 shadow-2xl shadow-pink-500/30 group cursor-pointer hover:rotate-[10deg] transition-transform duration-500">
-                            <div className="w-full h-full bg-white rounded-[1rem] flex items-center justify-center text-pink-500 font-black text-xl shadow-inner italic">
+                        <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-[1rem] lg:rounded-[1.2rem] bg-gradient-to-br from-pink-500 to-purple-600 p-0.5 shadow-2xl shadow-pink-500/30 group cursor-pointer hover:rotate-[10deg] transition-transform duration-500">
+                            <div className="w-full h-full bg-white rounded-[0.8rem] lg:rounded-[1rem] flex items-center justify-center text-pink-500 font-black text-lg lg:text-xl shadow-inner italic">
                                 {user?.name?.charAt(0) || "V"}
                             </div>
                         </div>

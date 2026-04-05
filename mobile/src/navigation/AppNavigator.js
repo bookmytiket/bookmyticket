@@ -17,6 +17,8 @@ import ServiceVendorsScreen from '../screens/ServiceVendorsScreen';
 import ServiceDetailScreen from '../screens/ServiceDetailScreen';
 import MeetingPortalScreen from '../screens/MeetingPortalScreen';
 import MeetingWaitingRoomScreen from '../screens/MeetingWaitingRoomScreen';
+import VendorSignInScreen from '../screens/VendorSignInScreen';
+import SplashScreen from '../screens/SplashScreen';
 
 import { Colors } from '../theme/Theme';
 import WebHeader from './WebHeader';
@@ -27,7 +29,7 @@ export default function AppNavigator() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return null; // Or a splash/loading screen
+    return <SplashScreen />;
   }
 
   const isOrganiserOrStaff = user?.role === 'organiser' || user?.role === 'staff';
@@ -35,10 +37,16 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName="Splash"
         screenOptions={{
           header: () => <WebHeader />,
         }}
       >
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="MainTabs"
           component={TabNavigator}
@@ -47,6 +55,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="SignIn"
           component={SignInScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="VendorSignIn"
+          component={VendorSignInScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

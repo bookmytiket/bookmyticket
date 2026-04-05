@@ -11,7 +11,6 @@ export const metadata = {
 
 import { AuthProvider } from '@/components/AuthContext';
 import ConvexClientProvider from '@/components/ConvexClientProvider';
-import CookieNotification from '@/components/CookieNotification';
 
 export default function RootLayout({ children }) {
   return (
@@ -30,7 +29,6 @@ export default function RootLayout({ children }) {
             <Suspense fallback={null}>
               <ConditionalNavbar />
               <CustomerAdPopup />
-              <CookieNotification />
               {children}
             </Suspense>
           </AuthProvider>

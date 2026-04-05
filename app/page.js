@@ -358,8 +358,13 @@ export default function Home() {
 
 
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     setIsMounted(true);
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   if (!isMounted) {
@@ -368,7 +373,7 @@ export default function Home() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 'var(--header-h)' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
 
         <style>{`
           .syne-heading {
@@ -382,11 +387,11 @@ export default function Home() {
         `}</style>
 
         {/* 0) Hero Banners */}
-        <div style={{ width: '100%', paddingTop: '20px' }}>
+        <div style={{ width: '100%', paddingTop: isMobile ? '0' : '20px' }}>
           <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
         </div>
         
-        <div style={{ width: '100%', paddingTop: '40px' }}>
+        <div style={{ width: '100%', paddingTop: isMobile ? '20px' : '40px' }}>
           <VideoHeroBanner />
         </div>
 

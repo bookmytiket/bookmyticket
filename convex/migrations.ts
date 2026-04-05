@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+const crypto = (globalThis as any).crypto;
 
 export const migrateOrganisers = mutation({
     args: {},
@@ -83,6 +84,69 @@ export const hashExistingPasswords = mutation({
             organisersHashed: orgCount,
             staffHashed: staffCount,
             usersHashed: userCount
+        };
+    },
+});
+
+export const fixCategoryStrings = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const organisers = await ctx.db.query("organisers").collect();
+        let orgCount = 0;
+        for (const org of organisers) {
+            let newCat = org.category;
+            if (!newCat) continue;
+
+            const c = newCat.toLowerCase().trim();
+            if (c === "mehandi" || c === "mehandi artist" || c === "mehendi") {
+                newCat = "Mehendi Artist";
+            } else if (c === "photographer" || c === "photo" || c === "studio" || c === "photographer/studio") {
+                // Ensure exact casing: Photographer/Studio
+                newCat = "Photographer/Studio";
+            } else if (c === "makeup" || c === "makeup artist") {
+                newCat = "Makeup Artist";
+            }
+
+            if (newCat !== org.category) {
+                await ctx.db.patch(org._id, { category: newCat });
+                orgCount++;
+            }
+        }
+
+        const profiles = await ctx.db.query("vendorProfiles").collect();
+        let profileCount = 0;
+        for (const profile of profiles) {
+            let newCat = profile.category;
+            if (!newCat) continue;
+
+            const c = newCat.toLowerCase().trim();
+            if (c === "mehandi" || c === "mehandi artist" || c === "mehendi") {
+                newCat = "Mehendi Artist";
+            } else if (c === "photographer" || c === "photo" || c === "studio" || c === "photographer/studio") {
+                newCat = "Photographer/Studio";
+            } else if (c === "makeup" || c === "makeup artist") {
+                newCat = "Makeup Artist";
+            }
+
+            if (newCat !== profile.category) {
+                await ctx.db.patch(profile._id, { category: newCat });
+                profileCount++;
+            }
+
+            // EXTRA SYNC: Ensure the linked organiser record matches the profile category
+            const org = await ctx.db
+                .query("organisers")
+                .withIndex("by_userId", (q) => q.eq("userId", profile.organiserId))
+                .unique();
+            if (org && org.category !== newCat) {
+                await ctx.db.patch(org._id, { category: newCat });
+                orgCount++;
+            }
+        }
+
+        return {
+            organisersUpdated: orgCount,
+            profilesUpdated: profileCount,
         };
     },
 });

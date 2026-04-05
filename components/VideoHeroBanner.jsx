@@ -39,6 +39,14 @@ export default function VideoHeroBanner() {
         router.push(`/?category=${encodeURIComponent(cat)}`);
     };
 
+    const [isMobile, setIsMobile] = useState(false);
+    React.useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const videoRef = React.useRef(null);
     React.useEffect(() => {
         const video = videoRef.current;
@@ -78,8 +86,8 @@ export default function VideoHeroBanner() {
         <section style={{
             position: "relative",
             width: "100%",
-            minHeight: "560px",
-            height: "75vh",
+            minHeight: isMobile ? "320px" : "560px",
+            height: isMobile ? "50vh" : "75vh",
             maxHeight: "800px",
             display: "flex",
             alignItems: "center",
@@ -123,18 +131,18 @@ export default function VideoHeroBanner() {
                 width: "100%",
                 maxWidth: "1240px",
                 margin: "0 auto",
-                padding: "0 20px",
+                padding: isMobile ? "0 24px" : "0 20px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-start"
             }}>
                 {/* Main Heading */}
                 <h1 style={{
-                    fontSize: "clamp(36px, 5vw, 64px)",
+                    fontSize: isMobile ? "32px" : "clamp(36px, 5vw, 64px)",
                     fontWeight: 900,
                     color: "#fff",
                     lineHeight: 1.1,
-                    marginBottom: "20px",
+                    marginBottom: isMobile ? "12px" : "20px",
                     fontFamily: "var(--font-heading), sans-serif",
                     letterSpacing: "-0.04em"
                 }}>
@@ -151,17 +159,15 @@ export default function VideoHeroBanner() {
 
                 {/* Subtitle */}
                 <p style={{
-                    fontSize: "clamp(16px, 2vw, 20px)",
+                    fontSize: isMobile ? "14px" : "clamp(16px, 2vw, 20px)",
                     color: "rgba(255, 255, 255, 0.9)",
                     fontWeight: 400,
-                    marginBottom: "40px",
-                    maxWidth: "800px",
+                    marginBottom: isMobile ? "24px" : "40px",
+                    maxWidth: isMobile ? "100%" : "800px",
                     lineHeight: 1.5
                 }}>
                     {config.subtitle || "Explore concerts, shows, nightlife, and exclusive experiences happening around you."}
                 </p>
-
-
             </div>
         </section>
     );

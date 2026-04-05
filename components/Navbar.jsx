@@ -11,7 +11,7 @@ import { api } from "@/convex/_generated/api";
 
 const SUBNAV_LINKS = [
   { href: "/#explore-popular-events", label: "Events" },
-  { href: "/services", label: "Services" },
+  { href: "/#services", label: "Services" },
 ];
 
 

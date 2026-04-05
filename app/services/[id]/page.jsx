@@ -37,6 +37,7 @@ export default function ArtistProfilePage() {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     const fullProfile = useQuery(api.vendors.getFullProfile, { organiserId: vendorId });
+    const reviews = useQuery(api.vendorReviews.getVendorReviews, { vendorId: vendorId }) || [];
     const availability = useQuery(api.vendorCalendar.getAvailability, { vendorId: vendorId });
     const blockedDates = availability?.blockedDates || [];
     const confirmedBookings = availability?.confirmedBookings || [];
@@ -53,6 +54,33 @@ export default function ArtistProfilePage() {
     }, [user]);
 
     const createBooking = useMutation(api.vendorBookings.create);
+    const submitReview = useMutation(api.vendorReviews.submitReview);
+
+    const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+    const handleReviewSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) return alert("Please sign in to leave a review.");
+        if (!reviewForm.comment.trim()) return alert("Please share a comment.");
+
+        setIsSubmittingReview(true);
+        try {
+            await submitReview({
+                vendorId: vendorId,
+                userId: user.email || user.identifier,
+                rating: reviewForm.rating,
+                comment: reviewForm.comment
+            });
+            setReviewForm({ rating: 5, comment: "" });
+            alert("Thank you for your feedback!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to submit review.");
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    };
 
     const handleBooking = async (e) => {
         if (e) e.preventDefault();
@@ -134,8 +162,7 @@ export default function ArtistProfilePage() {
     const { organiser, vendorProfile } = fullProfile;
     const portfolio = vendorProfile?.portfolio || [];
     const pricing = vendorProfile?.pricing || [];
-    const avgRating = 4.8; 
-    
+    const avgRating = reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : 0;    
     const categoryName = vendorProfile?.category || organiser.category || "";
     const isUnknown = !categoryName || categoryName.toLowerCase() === "unknown";
     
@@ -363,33 +390,98 @@ export default function ArtistProfilePage() {
                             <p className="text-[14px] font-medium text-slate-600 leading-[1.8] whitespace-pre-line mb-10">
                                 {vendorProfile?.bio || "No biography provided by the artist yet."}
                             </p>
-
                             <hr className="border-slate-100 mb-10" />
 
-                            {/* Portfolio Gallery Section */}
-                            <h3 className="text-[18px] font-extrabold text-[#111827] tracking-tight mb-6">Portfolio Gallery</h3>
-                            <div className="animate-in fade-in duration-700">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    {portfolio.map((item, i) => (
-                                        <div key={i} className="group relative aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
-                                            <img 
-                                                src={item.url.startsWith('http') ? item.url : `https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=800`} 
-                                                alt="Portfolio" 
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                                            />
+                             {/* Reviews & Manual Feedback Section */}
+                             <div className="space-y-10">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[20px] font-extrabold text-[#111827] tracking-tight">Customer Reflections</h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex text-yellow-400">
+                                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill={s <= Math.round(Number(avgRating)) ? "currentColor" : "none"} />)}
                                         </div>
-                                    ))}
-                                </div>
-                                {portfolio.length === 0 && (
-                                    <div className="py-16 text-center bg-slate-50 border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center">
-                                        <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-                                            <ImageIcon size={32} className="text-slate-300" />
-                                        </div>
-                                        <p className="font-bold text-slate-400 text-[13px] tracking-tight">Portfolio gallery is empty.</p>
-                                        <p className="text-slate-300 text-[11px] mt-1 font-medium">Work samples will appear here once uploaded.</p>
+                                        <span className="text-[12px] font-black text-slate-400 italic">({reviews.length} Validated)</span>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Submission Form */}
+                                    <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-8 space-y-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[13px] font-black text-slate-900 uppercase italic tracking-wider">Leave a Reflection</p>
+                                            <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic">Your manual feedback helps other organizers find the best artists.</p>
+                                        </div>
+                                        
+                                        <div className="flex items-center space-x-3">
+                                            {[1,2,3,4,5].map(s => (
+                                                <button 
+                                                    key={s} 
+                                                    onClick={() => setReviewForm({...reviewForm, rating: s})}
+                                                    className={`transition-transform hover:scale-110 ${s <= reviewForm.rating ? 'text-yellow-400' : 'text-slate-200'}`}
+                                                >
+                                                    <Star size={28} fill={s <= reviewForm.rating ? "currentColor" : "none"} strokeWidth={2.5} />
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <textarea 
+                                            value={reviewForm.comment}
+                                            onChange={e => setReviewForm({...reviewForm, comment: e.target.value})}
+                                            placeholder="Describe your the artist's professionalism and quality..."
+                                            className="w-full bg-white border border-slate-100 rounded-2xl p-5 text-[13px] font-medium text-slate-600 focus:border-[#FF5A5F] outline-none min-h-[140px] shadow-inner resize-none transition-all"
+                                        />
+
+                                        <button 
+                                            onClick={handleReviewSubmit}
+                                            disabled={isSubmittingReview || !reviewForm.comment.trim()}
+                                            className="w-full bg-slate-900 text-white rounded-2xl py-4 text-[10px] font-black uppercase tracking-[0.3em] italic hover:bg-pink-600 transition-all shadow-xl shadow-slate-900/10 disabled:opacity-50"
+                                        >
+                                            {isSubmittingReview ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Post Public Reflection"}
+                                        </button>
+                                    </div>
+
+                                    {/* Recent List */}
+                                    <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {reviews.length > 0 ? reviews.map((r, i) => (
+                                            <div key={i} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-slate-200 transition-colors shadow-sm">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 italic">
+                                                            {r.userId[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[12px] font-black text-slate-900 tracking-tight lowercase">{r.userId}</span>
+                                                            <div className="flex text-yellow-400">
+                                                                {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= r.rating ? "currentColor" : "none"} />)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-[12px] text-slate-500 font-medium leading-relaxed italic">"{r.comment}"</p>
+                                                {r.response && (
+                                                    <div className="pt-4 mt-4 border-t border-slate-50">
+                                                        <p className="text-[9px] font-black text-pink-500 uppercase tracking-widest mb-1 items-center flex gap-1.5 italic">
+                                                            <CheckCircle2 size={10} />
+                                                            Artist's Response
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-900 font-bold leading-relaxed italic bg-slate-50/50 p-3 rounded-xl border border-slate-50">
+                                                            {r.response}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )) : (
+                                            <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] space-y-4">
+                                                <div className="w-16 h-16 bg-slate-50 rounded-full mx-auto flex items-center justify-center">
+                                                    <Star size={24} className="text-slate-100" />
+                                                </div>
+                                                <p className="text-[11px] font-black text-slate-200 uppercase tracking-widest italic">Digital Void of Reflection</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                             </div>
                         </div>
                     </div>
 

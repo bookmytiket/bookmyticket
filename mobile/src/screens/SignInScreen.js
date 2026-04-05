@@ -116,11 +116,6 @@ export default function SignInScreen() {
           return;
         } 
         
-        if (res.role === 'organiser') {
-           setError('Please log in through the Web Portal. Mobile access is currently not available for organisers.');
-           return;
-        }
-
         if (!selectedCity) {
           navigation.navigate('Location');
         } else {
@@ -155,11 +150,6 @@ export default function SignInScreen() {
           return;
         }
         
-        if (res.role === 'organiser') {
-           setError('Please log in through the Web Portal. Mobile access is currently not available for organisers.');
-           return;
-        }
-
         if (!selectedCity) {
           navigation.navigate('Location');
         } else {

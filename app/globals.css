@@ -3479,7 +3479,7 @@ nextjs-portal {
   .bms-banner-stage {
     padding: 0;
     height: auto !important;
-    aspect-ratio: 16 / 7;
+    aspect-ratio: 16 / 10;
   }
 
   .bms-slide-main {

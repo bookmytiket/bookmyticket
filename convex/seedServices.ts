@@ -6,7 +6,7 @@ export const seed = mutation({
   handler: async (ctx) => {
     const categories = [
       { name: "Mehendi Artist", slug: "mehendi-artist", icon: "🌸", count: 0, order: 1 },
-      { name: "Photographer", slug: "photographer", icon: "📸", count: 0, order: 2 },
+      { name: "Photographer/Studio", slug: "photographer-studio", icon: "📸", count: 0, order: 2 },
       { name: "Makeup Artist", slug: "makeup-artist", icon: "✨", count: 0, order: 3 },
     ];
 
@@ -35,7 +35,7 @@ export const seed = mutation({
       {
         email: "photo1@example.com",
         name: "Dreamy Stills",
-        category: "Photographer",
+        category: "Photographer/Studio",
         bio: "Professional wedding and event photographer with 10 years experience.",
         portfolio: [
           { url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800", type: "image" }
