@@ -12,6 +12,7 @@ import BlockMapDesigner from "./components/BlockMapDesigner";
 import CalendarPicker from "./components/CalendarPicker";
 import CustomSelect from "./components/CustomSelect";
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
+import PromoteModal from "@/components/PromoteModal";
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
     static getDerivedStateFromError(error) { return { error }; }
@@ -718,6 +719,7 @@ function OrganiserPanel() {
 
     // Add Event: first step is choosing Online vs Venue (image format)
     const [addEventStep, setAddEventStep] = useState("select_type"); // 'select_type' | 'form'
+    const [promoteEventModal, setPromoteEventModal] = useState(null);
 
     const [showMapModal, setShowMapModal] = useState(false);
     const [tempLocation, setTempLocation] = useState({ lat: 28.6139, lng: 77.209 });
@@ -2691,6 +2693,9 @@ function OrganiserPanel() {
                                                             <button onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev._id }).catch(e => console.error(e)); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                 <Trash2 size={16} />
                                                             </button>
+                                                            <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                <Share size={16} />
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -4462,6 +4467,17 @@ function OrganiserPanel() {
                         </div>
                     </div>
                 )}
+
+                <PromoteModal
+                    isOpen={!!promoteEventModal}
+                    onClose={() => setPromoteEventModal(null)}
+                    title={promoteEventModal?.title || ""}
+                    imageUrl={promoteEventModal?.img || promoteEventModal?.bannerPreview || ""}
+                    date={promoteEventModal?.date || "TBA"}
+                    location={promoteEventModal?.venue || "Online"}
+                    bookingUrl={typeof window !== "undefined" && promoteEventModal ? `${window.location.origin}/events/detail/${promoteEventModal._id}` : ""}
+                    type="Event"
+                />
 
                 {/* Location Picker modal — draggable map marker */}
                 {showMapModal && (

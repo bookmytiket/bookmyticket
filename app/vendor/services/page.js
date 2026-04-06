@@ -19,8 +19,10 @@ import {
     CheckCircle2,
     Settings2,
     Package,
-    X
+    X,
+    Share
 } from "lucide-react";
+import PromoteModal from "@/components/PromoteModal";
 
 export default function ServicesPage() {
     const { user } = useAuth();
@@ -36,6 +38,7 @@ export default function ServicesPage() {
     const [pricing, setPricing] = useState([]);
     const [advancedSettings, setAdvancedSettings] = useState({});
     const [isSaving, setIsSaving] = useState(false);
+    const [promoteProfileModal, setPromoteProfileModal] = useState(false);
 
     useEffect(() => {
         if (profile?.pricing) setPricing(profile.pricing);
@@ -182,15 +185,34 @@ export default function ServicesPage() {
                     </div>
                     <p className="text-slate-500 text-sm max-w-xl font-medium">Define your service tiers and pricing. High clarity packages lead to 2x more conversions.</p>
                 </div>
-                <button 
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center space-x-3 bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-4 rounded-2xl text-white font-black text-sm shadow-2xl shadow-pink-500/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 uppercase tracking-widest"
-                >
-                    {isSaving ? <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Save size={18} />}
-                    <span>Save Packages</span>
-                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setPromoteProfileModal(true)}
+                        className="flex items-center space-x-3 border border-pink-200 text-pink-500 bg-pink-50 px-8 py-4 rounded-2xl font-black text-sm hover:bg-pink-100 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest"
+                    >
+                        <Share size={18} />
+                        <span>Promote</span>
+                    </button>
+                    <button 
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex items-center space-x-3 bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-4 rounded-2xl text-white font-black text-sm shadow-2xl shadow-pink-500/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 uppercase tracking-widest"
+                    >
+                        {isSaving ? <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Save size={18} />}
+                        <span>Save</span>
+                    </button>
+                </div>
             </div>
+
+            {/* Promote Modal */}
+            <PromoteModal
+                isOpen={promoteProfileModal}
+                onClose={() => setPromoteProfileModal(false)}
+                title={profile?.name || "Professional Services"}
+                imageUrl={profile?.portfolio?.[0]?.url || ""}
+                type="Service"
+                bookingUrl={typeof window !== "undefined" && vendorId ? `${window.location.origin}/profile/${vendorId}` : ""}
+            />
 
             {/* General Preferences Section */}
             <div className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
