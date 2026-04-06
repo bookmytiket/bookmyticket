@@ -211,7 +211,7 @@ export default function ServicesPage() {
                 title={profile?.name || "Professional Services"}
                 imageUrl={profile?.portfolio?.[0]?.url || ""}
                 type="Service"
-                bookingUrl={typeof window !== "undefined" && vendorId ? `${window.location.origin}/profile/${vendorId}` : ""}
+                bookingUrl={typeof window !== "undefined" && vendorId ? `${window.location.origin}/services/${vendorId}` : ""}
             />
 
             {/* General Preferences Section */}

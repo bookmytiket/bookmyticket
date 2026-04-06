@@ -110,3 +110,10 @@ export const unsubscribe = mutation({
         }
     },
 });
+
+export const remove = mutation({
+    args: { id: v.id("subscribers") },
+    handler: async (ctx, args) => {
+        await ctx.db.delete(args.id);
+    },
+});

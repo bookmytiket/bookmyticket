@@ -19,16 +19,19 @@ import {
     Sparkles,
     Image as ImageIcon,
     LayoutDashboard,
-    Briefcase
+    Briefcase,
+    Share
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PromoteModal from "@/components/PromoteModal";
 
 export default function DashboardPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
     const vendorId = getVendorAccountKey(user);
     const [mounted, setMounted] = React.useState(false);
+    const [promoteProfileModal, setPromoteProfileModal] = React.useState(false);
 
     React.useEffect(() => {
         setMounted(true);
@@ -98,6 +101,13 @@ export default function DashboardPage() {
                 </div>
                 
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setPromoteProfileModal(true)}
+                        className="group bg-pink-50 border border-pink-200 px-8 py-3.5 rounded-2xl text-pink-500 font-black text-[10px] shadow-sm hover:shadow-xl hover:bg-pink-100 transition-all flex items-center gap-3 uppercase tracking-widest"
+                    >
+                        <Share size={16} className="text-pink-500" />
+                        Promote
+                    </button>
                     <Link 
                         href="/vendor/services"
                         className="group bg-white border border-slate-200 px-8 py-3.5 rounded-2xl text-slate-900 font-black text-[10px] shadow-sm hover:shadow-xl hover:border-pink-500/30 transition-all flex items-center gap-3 uppercase tracking-widest"
@@ -107,6 +117,16 @@ export default function DashboardPage() {
                     </Link>
                 </div>
             </div>
+
+            {/* Promote Modal */}
+            <PromoteModal
+                isOpen={promoteProfileModal}
+                onClose={() => setPromoteProfileModal(false)}
+                title={profile?.name || "Professional Services"}
+                imageUrl={profile?.portfolio?.[0]?.url || ""}
+                type="Service"
+                bookingUrl={typeof window !== "undefined" && vendorId ? `${window.location.origin}/services/${vendorId}` : ""}
+            />
 
             {/* Premium Stat Grid - Clean & Elevated */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

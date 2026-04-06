@@ -2690,7 +2690,7 @@ function OrganiserPanel() {
                                                                     <Grid size={14} /> Map
                                                                 </button>
                                                             )}
-                                                            <button onClick={() => { if (confirm("Delete this event?")) deleteEventMutation({ id: ev._id }).catch(e => console.error(e)); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                            <button onClick={() => deleteEventMutation({ id: ev._id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                 <Trash2 size={16} />
                                                             </button>
                                                             <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
@@ -4475,7 +4475,7 @@ function OrganiserPanel() {
                     imageUrl={promoteEventModal?.img || promoteEventModal?.bannerPreview || ""}
                     date={promoteEventModal?.date || "TBA"}
                     location={promoteEventModal?.venue || "Online"}
-                    bookingUrl={typeof window !== "undefined" && promoteEventModal ? `${window.location.origin}/events/detail/${promoteEventModal._id}` : ""}
+                    bookingUrl={typeof window !== "undefined" && promoteEventModal ? `${window.location.origin}/events/detail?id=${promoteEventModal._id}` : ""}
                     type="Event"
                 />
 

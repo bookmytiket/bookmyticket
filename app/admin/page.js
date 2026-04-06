@@ -100,6 +100,64 @@ export default function AdminHomePageWrapper() {
     );
 }
 
+const SubscribersTable = ({ t, theme }) => {
+    const subscribers = useQuery(api.subscribers.listAll);
+    const removeSubscriber = useMutation(api.subscribers.remove);
+
+    if (subscribers === undefined) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading subscribers...</div>;
+    if (subscribers.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No subscribers found.</div>;
+
+    return (
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+            <thead>
+                <tr style={{ textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Email Address</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Subscribed At</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {subscribers.map((subs) => (
+                    <tr key={subs._id} style={{ backgroundColor: theme === 'light' ? '#fff' : t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#ec489920", display: "flex", alignItems: "center", justifyContent: "center", color: "#ec4899" }}>
+                                    <Mail size={16} />
+                                </div>
+                                <span style={{ fontWeight: 600, color: t.textMain }}>{subs.email}</span>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <span style={{ 
+                                padding: "4px 10px", 
+                                borderRadius: "100px", 
+                                fontSize: "11px", 
+                                fontWeight: 800, 
+                                backgroundColor: subs.status === 'Subscribed' ? "#22c55e20" : "#ef444420",
+                                color: subs.status === 'Subscribed' ? "#22c55e" : "#ef4444"
+                            }}>
+                                {subs.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ fontSize: "12px", color: t.textSub }}>{new Date(subs._creationTime).toLocaleString()}</div>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <button 
+                                onClick={() => { if(confirm("Permanently delete this subscriber?")) removeSubscriber({ id: subs._id }); }}
+                                style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 const AdminMeetingsTable = ({ t, router }) => {
     const meetings = useQuery(api.meetings.listAll);
     const deleteMeeting = useMutation(api.meetings.deleteMeeting);
@@ -403,14 +461,14 @@ function AdminHomePage() {
 
         if (convexEmailSettings === null) {
             updateEmailSettingsMutation({
-                host: "smtp.mailtrap.io",
-                port: 2525,
-                user: "api",
+                host: "smtp.gmail.com",
+                port: 587,
+                user: "v.raja2mail@gmail.com",
                 pass: "",
-                from: "noreply@bookmyticket.net",
-                fromName: "Ticketing Tool",
-                encryption: "None",
-                authMethod: "Basic Authentication"
+                from: "v.raja2mail@gmail.com",
+                fromName: "BookMyTicket",
+                encryption: "TLS",
+                authMethod: "App Password"
             });
         }
 
@@ -1279,6 +1337,7 @@ function AdminHomePage() {
 
                                 <SidebarGroupTitle title="Partners" />
                                 <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
+                                <SidebarItem id="subscribers" label="Subscribers" icon={Mail} active={activeTab === "subscribers"} onClick={() => setActiveTab("subscribers")} />
                                 
                                 <div onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isOrganizersOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
                                     <div className="flex items-center space-x-3">
@@ -3450,6 +3509,17 @@ function AdminHomePage() {
                                     <h3 style={{ fontSize: "14px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>SMTP Settings (Outgoing Email)</h3>
                                 </div>
 
+                                <div style={{ gridColumn: "span 2", marginBottom: "12px", padding: "16px", borderRadius: "10px", backgroundColor: "#fffbeb", border: "1px solid #fef3c7", display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                                    <AlertCircle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: "2px" }} />
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "#92400e" }}>Action Required: SMTP Configuration</p>
+                                        <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#b45309", lineHeight: "1.5" }}>
+                                            Valid SMTP credentials (Host, Port, User, Password) are **strictly required** for sending newsletter welcome emails and ticket confirmations. 
+                                            The default "Mailtrap" settings are for testing only and will not work without your specific password.
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                                     <div style={{ position: "relative" }}>
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px", color: t.textMain }}>SMTP Host <span style={{ color: "#888", fontWeight: "normal" }}>*</span> <span style={{ color: "#ef4444" }}>*</span></label>
@@ -3954,6 +4024,18 @@ function AdminHomePage() {
                                     <span style={{ fontWeight: 700 }}>Security Note:</span> SSO authentication methods use industry-standard OAuth 2.0 and OpenID Connect protocols. All authentication flows are secured with CSRF tokens and follow cybersecurity best practices.
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === "subscribers" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <div>
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Newsletter Subscribers</h3>
+                                    <p style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Manage and view all users who signed up for your website newsletter.</p>
+                                </div>
+                            </div>
+                            <SubscribersTable t={t} theme={theme} />
                         </div>
                     )}
 

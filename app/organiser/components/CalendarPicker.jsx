@@ -40,8 +40,11 @@ export default function CalendarPicker({ value, onChange, placeholder = "dd/mm/y
 
     const handleDateSelect = (day) => {
         const selectedDate = new Date(currentYear, currentMonth, day);
-        // Format as YYYY-MM-DD for standard input values
-        const formattedDate = selectedDate.toISOString().split("T")[0];
+        // Format as YYYY-MM-DD manually to avoid timezone shifts from toISOString()
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const date = String(selectedDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${date}`;
         onChange(formattedDate);
         setIsOpen(false);
     };
@@ -173,8 +176,11 @@ export default function CalendarPicker({ value, onChange, placeholder = "dd/mm/y
                             </button>
                             <button 
                                 onClick={() => {
-                                    const today = new Date().toISOString().split("T")[0];
-                                    onChange(today);
+                                    const today = new Date();
+                                    const year = today.getFullYear();
+                                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                                    const date = String(today.getDate()).padStart(2, '0');
+                                    onChange(`${year}-${month}-${date}`);
                                     setIsOpen(false);
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:bg-blue-50 px-3 py-1.5 rounded-xl transition-all border border-transparent hover:border-blue-100"
