@@ -364,3 +364,75 @@ export const testLatestEventNotification = action({
         });
     },
 });
+
+export const sendSubscriptionWelcome = action({
+    args: {
+        email: v.string(),
+    },
+    handler: async (ctx, args): Promise<any> => {
+        const { email } = args;
+        const branding = await ctx.runQuery(api.siteBranding.get) as any;
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
+        const brandNameDisplay = "bookmyticket";
+
+        // CLEAN MINIMAL VERSION - NO EMOJIS, SIMPLE INLINE STYLES, LOGO INCLUDED
+        const welcomeHtml = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 50px; width: auto;">
+                </div>
+                <div style="padding: 40px; color: #1e293b; line-height: 1.6; text-align: center;">
+                    <h2 style="color: #0f172a; margin-top: 0; font-size: 24px;">Welcome to ${brandNameDisplay}!</h2>
+                    <p style="font-size: 16px;">Thank you for subscribing to our newsletter.</p>
+                    <p style="font-size: 16px; margin-bottom: 30px;">We're excited to have you in our community. You'll be the first to know about the most exciting events near you.</p>
+                    
+                    <a href="${siteUrl}/events" style="background-color: #f844a4; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 10px rgba(248, 68, 164, 0.2);">Browse Events</a>
+                    
+                    <div style="margin-top: 40px; border-top: 1px solid #f1f5f9; padding-top: 30px;">
+                        <p style="font-size: 14px; color: #64748b; margin: 0;">Join our network as a partner:</p>
+                        <a href="${siteUrl}/signup" style="color: #f844a4; font-weight: 600; text-decoration: none;">Become a Partner →</a>
+                    </div>
+                </div>
+                <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #f1f5f9;">
+                    © 2026 ${brandNameDisplay}. All rights reserved.<br/>
+                    Visit us at <a href="${siteUrl}" style="color: #64748b; text-decoration: underline;">bookmyticket.net</a>
+                </div>
+            </div>
+        `;
+
+        console.log(`[Notification] Sending welcome email to ${email}...`);
+        
+        return await ctx.runAction(api.emailActions.sendEmail, {
+            to: email,
+            subject: `Welcome to ${brandNameDisplay}`,
+            html: welcomeHtml,
+        });
+    },
+});
+
+export const sendToExistingSubscribers = action({
+    args: {},
+    handler: async (ctx): Promise<any> => {
+        const subscribers = await ctx.runQuery(api.subscribers.list);
+        console.log(`[Batch] Found ${subscribers.length} active subscribers.`);
+        
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const sub of subscribers) {
+            console.log(`[Batch] Sending to ${sub.email}...`);
+            const result: any = await ctx.runAction(api.notificationActions.sendSubscriptionWelcome, { email: sub.email });
+            if (result.success) {
+                successCount++;
+            } else {
+                failCount++;
+                console.error(`[Batch] Failed for ${sub.email}:`, result.error);
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        return { successCount, failCount };
+    },
+});

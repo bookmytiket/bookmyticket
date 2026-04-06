@@ -390,7 +390,7 @@ function AdminHomePage() {
                 companyName: "book my ticket",
                 logoUrl: "",
                 importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
-                supportUrl: "https://www.bookmyticket.net",
+                supportUrl: "https://bookmyticket.net",
                 sendViaEmail: true,
                 sendViaSms: true,
                 sendPdfWhatsApp: true,

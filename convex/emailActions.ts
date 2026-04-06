@@ -80,17 +80,27 @@ export const sendEmail = action({
             console.log("✅ Email sent successfully to:", toEmail);
             console.log("🎟️ Message ID:", info.messageId);
             console.log("🎟️ SMTP Response:", info.response);
-            return { success: true, messageId: info.messageId, response: info.response };
+            console.log("🎟️ Envelope:", JSON.stringify(info.envelope));
+            
+            return { 
+                success: true, 
+                messageId: info.messageId, 
+                response: info.response,
+                accepted: info.accepted,
+                rejected: info.rejected
+            };
         } catch (error: any) {
-            console.error("❌ Error sending email to", args.to, ":", error);
-            console.error("SMTP Configuration used:", {
-                host: settings.host,
-                port: settings.port,
-                user: settings.user,
-                encryption: settings.encryption,
-                from: settings.from || settings.user
-            });
-            return { success: false, error: String(error?.message || error) };
+            console.error("❌ SMTP Error sending email to", args.to, ":", error);
+            console.error("Error Code:", error.code);
+            console.error("Error Command:", error.command);
+            console.error("Error Response:", error.response);
+            
+            return { 
+                success: false, 
+                error: String(error?.message || error),
+                code: error.code,
+                response: error.response
+            };
         }
     },
 });
