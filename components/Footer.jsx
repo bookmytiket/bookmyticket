@@ -26,7 +26,7 @@ const SOCIALS = [
 ];
 
 const DEFAULT_COPYRIGHT = {
-    copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+    copyrightText: "© Copyright 2026 – Nexvant Technologies. All Rights Reserved.",
     privacyUrl: "#",
     termsUrl: "#"
 };
@@ -47,7 +47,12 @@ export default function Footer() {
         if (rawCopyright == null) return DEFAULT_COPYRIGHT;
         try {
             const parsed = typeof rawCopyright === "string" ? JSON.parse(rawCopyright) : rawCopyright;
-            return typeof parsed === "object" && parsed !== null ? { ...DEFAULT_COPYRIGHT, ...parsed } : DEFAULT_COPYRIGHT;
+            const final = typeof parsed === "object" && parsed !== null ? { ...DEFAULT_COPYRIGHT, ...parsed } : DEFAULT_COPYRIGHT;
+            // Force the name change if it matches the old one
+            if (final.copyrightText && final.copyrightText.includes("BookMyTicket")) {
+                final.copyrightText = final.copyrightText.replace("BookMyTicket", "Nexvant Technologies");
+            }
+            return final;
         } catch (_) {
             return DEFAULT_COPYRIGHT;
         }
@@ -151,8 +156,8 @@ export default function Footer() {
                             {[
                                 { icon: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z", text: "+91 98765 43210" },
                                 { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", text: "Coimbatore, Tamil Nadu, India" },
-                                { icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6", text: "hello@bookmyticket.in" },
-                                { icon: "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z", text: "www.bookmyticket.in" },
+                                { icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6", text: "hello@bookmyticket.net" },
+                                { icon: "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z", text: "www.bookmyticket.net" },
                             ].map((item, i) => (
                                 <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: isMobile ? "center" : "flex-start", gap: "10px" }}>
                                     <div style={{ flexShrink: 0, marginTop: "2px" }}>

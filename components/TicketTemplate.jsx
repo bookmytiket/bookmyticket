@@ -12,7 +12,7 @@ export default function TicketTemplate({ booking = {}, event = {}, settings = {}
     const companyName = settings.companyName || DEFAULT_LOGO_NAME;
     const logoUrl = settings.logoUrl || "/logo.png";
     const importantInfo = settings.importantInfo || DEFAULT_IMPORTANT_INFO;
-    const supportUrl = settings.supportUrl || "https://www.bookmyticket.com";
+    const supportUrl = settings.supportUrl || "https://www.bookmyticket.net";
 
     const eventName = booking.eventName || event.title || "Event";
     const eventImg = event.img || event.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=400&fit=crop";

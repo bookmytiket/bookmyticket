@@ -461,7 +461,7 @@ function OrganiserPanel() {
     const [showVendorModal, setShowVendorModal] = useState(false);
     const [agreedToVendor, setAgreedToVendor] = useState(false);
 
-    const effectiveEmail = user?.role === "staff" ? user.organiserId : (user?.identifier || "organiser@bookmyticket.com");
+    const effectiveEmail = user?.role === "staff" ? user.organiserId : (user?.identifier || "hello@bookmyticket.net");
     const isStaff = user?.role === "staff";
 
     // KYC Wizard State

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, MapPin, Target, ChevronDown } from "lucide-react";
+import { Search, X, MapPin, Target } from "lucide-react";
 import { COUNTRIES, POPULAR_CITIES, LANDMARK_ICONS } from "@/app/data/locationData";
 
 export default function LocationSelectionModal({ 
@@ -15,7 +15,7 @@ export default function LocationSelectionModal({
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
-  const [showOtherCities, setShowOtherCities] = useState(false);
+
   
   const [activeCountry, setActiveCountry] = useState("India");
   const searchRef = useRef(null);
@@ -94,6 +94,15 @@ export default function LocationSelectionModal({
     );
   };
 
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -109,25 +118,25 @@ export default function LocationSelectionModal({
             backgroundColor: '#fff', 
             boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.15)', 
             position: 'relative', 
-            padding: '32px', 
+            padding: isMobile ? '20px' : '32px', 
             border: '1px solid #f1f5f9',
             overflow: 'hidden'
         }}
       >
-        {allowClose && <button onClick={onClose} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#1e293b'}><X size={24} /></button>}
+        {allowClose && <button onClick={onClose} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s', zIndex: 1100 }} onMouseEnter={(e) => e.currentTarget.style.color = '#1e293b'}><X size={24} /></button>}
 
-        <h2 style={{ textAlign: 'center', fontSize: '22px', fontWeight: 800, color: '#1e293b', marginBottom: '28px', letterSpacing: '-0.01em' }}>Select Your Location to Continue</h2>
+        <h2 style={{ textAlign: 'center', fontSize: isMobile ? '18px' : '22px', fontWeight: 800, color: '#1e293b', marginBottom: isMobile ? '20px' : '28px', letterSpacing: '-0.01em', paddingRight: '32px' }}>Select Your Location to Continue</h2>
 
         {/* 1. Search Bar */}
-        <div style={{ position: 'relative', marginBottom: '32px', zIndex: 1000 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', border: '1.5px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#fff', transition: 'all 0.2s' }}>
-            <Search size={22} color="#f84464" />
-            <input ref={searchRef} type="text" placeholder="Search For A Location..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, border: 'none', outline: 'none', fontSize: '18px', fontWeight: 600, color: '#334155', background: 'transparent' }} />
+        <div style={{ position: 'relative', marginBottom: isMobile ? '24px' : '32px', zIndex: 1000 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: isMobile ? '10px 16px' : '12px 20px', border: '1.5px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#fff', transition: 'all 0.2s' }}>
+            <Search size={isMobile ? 20 : 22} color="#f84464" />
+            <input ref={searchRef} type="text" placeholder="Search For A Location..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, border: 'none', outline: 'none', fontSize: isMobile ? '16px' : '18px', fontWeight: 600, color: '#334155', background: 'transparent' }} />
             {loading && <div className="animate-spin" style={{ width: 18, height: 18, border: '2px solid #94a3b8', borderTopColor: 'transparent', borderRadius: '50%' }} />}
             {search.length > 0 && <X size={20} color="#94a3b8" style={{ cursor: 'pointer' }} onClick={() => setSearch("")} />}
             <div style={{ width: '1.5px', height: '24px', backgroundColor: '#e2e8f0', margin: '0 8px' }} />
             <div onClick={handleGeoLocation} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
-              {geoLoading ? <div className="animate-spin" style={{ width: 22, height: 22, border: '2px solid #f84464', borderTopColor: 'transparent', borderRadius: '50%' }} /> : <Target size={24} color="#f84464" />}
+              {geoLoading ? <div className="animate-spin" style={{ width: 22, height: 22, border: '2px solid #f84464', borderTopColor: 'transparent', borderRadius: '50%' }} /> : <MapPin size={isMobile ? 22 : 24} color="#f84464" />}
             </div>
           </div>
           
@@ -167,7 +176,7 @@ export default function LocationSelectionModal({
         {/* Scrollable Content Area */}
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }} className="no-scrollbar">
             {/* 2. Country Tabs */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '24px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: isMobile ? '20px' : '24px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
               {COUNTRIES.map(c => (
                 <button key={c.label} onClick={() => setActiveCountry(c.label)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '40px', border: activeCountry === c.label ? '2.5px solid #4f46e5' : '1.5px solid #e2e8f0', backgroundColor: '#fff', color: activeCountry === c.label ? '#4f46e5' : '#64748b', whiteSpace: 'nowrap', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', boxShadow: activeCountry === c.label ? '0 4px 10px rgba(79, 70, 229, 0.12)' : 'none' }}>
                   <span style={{ fontSize: '14px' }}>{c.flag}</span><span>{c.label}</span>
@@ -175,16 +184,25 @@ export default function LocationSelectionModal({
               ))}
             </div>
             
-            {/* 3. Popular Cities Grid */}
+            {/* 3. Popular Cities - Responsive Layout */}
             <p style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginBottom: '16px' }}>Popular Cities</p>
-            <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(4, 1fr)', 
-                gap: '12px', 
-                marginBottom: '24px' 
-            }}>
+            <div 
+              className="hide-scrollbar"
+              style={{ 
+                display: isMobile ? 'grid' : 'flex', 
+                gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : undefined,
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+                overflowX: isMobile ? 'hidden' : 'auto',
+                gap: isMobile ? '8px' : '12px', 
+                marginBottom: '24px',
+                paddingBottom: '12px',
+                scrollBehavior: 'smooth',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none'
+              }}
+            >
                 {(POPULAR_CITIES[activeCountry] || POPULAR_CITIES["India"]).map(city => (
-                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: '100%' }} onMouseEnter={(e) => {
+                    <button key={city.name} onClick={() => { updateCity(city.name); onClose(); }} style={{ flex: isMobile ? undefined : '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: isMobile ? '100%' : '90px' }} onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-3px)';
                         const img = e.currentTarget.querySelector('img');
                         if (img) img.style.transform = 'scale(1.1)';
@@ -206,7 +224,7 @@ export default function LocationSelectionModal({
                             boxShadow: selectedCity === city.name ? '0 12px 24px -8px rgba(79, 70, 229, 0.4)' : 'none', 
                             overflow: 'hidden',
                             position: 'relative',
-                            padding: city.img ? '0' : '12px'
+                            padding: isMobile ? '24px' : '20px'
                         }}>
                             {city.img ? (
                                 <img 
@@ -215,7 +233,7 @@ export default function LocationSelectionModal({
                                     style={{ 
                                         width: '100%', 
                                         height: '100%', 
-                                        objectFit: 'cover', 
+                                        objectFit: 'contain', 
                                         transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                         opacity: 0.95
                                     }} 
@@ -226,7 +244,7 @@ export default function LocationSelectionModal({
                                 </div>
                             )}
                         </div>
-                        <span style={{ fontSize: '11px', fontWeight: 800, color: selectedCity === city.name ? '#4f46e5' : '#475569', textAlign: 'center', marginTop: '4px', width: '100%', display: 'block' }}>{city.name}</span>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: selectedCity === city.name ? '#4f46e5' : '#475569', textAlign: 'center', marginTop: '4px', width: '100%', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.name}</span>
                     </button>
                 ))}
             </div>

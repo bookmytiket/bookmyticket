@@ -378,7 +378,7 @@ function AdminHomePage() {
         if (allConfig["admin_footer_copyright"] === undefined) {
             setConfigMutation({
                 key: "admin_footer_copyright", value: JSON.stringify({
-                    copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+                    copyrightText: "© Copyright 2026 – Nexvant Technologies. All Rights Reserved.",
                     privacyUrl: "#",
                     termsUrl: "#"
                 })
@@ -390,7 +390,7 @@ function AdminHomePage() {
                 companyName: "book my ticket",
                 logoUrl: "",
                 importantInfo: "We are book my ticket and we are dedicated to selling tickets for the best events. book my ticket is not the event organizer and is not responsible for event conditions, safety, rescheduling, or cancellations. Present this ticket (printed or on your phone) with a valid ID at the venue. Do not share this ticket with others. For support, visit our website.",
-                supportUrl: "https://www.bookmyticket.com",
+                supportUrl: "https://www.bookmyticket.net",
                 sendViaEmail: true,
                 sendViaSms: true,
                 sendPdfWhatsApp: true,
@@ -407,7 +407,7 @@ function AdminHomePage() {
                 port: 2525,
                 user: "api",
                 pass: "",
-                from: "noreply@bookmyticket.com",
+                from: "noreply@bookmyticket.net",
                 fromName: "Ticketing Tool",
                 encryption: "None",
                 authMethod: "Basic Authentication"
@@ -459,7 +459,7 @@ function AdminHomePage() {
                 { title: "Terms of Service", slug: "terms-of-service", content: "<h1>Terms of Service</h1><p>By using our service, you agree to these terms.</p>", showInFooter: true, order: 2 },
                 { title: "Event Listing", slug: "event-listing", content: "<h1>Event Listing</h1><p>Check out our latest event listings.</p>", showInFooter: true, order: 3 },
                 { title: "Pricing Plan", slug: "pricing-plan", content: "<h1>Pricing Plan</h1><p>View our event pricing plans.</p>", showInFooter: true, order: 4 },
-                { title: "Contact Us", slug: "contact-us", content: "<h1>Contact Us</h1><p>Get in touch with us at hello@bookmyticket.in</p>", showInFooter: true, order: 5 },
+                { title: "Contact Us", slug: "contact-us", content: "<h1>Contact Us</h1><p>Get in touch with us at hello@bookmyticket.net</p>", showInFooter: true, order: 5 },
             ];
             defaults.forEach(d => createPageMutation(d));
         }
@@ -585,7 +585,7 @@ function AdminHomePage() {
     }, allConfig);
 
     const [footerCopyrightConfig, setFooterCopyrightConfig] = useConvexConfig("admin_footer_copyright", {
-        copyrightText: "© Copyright 2026 – BookMyTicket. All Rights Reserved.",
+        copyrightText: "© Copyright 2026 – Nexvant Technologies. All Rights Reserved.",
         privacyUrl: "#",
         termsUrl: "#"
     }, allConfig);

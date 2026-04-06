@@ -59,7 +59,7 @@ export const sendFailedLoginAlert = action({
                 </div>
                 <div style="padding: 30px; color: #1e293b; line-height: 1.6;">
                     <p>Hello,</p>
-                    <p>We detected a failed login attempt on your <b>BookMyTicket</b> account.</p>
+                    <p>We detected a failed login attempt on your <b>Nexvant Technologies</b> account.</p>
                     
                     <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #cbd5e1;">
                         <p style="margin: 0 0 10px 0;"><b>Details of the attempt:</b></p>
@@ -75,11 +75,11 @@ export const sendFailedLoginAlert = action({
                     <p style="color: #ef4444; font-weight: bold;">If this wasn't you, your account might be under risk. We recommend changing your password immediately.</p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="https://bookmyticket.com/signin?mode=forgot" style="background: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Secure My Account</a>
+                        <a href="https://www.bookmyticket.net/signin?mode=forgot" style="background: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Secure My Account</a>
                     </div>
                 </div>
                 <div style="background: #f1f5f9; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px;">
-                    © ${new Date().getFullYear()} BookMyTicket. All rights reserved.
+                    © ${new Date().getFullYear()} Nexvant Technologies. All rights reserved.
                 </div>
             </div>
         `;

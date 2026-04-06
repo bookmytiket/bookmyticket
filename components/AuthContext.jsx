@@ -183,7 +183,7 @@ export function AuthProvider({ children }) {
                 }
 
                 // Fallback for default demo organiser
-                if (identifier === "organiser@bookmyticket.com" && (password === "organiser123" || password === "985a539a667140f6b3cfc2398a69e900995c58a5da359740a12e52b2b115eb3d")) {
+                if (identifier === "hello@bookmyticket.net" && (password === "organiser123" || password === "985a539a667140f6b3cfc2398a69e900995c58a5da359740a12e52b2b115eb3d")) {
                     const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
                     localStorage.setItem("user", JSON.stringify(mockUser));
                     setUser(mockUser);

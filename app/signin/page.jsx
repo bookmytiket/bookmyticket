@@ -342,7 +342,7 @@ export default function SignInPage() {
         setLoginError("");
         try {
             // For demo purposes, we use a mock email
-            const mockEmail = `${provider}.demo@bookmyticket.com`;
+            const mockEmail = `${provider}.demo@bookmyticket.net`;
             const userData = await convex.query(api.users.getByIdentifier, { identifier: mockEmail });
             
             if (userData) {

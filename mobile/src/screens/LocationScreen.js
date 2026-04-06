@@ -137,11 +137,11 @@ export default function LocationScreen({ navigation }) {
                 </TouchableOpacity>
             )}
             <View style={styles.vDivider} />
-            <TouchableOpacity onPress={handleDetectLocation} disabled={geoLoading}>
+            <TouchableOpacity onPress={handleDetectLocation} style={styles.geoBtn}>
                 {geoLoading ? (
                     <ActivityIndicator size="small" color="#f84464" />
                 ) : (
-                    <MaterialCommunityIcons name="target" size={22} color="#f84464" />
+                    <Ionicons name="location-outline" size={24} color="#f84464" />
                 )}
             </TouchableOpacity>
         </View>
@@ -219,13 +219,13 @@ export default function LocationScreen({ navigation }) {
                                         <Image 
                                             source={city.image} 
                                             style={styles.cityImage}
-                                            resizeMode="cover"
+                                            resizeMode="contain"
                                         />
                                     ) : (
                                         getCityIcon(city.icon, isActive)
                                     )}
                                 </View>
-                                <Text style={[styles.cityName, isActive && styles.activeCityName]}>{city.name}</Text>
+                                <Text style={[styles.cityName, isActive && styles.activeCityName]} numberOfLines={1}>{city.name}</Text>
                             </TouchableOpacity>
                         );
                     })}
@@ -256,6 +256,8 @@ export default function LocationScreen({ navigation }) {
                         </View>
                     </View>
                 </View>
+
+
             </ScrollView>
         </View>
     </SafeAreaView>
@@ -404,16 +406,16 @@ const styles = StyleSheet.create({
   citiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     marginBottom: 10,
   },
   cityCard: {
-    width: (SCREEN_WIDTH - 32) / 4,
+    width: (SCREEN_WIDTH - 20) / 4,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   cityIconBox: {
-    width: '82%',
+    width: '65%',
     aspectRatio: 1,
     backgroundColor: '#f8fafc',
     borderRadius: 16,
@@ -423,6 +425,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#f1f5f9',
     overflow: 'hidden',
+    padding: 18,
   },
   activeCityIconBox: {
     borderColor: '#6366f1',
@@ -436,10 +439,10 @@ const styles = StyleSheet.create({
   cityImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.9,
+    opacity: 0.95,
   },
   cityName: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '800',
     color: '#64748b',
     textAlign: 'center',
