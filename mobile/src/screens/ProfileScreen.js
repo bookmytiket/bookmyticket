@@ -138,7 +138,7 @@ export default function ProfileScreen() {
                           return;
                         }
                         
-                        const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.vercel.app';
+                        const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.net';
                         const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
                         Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                       }}
@@ -217,7 +217,7 @@ export default function ProfileScreen() {
                     return;
                   }
                   
-                  const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.vercel.app';
+                  const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.net';
                   const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
                   Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                 }}

@@ -44,7 +44,7 @@ export default function MeetingWaitingRoomScreen() {
       } else {
         // Internal strategy: for now, open in browser until a native room is built
         // We can point specifically to the web portal's meeting page
-        const webPortalUrl = `https://bookmyticket.vercel.app/${access.url}`;
+        const webPortalUrl = `https://bookmyticket.net/${access.url}`;
         Linking.openURL(webPortalUrl);
       }
     }

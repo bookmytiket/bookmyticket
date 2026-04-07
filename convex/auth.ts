@@ -33,7 +33,7 @@ export const forgotPassword = mutation({
         });
 
         const branding = await ctx.db.query("siteBranding").first();
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -157,7 +157,7 @@ async function internalSendOTP(ctx: MutationCtx, rawEmail: string, purpose: stri
     console.log("=================================================");
 
     const branding = await ctx.db.query("siteBranding").first();
-    const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+    const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
     let brandLogo = branding?.logoUrl || "/logo.png";
     if (brandLogo.startsWith("/")) {
         brandLogo = `${siteUrl}${brandLogo}`;

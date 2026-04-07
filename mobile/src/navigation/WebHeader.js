@@ -75,7 +75,7 @@ export default function WebHeader() {
                       return;
                     }
                     
-                    const baseUrl = 'https://bookmyticket.vercel.app';
+                    const baseUrl = "https://bookmyticket.net";
                     const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
                     Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                   }}

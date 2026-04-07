@@ -52,7 +52,7 @@ export const sendEventCreationNotifications = action({
         console.log(`Unique recipients: ${emailRecipients.size} emails, ${whatsappRecipients.size} WhatsApp numbers.`);
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -260,7 +260,7 @@ export const sendSignupGreeting = action({
     handler: async (ctx, args) => {
         const { email, fullName } = args;
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -311,7 +311,7 @@ export const sendBulkGreetingToAll = action({
         subscribers.forEach((s: any) => { if (s.email) emailRecipients.add(s.email); });
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -455,7 +455,7 @@ export const sendTurfBookingConfirmation = action({
         const { bookingId, email, phone, name, turfName, date, time, participantCount, amountPaid, lat, lng } = args;
         
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
         const brandNameDisplay = branding?.name || "BookMyTicket";
