@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const MapPicker = dynamic(() => import("@/components/MapPicker"), { ssr: false });
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -44,6 +47,8 @@ export default function ManageTurfs() {
         description: "",
         location: "",
         address: "",
+        lat: null,
+        lng: null,
         pricePerHour: 1000,
         advanceAmount: 200,
         
@@ -68,7 +73,7 @@ export default function ManageTurfs() {
                 id: selectedTurf?._id
             });
             setShowAddModal(false);
-            setFormData({ name: "", description: "", location: "", address: "", pricePerHour: 1000, advanceAmount: 200, status: "active" });
+            setFormData({ name: "", description: "", location: "", address: "", lat: null, lng: null, pricePerHour: 1000, advanceAmount: 200, status: "active" });
             setSelectedTurf(null);
         } catch (err) {
             alert(err.message);
@@ -88,6 +93,8 @@ export default function ManageTurfs() {
             description: turf.description || "",
             location: turf.location || "",
             address: turf.address || "",
+            lat: turf.lat || null,
+            lng: turf.lng || null,
             pricePerHour: turf.pricePerHour,
             advanceAmount: turf.advanceAmount || 0,
             
@@ -271,14 +278,24 @@ export default function ManageTurfs() {
                                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition-all font-figtree"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest px-2">Location/Area</label>
+                                    <div className="space-y-4 col-span-full">
+                                        <div className="flex items-center justify-between px-2">
+                                            <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Precise Location Mapping</label>
+                                            <span className="text-[9px] font-bold text-slate-400">Click map to auto-fill</span>
+                                        </div>
+                                        <MapPicker 
+                                          lat={formData.lat} 
+                                          lng={formData.lng} 
+                                          onLocationSelect={(data) => {
+                                              setFormData({...formData, lat: data.lat, lng: data.lng, location: data.address || formData.location });
+                                          }} 
+                                        />
                                         <input 
                                             required
                                             value={formData.location}
                                             onChange={(e) => setFormData({...formData, location: e.target.value})}
                                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-300 transition-all font-figtree"
-                                            placeholder="e.g. Koramangala, Bangalore"
+                                            placeholder="Extracted Display Name (Or manually type)"
                                         />
                                     </div>
                                     <div className="space-y-4 col-span-full border-t border-slate-50 pt-6">

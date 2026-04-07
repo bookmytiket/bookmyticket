@@ -192,9 +192,9 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                 <div className="flex gap-4">
                     <button 
                          onClick={() => { setSelectedTurf(null); setFormData(initialForm); setShowAddModal(true); }}
-                        className="flex items-center space-x-3 bg-slate-900 px-10 py-4 rounded-2xl text-white font-black text-sm shadow-2xl shadow-slate-900/30 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest"
+                        className="flex items-center space-x-3 bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-4 rounded-2xl text-white font-black text-sm shadow-2xl shadow-pink-500/30 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest"
                     >
-                        <Plus size={18} className="text-blue-400" />
+                        <Plus size={18} className="text-white" />
                         <span>Add Pitch</span>
                     </button>
                 </div>
@@ -251,21 +251,21 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                             <div className="flex items-center gap-3 pt-6 border-t border-slate-50 mt-auto">
                                 <button 
                                     onClick={() => openEdit(turf)}
-                                    className="px-6 py-4 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 hover:border-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                    className="px-6 py-4 bg-purple-50 border border-purple-100 text-purple-600 hover:text-white hover:bg-purple-600 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                                 >
                                     <Settings2 size={16} />
                                     Edit Core
                                 </button>
                                 <Link 
                                     href={`/vendor/services/slots?turfId=${turf._id}`}
-                                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 hover:bg-blue-600"
+                                    className="flex-1 px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl shadow-pink-500/20 hover:scale-[1.02] active:scale-95 whitespace-nowrap"
                                 >
-                                    <Clock size={16} className="text-blue-400" />
-                                    Slot Blueprint
+                                    <Clock size={16} className="text-white shrink-0" />
+                                    <span className="truncate">Slot Blueprint</span>
                                 </Link>
                                 <button 
                                     onClick={() => setPromoteTurf(turf)}
-                                    className="p-4 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-2xl transition-all border border-blue-100/50"
+                                    className="p-4 bg-pink-50 text-pink-500 hover:bg-pink-500 hover:text-white rounded-2xl transition-all border border-pink-100/50"
                                     title="Promote Facility"
                                 >
                                     <Share size={16} />
@@ -467,7 +467,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                             {/* Modal Footer */}
                             <div className="p-10 pt-6 border-t border-slate-50 bg-white flex items-center gap-6">
                                 <button type="button" onClick={() => setShowAddModal(false)} className="px-10 py-5 bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-100 transition-all">Cancel Project</button>
-                                <button type="submit" className="flex-1 py-5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-blue-600 transition-all shadow-2xl shadow-slate-900/10">Initialize Deployment</button>
+                                <button type="submit" className="flex-1 py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.01] active:scale-95 transition-all shadow-2xl shadow-pink-500/20">Initialize Deployment</button>
                             </div>
                         </form>
                     </div>

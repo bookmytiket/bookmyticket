@@ -4506,11 +4506,9 @@ function OrganiserPanel() {
 
                 {/* Sidebar */}
                 <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 ${typeof sidebarOpen === 'boolean' && sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
-                    {/* Logo */}
-                    <div className="h-20 flex items-center px-6 border-b border-slate-50 bg-white">
-                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab("dashboard")}>
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-pink-500/20">B</div>
-                            <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">BookMyTicket</span>
+                    <div className="h-20 flex items-center justify-center border-b border-slate-50 bg-white">
+                        <div className="flex items-center cursor-pointer" onClick={() => setActiveTab("dashboard")}>
+                            <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
                         </div>
                     </div>
                     <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
@@ -4652,13 +4650,11 @@ function OrganiserPanel() {
                                     router.push('/signin');
                                     setTimeout(() => logout(), 100);
                                 }}
-                                className="sidebar-item"
-                                style={{ color: "#ef4444", marginBottom: 0 }}
+                                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-[1rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
+                                style={{ marginBottom: "12px" }}
                             >
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                    <LogOut size={18} />
-                                    <span>Logout</span>
-                                </div>
+                                <LogOut size={14} strokeWidth={3} className="text-white" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
                             </button>
                         </div>
                     </div>

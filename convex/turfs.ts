@@ -40,6 +40,8 @@ export const saveTurf = mutation({
         description: v.optional(v.string()),
         location: v.optional(v.string()),
         address: v.optional(v.string()),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
         images: v.optional(v.array(v.string())),
         amenities: v.optional(v.array(v.string())),
         pricePerHour: v.number(),

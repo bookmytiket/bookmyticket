@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+
+const StaticMap = dynamic(() => import("@/components/StaticMap"), { ssr: false });
 
 export default function TurfProfilePage() {
     const params = useParams();
@@ -499,14 +502,19 @@ export default function TurfProfilePage() {
                             </div>
 
                             <div className="space-y-6 pt-10 border-t border-slate-50">
-                                <h3 className="text-xl font-black text-slate-900 uppercase italic">Facility Location</h3>
-                                <div className="h-64 bg-slate-100 rounded-[2rem] relative overflow-hidden group">
-                                     <div className="absolute inset-0 flex items-center justify-center">
-                                         <MapIcon size={48} className="text-slate-300 group-hover:scale-110 transition-transform duration-700" />
-                                     </div>
-                                     <div className="absolute bottom-6 left-6 right-6 p-6 bg-white/90 backdrop-blur-md rounded-2xl border border-slate-100 shadow-xl">
-                                         <p className="text-sm font-bold text-slate-900">{turf.address || "Fetching precise coordinates..."}</p>
-                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">GCP Map Integration Active</p>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-black text-slate-900 uppercase italic">Facility Location</h3>
+                                    {turf.lat && turf.lng && (
+                                        <a href={`https://www.google.com/maps/search/?api=1&query=${turf.lat},${turf.lng}`} target="_blank" rel="noreferrer" className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                            Open in Google Maps
+                                        </a>
+                                    )}
+                                </div>
+                                <div className="h-64 bg-slate-100 rounded-[2rem] relative overflow-hidden group border border-slate-100 z-0">
+                                     <StaticMap lat={turf.lat} lng={turf.lng} />
+                                     <div className="absolute bottom-6 left-6 right-6 p-6 bg-white/90 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl z-[1000] pointer-events-none">
+                                         <p className="text-sm font-bold text-slate-900">{turf.address || turf.location || "Location not precisely mapped"}</p>
+                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Geo-Location Active</p>
                                      </div>
                                 </div>
                             </div>

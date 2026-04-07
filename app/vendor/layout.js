@@ -83,18 +83,13 @@ export default function VendorLayout({ children }) {
             >
                 <div className="flex flex-col h-full font-figtree">
                     {/* Header */}
-                    <div className="h-16 flex items-center justify-between px-6 border-b border-slate-50 bg-white">
-                        <Link href="/" className="flex items-center space-x-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-pink-500/20">
-                                B
-                            </div>
-                            <span className="text-lg font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">
-                                BookMyTicket
-                            </span>
+                    <div className="h-20 flex items-center justify-center px-6 border-b border-slate-50 bg-white relative">
+                        <Link href="/" className="flex items-center">
+                            <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
                         </Link>
                         <button 
                             onClick={() => setIsSidebarOpen(false)}
-                            className="p-1 px-2 ml-auto text-slate-400 hover:text-pink-500 lg:hidden transition-colors"
+                            className="p-1 px-2 absolute right-6 text-slate-400 hover:text-pink-500 lg:hidden transition-colors"
                         >
                             <X size={18} strokeWidth={3} />
                         </button>
@@ -149,10 +144,10 @@ export default function VendorLayout({ children }) {
                         </div>
                         <button 
                             onClick={logout}
-                            className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-500 shadow-sm"
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-[1rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
                         >
-                            <LogOut size={12} strokeWidth={3} />
-                            <span className="text-[9px] font-black uppercase tracking-[0.3em]">Sign Out</span>
+                            <LogOut size={14} strokeWidth={3} className="text-white" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
                         </button>
                     </div>
                 </div>

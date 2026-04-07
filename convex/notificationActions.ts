@@ -436,3 +436,93 @@ export const sendToExistingSubscribers = action({
         return { successCount, failCount };
     },
 });
+
+export const sendTurfBookingConfirmation = action({
+    args: {
+        bookingId: v.id("turfBookings"),
+        email: v.string(),
+        phone: v.string(),
+        name: v.string(),
+        turfName: v.string(),
+        date: v.string(),
+        time: v.string(),
+        participantCount: v.number(),
+        amountPaid: v.number(),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const { bookingId, email, phone, name, turfName, date, time, participantCount, amountPaid, lat, lng } = args;
+        
+        const branding = await ctx.runQuery(api.siteBranding.get) as any;
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.vercel.app";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
+        const brandNameDisplay = branding?.name || "BookMyTicket";
+
+        const mapsUrl = (lat && lng) ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null;
+
+        const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <div style="background-color: #f8fafc; padding: 30px; text-align: center; border-bottom: 3px solid #f844a4;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 50px; width: auto;">
+                    <h2 style="color: #1e293b; margin-top: 20px;">Booking Confirmed! ✅</h2>
+                </div>
+                <div style="padding: 30px; color: #334155; line-height: 1.6;">
+                    <p style="font-size: 16px;">Hello <strong>${name}</strong>,</p>
+                    <p style="font-size: 16px;">Your booking for <strong>${turfName}</strong> has been confirmed successfully.</p>
+                    
+                    <div style="background-color: #f1f5f9; padding: 20px; border-radius: 10px; margin-top: 20px; margin-bottom: 25px;">
+                        <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+                        <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+                        <p style="margin: 5px 0;"><strong>Participants:</strong> ${participantCount} players</p>
+                        <p style="margin: 5px 0;"><strong>Paid Amount:</strong> ₹${amountPaid}</p>
+                        <p style="margin: 5px 0;"><strong>Booking ID:</strong> ${bookingId as string}</p>
+                    </div>
+
+                    ${mapsUrl ? `
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="${mapsUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Navigate to Turf 📍</a>
+                    </div>
+                    ` : ''}
+                </div>
+                <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px; border-top: 1px solid #f1f5f9;">
+                    © 2026 ${brandNameDisplay}. All rights reserved.
+                </div>
+            </div>
+        `;
+
+        // 1. Send Email
+        const emailPromise = ctx.runAction(api.emailActions.sendEmail, {
+            to: email,
+            subject: `Booking Confirmed: ${turfName}`,
+            html: emailHtml,
+        }).catch(err => console.error("Email failed:", err));
+
+        // 2. Send WhatsApp
+        let whatsappPromise = Promise.resolve();
+        const whatsappSettings = await ctx.runQuery(api.whatsappSettings.get) as any;
+        if (phone && whatsappSettings && whatsappSettings.isActive && whatsappSettings.accountSid && whatsappSettings.authToken) {
+            const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+            
+            let waMessage = `✅ *Booking Confirmed!*\n\nHi ${name}, your booking at *${turfName}* is confirmed.\n\n📅 Date: ${date}\n⏰ Time: ${time}\n👥 Players: ${participantCount}\n💰 Amount Paid: ₹${amountPaid}`;
+            if (mapsUrl) waMessage += `\n\n📍 *Location:* ${mapsUrl}`;
+            
+            whatsappPromise = fetch(`https://api.twilio.com/2010-04-01/Accounts/${whatsappSettings.accountSid}/Messages.json`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    Authorization: "Basic " + Buffer.from(`${whatsappSettings.accountSid}:${whatsappSettings.authToken}`).toString("base64"),
+                },
+                body: new URLSearchParams({
+                    To: `whatsapp:${formattedPhone}`,
+                    From: whatsappSettings.fromNumber || "whatsapp:+14155238886",
+                    Body: waMessage,
+                }),
+            }).then(res => res.json()).catch(err => console.error("WhatsApp failed:", err));
+        }
+
+        await Promise.all([emailPromise, whatsappPromise]);
+        return { success: true };
+    },
+});

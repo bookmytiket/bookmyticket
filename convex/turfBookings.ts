@@ -82,6 +82,21 @@ export const confirmPayment = mutation({
         if (args.paymentStatus === "fully_paid" || args.paymentStatus === "advance_paid") {
             const turf = await ctx.db.get(booking.turfId);
             if (turf) {
+                // Schedule Notifications
+                await ctx.scheduler.runAfter(0, api.notificationActions.sendTurfBookingConfirmation, {
+                    bookingId: booking._id,
+                    email: booking.customerDetails.email,
+                    phone: booking.customerDetails.phone,
+                    name: booking.customerDetails.name,
+                    turfName: turf.name,
+                    date: booking.date,
+                    time: `${booking.startTime}`,
+                    participantCount: booking.participantCount || 1,
+                    amountPaid: args.paymentStatus === "fully_paid" ? booking.totalAmount : booking.advancePaid,
+                    lat: turf.lat,
+                    lng: turf.lng,
+                });
+
                 const organiser = await ctx.db
                     .query("organisers")
                     .withIndex("by_userId", (q) => q.eq("userId", turf.organiserId))
