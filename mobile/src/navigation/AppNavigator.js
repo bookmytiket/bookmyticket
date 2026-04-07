@@ -15,6 +15,7 @@ import BecomeOrganiserScreen from '../screens/BecomeOrganiserScreen';
 import SeatingScreen from '../screens/SeatingScreen';
 import ServiceVendorsScreen from '../screens/ServiceVendorsScreen';
 import ServiceDetailScreen from '../screens/ServiceDetailScreen';
+import TurfDetailScreen from '../screens/TurfDetailScreen';
 import MeetingPortalScreen from '../screens/MeetingPortalScreen';
 import MeetingWaitingRoomScreen from '../screens/MeetingWaitingRoomScreen';
 import VendorSignInScreen from '../screens/VendorSignInScreen';
@@ -114,6 +115,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="ServiceDetail"
           component={ServiceDetailScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TurfDetail"
+          component={TurfDetailScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

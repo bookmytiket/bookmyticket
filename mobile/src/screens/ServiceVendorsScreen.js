@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -7,35 +7,71 @@ import {
   Image, 
   StyleSheet, 
   ActivityIndicator,
-  SafeAreaView 
+  SafeAreaView,
+  ScrollView
 } from 'react-native';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { SERVICE_CATEGORIES } from '../data/serviceCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 
 export default function ServiceVendorsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { category = "All" } = route.params || {};
-  
-  // Normalize category name for query
-  const displayCategory = category === "All" ? "Professional Services" : category;
+  const { category: initialCategory = "All" } = route.params || {};
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   
   // Use listByCategory for the selected category
   const vendors = useQuery(api.vendors.listByCategory, { 
-    category: category === "All" ? "" : category 
+    category: selectedCategory === "All" ? "" : selectedCategory 
   });
   
-  const filteredVendors = vendors || [];
+  const turfsRaw = useQuery(api.turfs.listActive);
 
-  const renderVendorCard = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => navigation.navigate('ServiceDetail', { vendorId: item.id })}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+  const mergedItems = useMemo(() => {
+    const vList = vendors || [];
+    const tList = (turfsRaw || []).map(t => ({
+      id: t._id,
+      name: t.name,
+      category: "Turf Booking",
+      bio: t.description || "Premium sports facility with great amenities.",
+      portfolio: t.images?.map(img => ({ url: img, type: "image" })) || [],
+      pricing: [{ name: "Standard", price: t.pricePerHour || 0 }],
+      rating: 5.0, // Placeholder
+      reviewsCount: 0,
+      isTurf: true
+    }));
+
+    if (selectedCategory === "Turf Booking") {
+      return tList;
+    }
+
+    if (selectedCategory === "All") {
+      return [...vList, ...tList].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
+    return vList;
+  }, [vendors, turfsRaw, selectedCategory]);
+
+  const filteredVendors = mergedItems || [];
+
+  const renderVendorCard = ({ item }) => {
+    const handlePress = () => {
+      if (item.isTurf) {
+        navigation.navigate('TurfDetail', { turfId: item.id });
+      } else {
+        navigation.navigate('ServiceDetail', { vendorId: item.id });
+      }
+    };
+
+    return (
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={handlePress}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Image 
           source={{ uri: item.portfolio?.[0]?.url || 'https://images.unsplash.com/photo-1596704017254-9b1210630b65?w=500' }} 
           style={styles.avatar}
@@ -72,15 +108,16 @@ export default function ServiceVendorsScreen() {
         </View>
         <TouchableOpacity 
           style={styles.viewProfileBtn}
-          onPress={() => navigation.navigate('ServiceDetail', { vendorId: item.id })}
+          onPress={handlePress}
         >
-          <Text style={styles.viewProfileText}>View Profile</Text>
+          <Text style={styles.viewProfileText}>{item.isTurf ? "View Turf" : "View Profile"}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
-  if (vendors === undefined) {
+  if (vendors === undefined || turfsRaw === undefined) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.secondary} />
@@ -94,8 +131,28 @@ export default function ServiceVendorsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{displayCategory}</Text>
+        <Text style={styles.headerTitle}>Professional Services</Text>
         <View style={{ width: 40 }} />
+      </View>
+
+      <View style={styles.categoriesContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
+          <TouchableOpacity 
+            style={[styles.categoryPill, selectedCategory === "All" && styles.categoryPillActive]}
+            onPress={() => setSelectedCategory("All")}
+          >
+            <Text style={[styles.categoryPillText, selectedCategory === "All" && styles.categoryPillTextActive]}>All</Text>
+          </TouchableOpacity>
+          {SERVICE_CATEGORIES.map((cat) => (
+            <TouchableOpacity 
+              key={cat.id}
+              style={[styles.categoryPill, selectedCategory === cat.name && styles.categoryPillActive]}
+              onPress={() => setSelectedCategory(cat.name)}
+            >
+              <Text style={[styles.categoryPillText, selectedCategory === cat.name && styles.categoryPillTextActive]}>{cat.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FlatList
@@ -106,8 +163,8 @@ export default function ServiceVendorsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="search-outline" size={64} color={Colors.border} />
-            <Text style={styles.emptyTitle}>No Artists Found</Text>
-            <Text style={styles.emptySub}>We couldn't find any professionals in this category yet.</Text>
+            <Text style={styles.emptyTitle}>No {selectedCategory === "Turf Booking" ? "Turfs" : "Artists"} Found</Text>
+            <Text style={styles.emptySub}>We couldn't find any {selectedCategory === "Turf Booking" ? "turfs" : "professionals"} in this category yet.</Text>
           </View>
         }
       />
@@ -134,6 +191,39 @@ const styles = StyleSheet.create({
     color: Colors.black,
     textTransform: 'uppercase',
     letterSpacing: -0.5,
+  },
+  categoriesContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingVertical: 12,
+  },
+  categoriesScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9',
+    marginRight: 8,
+  },
+  categoryPillActive: {
+    backgroundColor: Colors.secondary,
+    shadowColor: Colors.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  categoryPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  categoryPillTextActive: {
+    color: '#fff',
   },
   list: { padding: 16, gap: 16 },
   card: {
