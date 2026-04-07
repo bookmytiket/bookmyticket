@@ -318,25 +318,58 @@ export const sendBulkGreetingToAll = action({
         }
         const brandNameDisplay = branding?.name || "BookMyTicket";
 
-        const htmlMessage = `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px;">
-                <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px;">
-                <h2 style="color: #333;">${subject}</h2>
-                <p>Hello,</p>
-                <p>${message.replace(/\n/g, '<br/>')}</p>
-                <p style="margin-top: 30px;">Best regards,<br/>The ${brandNameDisplay} Team</p>
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { font-family: 'Inter', Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+                .header { background: linear-gradient(135deg, #f43f5e, #a855f7); padding: 40px 20px; text-align: center; }
+                .logo { max-width: 150px; margin-bottom: 20px; }
+                .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+                .content { padding: 40px 30px; }
+                .message { font-size: 16px; color: #475569; line-height: 1.6; margin-bottom: 24px; white-space: pre-wrap; }
+                .footer { background-color: #1e293b; padding: 30px 20px; text-align: center; }
+                .footer-text { color: #94a3b8; font-size: 14px; margin-bottom: 16px; }
+                .support-link { color: #38bdf8; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <img src="${brandLogo}" alt="${brandNameDisplay} Logo" class="logo" onerror="this.style.display='none'">
+                    <h1>${subject}</h1>
+                </div>
+                <div class="content">
+                    <div class="message">${message.replace(/\n/g, '<br/>')}</div>
+                </div>
+                <div class="footer">
+                    <div class="footer-text">
+                        You are receiving this email because you subscribed to updates from ${brandNameDisplay}.
+                    </div>
+                    <div class="footer-text">
+                        Need help? <a href="${siteUrl}/support" class="support-link">Contact Support</a>
+                    </div>
+                    <div class="footer-text" style="margin-bottom: 0; font-size: 12px;">
+                        &copy; ${new Date().getFullYear()} ${brandNameDisplay}. All rights reserved.
+                    </div>
+                </div>
             </div>
+        </body>
+        </html>
         `;
 
-        const emailPromises = Array.from(emailRecipients).map((to) => 
-            ctx.runAction(api.emailActions.sendEmail, {
-                to,
+        const promises = Array.from(emailRecipients).map(async (email) => {
+            return await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                to: email as string,
                 subject,
-                html: htmlMessage,
-            })
-        );
+                html: htmlContent
+            });
+        });
 
-        await Promise.allSettled(emailPromises);
+        await Promise.allSettled(promises);
 
         return { success: true, recipientCount: emailRecipients.size };
     },
