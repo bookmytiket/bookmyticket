@@ -28,7 +28,14 @@ const CATEGORIES = [
     gradient: "linear-gradient(135deg, #c026d3 0%, #f783ac 100%)",
     image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80"
   },
-
+  {
+    name: "Turf Booking",
+    icon: <Users size={24} />,
+    description: "Book premium football, cricket, and multisport turfs near you.",
+    color: "#22c55e",
+    gradient: "linear-gradient(135deg, #22c55e 0%, #10b981 100%)",
+    image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80"
+  }
 ];
 
 export default function ServiceCategories() {

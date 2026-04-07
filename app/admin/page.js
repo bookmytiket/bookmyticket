@@ -234,6 +234,79 @@ const AdminMeetingsTable = ({ t, router }) => {
     );
 };
 
+const TurfBookingsTable = ({ t }) => {
+    const bookings = useQuery(api.turfBookings.listAll);
+
+    if (bookings === undefined) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading turf bookings...</div>;
+    if (bookings.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No turf bookings found.</div>;
+
+    return (
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+            <thead>
+                <tr style={{ textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Turf / Facility</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Customer</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Slot</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Payment</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {bookings.map((booking) => (
+                    <tr key={booking._id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                            <div>
+                                <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>{booking.turfName}</p>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>{booking.location}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 600, margin: 0, fontSize: "13px", color: t.textMain }}>{booking.customerDetails.name}</p>
+                                <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{booking.customerDetails.phone}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 700, margin: 0, fontSize: "13px", color: t.textMain }}>{new Date(booking.date).toLocaleDateString()}</p>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>{booking.startTime} - {booking.endTime}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>₹{booking.totalAmount}</p>
+                                <span style={{ 
+                                    fontSize: "10px", 
+                                    padding: "2px 6px", 
+                                    borderRadius: "4px", 
+                                    backgroundColor: booking.paymentType === 'full' ? "#3b82f620" : "#8b5cf620",
+                                    color: booking.paymentType === 'full' ? "#3b82f6" : "#8b5cf6",
+                                    fontWeight: 800,
+                                    textTransform: "uppercase"
+                                }}>
+                                    {booking.paymentType === 'full' ? "Full Pay" : "Advance Pay"}
+                                </span>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <span style={{ 
+                                padding: "4px 10px", 
+                                borderRadius: "100px", 
+                                fontSize: "11px", 
+                                fontWeight: 800, 
+                                backgroundColor: booking.bookingStatus === 'confirmed' ? "#22c55e20" : "#f59e0b20",
+                                color: booking.bookingStatus === 'confirmed' ? "#22c55e" : "#f59e0b"
+                            }}>
+                                {booking.bookingStatus.toUpperCase()}
+                            </span>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 function AdminHomePage() {
     const { user, loading, logout } = useAuth();
     const searchParams = useSearchParams();
@@ -686,7 +759,7 @@ function AdminHomePage() {
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
     const isProfService = (cat) => {
         const c = String(cat || "").trim().toLowerCase();
-        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering"];
+        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering", "turf"];
         return serviceKeywords.some(keyword => c.includes(keyword));
     };
 
@@ -1332,6 +1405,7 @@ function AdminHomePage() {
                                 <SidebarGroupTitle title="Operations" />
                                 <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
                                 <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
+                                <SidebarItem id="turf_bookings" label="Turf Bookings" icon={Briefcase} active={activeTab === "turf_bookings"} onClick={() => setActiveTab("turf_bookings")} />
                                 <SidebarItem id="meetings" label="Meetings" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
                                 <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
 
@@ -1888,6 +1962,22 @@ function AdminHomePage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "turf_bookings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Turf Reservation Ledger</h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button style={{ padding: "8px 16px", borderRadius: "8px", background: "#f1f5f9", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Archive size={14} /> Export CSV
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="table-container">
+                                <TurfBookingsTable t={t} />
                             </div>
                         </div>
                     )}

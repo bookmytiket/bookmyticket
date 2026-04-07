@@ -122,11 +122,9 @@ const POPULAR_CITIES_BY_COUNTRY = {
   ]
 };
 
-const EVENT_CATEGORIES = [
-  "Concert", "Sports", "Comedy", "Theatre", "Music",
-  "Workshop", "Festival", "Conference", "Exhibition", 
-  "Mehendi Artist", "Photographer/Studio", "Makeup Artist", "Other",
-];
+import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
+
+const EVENT_CATEGORIES = [...SERVICE_CATEGORIES, "Other"];
 
 import { useAuth } from "./AuthContext";
 import LocationSelectionModal from "./LocationSelectionModal";
@@ -280,8 +278,8 @@ export default function Navbar() {
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between' }}>
-          <Link href="/" className="header-logo" onClick={handleLogoClick}>
-            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "50px" : "60px", width: "auto", display: "block", transition: "height 0.3s ease" }} />
+          <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
+            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "45px" : "65px", width: "auto", display: "block", transition: "all 0.3s ease" }} />
           </Link>
 
 
@@ -369,10 +367,10 @@ export default function Navbar() {
                 style={{
                   background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)',
                   color: '#fff',
-                  padding: '10px 24px',
+                  padding: '8px 16px',
                   borderRadius: '8px',
-                  fontWeight: 800,
-                  fontSize: '13px',
+                  fontWeight: 700,
+                  fontSize: '12px',
                   textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -401,10 +399,10 @@ export default function Navbar() {
                     style={{
                       background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                       color: '#fff',
-                      padding: '10px 20px',
+                      padding: '8px 16px',
                       borderRadius: '8px',
-                      fontWeight: 800,
-                      fontSize: '13px',
+                      fontWeight: 700,
+                      fontSize: '12px',
                       border: 'none',
                       cursor: 'pointer',
                       display: 'flex',
@@ -436,10 +434,10 @@ export default function Navbar() {
                       style={{
                         background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                         color: '#fff',
-                        padding: '10px 24px',
+                        padding: '8px 16px',
                         borderRadius: '8px',
-                        fontWeight: 800,
-                        fontSize: '13px',
+                        fontWeight: 700,
+                        fontSize: '12px',
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -469,10 +467,10 @@ export default function Navbar() {
                       style={{
                         background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                         color: '#fff',
-                        padding: '10px 24px',
+                        padding: '8px 16px',
                         borderRadius: '8px',
-                        fontWeight: 800,
-                        fontSize: '13px',
+                        fontWeight: 700,
+                        fontSize: '12px',
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',

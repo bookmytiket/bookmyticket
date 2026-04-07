@@ -2,7 +2,8 @@ export const SERVICE_CATEGORIES = [
   "Event Organiser",
   "Mehendi Artist",
   "Photographer/Studio",
-  "Makeup Artist"
+  "Makeup Artist",
+  "Turf Booking"
 ];
 
 export const isServiceProvider = (category) => {
@@ -13,5 +14,6 @@ export const isServiceProvider = (category) => {
          c.includes("photograph") || 
          c.includes("makeup") || 
          c.includes("artist") || 
+         c.includes("turf") || 
          c.includes("personal service");
 };

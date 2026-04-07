@@ -562,18 +562,18 @@ export default function SignInPage() {
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px", marginTop: "2px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "4px", marginTop: "12px" }}>
                             <Link href="/">
-                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "55px", width: "auto", display: "block", cursor: "pointer" }} />
+                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "60px", width: "auto", display: "block", cursor: "pointer" }} />
                             </Link>
                         </div>
 
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                                    <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#1e293b", margin: "0 0 5px" }}>Welcome</h1>
-                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>Sign in to your account</p>
+                                <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                                    <h1 style={{ fontSize: "20px", fontWeight: 800, color: "#1e293b", margin: "0 0 2px" }}>Welcome</h1>
+                                    <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Sign in to your account</p>
                                 </div>
 
                                 <form onSubmit={handleLogin}>

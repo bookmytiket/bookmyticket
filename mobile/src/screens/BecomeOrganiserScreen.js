@@ -16,10 +16,9 @@ import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Colors } from '../theme/Theme';
 
-const CATEGORIES = [
-  "Concert", "Sports", "Comedy", "Theatre", "Music",
-  "Workshop", "Festival", "Conference", "Exhibition", "Other",
-];
+import { SERVICE_CATEGORIES } from '../data/serviceCategories';
+
+const CATEGORIES = [...SERVICE_CATEGORIES.map(c => c.name), "Other"];
 
 const ROLES = ["Organiser", "Individual", "Pvt Ltd", "Others"];
 

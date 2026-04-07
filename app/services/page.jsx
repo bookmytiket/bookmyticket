@@ -19,14 +19,44 @@ export default function ServicesPage() {
     category: category === "All Services" ? "" : category,
   });
 
+  // Fetch all active turfs
+  const turfsRaw = useQuery(api.turfs.listActive);
+
+  // Normalize and merge data
+  const mergedItems = useMemo(() => {
+    const vList = vendors || [];
+    const tList = (turfsRaw || []).map(t => ({
+      id: t._id,
+      name: t.name,
+      category: "Turf Booking",
+      bio: t.description || "Premium sports facility with great amenities.",
+      portfolio: t.images?.map(img => ({ url: img, type: "image" })) || [],
+      pricing: [{ name: "Standard", price: t.pricePerHour || 0 }],
+      rating: 5.0, // Placeholder
+      reviewsCount: 0,
+      isTurf: true
+    }));
+
+    if (category === "Turf Booking") {
+      return tList;
+    }
+
+    if (category === "All Services") {
+      // Merge and shuffle or sort by rating
+      return [...vList, ...tList].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
+    // Default to vendor list for specific categories
+    return vList;
+  }, [vendors, turfsRaw, category]);
+
   // Client-side pagination
-  const totalVendors = vendors?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalVendors / PAGE_SIZE));
-  const pagedVendors = useMemo(() => {
-    if (!vendors) return [];
+  const totalItems = mergedItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const pagedItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
-    return vendors.slice(start, start + PAGE_SIZE);
-  }, [vendors, page]);
+    return mergedItems.slice(start, start + PAGE_SIZE);
+  }, [mergedItems, page]);
 
   const handlePageChange = (p) => {
     setPage(p);
@@ -126,9 +156,9 @@ export default function ServicesPage() {
           </h1>
 
           <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0, fontWeight: 500 }}>
-            {vendors === undefined
+            {vendors === undefined || turfsRaw === undefined
               ? "Loading experts..."
-              : `${totalVendors} expert${totalVendors !== 1 ? "s" : ""} ready to serve you`}
+              : `${totalItems} result${totalItems !== 1 ? "s" : ""} ready to serve you`}
           </p>
         </div>
       </div>
@@ -137,7 +167,7 @@ export default function ServicesPage() {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 24px 60px" }}>
 
         {/* Loading */}
-        {vendors === undefined && (
+        {(vendors === undefined || turfsRaw === undefined) && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
             <div style={{
               width: 44, height: 44,
@@ -153,7 +183,7 @@ export default function ServicesPage() {
         )}
 
         {/* Empty State */}
-        {vendors !== undefined && vendors.length === 0 && (
+        {(vendors !== undefined && turfsRaw !== undefined) && totalItems === 0 && (
           <div style={{
             textAlign: "center", padding: "80px 20px",
             background: "#fff", borderRadius: "28px",
@@ -182,7 +212,7 @@ export default function ServicesPage() {
         )}
 
         {/* 4-Column Grid */}
-        {vendors !== undefined && vendors.length > 0 && (
+        {(vendors !== undefined && turfsRaw !== undefined) && totalItems > 0 && (
           <>
             <div style={{
               display: "grid",
@@ -191,10 +221,16 @@ export default function ServicesPage() {
             }}
               className="services-grid"
             >
-              {pagedVendors.map((vendor) => (
+              {pagedItems.map((vendor) => (
                 <div
                   key={vendor.id}
-                  onClick={() => router.push(`/services/${vendor.id}`)}
+                  onClick={() => {
+                    if (vendor.isTurf) {
+                      router.push(`/turfs/${vendor.id}`);
+                    } else {
+                      router.push(`/services/${vendor.id}`);
+                    }
+                  }}
                   style={{
                     background: "#fff",
                     borderRadius: "20px",
@@ -285,7 +321,7 @@ export default function ServicesPage() {
                         borderRadius: "10px", fontSize: "12px", fontWeight: 700,
                         boxShadow: "0 4px 12px rgba(248,68,100,0.25)",
                       }}>
-                        View Profile
+                        {vendor.isTurf ? "Book Slot" : "View Profile"}
                       </div>
                     </div>
                   </div>
@@ -368,7 +404,7 @@ export default function ServicesPage() {
 
             {/* Page info */}
             <p style={{ textAlign: "center", color: "#94a3b8", fontSize: "12px", fontWeight: 600, marginTop: "16px" }}>
-              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalVendors)} of {totalVendors} professionals
+              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalItems)} of {totalItems} professionals
             </p>
           </>
         )}

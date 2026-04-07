@@ -22,5 +22,13 @@ export const SERVICE_CATEGORIES = [
     description: "Flawless bridal transformations",
     image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=500&q=80",
     gradient: ["#c026d3", "#f783ac"]
+  },
+  {
+    id: "turf-booking",
+    name: "Turf Booking",
+    icon: "football",
+    description: "Premium sports facilities",
+    image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=500&q=80",
+    gradient: ["#10b981", "#34d399"]
   }
 ];

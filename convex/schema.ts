@@ -344,7 +344,7 @@ export default defineSchema({
         count: v.number(),
         order: v.number(),
         updatedAt: v.number(),
-    }),
+    }).index("by_slug", ["slug"]),
 
     notificationsLog: defineTable({
         subject: v.string(),
@@ -679,6 +679,73 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_isActive", ["isActive"]).index("by_order", ["order"]),
+
+    turfs: defineTable({
+        organiserId: v.string(), // Reference to organiser userId (email)
+        name: v.string(),
+        description: v.optional(v.string()),
+        location: v.optional(v.string()),
+        address: v.optional(v.string()),
+        images: v.optional(v.array(v.string())),
+        amenities: v.optional(v.array(v.string())),
+        pricePerHour: v.number(),
+        advanceAmount: v.optional(v.number()), // Partial payment amount to confirm
+        
+        // New Pricing Fields
+        pricingType: v.optional(v.string()), // "flat", "per_person", "tiered"
+        maxCapacity: v.optional(v.number()),
+        pricePerPerson: v.optional(v.number()),
+        pricingTiers: v.optional(v.array(v.object({ 
+            min: v.number(), 
+            max: v.number(), 
+            price: v.number() 
+        }))),
+
+        status: v.string(), // "active" | "inactive"
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index("by_organiserId", ["organiserId"]),
+
+    turfSlots: defineTable({
+        turfId: v.id("turfs"),
+        dayOfWeek: v.number(), // 0-6
+        startTime: v.string(), // "HH:MM"
+        endTime: v.string(), // "HH:MM"
+        priceOverride: v.optional(v.number()),
+        isActive: v.boolean(),
+    }).index("by_turfId", ["turfId"]),
+
+    turfBookings: defineTable({
+        turfId: v.id("turfs"),
+        userId: v.string(),
+        date: v.string(), // "YYYY-MM-DD"
+        startTime: v.string(), // "HH:MM"
+        endTime: v.string(), // "HH:MM"
+        totalAmount: v.number(),
+        advancePaid: v.number(),
+        participantCount: v.optional(v.number()), // New field for user count
+        paymentType: v.string(), // "advance" | "full"
+        paymentStatus: v.string(), // "pending", "advance_paid", "fully_paid", "failed"
+        bookingStatus: v.string(), // "confirmed", "cancelled", "pending"
+        customerDetails: v.object({
+            name: v.string(),
+            email: v.string(),
+            phone: v.string(),
+        }),
+        cancellationReason: v.optional(v.string()),
+        paymentIntentId: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_turfId", ["turfId"])
+      .index("by_userId", ["userId"])
+      .index("by_date", ["date"]),
+
+    turfManualBlocks: defineTable({
+        turfId: v.id("turfs"),
+        date: v.string(), // "YYYY-MM-DD"
+        startTime: v.string(), // "HH:MM"
+        endTime: v.string(), // "HH:MM"
+        reason: v.optional(v.string()),
+        createdAt: v.number(),
+    }).index("by_turfId", ["turfId"])
+      .index("by_date", ["date"]),
 });
-
-

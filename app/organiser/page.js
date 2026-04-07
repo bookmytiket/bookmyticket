@@ -374,7 +374,9 @@ function OrganiserPanel() {
 
     // IMMEDIATE GUARD: If the session already knows this is a professional service, redirect NOW.
     if (!loading && user && isProfService(user.category)) {
-        if (typeof window !== "undefined") router.replace("/vendor/dashboard");
+        if (typeof window !== "undefined") {
+            router.replace("/vendor/dashboard");
+        }
         return null;
     }
 

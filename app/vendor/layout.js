@@ -51,12 +51,14 @@ export default function VendorLayout({ children }) {
         );
     }
 
+    const isTurfVendor = user?.category?.toLowerCase().includes("turf");
+
     const navigation = [
         { name: "Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard },
         { name: "Bookings", href: "/vendor/bookings", icon: CheckCircle },
         { name: "Calendar", href: "/vendor/calendar", icon: Calendar },
-        { name: "Services / Packages", href: "/vendor/services", icon: Package },
-        { name: "Portfolio", href: "/vendor/portfolio", icon: ImageIcon },
+        { name: isTurfVendor ? "Turf Management" : "Services / Packages", href: "/vendor/services", icon: isTurfVendor ? Package : Sparkles },
+        { name: isTurfVendor ? "Facility Gallery" : "Portfolio", href: "/vendor/portfolio", icon: ImageIcon },
         { name: "Messages", href: "/vendor/messages", icon: MessageSquare },
         { name: "Reviews", href: "/vendor/reviews", icon: Star },
         { name: "Earnings", href: "/vendor/earnings", icon: DollarSign },
@@ -77,24 +79,24 @@ export default function VendorLayout({ children }) {
 
             {/* Sidebar */}
             <aside 
-                className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
+                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
             >
                 <div className="flex flex-col h-full font-figtree">
                     {/* Header */}
-                    <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50 bg-white">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-pink-500/20">
+                    <div className="h-16 flex items-center justify-between px-6 border-b border-slate-50 bg-white">
+                        <Link href="/" className="flex items-center space-x-2">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-pink-500/20">
                                 B
                             </div>
-                            <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">
+                            <span className="text-lg font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent italic tracking-tighter">
                                 BookMyTicket
                             </span>
                         </Link>
                         <button 
                             onClick={() => setIsSidebarOpen(false)}
-                            className="p-2 ml-auto text-slate-400 hover:text-pink-500 lg:hidden transition-colors"
+                            className="p-1 px-2 ml-auto text-slate-400 hover:text-pink-500 lg:hidden transition-colors"
                         >
-                            <X size={20} strokeWidth={3} />
+                            <X size={18} strokeWidth={3} />
                         </button>
                     </div>
                     {/* Side Sub-Header (Service Role) */}
@@ -102,7 +104,7 @@ export default function VendorLayout({ children }) {
                         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
                             <Sparkles size={40} className="text-pink-500" />
                         </div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Artist Portal</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">{isTurfVendor ? "Turf Portal" : "Artist Portal"}</p>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
                             <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">{user?.category || "Professional Artist"}</span>
@@ -110,7 +112,7 @@ export default function VendorLayout({ children }) {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
+                    <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
                         {navigation.map((item) => {
                             const isActive = pathname === item.href;
                             return (
@@ -135,9 +137,9 @@ export default function VendorLayout({ children }) {
                     </nav>
 
                     {/* Footer - Profile Minimal */}
-                    <div className="p-6 border-t border-slate-50 bg-slate-50/50 mt-auto">
-                        <div className="bg-white rounded-[1.5rem] p-4 mb-4 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner">
+                    <div className="p-4 border-t border-slate-50 bg-slate-50/50 mt-auto">
+                        <div className="bg-white rounded-2xl p-3 mb-3 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner shrink-0">
                                 {user?.name?.charAt(0) || "V"}
                             </div>
                             <div className="flex-1 overflow-hidden">
@@ -147,9 +149,9 @@ export default function VendorLayout({ children }) {
                         </div>
                         <button 
                             onClick={logout}
-                            className="w-full flex items-center justify-center space-x-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-500 shadow-sm"
+                            className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-500 shadow-sm"
                         >
-                            <LogOut size={14} strokeWidth={3} />
+                            <LogOut size={12} strokeWidth={3} />
                             <span className="text-[9px] font-black uppercase tracking-[0.3em]">Sign Out</span>
                         </button>
                     </div>
@@ -159,22 +161,22 @@ export default function VendorLayout({ children }) {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 font-figtree lg:h-screen">
                 {/* Top Header - Glassmorphism Light */}
-                <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-12">
-                    <div className="flex items-center space-x-4 lg:space-x-8">
+                <header className="h-16 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
+                    <div className="flex items-center space-x-4 lg:space-x-6">
                         <button 
                             onClick={toggleSidebar}
-                            className="p-2.5 sm:p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm shrink-0"
+                            className="p-2 sm:p-2.5 rounded-xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm shrink-0"
                         >
-                            <Menu size={20} />
+                            <Menu size={18} />
                         </button>
                         <div className="min-w-0">
-                            <div className="flex items-center gap-2.5 mb-0.5">
-                                <div className="w-1 h-3.5 bg-pink-500 rounded-full hidden xs:block"></div>
-                                <h1 className="text-[16px] sm:text-lg lg:text-2xl font-black text-slate-900 tracking-tighter uppercase italic truncate">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <div className="w-1 h-3 bg-pink-500 rounded-full hidden xs:block"></div>
+                                <h1 className="text-[14px] sm:text-base lg:text-xl font-black text-slate-900 tracking-tighter uppercase italic truncate">
                                     {navigation.find(n => n.href === pathname)?.name || "Dashboard"}
                                 </h1>
                             </div>
-                            <p className="text-[7px] lg:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] xs:ml-3.5 truncate">Artist Management Hub</p>
+                            <p className="text-[7px] lg:text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] xs:ml-3 truncate">{isTurfVendor ? "Turf Management Hub" : "Artist Management Hub"}</p>
                         </div>
                     </div>
 
@@ -202,9 +204,9 @@ export default function VendorLayout({ children }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-4 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
                     <VendorErrorBoundary>
-                        <div className="max-w-[1500px] mx-auto">
+                        <div className="max-w-[1400px] mx-auto">
                             {children}
                         </div>
                     </VendorErrorBoundary>
