@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Star, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, ArrowLeft, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
+import BecomePartnerModal from "@/components/BecomePartnerModal";
 
 const PAGE_SIZE = 16; // 4×4 grid
 
@@ -14,6 +15,7 @@ export default function ServicesPage() {
   const searchParams = useSearchParams();
   const category = searchParams.get("category") || "All Services";
   const [page, setPage] = useState(1);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
   // Fetch all vendors for the category (uses listByCategory from Convex)
   const vendors = useQuery(api.vendors.listByCategory, {
@@ -111,12 +113,29 @@ export default function ServicesPage() {
             <img src="/logo.png" alt="BookMyTicket" style={{ height: "64px", width: "auto" }} />
           </Link>
 
-          {/* Subtle breadcrumb */}
-          <div style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 600 }}>
-            Professional Services
+          {/* Become a Partner Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 600 }}>
+                Professional Services
+              </div>
+              <button 
+                onClick={() => setIsPartnerModalOpen(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  background: "linear-gradient(135deg, #8b5cf6, #d946ef)",
+                  color: "#fff", border: "none", borderRadius: "10px",
+                  padding: "8px 16px", fontSize: "13px", fontWeight: "700",
+                  cursor: "pointer", boxShadow: "0 4px 12px rgba(139,92,246,0.25)"
+                }}
+              >
+                <Briefcase size={14} />
+                Become a Partner
+              </button>
           </div>
         </div>
       </div>
+
+      <BecomePartnerModal isOpen={isPartnerModalOpen} onClose={() => setIsPartnerModalOpen(false)} />
 
       {/* ── Category Pill List (Scrollable) ────────────────────────── */}
       <div style={{

@@ -12,6 +12,7 @@ import OrganiserScannerScreen from '../screens/OrganiserScannerScreen';
 import ManagementScreen from '../screens/ManagementScreen';
 import LocationScreen from '../screens/LocationScreen';
 import BecomeOrganiserScreen from '../screens/BecomeOrganiserScreen';
+import BecomePartnerScreen from '../screens/BecomePartnerScreen';
 import SeatingScreen from '../screens/SeatingScreen';
 import ServiceVendorsScreen from '../screens/ServiceVendorsScreen';
 import ServiceDetailScreen from '../screens/ServiceDetailScreen';
@@ -105,6 +106,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="BecomeOrganiser"
           component={BecomeOrganiserScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="BecomePartner"
+          component={BecomePartnerScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

@@ -110,16 +110,28 @@ export default function WebHeader() {
           )}
           
           {!isStaff && (
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                setMenuVisible(false);
-                navigation.navigate('BecomeOrganiser');
-              }}
-            >
-              <Ionicons name="business-outline" size={20} color={Colors.text} />
-              <Text style={styles.menuItemText}>Become a Partner</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('BecomeOrganiser');
+                }}
+              >
+                <Ionicons name="megaphone-outline" size={20} color={Colors.text} />
+                <Text style={styles.menuItemText}>Become an Organiser</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('BecomePartner');
+                }}
+              >
+                <Ionicons name="business-outline" size={20} color={Colors.text} />
+                <Text style={styles.menuItemText}>Become a Partner</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       )}

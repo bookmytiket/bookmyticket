@@ -163,6 +163,18 @@ export default defineSchema({
         createdAt: v.number(),
     }).index("by_status", ["status"]),
 
+    partnerRequests: defineTable({
+        firstName: v.string(),
+        lastName: v.string(),
+        email: v.string(),
+        phone: v.string(),
+        category: v.string(),
+        role: v.string(), // e.g., "Individual", "Company"
+        remarks: v.optional(v.string()),
+        status: v.string(), // "Pending", "Approved", "Rejected"
+        createdAt: v.number(),
+    }).index("by_status", ["status"]).index("by_email", ["email"]),
+
     systemConfig: defineTable({
         key: v.string(),
         value: v.any(),
