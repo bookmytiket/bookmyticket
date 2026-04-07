@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Star, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
 
 const PAGE_SIZE = 16; // 4×4 grid
 
@@ -115,6 +116,57 @@ export default function ServicesPage() {
             Professional Services
           </div>
         </div>
+      </div>
+
+      {/* ── Category Pill List (Scrollable) ────────────────────────── */}
+      <div style={{
+          backgroundColor: "#fff",
+          borderBottom: "1px solid #e2e8f0",
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+          padding: "12px 24px",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none"
+      }} className="hide-scrollbar">
+          <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+          <div style={{ display: "flex", gap: "10px", maxWidth: "1280px", margin: "0 auto" }}>
+              <Link 
+                  href="/services?category=All Services"
+                  style={{
+                      padding: "8px 18px",
+                      borderRadius: "100px",
+                      textDecoration: "none",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      background: category === "All Services" ? "linear-gradient(135deg, #f84464, #a855f7)" : "#f1f5f9",
+                      color: category === "All Services" ? "#fff" : "#475569",
+                      boxShadow: category === "All Services" ? "0 4px 12px rgba(248,68,100,0.25)" : "none",
+                      transition: "all 0.2s"
+                  }}
+              >
+                  All
+              </Link>
+              {SERVICE_CATEGORIES.map(cat => (
+                  <Link 
+                      key={cat}
+                      href={`/services?category=${cat}`}
+                      style={{
+                          padding: "8px 18px",
+                          borderRadius: "100px",
+                          textDecoration: "none",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          background: category === cat ? "linear-gradient(135deg, #f84464, #a855f7)" : "#f1f5f9",
+                          color: category === cat ? "#fff" : "#475569",
+                          boxShadow: category === cat ? "0 4px 12px rgba(248,68,100,0.25)" : "none",
+                          transition: "all 0.2s"
+                      }}
+                  >
+                      {cat}
+                  </Link>
+              ))}
+          </div>
       </div>
 
       {/* ── Hero Header ────────────────────────────────────────────── */}
