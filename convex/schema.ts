@@ -162,20 +162,10 @@ export default defineSchema({
       .index("by_kycStatus", ["kycStatus"])
       .index("by_category", ["category"]),
 
-    organiserRequests: defineTable({
-        firstName: v.string(),
-        lastName: v.string(),
-        email: v.string(),
-        phone: v.string(),
-        category: v.string(),
-        role: v.string(),
-        remarks: v.optional(v.string()),
-        status: v.string(), // "Pending", "Approved", "Rejected"
-        createdAt: v.number(),
-    }).index("by_status", ["status"]),
+
 
     partnerRequests: defineTable({
-        type: v.string(), // "organiser" | "professional_service"
+        type: v.optional(v.string()), // "organiser" | "professional_service"
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),

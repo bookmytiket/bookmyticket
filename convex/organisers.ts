@@ -201,53 +201,7 @@ export const listByStage = query({
     },
 });
 
-export const approveRequest = mutation({
-    args: { id: v.id("organiserRequests"), password: v.optional(v.string()) },
-    handler: async (ctx, args) => {
-        const request = await ctx.db.get(args.id);
-        if (!request) throw new Error("Request not found");
-        if (request.status !== "Pending") throw new Error("Request is not pending");
 
-        const email = request.email.trim().toLowerCase();
-        // Check if organiser already exists
-        const existing = await ctx.db
-            .query("organisers")
-            .withIndex("by_userId", (q) => q.eq("userId", email))
-            .unique();
-        if (existing) {
-            await ctx.db.patch(args.id, { status: "Approved" });
-            return "Already Approved";
-        }
-
-        // Generate a random 8-character temporary password if none provided
-        let tempPassword = args.password;
-        if (!tempPassword) {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-            tempPassword = "";
-            for (let i = 0; i < 8; i++) {
-                tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-        }
-
-        // Create the organiser account
-        const hashedPassword = await hashPassword(tempPassword);
-        await ctx.db.insert("organisers", {
-            userId: email,
-            password: hashedPassword,
-            name: `${request.firstName} ${request.lastName}`,
-            firstName: request.firstName,
-            lastName: request.lastName,
-            category: request.category,
-            kycStatus: "KYC Pending",
-            walletBalance: 0,
-        });
-
-        // Update the request status
-        await ctx.db.patch(args.id, { status: "Approved" });
-
-        return tempPassword;
-    },
-});
 
 export const verifyCredentials = query({
     args: { identifier: v.string(), password: v.string() },

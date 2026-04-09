@@ -42,7 +42,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
-            const matchesType = filterType === "all" || req.type === filterType;
+            const matchesType = filterType === "all" || (req.type || "professional_service") === filterType;
             const matchesStatus = filterStatus === "all" || req.status === filterStatus;
             const search = searchTerm.toLowerCase();
             const matchesSearch = !searchTerm || 
@@ -119,7 +119,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                             <span style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.firstName} {req.lastName}</span>
                                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                {req.type === "organiser" ? (
+                                                {(req.type || "professional_service") === "organiser" ? (
                                                     <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#3b82f615", color: "#3b82f6", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>
                                                         <User size={10} /> Organiser
                                                     </span>
