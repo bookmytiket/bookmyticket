@@ -9,12 +9,45 @@ import {
     CheckCircle2, 
     Clock, 
     AlertCircle, 
-    ShieldCheck
+    ShieldCheck,
+    Download,
+    Loader2
 } from "lucide-react";
 import { DEFAULT_TICKET_TERMS } from "@/app/utils/ticketTerms";
+import * as htmlToImage from 'html-to-image';
+import jsPDF from 'jspdf';
 
-export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_TERMS }) {
+export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
+    const ticketRef = React.useRef(null);
+    const [downloading, setDownloading] = React.useState(false);
+
     if (!booking || !event) return null;
+
+    const downloadTicket = async () => {
+        if (!ticketRef.current) return;
+        setDownloading(true);
+        try {
+            const dataUrl = await htmlToImage.toPng(ticketRef.current, {
+                quality: 1,
+                pixelRatio: 2, // High quality
+                backgroundColor: '#fff',
+            });
+            
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [850, 400] // Match container size
+            });
+
+            pdf.addImage(dataUrl, 'PNG', 0, 0, 850, 400);
+            pdf.save(`Ticket-${event.title.replace(/\s+/g, '-')}-${booking._id?.slice(-8)}.pdf`);
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('Failed to generate ticket PDF. Please try again.');
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     const isScanned = booking.scanned || booking.status === "Scanned";
     const bookingId = booking._id || booking.id;
@@ -43,7 +76,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
     };
 
     return (
-        <div className="digital-ticket-container" style={containerStyle}>
+        <div className="digital-ticket-container" style={containerStyle} ref={ticketRef}>
             {/* Main Landscape Row */}
             <div className="flex flex-col md:flex-row w-full">
                 
@@ -68,6 +101,10 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     {/* Perforated Cuts (Desktop only) */}
                     <div className="hidden md:block absolute -top-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
                     <div className="hidden md:block absolute -bottom-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
+
+                    <div className="mb-6">
+                        <img src="/logo.png" alt="Company Logo" style={{ height: "40px", width: "auto" }} />
+                    </div>
 
                     <div>
                         <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight mb-6 tracking-tight">
@@ -156,6 +193,17 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     <CheckCircle2 size={12} className="text-emerald-500" />
                     <span>Verified Digital Pass</span>
                 </div>
+                {showDownload && (
+                    <button 
+                        onClick={downloadTicket}
+                        disabled={downloading}
+                        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
+                        style={{ border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
+                    >
+                        {downloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                        <span style={{ color: '#fff' }}>{downloading ? 'Saving...' : 'Save PDF'}</span>
+                    </button>
+                )}
             </div>
         </div>
     );

@@ -415,6 +415,7 @@ export default function ProfilePage() {
                                 time: viewTicketModal.eventTime || "—",
                                 location: viewTicketModal.eventLocation || "Venue"
                             }}
+                            showDownload={true}
                         />
 
                         {/* Meeting Access Button if applicable */}

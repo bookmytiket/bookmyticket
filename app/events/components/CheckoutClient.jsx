@@ -209,6 +209,7 @@ export default function CheckoutClient({ id }) {
                                 virtual: event.virtual,
                                 meetingUrl: event.meetingUrl
                             }} 
+                            showDownload={true}
                         />
                     </div>
 
