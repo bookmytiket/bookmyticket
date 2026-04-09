@@ -73,8 +73,7 @@ export const sendEmail = action({
                 html: args.html,
                 headers: {
                     "X-Entity-Ref-ID": `${Date.now()}-${toEmail}`,
-                    "Precedence": "bulk",
-                    "X-Auto-Response-Suppress": "All",
+                    "X-Auto-Response-Suppress": "OOF, AutoReply",
                 }
             });
             console.log("✅ Email sent successfully to:", toEmail);

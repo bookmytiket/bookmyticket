@@ -23,7 +23,7 @@ const CATEGORIES = [...SERVICE_CATEGORIES.map(c => c.name), "Other"];
 const ROLES = ["Organiser", "Individual", "Pvt Ltd", "Others"];
 
 export default function BecomeOrganiserScreen({ navigation }) {
-  const createOrgRequest = useMutation(api.organiserRequests.create);
+  const submitPartnerRequest = useMutation(api.partnerRequests.submitRequest);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -45,7 +45,7 @@ export default function BecomeOrganiserScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await createOrgRequest(form);
+      await submitPartnerRequest({ ...form, type: "organiser" });
       setSuccess(true);
       setTimeout(() => {
         navigation.goBack();

@@ -49,7 +49,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
 
         setIsSubmitting(true);
         try {
-            await submitRequest(form);
+            await submitRequest({ ...form, type: "professional_service" });
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);

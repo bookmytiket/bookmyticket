@@ -340,16 +340,16 @@ function AdminHomePage() {
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [theme, setTheme] = useState("light");
-    const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
-    const [isServicesOpen, setIsServicesOpen] = useState(false);
     const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [selectedRequestForApproval, setSelectedRequestForApproval] = useState(null);
     const [generatedTempPassword, setGeneratedTempPassword] = useState("");
     const [manualApprovalPassword, setManualApprovalPassword] = useState("");
-    const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isGrowthOpen, setIsGrowthOpen] = useState(false);
+    const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(true);
+    const [isOrganizersOpen, setIsOrganizersOpen] = useState(true);
+    const [isServicesOpen, setIsServicesOpen] = useState(true);
+    const [isGrowthOpen, setIsGrowthOpen] = useState(true);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     // Payment gateways: which config modal is open + saved configs per gateway
@@ -387,11 +387,38 @@ function AdminHomePage() {
     const convexFeeSettings = useQuery(api.feeSettings.get);
     const updateFeeSettingsMutation = useMutation(api.feeSettings.update);
 
-    const feeSettings = useMemo(() => convexFeeSettings || {
+    const [localFeeSettings, setLocalFeeSettings] = useState({
         convenienceFeeType: "percent",
         convenienceFeeValue: 5,
         gstPercent: 18
+    });
+    const [isSavingFees, setIsSavingFees] = useState(false);
+
+    useEffect(() => {
+        if (convexFeeSettings) {
+            setLocalFeeSettings({
+                convenienceFeeType: convexFeeSettings.convenienceFeeType,
+                convenienceFeeValue: convexFeeSettings.convenienceFeeValue,
+                gstPercent: convexFeeSettings.gstPercent
+            });
+        }
     }, [convexFeeSettings]);
+
+    const handleSaveFees = async () => {
+        setIsSavingFees(true);
+        try {
+            await updateFeeSettingsMutation({
+                convenienceFeeType: localFeeSettings.convenienceFeeType,
+                convenienceFeeValue: localFeeSettings.convenienceFeeValue,
+                gstPercent: localFeeSettings.gstPercent
+            });
+            alert("Settings updated successfully!");
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            setIsSavingFees(false);
+        }
+    };
 
     // New Convex settings
     const convexTicketSettings = useQuery(api.ticketSettings.get);
@@ -794,15 +821,10 @@ function AdminHomePage() {
 
 
 
-    const convexOrganiserRequests = useQuery(api.organiserRequests.list) || [];
-    const updateOrganiserRequestStatusMutation = useMutation(api.organiserRequests.updateStatus);
+
     const approveOrganiserRequestMutation = useMutation(api.organisers.approveRequest);
 
-    const serviceRequests = useMemo(() => {
-        return convexOrganiserRequests.filter(req => 
-            isProfService(req.category) && req.status === "Pending"
-        );
-    }, [convexOrganiserRequests]);
+
 
     const serviceActive = useMemo(() => {
         return convexOrganizers.filter(o => 
@@ -1245,7 +1267,7 @@ function AdminHomePage() {
                     background-color: ${t.cardBg};
                     border-radius: 16px;
                     border: 1px solid ${t.border};
-                    padding: 24px;
+                    padding: 16px;
                     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                     transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
@@ -1255,15 +1277,15 @@ function AdminHomePage() {
                 }
                 .stats-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                    gap: 24px;
-                    margin-bottom: 32px;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 12px;
+                    margin-bottom: 24px;
                 }
                 .section-card {
                     background-color: ${t.cardBg};
                     border-radius: 16px;
                     border: 1px solid ${t.border};
-                    padding: 24px;
+                    padding: 16px;
                     margin-bottom: 24px;
                 }
                 .table-container {
@@ -1277,7 +1299,7 @@ function AdminHomePage() {
                 }
                 th {
                     text-align: left;
-                    padding: 12px 16px;
+                    padding: 10px 14px;
                     background-color: ${theme === 'dark' ? '#1e293b' : '#f8fafc'};
                     color: ${t.textSub};
                     font-size: 12px;
@@ -1286,7 +1308,7 @@ function AdminHomePage() {
                     border-bottom: 1px solid ${t.border};
                 }
                 td {
-                    padding: 16px;
+                    padding: 12px;
                     border-bottom: 1px solid ${t.border};
                     font-size: 14px;
                 }
@@ -1327,16 +1349,16 @@ function AdminHomePage() {
             )}
 
             {/* Sidebar Navigation - always visible on desktop, slide-in on mobile */}
-            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
+            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 bg-white border-r border-slate-200 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
                 {/* Header */}
-                <div className="h-20 flex items-center justify-center border-b border-slate-50 bg-white">
+                <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
                     <div className="flex items-center cursor-pointer" onClick={() => setActiveTab("dashboard")}>
                         <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
                     </div>
                 </div>
                 
                 {/* Side Sub-Header (Service Role) */}
-                <div className="px-6 py-6 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
                         <Sparkles size={40} className="text-pink-500" />
                     </div>
@@ -1347,41 +1369,48 @@ function AdminHomePage() {
                     </div>
                 </div>
 
-                <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
                     {/* Render Helper */}
                     {(() => {
                         const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
                                 <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
                                 <span className={`text-[11px] uppercase tracking-widest ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
                                 {active && <div className="absolute right-4 w-1 h-4 bg-pink-500 rounded-full"></div>}
                             </button>
                         );
                         const SidebarGroupTitle = ({ title }) => (
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-6 mb-3 px-4">{title}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 mb-1 px-4 first:mt-2">{title}</p>
+                        );
+                        const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick }) => (
+                            <button 
+                                onClick={onClick}
+                                className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all duration-300 group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                <div className="flex items-center space-x-3">
+                                    <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
+                                    <span className={`text-[11px] uppercase tracking-[0.2em] ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
+                            </button>
                         );
                         const SidebarSubItem = ({ id, label, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-3 pl-10 rounded-2xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
                                 <span className="text-[10px] uppercase tracking-widest font-bold">{label}</span>
                             </button>
                         );
 
                         return (
-                            <>
+                            <div className="flex flex-col pb-4">
                                 <SidebarGroupTitle title="Home" />
                                 <SidebarItem id="dashboard" label="Dashboard" icon={LayoutDashboard} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+                                 <SidebarItem id="partner_requests" label="Partner Requests" icon={Users} active={activeTab === "partner_requests"} onClick={() => setActiveTab("partner_requests")} />
                                 <SidebarItem id="banner_ads" label="Banner Ads" icon={Megaphone} active={activeTab === "banner_ads"} onClick={() => setActiveTab("banner_ads")} />
                                 
-                                <div onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isHomeSettingsOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
-                                    <div className="flex items-center space-x-3">
-                                        <Globe size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
-                                        <span className="text-[11px] uppercase tracking-widest font-bold">Home Page Setup</span>
-                                    </div>
-                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isHomeSettingsOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
-                                </div>
+                                <SidebarCategoryHeader label="Home Page" icon={Globe} isOpen={isHomeSettingsOpen} onClick={() => setIsHomeSettingsOpen(!isHomeSettingsOpen)} />
                                 {isHomeSettingsOpen && (
-                                    <div className="mt-1 space-y-1">
+                                    <div className="space-y-0.5">
                                         {[
                                             { label: "Hero Banner", id: "hero" },
                                             { label: "Mobile Banners", id: "mobile_banners" },
@@ -1410,39 +1439,24 @@ function AdminHomePage() {
                                 <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
                                 <SidebarItem id="subscribers" label="Subscribers" icon={Mail} active={activeTab === "subscribers"} onClick={() => setActiveTab("subscribers")} />
                                 
-                                <div onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isOrganizersOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
-                                    <div className="flex items-center space-x-3">
-                                        <Users size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
-                                        <span className="text-[11px] uppercase tracking-widest font-bold">Organizers</span>
-                                    </div>
-                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isOrganizersOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
-                                </div>
+                                <SidebarCategoryHeader label="Organizers" icon={Users} isOpen={isOrganizersOpen} onClick={() => setIsOrganizersOpen(!isOrganizersOpen)} />
                                 {isOrganizersOpen && (
-                                    <div className="mt-1 space-y-1">
+                                    <div className="space-y-0.5">
                                         {[
                                             { label: "All Organizers", id: "all_org" },
                                             { label: "KYC Pending", id: "kyc_pending" },
                                             { label: "KYC Verified", id: "kyc_verified" },
                                             { label: "Banned", id: "banned_org" },
-                                            { label: "Organiser Requests", id: "org_requests" },
-                                                { label: "Partner Requests", id: "partner_requests" },
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
                                     </div>
                                 )}
 
-                                <div onClick={() => setIsServicesOpen(!isServicesOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isServicesOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
-                                    <div className="flex items-center space-x-3">
-                                        <Briefcase size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
-                                        <span className="text-[11px] uppercase tracking-widest font-bold">Services</span>
-                                    </div>
-                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isServicesOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
-                                </div>
+                                <SidebarCategoryHeader label="Services" icon={Briefcase} isOpen={isServicesOpen} onClick={() => setIsServicesOpen(!isServicesOpen)} />
                                 {isServicesOpen && (
-                                    <div className="mt-1 space-y-1">
+                                    <div className="space-y-0.5">
                                         {[
-                                            { label: "Professional Service Requests", id: "service_requests" },
                                             { label: "Active Users", id: "service_active" },
                                             { label: "Banned Users", id: "service_banned" },
                                         ].map(sub => (
@@ -1452,15 +1466,9 @@ function AdminHomePage() {
                                 )}
 
                                 <SidebarGroupTitle title="Growth" />
-                                <div onClick={() => setIsGrowthOpen(!isGrowthOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isGrowthOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
-                                    <div className="flex items-center space-x-3">
-                                        <Gift size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
-                                        <span className="text-[11px] uppercase tracking-widest font-bold">Growth</span>
-                                    </div>
-                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isGrowthOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
-                                </div>
+                                <SidebarCategoryHeader label="Marketing" icon={Gift} isOpen={isGrowthOpen} onClick={() => setIsGrowthOpen(!isGrowthOpen)} />
                                 {isGrowthOpen && (
-                                    <div className="mt-1 space-y-1">
+                                    <div className="space-y-0.5">
                                         {[
                                             { label: "Promotions", id: "promotions" },
                                             { label: "Push Notifications", id: "send_notif" },
@@ -1484,15 +1492,9 @@ function AdminHomePage() {
                                 <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
 
                                 <SidebarGroupTitle title="System" />
-                                <div onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-all duration-400 group cursor-pointer ${ isSettingsOpen ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }`}>
-                                    <div className="flex items-center space-x-3">
-                                        <Settings size={18} className="text-slate-300 group-hover:text-slate-900" strokeWidth={2} />
-                                        <span className="text-[11px] uppercase tracking-widest font-bold">Settings</span>
-                                    </div>
-                                    <ChevronDown size={14} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
-                                </div>
+                                <SidebarCategoryHeader label="Settings" icon={Settings} isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(!isSettingsOpen)} />
                                 {isSettingsOpen && (
-                                    <div className="mt-1 space-y-1">
+                                    <div className="space-y-0.5">
                                         {[
                                             { label: "API Keys", id: "api_settings" },
                                             { label: "Payments", id: "payment_settings" },
@@ -1507,29 +1509,29 @@ function AdminHomePage() {
                                         ))}
                                     </div>
                                 )}
-                            </>
+                            </div>
                         );
                     })()}
 
                 </nav>
 
                 {/* Footer - Profile Minimal */}
-                <div className="p-6 border-t border-slate-50 bg-slate-50/50 mt-auto">
-                    <div className="bg-white rounded-[1.5rem] p-4 mb-4 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner">
+                <div className="p-4 border-t border-slate-50 bg-slate-50/50 mt-auto">
+                    <div className="bg-white rounded-[1.2rem] p-3 mb-2 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner font-bold text-xs">
                             A
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tight italic">Admin User</p>
-                            <p className="text-[9px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
+                            <p className="text-[9px] font-black text-slate-900 truncate uppercase tracking-tight italic">Admin User</p>
+                            <p className="text-[8px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
                         </div>
                     </div>
                     <button 
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-[1rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
                     >
-                        <LogOut size={14} strokeWidth={3} className="text-white" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
+                        <LogOut size={12} strokeWidth={3} className="text-white" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
                     </button>
                 </div>
             </aside>
@@ -1538,7 +1540,7 @@ function AdminHomePage() {
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
                 
                 {/* Top Header */}
-                <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
+                <header className="h-16 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
                     <div className="flex items-center space-x-8">
                         <button 
                             onClick={() => setIsSidebarOpen(true)}
@@ -1579,28 +1581,28 @@ function AdminHomePage() {
                 </header>
 
                 {/* Main */}
-                <main style={{ padding: "32px" }}>
+                <main style={{ padding: "20px" }}>
                     {activeTab === "dashboard" && (
                         <>
                             {/* Welcome Banner */}
                             <div style={{ 
                                 background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                                borderRadius: "24px",
-                                padding: "40px",
-                                marginBottom: "32px",
+                                borderRadius: "20px",
+                                padding: "24px",
+                                marginBottom: "24px",
                                 position: "relative",
                                 overflow: "hidden",
                                 border: `1px solid ${t.border}`,
                                 boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)"
                             }}>
                                 <div style={{ position: "relative", zIndex: 2 }}>
-                                    <h2 style={{ fontSize: "36px", fontWeight: 900, color: t.textMain, marginBottom: "12px", letterSpacing: "-0.03em" }}>Welcome back, Admin! 👋</h2>
-                                    <p style={{ fontSize: "16px", color: t.textSub, maxWidth: "500px", lineHeight: "1.6", fontWeight: 500 }}>
+                                    <h2 style={{ fontSize: "28px", fontWeight: 900, color: t.textMain, marginBottom: "8px", letterSpacing: "-0.03em" }}>Welcome back, Admin! 👋</h2>
+                                    <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "500px", lineHeight: "1.5", fontWeight: 500 }}>
                                         Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
                                     </p>
-                                    <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "14px 28px", borderRadius: "14px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 20px -5px rgba(59, 130, 246, 0.4)", transition: "all 0.2s" }}>View Requests</button>
-                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "14px 28px", borderRadius: "14px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 800, cursor: "pointer", transition: "all 0.2s" }}>Manage Events</button>
+                                    <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "10px 20px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 20px -5px rgba(59, 130, 246, 0.4)", transition: "all 0.2s", fontSize: "12px" }}>View Requests</button>
+                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "10px 20px", borderRadius: "12px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 800, cursor: "pointer", transition: "all 0.2s", fontSize: "12px" }}>Manage Events</button>
                                     </div>
                                 </div>
                                 {/* Modern Abstract Background Element */}
@@ -1617,16 +1619,16 @@ function AdminHomePage() {
                                     { label: "Organisers", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", icon: Users, color: "#10b981", trend: "+1.8%" },
                                     { label: "Bookings", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", icon: ShoppingCart, color: "#06b6d4", trend: "+14.2%" }
                                 ].map((stat, i) => (
-                                    <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                    <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                            <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: `${stat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color }}>
-                                                <stat.icon size={24} />
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: `${stat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color }}>
+                                                <stat.icon size={20} />
                                             </div>
-                                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#22c55e", backgroundColor: "#f0fdf4", padding: "4px 8px", borderRadius: "6px" }}>{stat.trend}</span>
+                                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#22c55e", backgroundColor: "#f0fdf4", padding: "2px 6px", borderRadius: "4px" }}>{stat.trend}</span>
                                         </div>
                                         <div>
-                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 500, color: t.textSub }}>{stat.label}</p>
-                                            <h3 style={{ margin: "4px 0 0 0", fontSize: "28px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>{stat.value}</h3>
+                                            <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: t.textSub }}>{stat.label}</p>
+                                            <h3 style={{ margin: "2px 0 0 0", fontSize: "22px", fontWeight: 800, color: t.textMain, letterSpacing: "-0.5px" }}>{stat.value}</h3>
                                         </div>
                                     </div>
                                 ))}
@@ -3037,117 +3039,7 @@ function AdminHomePage() {
                         </>
                     )}
 
-                    {activeTab === "org_requests" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Event Organiser Requests</h3>
-                            </div>
-                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Remarks</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {convexOrganiserRequests.filter(req => !isProfService(req.category)).map((req) => (
-                                            <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{req.firstName} {req.lastName}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.email}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.phone}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.category}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px", maxWidth: "200px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={req.remarks}>{req.remarks}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{
-                                                        padding: "4px 10px",
-                                                        borderRadius: "20px",
-                                                        fontSize: "11px",
-                                                        fontWeight: 700,
-                                                        backgroundColor:
-                                                            req.status === 'Approved' ? '#22c55e15' :
-                                                                req.status === 'Rejected' ? '#ef444415' : '#f9731615',
-                                                        color:
-                                                            req.status === 'Approved' ? '#22c55e' :
-                                                                req.status === 'Rejected' ? '#ef4444' : '#f97316'
-                                                    }}>
-                                                        {req.status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "12px", position: "relative" }}>
-                                                    <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {convexOrganiserRequests.length === 0 && (
-                                    <div style={{ padding: "24px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>No requests found.</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
 
-                    {activeTab === "service_requests" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Professional Service Requests</h3>
-                            </div>
-                            <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Name</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Email</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Phone</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {convexOrganiserRequests.filter(req => isProfService(req.category)).map((req) => (
-                                            <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600, color: t.textMain }}>{req.firstName} {req.lastName}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.email}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.category}</td>
-                                                <td style={{ padding: "12px", color: t.textSub, fontSize: "13px" }}>{req.phone}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{
-                                                        padding: "4px 10px",
-                                                        borderRadius: "20px",
-                                                        fontSize: "11px",
-                                                        fontWeight: 700,
-                                                        backgroundColor:
-                                                            req.status === 'Approved' ? '#22c55e15' :
-                                                                req.status === 'Rejected' ? '#ef444415' : '#f9731615',
-                                                        color:
-                                                            req.status === 'Approved' ? '#22c55e' :
-                                                                req.status === 'Rejected' ? '#ef4444' : '#f97316'
-                                                    }}>
-                                                        {req.status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "12px" }}>
-                                                    {req.status === 'Pending' && (
-                                                        <button onClick={() => { setSelectedRequestForApproval(req); setShowApprovalModal(true); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Approve</button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {convexOrganiserRequests.filter(req => isProfService(req.category)).length === 0 && (
-                                    <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No professional service requests found.</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
 
                     {["service_active", "service_banned"].includes(activeTab) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
@@ -3198,7 +3090,7 @@ function AdminHomePage() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Partner Requests</h3>
                             </div>
-                            <AdminPartnerRequestsTable t={t} router={router} />
+                             <AdminPartnerRequestsTable t={t} router={router} theme={theme} />
                         </div>
                     )}
 
@@ -3387,8 +3279,8 @@ function AdminHomePage() {
                                         <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Convenience fee</label>
                                         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                                             <select
-                                                value={feeSettings.convenienceFeeType}
-                                                onChange={(e) => setFeeSettings(f => ({ ...f, convenienceFeeType: e.target.value }))}
+                                                value={localFeeSettings.convenienceFeeType}
+                                                onChange={(e) => setLocalFeeSettings(f => ({ ...f, convenienceFeeType: e.target.value }))}
                                                 style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
                                             >
                                                 <option value="percent">Percent (%)</option>
@@ -3397,12 +3289,12 @@ function AdminHomePage() {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                step={feeSettings.convenienceFeeType === "percent" ? 0.5 : 1}
-                                                value={feeSettings.convenienceFeeValue}
-                                                onChange={(e) => setFeeSettings(f => ({ ...f, convenienceFeeValue: parseFloat(e.target.value) || 0 }))}
+                                                step={localFeeSettings.convenienceFeeType === "percent" ? 0.5 : 1}
+                                                value={localFeeSettings.convenienceFeeValue}
+                                                onChange={(e) => setLocalFeeSettings(f => ({ ...f, convenienceFeeValue: parseFloat(e.target.value) || 0 }))}
                                                 style={{ width: "80px", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
                                             />
-                                            <span style={{ fontSize: "13px", color: t.textSub }}>{feeSettings.convenienceFeeType === "percent" ? "%" : "₹"}</span>
+                                            <span style={{ fontSize: "13px", color: t.textSub }}>{localFeeSettings.convenienceFeeType === "percent" ? "%" : "₹"}</span>
                                         </div>
                                     </div>
                                     <div>
@@ -3412,12 +3304,45 @@ function AdminHomePage() {
                                             min="0"
                                             max="100"
                                             step="0.5"
-                                            value={feeSettings.gstPercent}
-                                            onChange={(e) => setFeeSettings(f => ({ ...f, gstPercent: parseFloat(e.target.value) || 0 }))}
+                                            value={localFeeSettings.gstPercent}
+                                            onChange={(e) => setLocalFeeSettings(f => ({ ...f, gstPercent: parseFloat(e.target.value) || 0 }))}
                                             style={{ width: "80px", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "13px" }}
                                         />
                                         <span style={{ fontSize: "13px", color: t.textSub, marginLeft: "4px" }}>%</span>
                                     </div>
+
+                                    <button
+                                        onClick={handleSaveFees}
+                                        disabled={isSavingFees}
+                                        style={{
+                                            padding: "10px 24px",
+                                            borderRadius: "10px",
+                                            background: "linear-gradient(135deg, #FF1CF7 0%, #00E0FF 100%)",
+                                            color: "white",
+                                            border: "none",
+                                            cursor: isSavingFees ? "not-allowed" : "pointer",
+                                            fontWeight: 700,
+                                            fontSize: "13px",
+                                            opacity: isSavingFees ? 0.7 : 1,
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                            transition: "all 0.3s ease",
+                                            marginLeft: "auto"
+                                        }}
+                                        onMouseOver={(e) => { 
+                                           if(!isSavingFees) {
+                                               e.currentTarget.style.transform = "translateY(-2px)";
+                                               e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
+                                           }
+                                        }}
+                                        onMouseOut={(e) => { 
+                                           if(!isSavingFees) {
+                                               e.currentTarget.style.transform = "translateY(0)";
+                                               e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+                                           }
+                                        }}
+                                    >
+                                        {isSavingFees ? "Saving..." : "Save Settings"}
+                                    </button>
                                 </div>
                             </div>
 

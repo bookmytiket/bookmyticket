@@ -412,31 +412,36 @@ export const sendSubscriptionWelcome = action({
 
         // CLEAN MINIMAL VERSION - NO EMOJIS, SIMPLE INLINE STYLES, LOGO INCLUDED
         const welcomeHtml = `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                <div style="background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 50px; width: auto;">
+            <div style="font-family: sans-serif; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); background: #ffffff;">
+                <div style="background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%); padding: 50px 30px; text-align: center;">
+                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="height: 45px; width: auto; filter: brightness(0) invert(1);">
+                    <h1 style="color: #ffffff; margin-top: 20px; font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Welcome to the Club! 🎉</h1>
                 </div>
-                <div style="padding: 40px; color: #1e293b; line-height: 1.6; text-align: center;">
-                    <h2 style="color: #0f172a; margin-top: 0; font-size: 24px;">Welcome to ${brandNameDisplay}!</h2>
-                    <p style="font-size: 16px;">Thank you for subscribing to our newsletter.</p>
-                    <p style="font-size: 16px; margin-bottom: 30px;">We're excited to have you in our community. You'll be the first to know about the most exciting events near you.</p>
+                <div style="padding: 40px; color: #334155; line-height: 1.7;">
+                    <p style="font-size: 17px; margin-top: 0;">Hello there,</p>
+                    <p style="font-size: 16px;">Thank you for subscribing to our newsletter! You're now on the list to receive first-hand updates on the most exciting events, exclusive deals, and community highlights.</p>
                     
-                    <a href="${siteUrl}/events" style="background-color: #f844a4; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 10px rgba(248, 68, 164, 0.2);">Browse Events</a>
-                    
-                    <div style="margin-top: 40px; border-top: 1px solid #f1f5f9; padding-top: 30px;">
-                        <p style="font-size: 14px; color: #64748b; margin: 0;">Join our network as a partner:</p>
-                        <a href="${siteUrl}/signup" style="color: #f844a4; font-weight: 600; text-decoration: none;">Become a Partner →</a>
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #f1f5f9;">
+                        <h4 style="margin: 0 0 10px; font-size: 18px; color: #0f172a;">What's Next?</h4>
+                        <p style="margin: 0 0 20px; font-size: 14px; color: #64748b;">Ready to find your next great experience? Check out what's happening this week.</p>
+                        <a href="${siteUrl}/events" style="background-color: #f844a4; color: white; padding: 12px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 14px; box-shadow: 0 4px 12px rgba(248, 68, 164, 0.25);">Explore Events</a>
                     </div>
                 </div>
-                <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #f1f5f9;">
+                <div style="background-color: #f8fafc; padding: 25px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #f1f5f9;">
                     © 2026 ${brandNameDisplay}. All rights reserved.<br/>
-                    Visit us at <a href="${siteUrl}" style="color: #64748b; text-decoration: underline;">bookmyticket.net</a>
+                    You're receiving this because you subscribed at <a href="${siteUrl}" style="color: #64748b; text-decoration: underline;">bookmyticket.net</a>
                 </div>
             </div>
         `;
 
         console.log(`[Notification] Sending welcome email to ${email}...`);
         
+        await ctx.runMutation(api.notifications.send, {
+            subject: `Welcome to ${brandNameDisplay}! 🎉`,
+            message: `Newsletter welcome sent to ${email}`,
+            target: "users"
+        });
+
         return await ctx.runAction(api.emailActions.sendEmail, {
             to: email,
             subject: `Welcome to ${brandNameDisplay}`,

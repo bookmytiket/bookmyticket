@@ -225,7 +225,7 @@ export default function Navbar() {
 
 
 
-  const createOrgRequest = useMutation(api.organiserRequests.create);
+  const createPartnerRequest = useMutation(api.partnerRequests.submitRequest);
   const [orgLoading, setOrgLoading] = useState(false);
 
   const handleOrgSubmit = async (e) => {
@@ -236,7 +236,7 @@ export default function Navbar() {
     }
     setOrgLoading(true);
     try {
-      await createOrgRequest(orgForm);
+      await createPartnerRequest({ ...orgForm, type: "organiser" });
       setOrgSent(true);
       setTimeout(() => {
         setOrgSent(false);

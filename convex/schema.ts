@@ -175,6 +175,7 @@ export default defineSchema({
     }).index("by_status", ["status"]),
 
     partnerRequests: defineTable({
+        type: v.string(), // "organiser" | "professional_service"
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
@@ -184,7 +185,7 @@ export default defineSchema({
         remarks: v.optional(v.string()),
         status: v.string(), // "Pending", "Approved", "Rejected"
         createdAt: v.number(),
-    }).index("by_status", ["status"]).index("by_email", ["email"]),
+    }).index("by_status", ["status"]).index("by_email", ["email"]).index("by_type", ["type"]),
 
     systemConfig: defineTable({
         key: v.string(),
