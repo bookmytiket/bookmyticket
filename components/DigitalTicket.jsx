@@ -102,8 +102,8 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     <div className="hidden md:block absolute -top-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
                     <div className="hidden md:block absolute -bottom-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
 
-                    <div className="mb-6">
-                        <img src="/logo.png" alt="Company Logo" style={{ height: "40px", width: "auto" }} />
+                    <div className="mb-8 w-full bg-[#facc15] py-4 flex justify-center items-center rounded-xl shadow-sm">
+                        <img src="/logo.png" alt="Company Logo" style={{ height: "60px", width: "auto" }} />
                     </div>
 
                     <div>
