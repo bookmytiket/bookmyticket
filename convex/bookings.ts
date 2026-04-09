@@ -40,10 +40,14 @@ export const getBookings = query({
 
                 return {
                     ...booking,
-                    eventName: event && event.title ? event.title : "Static Event",
-                    eventType: event && event.type ? event.type : "Physical",
+                    eventName: event?.title || "Event Ticket",
+                    eventType: event?.type || "Physical",
+                    eventDate: event?.date || "—",
+                    eventTime: event?.time || "—",
+                    eventLocation: event?.location || event?.venue || "—",
+                    eventImg: event?.img || event?.bannerPreview || null,
                     meetingUrl: resolvedUrl,
-                    customerEmail: booking.userId, // Map userId to customerEmail for UI compatibility
+                    customerEmail: booking.userId,
                     userName: userName || "Guest User",
                     organiserId: event?.organiserId || null,
                     virtual: !!isVirtual,
@@ -90,10 +94,13 @@ export const getBookingById = query({
 
         return {
             ...booking,
-            eventName: event && "title" in event ? event.title : "Static Event",
-            eventType: event && "type" in event ? event.type : "Physical",
+            eventName: event?.title || "Event Ticket",
+            eventType: event?.type || "Physical",
+            eventDate: event?.date || "—",
+            eventTime: event?.time || "—",
+            eventLocation: event?.location || event?.venue || "—",
+            eventImg: event?.img || event?.bannerPreview || null,
             meetingUrl: resolvedUrl,
-            location: event && "location" in event ? event.location : "TBA",
             userName: userName || "Guest User",
             virtual: !!isVirtual,
         };
@@ -367,6 +374,10 @@ export const getByUser = query({
                     ...booking,
                     eventName: event?.title || "Event Ticket",
                     eventType: event?.type || "Physical",
+                    eventDate: event?.date || "—",
+                    eventTime: event?.time || "—",
+                    eventLocation: event?.location || event?.venue || "—",
+                    eventImg: event?.img || event?.bannerPreview || null,
                     meetingUrl: resolvedUrl,
                     virtual: !!isVirtual,
                 };

@@ -47,8 +47,8 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
             {/* Main Landscape Row */}
             <div className="flex flex-col md:flex-row w-full">
                 
-                {/* Left Section: Event Image (40% width on desktop) */}
-                <div className="w-full md:w-[35%] relative min-h-[220px]">
+                {/* Left Section: Event Image (30% width on desktop) */}
+                <div className="w-full md:w-[30%] relative min-h-[220px]">
                     <img 
                         src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87"} 
                         alt={event.title}
@@ -63,8 +63,8 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     </div>
                 </div>
 
-                {/* Middle Section: Event Details (40% width on desktop) */}
-                <div className="w-full md:w-[40%] p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative">
+                {/* Middle Section: Event Details (45% width on desktop) */}
+                <div className="w-full md:w-[45%] p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative">
                     {/* Perforated Cuts (Desktop only) */}
                     <div className="hidden md:block absolute -top-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
                     <div className="hidden md:block absolute -bottom-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
