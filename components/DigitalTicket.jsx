@@ -29,8 +29,14 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
         try {
             const dataUrl = await htmlToImage.toPng(ticketRef.current, {
                 quality: 1,
-                pixelRatio: 2, // High quality
+                pixelRatio: 2,
                 backgroundColor: '#fff',
+                cacheBust: true,
+                includeFonts: true,
+                filter: (node) => {
+                    const exclusionClass = 'download-button-exclude';
+                    return !(node.classList && node.classList.contains(exclusionClass));
+                }
             });
             
             const pdf = new jsPDF({
@@ -85,6 +91,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     <img 
                         src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87"} 
                         alt={event.title}
+                        crossOrigin="anonymous"
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
@@ -103,7 +110,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     <div className="hidden md:block absolute -bottom-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
 
                     <div className="mb-8 w-full bg-[#facc15] py-4 flex justify-center items-center rounded-xl shadow-sm">
-                        <img src="/logo.png" alt="Company Logo" style={{ height: "60px", width: "auto" }} />
+                        <img src="/logo.png" alt="Company Logo" crossOrigin="anonymous" style={{ height: "60px", width: "auto" }} />
                     </div>
 
                     <div>
@@ -197,7 +204,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     <button 
                         onClick={downloadTicket}
                         disabled={downloading}
-                        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
+                        className="download-button-exclude flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-all"
                         style={{ border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
                     >
                         {downloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
