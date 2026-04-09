@@ -564,3 +564,125 @@ export const sendTurfBookingConfirmation = action({
         return { success: true };
     },
 });
+
+export const sendPartnerApprovalCredentials = action({
+    args: {
+        email: v.string(),
+        firstName: v.string(),
+        password: v.string(),
+        phone: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const { email, firstName, password, phone } = args;
+
+        const branding = await ctx.runQuery(api.siteBranding.get) as any;
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        let brandLogo = branding?.logoUrl || "/logo.png";
+        if (brandLogo && brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
+        const brandNameDisplay = branding?.name || "BookMyTicket";
+
+        // 1. Email Notification (Premium Gradient-Based Template)
+        const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+                    .wrapper { padding: 40px 20px; }
+                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+                    .header-banner { background: linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%); padding: 60px 40px; text-align: center; color: #ffffff; }
+                    .logo { height: 50px; width: auto; margin-bottom: 24px; filter: brightness(0) invert(1); }
+                    .header-title { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+                    .content { padding: 48px; color: #334155; }
+                    .welcome-text { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
+                    .body-text { font-size: 16px; line-height: 1.7; color: #64748b; margin-bottom: 32px; }
+                    .credential-box { background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 32px; margin-bottom: 32px; }
+                    .credential-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+                    .credential-row:last-child { border-bottom: none; }
+                    .label { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; width: 100px; letter-spacing: 0.5px; }
+                    .value { font-size: 15px; font-weight: 700; color: #1e293b; font-family: 'JetBrains Mono', monospace; }
+                    .btn { display: block; background: linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%); color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 16px; text-align: center; margin-top: 24px; }
+                    .footer { padding: 40px; text-align: center; background-color: #f8fafc; color: #94a3b8; font-size: 13px; line-height: 1.5; }
+                    .security-alert { background-color: #fff1f2; border-radius: 12px; padding: 16px; margin-top: 32px; border-left: 4px solid #f43f5e; }
+                    .security-alert p { margin: 0; font-size: 13px; color: #e11d48; font-weight: 600; }
+                </style>
+            </head>
+            <body>
+                <div class="wrapper">
+                    <div class="container">
+                        <div class="header-banner">
+                            <img src="${brandLogo}" alt="${brandNameDisplay}" class="logo" onerror="this.style.display='none'">
+                            <h2 class="header-title">Approved & Ready! 🎟️</h2>
+                        </div>
+                        <div class="content">
+                            <div class="welcome-text">Hi ${firstName},</div>
+                            <p class="body-text">We've verified your partner application and your account is now fully active. You can start creating and managing events immediately.</p>
+                            
+                            <div class="credential-box">
+                                <div class="credential-row">
+                                    <span class="label">Login URL</span>
+                                    <span class="value"><a href="${siteUrl}/signin" style="color: #6366f1; text-decoration: none;">Click Here to Login</a></span>
+                                </div>
+                                <div class="credential-row">
+                                    <span class="label">User Email</span>
+                                    <span class="value">${email}</span>
+                                </div>
+                                <div class="credential-row">
+                                    <span class="label">Password</span>
+                                    <span class="value">${password}</span>
+                                </div>
+                            </div>
+                            
+                            <a href="${siteUrl}/signin" class="btn">Access Your Dashboard</a>
+                            
+                            <div class="security-alert">
+                                <p>⚠️ Important: For security reasons, please update your temporary password immediately upon your first login.</p>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ${new Date().getFullYear()} ${brandNameDisplay}. Quality Ticketing Experience.</p>
+                            <p>You received this because your partner application was approved by our administration team.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        await ctx.runAction(api.emailActions.sendEmail, {
+            to: email,
+            subject: `Welcome to ${brandNameDisplay} - Your Partner Account Credentials`,
+            html: emailHtml,
+        });
+
+        // 2. SMS Notification (via Twilio)
+        const settings = await ctx.runQuery(api.whatsappSettings.get) as any;
+        if (settings && settings.isActive && settings.accountSid && settings.authToken && settings.fromNumber) {
+            const smsMessage = `Your ${brandNameDisplay} partner account is approved!\nLogin: ${email}\nPassword: ${password}\nLogin here: ${siteUrl}/signin`;
+            
+            try {
+                const cleanPhone = phone.replace(/\D/g, "");
+                const formattedPhone = cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`;
+                
+                const auth = Buffer.from(`${settings.accountSid}:${settings.authToken}`).toString("base64");
+                await fetch(`https://api.twilio.com/2010-04-01/Accounts/${settings.accountSid}/Messages.json`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Authorization": `Basic ${auth}`
+                    },
+                    body: new URLSearchParams({
+                        To: formattedPhone,
+                        From: settings.fromNumber, // Assuming fromNumber is set in settings
+                        Body: smsMessage
+                    })
+                });
+                console.log(`✅ Credentials SMS sent to ${formattedPhone}`);
+            } catch (smsError) {
+                console.error("❌ Failed to send credentials SMS:", smsError);
+            }
+        }
+
+        return { success: true };
+    },
+});

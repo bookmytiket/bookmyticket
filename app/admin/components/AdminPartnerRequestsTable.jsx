@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase } from "lucide-react";
+import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail } from "lucide-react";
 
 export default function AdminPartnerRequestsTable({ t, theme }) {
     const requests = useQuery(api.partnerRequests.getAll) || [];
@@ -13,6 +13,14 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const [filterStatus, setFilterStatus] = useState("Pending");
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Modal State
+    const [showApproveModal, setShowApproveModal] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [manualPassword, setManualPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPass, setShowPass] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleUpdate = async (id, status) => {
         if (!confirm(`Are you sure you want to mark this request as ${status}?`)) return;
         try {
@@ -22,12 +30,39 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
         }
     };
 
-    const handleApprove = async (id) => {
-        if (!confirm(`Are you sure you want to APPROVE this request? This will create an account and send welcome emails.`)) return;
+    const handleApprove = (req) => {
+        setSelectedRequest(req);
+        setManualPassword("");
+        setConfirmPassword("");
+        setShowApproveModal(true);
+    };
+
+    const submitApproval = async () => {
+        if (!manualPassword) {
+            alert("Please enter a password.");
+            return;
+        }
+        if (manualPassword !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+        if (manualPassword.length < 8) {
+            alert("Password must be at least 8 characters.");
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
-            await approveMutation({ id });
+            await approveMutation({ 
+                id: selectedRequest._id, 
+                password: manualPassword 
+            });
+            setShowApproveModal(false);
+            alert("Partner approved successfully! Credentials sent via Email and SMS.");
         } catch (err) {
             alert("Error approving request: " + err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -156,8 +191,8 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             {req.status === "Pending" && (
                                                 <>
                                                     <button 
-                                                        onClick={() => handleApprove(req._id)} 
-                                                        title="Approve & Create Account"
+                                                        onClick={() => handleApprove(req)} 
+                                                        title="Approve & Set Password"
                                                         style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#22c55e15", color: "#22c55e", cursor: "pointer", transition: "0.2s" }}
                                                     >
                                                         <CheckCircle size={18} />
@@ -190,6 +225,91 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                 .hover-row:hover { background-color: #f8fafc; }
                 [data-theme='dark'] .hover-row:hover { background-color: #1e293b; }
             `}</style>
+
+            {/* Approval Modal */}
+            {showApproveModal && selectedRequest && (
+                <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
+                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "480px", borderRadius: "24px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "32px", textAlign: "center", position: "relative" }}>
+                            <button onClick={() => setShowApproveModal(false)} style={{ position: "absolute", top: "20px", right: "20px", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
+                            <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
+                                <ShieldCheck size={32} />
+                            </div>
+                            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize Partner</h2>
+                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px", marginTop: "8px" }}>Approving <strong>{selectedRequest.firstName} {selectedRequest.lastName}</strong></p>
+                        </div>
+
+                        <div style={{ padding: "32px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                    <Mail size={18} color="#3b82f6" style={{ marginTop: "2px" }} />
+                                    <div>
+                                        <p style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, margin: "0 0 2px 0", textTransform: "uppercase" }}>Login Account</p>
+                                        <p style={{ fontSize: "15px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedRequest.email}</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: t.textSub, marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Key size={14} /> MANUAL PASSWORD
+                                    </label>
+                                    <div style={{ position: "relative" }}>
+                                        <input 
+                                            type={showPass ? "text" : "password"} 
+                                            value={manualPassword}
+                                            onChange={(e) => setManualPassword(e.target.value)}
+                                            placeholder="Enter secure password"
+                                            style={{ width: "100%", padding: "14px 45px 14px 16px", borderRadius: "14px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "15px", outline: "none", boxSizing: "border-box" }}
+                                        />
+                                        <button 
+                                            onClick={() => setShowPass(!showPass)}
+                                            style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.textSub, cursor: "pointer" }}
+                                        >
+                                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: t.textSub, marginBottom: "8px" }}>CONFIRM PASSWORD</label>
+                                    <input 
+                                        type={showPass ? "text" : "password"} 
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="Repeat password"
+                                        style={{ width: "100%", padding: "14px 16px", borderRadius: "14px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "15px", outline: "none", boxSizing: "border-box" }}
+                                    />
+                                </div>
+
+                                <button 
+                                    onClick={submitApproval}
+                                    disabled={isSubmitting}
+                                    style={{ 
+                                        width: "100%", 
+                                        padding: "16px", 
+                                        borderRadius: "14px", 
+                                        background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", 
+                                        color: "#fff", 
+                                        border: "none", 
+                                        fontWeight: 800, 
+                                        fontSize: "16px", 
+                                        cursor: "pointer", 
+                                        marginTop: "8px",
+                                        opacity: isSubmitting ? 0.7 : 1,
+                                        boxShadow: "0 10px 20px rgba(255, 61, 110, 0.2)"
+                                    }}
+                                >
+                                    {isSubmitting ? "Finalizing Approval..." : "Approve & Send Credentials"}
+                                </button>
+                                
+                                <p style={{ fontSize: "12px", color: t.textSub, textAlign: "center", margin: 0 }}>
+                                    Partner will be notified via <strong>Email</strong> and <strong>SMS</strong> immediately.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
