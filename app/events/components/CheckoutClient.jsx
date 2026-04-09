@@ -240,6 +240,7 @@ export default function CheckoutClient({ id }) {
                         )}
                         <button type="button" onClick={handleSendEmail} style={{ padding: '12px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send ticket to Email</button>
                         <button type="button" onClick={handleSendSms} style={{ padding: '12px 20px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send SMS</button>
+                        <Link href="/" style={{ padding: '12px 24px', background: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '14px', textDecoration: 'none' }}>Back to Home</Link>
                     </div>
 
                 </div>

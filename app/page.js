@@ -25,6 +25,7 @@ import { eventMatchesCategory } from './utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
+import DigitalTicket from '@/components/DigitalTicket';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
 
@@ -108,6 +109,18 @@ export default function Home() {
   const metaSettings = parseConfig(allConfig?.admin_meta_settings) || {
     global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
   };
+
+  const { user } = useAuth();
+  const userId = user?.identifier || user?.email;
+  const userBookings = useQuery(api.bookings.getByUser, userId ? { userId } : "skip");
+  const [viewTicketModal, setViewTicketModal] = useState(null);
+
+  const activeBooking = useMemo(() => {
+    if (!userBookings || userBookings.length === 0) return null;
+    return userBookings
+      .filter(b => b.status === "Confirmed" || b.status === "Scanned")
+      .sort((a, b) => b._creationTime - a._creationTime)[0];
+  }, [userBookings]);
 
   useEffect(() => {
     if (metaSettings?.global?.title) {
@@ -368,6 +381,48 @@ export default function Home() {
   return (
     <>
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
+        
+        {/* Active Ticket Banner Surface */}
+        {activeBooking && (
+          <div style={{ 
+            width: '100%', 
+            background: 'linear-gradient(90deg, #111827 0%, #1e293b 100%)', 
+            padding: '12px 0', 
+            borderBottom: '1px solid rgba(255,255,255,0.1)', 
+            position: 'relative', 
+            zIndex: 100 
+          }}>
+            <div className="container mx-auto px-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e' }}>
+                  <Ticket size={18} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#fff' }}>Upcoming Event: {activeBooking.eventName}</p>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Confirmed Booking #{activeBooking._id.slice(-8).toUpperCase()}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewTicketModal(activeBooking)}
+                style={{ 
+                  height: '36px', 
+                  padding: '0 16px', 
+                  borderRadius: '8px', 
+                  background: '#f43f5e', 
+                  color: '#fff', 
+                  fontSize: '12px', 
+                  fontWeight: 900, 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(244,63,94,0.3)' 
+                }}
+              >
+                View Digital Ticket
+              </button>
+            </div>
+          </div>
+        )}
 
         <style>{`
           .syne-heading {
@@ -546,6 +601,42 @@ export default function Home() {
       </main>
       <Footer />
       <DemoToggle demoVisible={true} />
+
+      {/* Digital Ticket Modal */}
+      {viewTicketModal && (
+        <div 
+          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px", backdropFilter: "blur(8px)" }} 
+          onClick={() => setViewTicketModal(null)}
+        >
+          <div style={{ width: "100%", maxWidth: "850px", position: "relative" }} onClick={e => e.stopPropagation()}>
+            <button 
+                onClick={() => setViewTicketModal(null)} 
+                style={{ 
+                    position: "absolute", 
+                    top: "-40px", 
+                    right: "0", 
+                    background: "none", 
+                    border: "none", 
+                    color: "#fff", 
+                    cursor: "pointer", 
+                    fontSize: "24px"
+                }}
+            >
+                ✕
+            </button>
+            <DigitalTicket 
+                booking={viewTicketModal}
+                event={{
+                    title: viewTicketModal.eventName,
+                    img: viewTicketModal.eventImg || viewTicketModal.img,
+                    date: viewTicketModal.eventDate || viewTicketModal.date,
+                    time: viewTicketModal.eventTime || viewTicketModal.time,
+                    location: viewTicketModal.eventLocation || viewTicketModal.location || "Venue"
+                }}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

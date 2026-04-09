@@ -6,12 +6,10 @@ import {
     Calendar, 
     MapPin, 
     Ticket, 
-    User, 
     CheckCircle2, 
     Clock, 
     AlertCircle, 
-    ShieldCheck,
-    Info
+    ShieldCheck
 } from "lucide-react";
 import { DEFAULT_TICKET_TERMS } from "@/app/utils/ticketTerms";
 
@@ -22,185 +20,142 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
     const bookingId = booking._id || booking.id;
     const shortId = bookingId?.slice(-8).toUpperCase();
 
+    // Responsive helper styles
+    const containerStyle = {
+        width: "100%",
+        maxWidth: "850px",
+        margin: "0 auto",
+        backgroundColor: "#fff",
+        borderRadius: "24px",
+        overflow: "hidden",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
+        fontFamily: "'Inter', sans-serif",
+        position: "relative",
+        border: "1px solid #e2e8f0",
+        display: "flex",
+        flexDirection: "column", // Default mobile
+    };
+
+    const landscapeSectionStyle = {
+        display: "flex",
+        flexDirection: "row", // Will be changed via className or inline logic for desktop
+        flexWrap: "wrap"
+    };
+
     return (
-        <div className="digital-ticket-root" style={{
-            maxWidth: "400px",
-            margin: "0 auto",
-            backgroundColor: "#fff",
-            borderRadius: "24px",
-            overflow: "hidden",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
-            fontFamily: "'Inter', sans-serif",
-            position: "relative",
-            border: "1px solid #e2e8f0"
-        }}>
-            {/* Top Section: Event Image + Header */}
-            <div style={{ position: "relative", height: "160px", overflow: "hidden" }}>
-                <img 
-                    src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87"} 
-                    alt={event.title}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-                <div style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%)"
-                }} />
+        <div className="digital-ticket-container" style={containerStyle}>
+            {/* Main Landscape Row */}
+            <div className="flex flex-col md:flex-row w-full">
                 
-                {/* Status Badge */}
-                <div style={{
-                    position: "absolute",
-                    top: "16px",
-                    right: "16px",
-                    backgroundColor: isScanned ? "#ef4444" : "#22c55e",
-                    color: "#fff",
-                    padding: "6px 14px",
-                    borderRadius: "50px",
-                    fontSize: "11px",
-                    fontWeight: "800",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
-                }}>
-                    {isScanned ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
-                    {isScanned ? "Used" : "Active"}
-                </div>
-            </div>
-
-            {/* Ticket Content */}
-            <div style={{ padding: "24px", position: "relative" }}>
-                {/* Event Name */}
-                <h2 style={{ 
-                    fontSize: "20px", 
-                    fontWeight: "900", 
-                    color: "#111827", 
-                    margin: "0 0 16px 0",
-                    lineHeight: "1.2",
-                    letterSpacing: "-0.02em"
-                }}>
-                    {event.title}
-                </h2>
-
-                {/* Info Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                        <div style={{ color: "#f84464", marginTop: "2px" }}><Calendar size={18} /></div>
-                        <div>
-                            <p style={{ margin: 0, fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Date</p>
-                            <p style={{ margin: 0, fontSize: "14px", color: "#111827", fontWeight: "700" }}>{event.date}</p>
-                        </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                        <div style={{ color: "#f84464", marginTop: "2px" }}><Clock size={16} /></div>
-                        <div>
-                            <p style={{ margin: 0, fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Time</p>
-                            <p style={{ margin: 0, fontSize: "14px", color: "#111827", fontWeight: "700" }}>{event.time || "TBA"}</p>
-                        </div>
+                {/* Left Section: Event Image (40% width on desktop) */}
+                <div className="w-full md:w-[35%] relative min-h-[220px]">
+                    <img 
+                        src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87"} 
+                        alt={event.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
+                    
+                    {/* Entry Badge */}
+                    <div className="absolute top-4 left-4 flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-white text-[10px] font-bold uppercase tracking-widest">
+                        <Ticket size={12} />
+                        Standard Pass
                     </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginBottom: "24px" }}>
-                    <div style={{ color: "#f84464", marginTop: "2px" }}><MapPin size={18} /></div>
+                {/* Middle Section: Event Details (40% width on desktop) */}
+                <div className="w-full md:w-[40%] p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative">
+                    {/* Perforated Cuts (Desktop only) */}
+                    <div className="hidden md:block absolute -top-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
+                    <div className="hidden md:block absolute -bottom-3 -right-3 w-6 height-6 bg-[#f8fafc] rounded-full border border-slate-200 shadow-inner" />
+
                     <div>
-                        <p style={{ margin: 0, fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>Venue</p>
-                        <p style={{ margin: 0, fontSize: "14px", color: "#111827", fontWeight: "700" }}>{event.location}</p>
+                        <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight mb-6 tracking-tight">
+                            {event.title}
+                        </h2>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Calendar size={12} className="text-rose-500" /> Date
+                                </p>
+                                <p className="text-sm font-extrabold text-slate-800">{event.date}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Clock size={12} className="text-rose-500" /> Time
+                                </p>
+                                <p className="text-sm font-extrabold text-slate-800">{event.time || "TBA"}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1 mb-8">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <MapPin size={12} className="text-rose-500" /> Venue
+                            </p>
+                            <p className="text-sm font-extrabold text-slate-800 line-clamp-1">{event.location}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                            <ShieldCheck size={12} className="text-emerald-500" /> Guidelines
+                        </p>
+                        <ul className="space-y-1.5">
+                            {terms.slice(0, 2).map((term, i) => (
+                                <li key={i} className="text-[11px] text-slate-500 font-medium leading-relaxed flex gap-2">
+                                    <span className="text-emerald-500">•</span> {term}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
 
-                {/* Perforated Divider */}
-                <div style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    margin: "0 -24px 24px -24px",
-                    overflow: "hidden" 
-                }}>
-                    <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#f8fafc", marginLeft: "-10px", border: "1px solid #e2e8f0" }} />
-                    <div style={{ flex: 1, borderTop: "2px dashed #e2e8f0", margin: "0 10px" }} />
-                    <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#f8fafc", marginRight: "-10px", border: "1px solid #e2e8f0" }} />
-                </div>
+                {/* Right Section: QR & ID (25% width on desktop) */}
+                <div className="w-full md:w-[25%] bg-slate-50/50 p-6 md:p-8 flex flex-col items-center justify-center text-center">
+                    
+                    {/* Dynamic Status Badge */}
+                    <div className={`mb-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm ${
+                        isScanned 
+                        ? "bg-rose-100 text-rose-600 border border-rose-200" 
+                        : "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                    }`}>
+                        {isScanned ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
+                        {isScanned ? "Used" : "Active"}
+                    </div>
 
-                {/* QR Section */}
-                <div style={{ 
-                    textAlign: "center", 
-                    background: "#f8fafc", 
-                    borderRadius: "16px", 
-                    padding: "24px",
-                    border: "1px solid #f1f5f9",
-                    marginBottom: "24px"
-                }}>
-                    <div style={{ 
-                        display: "inline-block", 
-                        padding: "12px", 
-                        background: "#fff", 
-                        borderRadius: "16px", 
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.05)" 
-                    }}>
+                    <div className="p-3 bg-white rounded-2xl shadow-xl border border-white mb-6">
                         <QRCodeSVG 
                             value={bookingId} 
-                            size={160} 
+                            size={120} 
                             level="H" 
-                            fgColor={isScanned ? "#94a3b8" : "#000000"} 
+                            fgColor={isScanned ? "#cbd5e1" : "#0f172a"} 
                         />
                     </div>
-                    <div style={{ marginTop: "16px" }}>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#64748b", fontWeight: "700", letterSpacing: "0.1em" }}>BOOKING ID</p>
-                        <p style={{ margin: 0, fontSize: "18px", color: "#111827", fontWeight: "900", fontFamily: "monospace" }}>#{shortId}</p>
-                    </div>
-                    {isScanned && (
-                        <div style={{ 
-                            marginTop: "12px", 
-                            color: "#ef4444", 
-                            fontSize: "12px", 
-                            fontWeight: "700",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "4px"
-                        }}>
-                             <AlertCircle size={14} /> This ticket has been redeemed
-                        </div>
-                    )}
-                </div>
 
-                {/* Guidelines Section */}
-                <div style={{ textAlign: "left" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                        <ShieldCheck size={18} style={{ color: "#22c55e" }} />
-                        <h3 style={{ margin: 0, fontSize: "13px", fontWeight: "800", color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry Guidelines</h3>
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Booking ID</p>
+                        <p className="text-lg font-black text-slate-900 font-mono tracking-tighter">#{shortId}</p>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {terms.slice(0, 3).map((term, i) => (
-                            <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                                <div style={{ width: "14px", height: "14px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: "bold", marginTop: "2px" }}>{i+1}</div>
-                                <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: "1.4" }}>{term}</p>
-                            </div>
-                        ))}
-                    </div>
-                    <p style={{ marginTop: "12px", fontSize: "11px", color: "#94a3b8", fontStyle: "italic", textAlign: "center" }}>
-                        Full Terms & Conditions available at the venue.
-                    </p>
+
+                    {isScanned && (
+                        <p className="mt-4 text-[10px] text-rose-500 font-black uppercase max-w-[120px]">
+                            Redeemed at Venue
+                        </p>
+                    )}
                 </div>
             </div>
 
-            {/* Footer */}
-            <div style={{ 
-                background: "#111827", 
-                padding: "16px", 
-                color: "#fff", 
-                textAlign: "center",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px"
-            }}>
-                <Ticket size={16} />
-                <span style={{ fontSize: "12px", fontWeight: "700", letterSpacing: "0.05em" }}>BOOKMYTICKET SECURE DIGITAL PASS</span>
+            {/* Bottom Footer Bar */}
+            <div className="bg-slate-900 px-8 py-3 flex items-center justify-between text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
+                <div className="flex items-center gap-3">
+                    <span className="text-rose-500">Security Checkpoint:</span>
+                    <span>Valid Govt ID Required</span>
+                </div>
+                <div className="hidden md:flex items-center gap-2">
+                    <CheckCircle2 size={12} className="text-emerald-500" />
+                    <span>Verified Digital Pass</span>
+                </div>
             </div>
         </div>
     );
