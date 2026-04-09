@@ -18,3 +18,24 @@ export function isVirtualEvent(event) {
     
     return false;
 }
+
+export function isFreeEvent(event) {
+    if (!event) return false;
+    
+    // Check if price is explicitly 0
+    if (event.price === 0 || event.price === "0") return true;
+    
+    // Check normalTicketPrice
+    if (event.normalTicketPrice === 0 || event.normalTicketPrice === "0") return true;
+
+    // Check type explicitly
+    if (String(event.type || '').toLowerCase() === 'free') return true;
+
+    // Check seat categories if available
+    if (Array.isArray(event.seatCategories) && event.seatCategories.length > 0) {
+        // If all categories are marked isFree or have 0 price
+        return event.seatCategories.every(cat => cat.isFree || cat.price === 0);
+    }
+    
+    return false;
+}

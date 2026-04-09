@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { isVirtualEvent, isFreeEvent } from './utils/eventUtils';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import HeroBanner from '@/components/HeroBanner';
@@ -26,7 +27,6 @@ import { Ticket, X } from 'lucide-react';
 import TicketBookingDemo from '@/components/TicketBookingDemo';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
-import { isVirtualEvent } from './utils/eventUtils';
 
 function TicketCard({ event }) {
   return (
@@ -72,7 +72,7 @@ function TicketCard({ event }) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
             <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>{event.date}</span>
           </div>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#111827' }}>Paid</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#111827' }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
         </div>
       </div>
     </div>
@@ -122,52 +122,46 @@ export default function Home() {
     if (!dateStr) return null;
     try {
       let dt = String(dateStr).trim();
+      let t = String(timeStr || '23:59').trim();
+
       // Handle DD/MM/YYYY or DD-MM-YYYY
       if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
-        const parts = dt.split(/[-/]/);
-        dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          const separator = dt.includes('/') ? '/' : '-';
+          const [day, month, year] = dt.split(separator);
+          dt = `${year}-${month}-${day}`;
       }
       
-      // If dt already has T or a space + time, don't append default time
-      if (dt.includes('T') || dt.includes(' ')) {
-        const d = new Date(dt.replace(' ', 'T'));
-        return isNaN(d.getTime()) ? null : d;
-      }
-
-      let normalizedTime = "23:59";
-      if (timeStr) {
-        let t = String(timeStr).trim().toUpperCase();
-        const ampmMatch = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
-        if (ampmMatch) {
-          let [_, hours, mins = "00", ampm] = ampmMatch;
-          hours = parseInt(hours);
-          if (ampm === "PM" && hours < 12) hours += 12;
-          if (ampm === "AM" && hours === 12) hours = 0;
-          normalizedTime = `${String(hours).padStart(2, '0')}:${mins}`;
-        } else {
-          normalizedTime = t.includes(':') ? t : `${t}:00`;
-        }
+      let normalizedTime = t;
+      if (t.includes(' ')) {
+          let [timePart, modifier] = t.split(' ');
+          let [hours, mins] = timePart.split(':').map(Number);
+          if (modifier === 'PM' && hours < 12) hours += 12;
+          if (modifier === 'AM' && hours === 12) hours = 0;
+          normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins || 0).padStart(2, '0')}`;
       }
       
       const eventDate = new Date(`${dt}T${normalizedTime}`);
       return isNaN(eventDate.getTime()) ? null : eventDate;
-    } catch (_) { return null; }
+    } catch (e) {
+      return null;
+    }
   };
 
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
     return (Array.isArray(newOrgEvents) ? newOrgEvents : [])
       .filter(ev => {
+        if (ev.status === "Inactive" || ev.status === "Expired") return false;
+        
+        const now = new Date();
         const eventDate = parseEventDate(ev.date, ev.time);
-        if (!eventDate) return true;
         
-        // Show all events from today onwards, ignoring time for today's events
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const evDateOnly = new Date(eventDate);
-        evDateOnly.setHours(0, 0, 0, 0);
+        if (!eventDate) return true; // Keep if we can't parse it
         
-        return evDateOnly >= today;
+        // Use a 2-hour buffer for "end time" if not explicitly provided
+        const endTs = ev.endDateTime || (eventDate.getTime() + (2 * 60 * 60 * 1000));
+        
+        return endTs > now.getTime();
       })
       .map((ev, idx) => {
         const loc = ev.location || ev.venue || ev.address || "Venue";

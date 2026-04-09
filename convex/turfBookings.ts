@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { calculateGst } from "./gst";
 
 // Create a new booking
 export const create = mutation({
@@ -48,8 +49,41 @@ export const create = mutation({
             throw new Error("This slot is already booked or manually blocked.");
         }
 
+        const gstSettings = await ctx.db.query("gstSettings").first();
+        let gstData = {};
+        let finalAmount = args.totalAmount;
+
+        if (gstSettings && gstSettings.isEnabled) {
+            const turfRate = gstSettings.categoryRates?.turf;
+            const isCategoryEnabled = turfRate ? turfRate.enabled : true;
+
+            if (isCategoryEnabled) {
+                const taxConfig = turfRate ? { cgst: turfRate.cgst, sgst: turfRate.sgst, igst: turfRate.igst } : gstSettings.taxConfig;
+                const gstResult = calculateGst(args.totalAmount, taxConfig, gstSettings.pricingType);
+                
+                if (gstSettings.pricingType === "exclusive") {
+                    finalAmount = args.totalAmount + gstResult.gstAmount;
+                }
+
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+                const invoiceNumber = `${gstSettings.invoicePrefix}${timestamp}${random}`;
+
+                gstData = {
+                    taxableAmount: gstResult.taxableAmount,
+                    gstAmount: gstResult.gstAmount,
+                    gstBreakdown: gstResult.gstBreakdown,
+                    invoiceNumber: invoiceNumber,
+                    isGstApplied: true,
+                    totalAmount: finalAmount,
+                    invoiceDate: Date.now(),
+                };
+            }
+        }
+
         const bookingId = await ctx.db.insert("turfBookings", {
             ...args,
+            ...gstData,
             paymentStatus: "pending",
             bookingStatus: "pending",
             createdAt: Date.now(),
@@ -288,13 +322,44 @@ export const reserveSlot = mutation({
             ? Math.ceil(totalAmount / participants) 
             : totalAmount;
 
+        const gstSettings = await ctx.db.query("gstSettings").first();
+        let gstData = {};
+        let finalTotalAmount = totalAmount;
+
+        if (gstSettings && gstSettings.isEnabled) {
+            const turfRate = gstSettings.categoryRates?.turf;
+            const isCategoryEnabled = turfRate ? turfRate.enabled : true;
+
+            if (isCategoryEnabled) {
+                const taxConfig = turfRate ? { cgst: turfRate.cgst, sgst: turfRate.sgst, igst: turfRate.igst } : gstSettings.taxConfig;
+                const gstResult = calculateGst(totalAmount, taxConfig, gstSettings.pricingType);
+                
+                if (gstSettings.pricingType === "exclusive") {
+                    finalTotalAmount = totalAmount + gstResult.gstAmount;
+                }
+
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+                const invoiceNumber = `${gstSettings.invoicePrefix}${timestamp}${random}`;
+
+                gstData = {
+                    taxableAmount: gstResult.taxableAmount,
+                    gstAmount: gstResult.gstAmount,
+                    gstBreakdown: gstResult.gstBreakdown,
+                    invoiceNumber: invoiceNumber,
+                    isGstApplied: true,
+                    invoiceDate: Date.now(),
+                };
+            }
+        }
+
         const bookingId = await ctx.db.insert("turfBookings", {
             turfId: args.turfId,
             userId: args.userId,
             date: args.date,
             startTime: slot.startTime,
             endTime: slot.endTime,
-            totalAmount,
+            totalAmount: finalTotalAmount,
             advancePaid: advanceRequired, // The amount the user is paying NOW
             participantCount: participants,
             paymentType: args.paymentType,
@@ -302,6 +367,7 @@ export const reserveSlot = mutation({
             bookingStatus: "pending",
             customerDetails: args.customerDetails,
             createdAt: Date.now(),
+            ...gstData,
         });
 
         return bookingId;

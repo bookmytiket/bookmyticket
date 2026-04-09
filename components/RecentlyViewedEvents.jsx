@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { isFreeEvent } from "@/app/utils/eventUtils";
 
 const STORAGE_KEY = "recently_viewed_events";
 const MAX_ITEMS = 12;
@@ -254,7 +255,7 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
                                             <span style={{ fontSize: "13px", color: "#6b7280", fontWeight: 600 }}>{event.date || "TBA"}</span>
                                         </div>
                                         <div style={{ position: "relative", display: "inline-block" }}>
-                                            <span style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{event.type || "Paid"}</span>
+                                            <span style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
                                             <span style={{
                                                 position: "absolute",
                                                 bottom: "-2px",

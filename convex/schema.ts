@@ -87,7 +87,18 @@ export default defineSchema({
             price: v.number(),
             isFree: v.boolean(),
         }))),
-    }).index("by_eventId", ["eventId"]).index("by_userId", ["userId"]),
+        // GST Fields
+        taxableAmount: v.optional(v.number()),
+        gstAmount: v.optional(v.number()),
+        gstBreakdown: v.optional(v.object({
+            cgst: v.number(),
+            sgst: v.number(),
+            igst: v.number(),
+        })),
+        invoiceNumber: v.optional(v.string()),
+        isGstApplied: v.optional(v.boolean()),
+        invoiceDate: v.optional(v.number()),
+    }).index("by_eventId", ["eventId"]).index("by_userId", ["userId"]).index("by_invoiceNumber", ["invoiceNumber"]).index("by_invoiceDate", ["invoiceDate"]),
 
     pwaScans: defineTable({
         bookingId: v.id("bookings"),
@@ -588,7 +599,18 @@ export default defineSchema({
         remarks: v.optional(v.string()),
         rescheduleDate: v.optional(v.string()),
         createdAt: v.number(),
-    }).index("by_vendorId", ["vendorId"]).index("by_userId", ["userId"]).index("by_status", ["status"]),
+        // GST Fields
+        taxableAmount: v.optional(v.number()),
+        gstAmount: v.optional(v.number()),
+        gstBreakdown: v.optional(v.object({
+            cgst: v.number(),
+            sgst: v.number(),
+            igst: v.number(),
+        })),
+        invoiceNumber: v.optional(v.string()),
+        isGstApplied: v.optional(v.boolean()),
+        invoiceDate: v.optional(v.number()),
+    }).index("by_vendorId", ["vendorId"]).index("by_userId", ["userId"]).index("by_status", ["status"]).index("by_invoiceNumber", ["invoiceNumber"]).index("by_invoiceDate", ["invoiceDate"]),
 
     chatRooms: defineTable({
         participants: v.array(v.string()), // Array of user/vendor emails
@@ -749,9 +771,22 @@ export default defineSchema({
         cancellationReason: v.optional(v.string()),
         paymentIntentId: v.optional(v.string()),
         createdAt: v.number(),
+        // GST Fields
+        taxableAmount: v.optional(v.number()),
+        gstAmount: v.optional(v.number()),
+        gstBreakdown: v.optional(v.object({
+            cgst: v.number(),
+            sgst: v.number(),
+            igst: v.number(),
+        })),
+        invoiceNumber: v.optional(v.string()),
+        isGstApplied: v.optional(v.boolean()),
+        invoiceDate: v.optional(v.number()),
     }).index("by_turfId", ["turfId"])
       .index("by_userId", ["userId"])
-      .index("by_date", ["date"]),
+      .index("by_date", ["date"])
+      .index("by_invoiceNumber", ["invoiceNumber"])
+      .index("by_invoiceDate", ["invoiceDate"]),
 
     turfManualBlocks: defineTable({
         turfId: v.id("turfs"),
@@ -762,4 +797,24 @@ export default defineSchema({
         createdAt: v.number(),
     }).index("by_turfId", ["turfId"])
       .index("by_date", ["date"]),
+
+    gstSettings: defineTable({
+        businessName: v.string(),
+        businessAddress: v.string(),
+        gstin: v.string(),
+        taxConfig: v.object({
+            cgst: v.number(),
+            sgst: v.number(),
+            igst: v.number(),
+        }),
+        categoryRates: v.optional(v.object({
+            events: v.object({ cgst: v.number(), sgst: v.number(), igst: v.number(), enabled: v.boolean() }),
+            turf: v.object({ cgst: v.number(), sgst: v.number(), igst: v.number(), enabled: v.boolean() }),
+            services: v.object({ cgst: v.number(), sgst: v.number(), igst: v.number(), enabled: v.boolean() }),
+        })),
+        invoicePrefix: v.string(),
+        isEnabled: v.boolean(),
+        pricingType: v.string(), // "inclusive" | "exclusive"
+        updatedAt: v.number(),
+    }),
 });

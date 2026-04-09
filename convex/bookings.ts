@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { calculateGst } from "./gst";
 
 export const getBookings = query({
     args: {},
@@ -147,7 +148,46 @@ export const createBooking = mutation({
         }))),
     },
     handler: async (ctx, args) => {
-        const bookingId = await ctx.db.insert("bookings", args);
+        // GST Calculation
+        const gstSettings = await ctx.db.query("gstSettings").first();
+        let gstData = {};
+        let finalTotalPrice = args.totalPrice;
+
+        if (gstSettings && gstSettings.isEnabled) {
+            // Check if events category GST is enabled specifically
+            const eventRate = gstSettings.categoryRates?.events;
+            const isCategoryEnabled = eventRate ? eventRate.enabled : true; // Default to true if not specified but global is enabled
+
+            if (isCategoryEnabled) {
+                const taxConfig = eventRate ? { cgst: eventRate.cgst, sgst: eventRate.sgst, igst: eventRate.igst } : gstSettings.taxConfig;
+                const gstResult = calculateGst(args.totalPrice, taxConfig, gstSettings.pricingType);
+                
+                // If exclusive, total price increases
+                if (gstSettings.pricingType === "exclusive") {
+                    finalTotalPrice = args.totalPrice + gstResult.gstAmount;
+                }
+
+                // Generate Invoice Number
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+                const invoiceNumber = `${gstSettings.invoicePrefix}${timestamp}${random}`;
+
+                gstData = {
+                    taxableAmount: gstResult.taxableAmount,
+                    gstAmount: gstResult.gstAmount,
+                    gstBreakdown: gstResult.gstBreakdown,
+                    invoiceNumber: invoiceNumber,
+                    isGstApplied: true,
+                    totalPrice: finalTotalPrice,
+                    invoiceDate: Date.now(),
+                };
+            }
+        }
+
+        const bookingId = await ctx.db.insert("bookings", {
+            ...args,
+            ...gstData,
+        });
 
         // Update Organiser Wallet ONLY if status is 'Confirmed'
         if (args.status === 'Confirmed') {

@@ -8,7 +8,9 @@ import { Calendar, MapPin, Video, CheckCircle2, Ticket } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 import TicketTemplate from '@/components/TicketTemplate';
+import DigitalTicket from '@/components/DigitalTicket';
 import CheckoutFooterBar from '@/components/CheckoutFooterBar';
+import { DEFAULT_TICKET_TERMS } from '@/app/utils/ticketTerms';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/AuthContext";
@@ -159,21 +161,6 @@ export default function CheckoutClient({ id }) {
         }
     }, [bookingDone, event, lastBooking, router]);
 
-    const handleDownloadPdf = useCallback(() => {
-        if (!event) return;
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-        const ticketHtml = document.getElementById('ticket-print-area');
-        if (!ticketHtml) return;
-        printWindow.document.write(`
-          <!DOCTYPE html><html><head><title>Ticket - ${event.title}</title></head>
-          <body style="margin:16px;background:#f1f5f9;">${ticketHtml.outerHTML}</body></html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
-    }, [event]);
-
     const handleSendEmail = useCallback(() => {
         if (!event) return;
         const subject = encodeURIComponent(`Your ticket for ${event.title}`);
@@ -207,9 +194,12 @@ export default function CheckoutClient({ id }) {
                         )}
                     </div>
 
-                    <div style={{ marginBottom: '24px', background: '#fff', padding: '16px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <TicketTemplate 
-                            booking={lastBooking} 
+                    <div style={{ marginBottom: '24px', position: 'relative' }}>
+                        <DigitalTicket 
+                            booking={{
+                                ...lastBooking,
+                                id: lastBooking.id || lastBooking._id
+                            }}
                             event={{ 
                                 ...event, 
                                 img: event.img, 
@@ -219,7 +209,6 @@ export default function CheckoutClient({ id }) {
                                 virtual: event.virtual,
                                 meetingUrl: event.meetingUrl
                             }} 
-                            settings={ticketSettings} 
                         />
                     </div>
 
@@ -249,7 +238,6 @@ export default function CheckoutClient({ id }) {
                                 <Video size={18} /> Join Meeting Now
                             </button>
                         )}
-                        <button type="button" onClick={handleDownloadPdf} style={{ padding: '12px 20px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Download ticket (PDF)</button>
                         <button type="button" onClick={handleSendEmail} style={{ padding: '12px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send ticket to Email</button>
                         <button type="button" onClick={handleSendSms} style={{ padding: '12px 20px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send SMS</button>
                     </div>
@@ -339,7 +327,7 @@ export default function CheckoutClient({ id }) {
                                         <div className="relative flex items-start">
                                             <input type="checkbox" required className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
                                         </div>
-                                        <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the website <a href="#" className="text-blue-500 hover:underline">terms and conditions</a></span>
+                                        <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the <a href="#terms" className="text-blue-500 hover:underline">Event Guidelines and Terms & Conditions</a></span>
                                     </label>
                                 </div>
 

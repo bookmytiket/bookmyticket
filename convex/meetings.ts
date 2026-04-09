@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
+import { computeEndDateTime } from "./utils";
 
 export const create = mutation({
     args: {
@@ -367,17 +368,18 @@ export const getVirtualEvents = query({
         const now = Date.now();
         const events = await ctx.db
             .query("events")
-            .filter((q) => 
-                q.and(
-                    q.eq(q.field("virtual"), true),
-                    q.or(
-                        q.eq(q.field("endDateTime"), undefined),
-                        q.gte(q.field("endDateTime"), now)
-                    )
-                )
-            )
+            .filter((q) => q.eq(q.field("virtual"), true))
             .collect();
-        return events.filter((e) => !e.status || e.status === "Active");
+        
+        return events.filter((e) => {
+            const isActive = !e.status || e.status === "Active";
+            if (!isActive) return false;
+            
+            const endTs = e.endDateTime || computeEndDateTime(e.date, e.time) || 0;
+            if (endTs > 0 && now > endTs) return false;
+            
+            return true;
+        });
     },
 });
 

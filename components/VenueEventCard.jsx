@@ -2,7 +2,7 @@
 import React from "react";
 import { MapPin, Calendar, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { isVirtualEvent } from "@/app/utils/eventUtils";
+import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
 
 export default function VenueEventCard({ event }) {
     if (!event) return null;
@@ -84,7 +84,7 @@ export default function VenueEventCard({ event }) {
                         {event.category || "VENUE EVENT"}
                     </p>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
-                        {event.price && event.price !== "0" ? `₹${event.price}` : "FREE"}
+                        {isFreeEvent(event) ? "FREE" : `₹${event.price}`}
                     </span>
                 </div>
 

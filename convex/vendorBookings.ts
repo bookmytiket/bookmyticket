@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { calculateGst } from "./gst";
 
 export const list = query({
     args: { vendorId: v.string(), status: v.optional(v.string()) },
@@ -36,8 +37,41 @@ export const create = mutation({
         remarks: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
+        const gstSettings = await ctx.db.query("gstSettings").first();
+        let gstData = {};
+        let finalAmount = args.totalAmount;
+
+        if (gstSettings && gstSettings.isEnabled) {
+            const serviceRate = gstSettings.categoryRates?.services;
+            const isCategoryEnabled = serviceRate ? serviceRate.enabled : true;
+
+            if (isCategoryEnabled) {
+                const taxConfig = serviceRate ? { cgst: serviceRate.cgst, sgst: serviceRate.sgst, igst: serviceRate.igst } : gstSettings.taxConfig;
+                const gstResult = calculateGst(args.totalAmount, taxConfig, gstSettings.pricingType);
+                
+                if (gstSettings.pricingType === "exclusive") {
+                    finalAmount = args.totalAmount + gstResult.gstAmount;
+                }
+
+                const timestamp = Date.now().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+                const invoiceNumber = `${gstSettings.invoicePrefix}${timestamp}${random}`;
+
+                gstData = {
+                    taxableAmount: gstResult.taxableAmount,
+                    gstAmount: gstResult.gstAmount,
+                    gstBreakdown: gstResult.gstBreakdown,
+                    invoiceNumber: invoiceNumber,
+                    isGstApplied: true,
+                    totalAmount: finalAmount,
+                    invoiceDate: Date.now(),
+                };
+            }
+        }
+
         const id = await ctx.db.insert("vendorBookings", {
             ...args,
+            ...gstData,
             status: "pending",
             createdAt: Date.now(),
         });

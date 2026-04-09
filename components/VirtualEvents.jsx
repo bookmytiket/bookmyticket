@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Video, Calendar, ArrowRight, Heart, Zap } from "lucide-react";
-import { isVirtualEvent } from "@/app/utils/eventUtils";
+import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
 import JoinNowButton from "./JoinNowButton";
 import { useRouter } from "next/navigation";
 
@@ -13,9 +13,7 @@ function VirtualCard({ event }) {
     const router = useRouter();
     
     // Check if event is free
-    const isFree = !event.price || event.price === 0 || 
-                  event.normalTicketPrice === 0 ||
-                  event.seatCategories?.every(c => c.isFree);
+    const isFree = isFreeEvent(event);
 
     return (
         <div
@@ -140,9 +138,9 @@ export default function VirtualEvents({ events }) {
     const convexVirtualEvents = useQuery(api.meetings.getVirtualEvents) || [];
     
     // Determine the list of events to show
-    const virtualEvents = (Array.isArray(events) && events.length > 0) 
-        ? events.filter(e => isVirtualEvent(e))
-        : convexVirtualEvents;
+    const virtualEvents = events !== undefined
+        ? events.filter(isVirtualEvent)
+        : (convexVirtualEvents || []).filter(isVirtualEvent);
 
     const scrollRef = useRef(null);
     const scroll = dir =>

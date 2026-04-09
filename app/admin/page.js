@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import GstPortal from "@/app/admin/components/GstPortal";
 import { useAuth } from "@/components/AuthContext";
 import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
@@ -872,7 +873,7 @@ function AdminHomePage() {
         ];
     }, [events, archivedHomeIds]);
 
-    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const convexEvents = useQuery(api.events.getActiveEvents, { isAdmin: true }) || [];
     const convexBookings = useQuery(api.bookings.getBookings) || [];
     const convexUsers = useQuery(api.users.list) || [];
     const dashboardStats = useQuery(api.analytics.getDashboardStats);
@@ -1468,6 +1469,9 @@ function AdminHomePage() {
                                         ))}
                                     </div>
                                 )}
+                                
+                                <SidebarGroupTitle title="Finance" />
+                                <SidebarItem id="gst" label="GST Reports" icon={Briefcase} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
 
                                 <SidebarGroupTitle title="Reports" />
                                 <SidebarItem id="support_tickets" label="Support Tickets" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
@@ -4367,6 +4371,9 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "gst" && (
+                        <GstPortal t={t} theme={theme} />
+                    )}
                     {activeTab === "pages" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>

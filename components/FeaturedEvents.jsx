@@ -2,7 +2,7 @@
 import React, { useRef, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Video } from "lucide-react";
-import { isVirtualEvent } from "@/app/utils/eventUtils";
+import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
 import { HOME_EVENTS } from "@/app/data/homeEvents";
 
 const DEFAULT_FEATURED = HOME_EVENTS.filter((e) => e.featured);
@@ -190,7 +190,7 @@ export default function FeaturedEvents({ events }) {
                                             </svg>
                                             <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{event.date}</span>
                                         </div>
-                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>Paid</span>
+                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
                                     </div>
                                 </div>
                             </div>

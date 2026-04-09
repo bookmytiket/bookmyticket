@@ -1,31 +1,53 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-
-const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-function computeEndDateTime(dateStr?: string, timeStr?: string) {
-    if (!dateStr || !timeStr) return undefined;
-    try {
-        const [year, month, day] = dateStr.split("-").map(Number);
-        let [time, modifier] = timeStr.split(" ");
-        let [hours, minutes] = time.split(":").map(Number);
-        if (modifier === "PM" && hours < 12) hours += 12;
-        if (modifier === "AM" && hours === 12) hours = 0;
-        
-        const date = new Date(year, month - 1, day, hours, minutes);
-        return date.getTime() + DEFAULT_DURATION_MS;
-    } catch (e) {
-        return undefined;
-    }
-}
+import { computeEndDateTime } from "./utils";
 
 export const getActiveEvents = query({
+    args: { isAdmin: v.optional(v.boolean()) },
+    handler: async (ctx, args) => {
+        const events = await ctx.db.query("events").collect();
+        const now = Date.now();
+        
+        // If not admin, filter out inactive and expired events
+        if (!args.isAdmin) {
+            return events.filter(ev => {
+                const isInactive = ev.status === "Inactive" || ev.status === "Expired";
+                if (isInactive) return false;
+                
+                const endTs = ev.endDateTime || computeEndDateTime(ev.date, ev.time) || 0;
+                if (endTs > 0 && now > endTs) return false;
+                
+                return true;
+            });
+        }
+        
+        return events;
+    },
+});
+
+export const markExpiredEvents = internalMutation({
     args: {},
     handler: async (ctx) => {
-        return await ctx.db.query("events").collect();
-    },
+        const now = Date.now();
+        const events = await ctx.db.query("events")
+            .filter((q) => q.or(
+                q.eq(q.field("status"), "Active"),
+                q.eq(q.field("status"), undefined)
+            ))
+            .collect();
+            
+        let count = 0;
+        for (const ev of events) {
+            const endTs = ev.endDateTime || computeEndDateTime(ev.date, ev.time);
+            if (endTs && now > endTs) {
+                await ctx.db.patch(ev._id, { status: "Inactive" });
+                count++;
+            }
+        }
+        return { markedInactive: count };
+    }
 });
 
 export const getOrganiserEvents = query({

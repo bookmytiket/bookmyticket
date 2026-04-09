@@ -8,6 +8,7 @@ import { isVirtualEvent } from "@/app/utils/eventUtils";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import JoinNowButton from "@/components/JoinNowButton";
+import DigitalTicket from "@/components/DigitalTicket";
 
 const THEME = {
     bg: "#f8fafc",
@@ -386,36 +387,45 @@ export default function ProfilePage() {
 
             {/* View Ticket Modal */}
             {viewTicketModal && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={() => setViewTicketModal(null)}>
-                    <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "400px", border: `1px solid ${t.border}`, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Digital Ticket</h2>
-                            <button onClick={() => setViewTicketModal(null)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer", fontSize: "20px" }}>✕</button>
-                        </div>
-                        <div style={{ padding: "24px", background: "#f8fafc", borderRadius: "16px", border: `1px dashed ${t.border}`, marginBottom: "24px" }}>
-                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${viewTicketModal._id}`} alt="QR Code" style={{ width: "200px", height: "200px", borderRadius: "8px", margin: "0 auto", display: "block" }} />
-                        </div>
-                        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 8px", color: t.textMain }}>{viewTicketModal.eventName || "Event Ticket"}</h3>
-                        <p style={{ margin: "0 0 16px", fontSize: "14px", color: t.textSub }}>Booking ID: <span style={{ fontWeight: 700, color: t.textMain }}>{viewTicketModal._id}</span></p>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "16px", backgroundColor: "#f1f5f9", borderRadius: "12px", textAlign: "left" }}>
-                            <div>
-                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Quantity</p>
-                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.ticketCount} Ticket(s)</p>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px", backdropFilter: "blur(8px)" }} onClick={() => setViewTicketModal(null)}>
+                    <div style={{ width: "100%", maxWidth: "420px", position: "relative" }} onClick={e => e.stopPropagation()}>
+                        <button 
+                            onClick={() => setViewTicketModal(null)} 
+                            style={{ 
+                                position: "absolute", 
+                                top: "-40px", 
+                                right: "0", 
+                                background: "none", 
+                                border: "none", 
+                                color: "#fff", 
+                                cursor: "pointer", 
+                                fontSize: "24px",
+                                zIndex: 1001
+                            }}
+                        >
+                            ✕
+                        </button>
+                        
+                        <DigitalTicket 
+                            booking={viewTicketModal}
+                            event={{
+                                title: viewTicketModal.eventName || "Event Ticket",
+                                img: viewTicketModal.eventImg || viewTicketModal.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+                                date: viewTicketModal.eventDate || viewTicketModal.date || "TBA",
+                                time: viewTicketModal.eventTime || viewTicketModal.time || "TBA",
+                                location: viewTicketModal.eventLocation || viewTicketModal.location || "Venue"
+                            }}
+                        />
+
+                        {/* Meeting Access Button if applicable */}
+                        {(viewTicketModal.meetingUrl || viewTicketModal.isVirtual) && (
+                            <div className="mt-4 px-4">
+                                <JoinNowButton 
+                                    eventId={viewTicketModal.eventId} 
+                                    className="w-full !py-4 !text-xs !tracking-[0.2em] !shadow-xl"
+                                />
                             </div>
-                            <div>
-                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Status</p>
-                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{viewTicketModal.status}</p>
-                            </div>
-                        </div>
-                        <div className="mt-6 flex flex-col gap-3">
-                            <JoinNowButton 
-                                eventId={viewTicketModal.eventId} 
-                                className="w-full !py-4 !text-xs !tracking-[0.2em]"
-                            />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                Access is restricted to confirmed bookings
-                            </p>
-                        </div>
+                        )}
                     </div>
                 </div>
             )}

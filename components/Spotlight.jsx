@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { BANNER_HEIGHT, BANNER_BORDER_RADIUS } from "./ImageHeroCarousel";
+import { isFreeEvent } from "@/app/utils/eventUtils";
 
 const ROTATE_MS = 6000;
 
@@ -157,7 +158,7 @@ export default function Spotlight({ events = [] }) {
                       </svg>
                       <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{ev.date}</span>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>Paid</span>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(ev) ? "Free" : "Paid"}</span>
                   </div>
                 </div>
               </div>
