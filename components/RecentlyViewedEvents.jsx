@@ -6,7 +6,7 @@ import { isFreeEvent } from "@/app/utils/eventUtils";
 const STORAGE_KEY = "recently_viewed_events";
 const MAX_ITEMS = 12;
 
-export default function RecentlyViewedEvents({ events: propEvents }) {
+export default function RecentlyViewedEvents({ events: propEvents, liveEvents }) {
     const [events, setEvents] = useState(Array.isArray(propEvents) ? propEvents : []);
     const scrollRef = useRef(null);
     const [isMobile, setIsMobile] = useState(false);
@@ -72,6 +72,30 @@ export default function RecentlyViewedEvents({ events: propEvents }) {
         }
         loadFromStorage();
     }, [propEvents, loadFromStorage]);
+
+    // SYNC: Update stale localStorage data with live data from Convex
+    useEffect(() => {
+        if (!liveEvents || liveEvents.length === 0 || events.length === 0) return;
+        
+        setEvents(prev => {
+            let changed = false;
+            const synced = prev.map(ev => {
+                const liveItem = liveEvents.find(live => String(live._id || live.id) === String(ev.id));
+                if (liveItem) {
+                    // Normalize ID field for consistency
+                    const normalizedLive = { ...liveItem, id: liveItem._id || liveItem.id };
+                    
+                    // Simple shallow comparison of key fields
+                    if (normalizedLive.type !== ev.type || normalizedLive.price !== ev.price) {
+                        changed = true;
+                        return { ...ev, ...normalizedLive };
+                    }
+                }
+                return ev;
+            });
+            return changed ? synced : prev;
+        });
+    }, [liveEvents, events.length]);
 
     useEffect(() => {
         window.addEventListener("focus", loadFromStorage);

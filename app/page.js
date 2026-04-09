@@ -525,7 +525,7 @@ export default function Home() {
             />
 
             {/* 1) Recently Viewed */}
-            <RecentlyViewedEvents />
+            <RecentlyViewedEvents liveEvents={convexEvents} />
 
             {/* 2) Featured Events */}
             <FeaturedEvents events={featuredEventsList} />
