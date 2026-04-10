@@ -408,7 +408,7 @@ export const sendSubscriptionWelcome = action({
         const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
-        const brandNameDisplay = "bookmyticket";
+        const brandNameDisplay = branding?.name || "BookMyTicket";
 
         // CLEAN MINIMAL VERSION - NO EMOJIS, SIMPLE INLINE STYLES, LOGO INCLUDED
         const welcomeHtml = `
@@ -438,15 +438,31 @@ export const sendSubscriptionWelcome = action({
         
         await ctx.runMutation(api.notifications.send, {
             subject: `Welcome to ${brandNameDisplay}! 🎉`,
-            message: `Newsletter welcome sent to ${email}`,
+            message: `Newsletter welcome process started for ${email}`,
             target: "users"
         });
 
-        return await ctx.runAction(api.emailActions.sendEmail, {
+        const result: any = await ctx.runAction(api.emailActions.sendEmail, {
             to: email,
             subject: `Welcome to ${brandNameDisplay}`,
             html: welcomeHtml,
         });
+
+        if (result.success) {
+            await ctx.runMutation(api.notifications.send, {
+                subject: `Email Sent: ${email}`,
+                message: `Successfully sent welcome email to ${email}. SMTP Response: ${result.response || 'OK'}`,
+                target: "users"
+            });
+        } else {
+            await ctx.runMutation(api.notifications.send, {
+                subject: `Email Failed: ${email}`,
+                message: `FAILED to send welcome email to ${email}. Error: ${result.error}`,
+                target: "users"
+            });
+        }
+
+        return result;
     },
 });
 

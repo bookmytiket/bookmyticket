@@ -19,6 +19,8 @@ export const add = mutation({
             if (existing.status === "Unsubscribed") {
                 await ctx.db.patch(existing._id, { status: "Active", updatedAt: Date.now() } as any);
             }
+            // Always trigger welcome email for testing/redundancy
+            await ctx.scheduler.runAfter(0, api.notificationActions.sendSubscriptionWelcome, { email });
             return existing._id;
         }
 
@@ -28,6 +30,9 @@ export const add = mutation({
             status: "Active",
             createdAt: Date.now(),
         });
+
+        // Send welcome email to new subscribers
+        await ctx.scheduler.runAfter(0, api.notificationActions.sendSubscriptionWelcome, { email });
 
         return subscriberId;
     },
