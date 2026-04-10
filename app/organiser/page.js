@@ -13,6 +13,8 @@ import CalendarPicker from "./components/CalendarPicker";
 import CustomSelect from "./components/CustomSelect";
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 import PromoteModal from "@/components/PromoteModal";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
     static getDerivedStateFromError(error) { return { error }; }
@@ -40,7 +42,7 @@ import {
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap
 } from "lucide-react";
 
 const ACCENT_BLUE = "#3b82f6";
@@ -366,6 +368,8 @@ const EMPTY_ARRAY = [];
 
 function OrganiserPanel() {
     const { user, loading, logout, selectedCity, locationHierarchy } = useAuth();
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
     const router = useRouter();
 
     const isProfService = (cat) => {
@@ -1222,7 +1226,7 @@ function OrganiserPanel() {
                 -webkit-font-smoothing: antialiased;
             }
             .sidebar {
-                width: 260px;
+                width: 280px;
                 background-color: #ffffff;
                 color: #64748b;
                 display: flex;
@@ -1236,18 +1240,18 @@ function OrganiserPanel() {
                 box-shadow: 20px 0 50px rgba(226, 232, 240, 0.4);
             }
             .sidebar-logo {
-                padding: 32px 24px;
+                padding: 24px 30px;
                 display: flex;
                 align-items: center;
                 gap: 12px;
                 border-bottom: 1px solid #f8fafc;
             }
             .sidebar-category {
-                padding: 32px 24px 12px;
-                font-size: 10px;
+                padding: 24px 30px 12px;
+                font-size: 11px;
                 font-weight: 900;
                 text-transform: uppercase;
-                letter-spacing: 0.2em;
+                letter-spacing: 0.25em;
                 color: #94a3b8;
             }
             .sidebar-item {
@@ -1255,34 +1259,34 @@ function OrganiserPanel() {
                 align-items: center;
                 justify-content: space-between;
                 padding: 14px 20px;
-                margin: 4px 12px;
+                margin: 4px 15px;
                 cursor: pointer;
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 600;
                 color: #64748b;
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 border: none;
                 background: none;
                 text-align: left;
-                border-radius: 16px;
+                border-radius: 18px;
                 letter-spacing: -0.01em;
             }
             .sidebar-item:hover {
                 background-color: #f8fafc;
                 color: #0f172a;
-                transform: translateX(4px);
+                transform: translateX(6px);
             }
             .sidebar-item.active {
                 background-color: #0f172a!important;
                 color: #ffffff!important;
                 font-weight: 800;
-                box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+                box-shadow: 0 15px 30px -5px rgba(15, 23, 42, 0.15);
             }
             .sidebar-dropdown-item {
                 display: flex;
                 align-items: center;
-                padding: 12px 20px 12px 52px;
-                font-size: 12px;
+                padding: 14px 24px 14px 56px;
+                font-size: 13px;
                 font-weight: 700;
                 color: #64748b;
                 transition: all 0.3s;
@@ -1291,9 +1295,9 @@ function OrganiserPanel() {
                 width: 100%;
                 text-align: left;
                 cursor: pointer;
-                border-radius: 12px;
-                margin: 2px 12px;
-                width: calc(100% - 24px);
+                border-radius: 14px;
+                margin: 4px 15px;
+                width: calc(100% - 30px);
             }
             .sidebar-dropdown-item:hover {
                 color: #ec4899;
@@ -1313,14 +1317,14 @@ function OrganiserPanel() {
                 background-color: #f8fafc;
             }
             .top-header {
-                height: 80px;
+                height: 48px;
                 background-color: rgba(255, 255, 255, 0.8);
                 backdrop-filter: blur(20px);
                 border-bottom: 1px solid #e2e8f0;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 0 40px;
+                padding: 0 24px;
                 position: sticky;
                 top: 0;
                 z-index: 50;
@@ -1546,34 +1550,34 @@ function OrganiserPanel() {
                 to { opacity: 1; transform: translateY(0); }
             }
             .dropdown-hover:hover {
-                background-color: #f1f5f9 !format;
+                background-color: #f1f5f9;
             }
             .dropdown-hover-red:hover {
-                background-color: #fef2f2 !format;
+                background-color: #fef2f2;
             }
         `}</style>
     );
 
     // MFA View Component
     const renderMFAView = () => (
-        <div style={{ maxWidth: "480px", margin: "100px auto", textAlign: "center", backgroundColor: "#ffffff", padding: "48px", borderRadius: "32px", border: "1px solid #e2e8f0", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
-            <div style={{ backgroundColor: "#fdf2f8", width: "80px", height: "80px", borderRadius: "24px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                <Shield size={40} color="#ec4899" />
+        <div style={{ maxWidth: "480px", margin: "40px auto", textAlign: "center", backgroundColor: "#ffffff", padding: "40px", borderRadius: "24px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0, 0, 0, 0.05)" }}>
+            <div style={{ backgroundColor: "#fdf2f8", width: "64px", height: "64px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                <Shield size={32} color="#ec4899" />
             </div>
-            <h2 style={{ fontSize: "28px", fontWeight: 900, marginBottom: "12px", color: "#0f172a", letterSpacing: "-0.03em", fontStyle: "italic", textTransform: "uppercase" }}>Security First</h2>
-            <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600, lineHeight: "1.6", marginBottom: "40px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Setup Two-Factor Authentication to protect your account.</p>
+            <h2 style={{ fontSize: "24px", fontWeight: 900, marginBottom: "8px", color: "#0f172a" }}>Two-Factor Security</h2>
+            <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600, marginBottom: "32px" }}>Scan the QR code below to setup MFA</p>
 
-            <div style={{ backgroundColor: "#ffffff", padding: "20px", borderRadius: "24px", width: "220px", height: "220px", margin: "0 auto 32px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)" }}>
-                <div style={{ width: "180px", height: "180px", backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=BookMyTicketOrganizerMFA')", backgroundSize: "cover" }}></div>
+            <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "20px", width: "200px", height: "200px", margin: "0 auto 32px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0" }}>
+                <div style={{ width: "168px", height: "168px", backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=168x168&data=BookMyTicketOrganizerMFA')", backgroundSize: "cover" }}></div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <input type="text" placeholder="ENTER 6-DIGIT CODE" style={{ width: "100%", padding: "16px", borderRadius: "16px", border: "2px solid #e2e8f0", backgroundColor: "#f8fafc", color: "#0f172a", textAlign: "center", letterSpacing: "0.3em", fontWeight: "900", fontSize: "18px", outline: "none", transition: "all 0.3s" }} onFocus={(e) => e.target.style.borderColor = "#ec4899"} onBlur={(e) => e.target.style.borderColor = "#e2e8f0"} />
+                <input type="text" placeholder="Enter 6-digit code" style={{ width: "100%", padding: "14px", borderRadius: "12px", border: "1.5px solid #e2e8f0", textAlign: "center", fontWeight: "800", fontSize: "18px" }} />
                 <button
                     onClick={() => setCurrentStage("kyc_start")}
-                    style={{ width: "100%", padding: "18px", borderRadius: "18px", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.1em", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}
+                    style={{ width: "100%", padding: "16px", borderRadius: "12px", background: "linear-gradient(135deg, #0f172a, #334155)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "14px" }}
                 >
-                    Verify & Continue <ArrowRight size={20} />
+                    Verify & Continue
                 </button>
             </div>
         </div>
@@ -1581,63 +1585,27 @@ function OrganiserPanel() {
 
     // KYC Start View (Banner & Features)
     const renderKYCStartView = () => (
-        <div style={{ maxWidth: "1100px", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "32px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
-            <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", padding: "48px 60px", color: "#fff", position: "relative" }}>
-                <div style={{ position: "absolute", right: "40px", top: "50%", transform: "translateY(-50%)", opacity: 0.1 }}><Shield size={160} /></div>
-                <span style={{ backgroundColor: "#ec4899", color: "#fff", padding: "6px 16px", borderRadius: "100px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Verification Hub</span>
-                <h1 style={{ margin: "16px 0 0", fontSize: "42px", fontWeight: 900, letterSpacing: "-0.04em", fontStyle: "italic", textTransform: "uppercase" }}>KYC PENDING</h1>
-                <p style={{ fontSize: "16px", color: "#94a3b8", fontWeight: 600, marginTop: "8px", maxWidth: "600px" }}>Secure your account and unlock professional event hosting features by completing your identity verification.</p>
+        <div style={{ maxWidth: "1000px", margin: "30px auto", backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 10px 40px rgba(0, 0, 0, 0.05)" }}>
+            <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", padding: "40px", color: "#fff" }}>
+                <span style={{ backgroundColor: "#ec4899", color: "#fff", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Onboarding Stage 1</span>
+                <h1 style={{ margin: "16px 0 8px", fontSize: "32px", fontWeight: 900 }}>Complete Your Profile</h1>
+                <p style={{ margin: 0, opacity: 0.8, fontSize: "16px", fontWeight: 500 }}>Verify your account to start hosting professional events</p>
             </div>
 
-            <div style={{ display: "flex", padding: "60px", gap: "60px", alignItems: "center" }}>
-                <div style={{ flex: 1 }}>
-                    <div style={{ backgroundColor: "#f8fafc", padding: "48px", borderRadius: "32px", display: "flex", justifyContent: "center", alignItems: "center", border: "1px solid #e2e8f0", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                        <ShieldCheck size={120} color="#ec4899" strokeWidth={1} />
-                    </div>
+            <div style={{ display: "flex", padding: "40px", gap: "40px", alignItems: "center" }}>
+                <div style={{ width: "100px", height: "100px", borderRadius: "24px", backgroundColor: "#fdf2f8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <ShieldCheck size={48} color="#ec4899" />
                 </div>
-                <div style={{ flex: 1.2 }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#f0fdf4", color: "#16a34a", padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, marginBottom: "24px" }}>
-                        <Clock size={16} /> Fast Track: Takes ~3 mins
-                    </div>
-                    <h2 style={{ fontSize: "32px", fontWeight: 900, color: "#0f172a", marginBottom: "16px", letterSpacing: "-0.03em" }}>Scale Your Event Business</h2>
-                    <p style={{ color: "#64748b", fontSize: "15px", fontWeight: 600, lineHeight: "1.7", marginBottom: "32px" }}>Join our community of verified professional organisers. We prioritize security and trust for all stakeholders.</p>
-
-                    <h3 style={{ fontSize: "11px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "20px" }}>Benefits of Verification</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "40px" }}>
-                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                            <div style={{ backgroundColor: "#fdf2f8", borderRadius: "12px", padding: "10px", color: "#ec4899" }}><Zap size={20} /></div>
-                            <div>
-                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Unlimited Hosting</div>
-                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>No event limits</div>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                            <div style={{ backgroundColor: "#eff6ff", borderRadius: "12px", padding: "10px", color: "#3b82f6" }}><Wallet size={20} /></div>
-                            <div>
-                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Smooth Payouts</div>
-                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>Weekly settlements</div>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                            <div style={{ backgroundColor: "#f0fdf4", borderRadius: "12px", padding: "10px", color: "#22c55e" }}><Shield size={20} /></div>
-                            <div>
-                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Trust Shield</div>
-                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>Verified badge</div>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                            <div style={{ backgroundColor: "#fff7ed", borderRadius: "12px", padding: "10px", color: "#f97316" }}><Activity size={20} /></div>
-                            <div>
-                                <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Priority Ops</div>
-                                <div style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8" }}>24/7 Support</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-                        <button onClick={() => setCurrentStage("kyc_wizard")} style={{ backgroundColor: "#0f172a", color: "#fff", padding: "18px 36px", borderRadius: "20px", fontWeight: 800, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.3s", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}>GET STARTED <ArrowRight size={20} /></button>
-                        <a href="#" style={{ color: "#0f172a", fontSize: "14px", fontWeight: 800, textDecoration: "none", display: "flex", alignItems: "center", gap: "8px", borderBottom: "2px solid #e2e8f0", paddingBottom: "2px" }}>Learn More <ExternalLink size={16} /></a>
-                    </div>
+                <div style={{ flex: 1 }}>
+                    <h2 style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>Professional Organiser Verification</h2>
+                    <p style={{ color: "#64748b", fontSize: "15px", lineHeight: 1.6, marginBottom: "24px" }}>To ensure the highest quality of events on our platform, we require all organisers to complete a one-time KYC verification. This helps us maintain trust and security for all attendees. process.</p>
+                    <button 
+                        onClick={() => setCurrentStage("kyc_wizard")}
+                        style={{ backgroundColor: "#0f172a", color: "#fff", padding: "14px 32px", borderRadius: "12px", fontSize: "14px", fontWeight: 900, border: "none", cursor: "pointer", transition: "transform 0.2s" }}
+                        className="hover:scale-105"
+                    >
+                        START VERIFICATION
+                    </button>
                 </div>
             </div>
         </div>
@@ -1645,283 +1613,137 @@ function OrganiserPanel() {
 
     // KYC Wizard View (3 steps)
     const renderKYCWizardView = () => (
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", gap: "48px", backgroundColor: "#ffffff", borderRadius: "40px", border: "1px solid #e2e8f0", padding: "48px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", height: "calc(100vh - 120px)", display: "flex", backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 20px 50px rgba(0, 0, 0, 0.05)" }}>
 
             {/* Left Sidebar Tracker */}
-            <div style={{ width: "280px", position: "relative", flexShrink: 0 }}>
-                <h2 style={{ fontSize: "11px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "40px", paddingLeft: "10px" }}>Verification Progress</h2>
+            <div style={{ width: "240px", position: "relative", flexShrink: 0, padding: "30px 24px", borderRight: "1px solid #f1f5f9", backgroundColor: "#fcfdfe" }}>
+                <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "24px" }}>Onboarding Progress</h2>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "48px", position: "relative" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", position: "relative" }}>
                     {[
-                        { num: 1, label: "Business Profile" },
-                        { num: 2, label: "Digital Assets" },
-                        { num: 3, label: "Legal Consensus" }
+                        { num: 1, label: "Business Profile", desc: "Basic information" },
+                        { num: 2, label: "Document Assets", desc: "KYC verification" },
+                        { num: 3, label: "Final Consensus", desc: "Terms & Agreement" }
                     ].map((step, idx) => {
                         const isActive = kycStep === step.num;
                         const isCompleted = kycStep > step.num;
                         return (
-                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "20px", zIndex: 2 }}>
+                            <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "16px", zIndex: 2 }}>
                                 <div style={{
-                                    width: "44px",
-                                    height: "44px",
-                                    borderRadius: "16px",
+                                    width: "40px",
+                                    height: "40px",
+                                    borderRadius: "12px",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     flexShrink: 0,
                                     fontWeight: 900,
-                                    fontSize: "15px",
+                                    fontSize: "16px",
                                     backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#0f172a" : "#f8fafc"),
                                     color: isActive || isCompleted ? "#fff" : "#94a3b8",
-                                    border: isActive || isCompleted ? "none" : "2px solid #f1f5f9",
-                                    boxShadow: isActive ? "0 10px 15px -3px rgba(15, 23, 42, 0.2)" : "none",
-                                    transition: "all 0.4s ease"
+                                    border: isActive || isCompleted ? "none" : "1.5px solid #f1f5f9",
+                                    transition: "all 0.4s ease",
+                                    boxShadow: isActive ? "0 10px 15px -3px rgba(15, 23, 42, 0.1)" : "none"
                                 }}>
-                                    {isCompleted ? <Check size={22} strokeWidth={3} /> : step.num}
+                                    {isCompleted ? <Check size={20} strokeWidth={3} /> : step.num}
                                 </div>
-                                <span style={{ fontSize: "13px", fontWeight: 800, color: isActive || isCompleted ? "#0f172a" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.label}</span>
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: 800, color: isActive || isCompleted ? "#0f172a" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.label}</span>
+                                    <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px", fontWeight: 600 }}>{step.desc}</span>
+                                </div>
                             </div>
                         );
                     })}
-
-                    <div style={{ position: "absolute", left: "21px", top: "24px", bottom: "24px", width: "2px", backgroundColor: "#f1f5f9", zIndex: 0 }}></div>
-                    <div style={{ position: "absolute", left: "21px", top: "24px", height: kycStep === 1 ? "0%" : (kycStep === 2 ? "50%" : "100%"), width: "2px", backgroundColor: "#ec4899", zIndex: 1, transition: "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}></div>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div style={{ flex: 1, borderLeft: "1px solid #f1f5f9", paddingLeft: "48px" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+                <div style={{ flex: 1, overflowY: "auto", padding: "30px 24px", scrollbarWidth: "thin" }}>
                 {kycStep === 1 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-                        {/* Organisation Details */}
-                        <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                            <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
-                                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Organisation Details</h3>
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual Name <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Individual" 
-                                        value={kycFormData.name} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, name: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'name'));
-                                        }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('name') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
-                                    />
-                                    {kycErrors.includes('name') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Name is required</p>}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                        <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "20px", display: "none" }}>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category *</label>
+                                    <select
+                                        value={kycFormData.category}
+                                        onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })}
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600, backgroundColor: "#fff" }}
+                                    >
+                                        <option value="Individual">Individual</option>
+                                        <option value="Company">Company</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual PAN card number <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Legal Name *</label>
                                     <input 
                                         type="text" 
-                                        placeholder="ABCDE1234F" 
-                                        value={kycFormData.panCard} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, panCard: e.target.value.toUpperCase() });
-                                            setKycErrors(prev => prev.filter(f => f !== 'panCard'));
-                                        }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('panCard') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
+                                        placeholder="As per Government ID"
+                                        value={kycFormData.name} 
+                                        onChange={e => setKycFormData({ ...kycFormData, name: e.target.value })} 
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('panCard') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>PAN Number is required</p>}
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Card Number *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="ABCDE1234F"
+                                        value={kycFormData.panCard} 
+                                        onChange={e => setKycFormData({ ...kycFormData, panCard: e.target.value.toUpperCase() })} 
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.1em" }} 
+                                    />
                                 </div>
                                 <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Organisation/Individual Address <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <textarea 
-                                        placeholder="Pollachi" 
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address *</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Enter full address for communications"
                                         value={kycFormData.address} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, address: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'address'));
-                                        }} 
-                                        style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('address') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px", minHeight: "80px", resize: "vertical" }} 
+                                        onChange={e => setKycFormData({ ...kycFormData, address: e.target.value })} 
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('address') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>Address is required</p>}
                                 </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Do you have a GSTIN number?</label>
-                                    <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
-                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="gstin_opt" checked={kycFormData.ostin === "Yes"} onChange={() => setKycFormData({ ...kycFormData, ostin: "Yes" })} /> Yes</label>
-                                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#1e293b", cursor: "pointer" }}><input type="radio" name="gstin_opt" checked={kycFormData.ostin === "No"} onChange={() => setKycFormData({ ...kycFormData, ostin: "No" })} /> No</label>
-                                    </div>
-                                </div>
-                                {kycFormData.ostin === "Yes" && (
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>GSTIN Number <span style={{ color: "#ef4444" }}>*</span></label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Enter GSTIN" 
-                                            value={kycFormData.gstin} 
-                                            onChange={e => {
-                                                setKycFormData({ ...kycFormData, gstin: e.target.value.toUpperCase() });
-                                                setKycErrors(prev => prev.filter(f => f !== 'gstin'));
-                                            }} 
-                                            style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('gstin') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px" }} 
-                                        />
-                                        {kycErrors.includes('gstin') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "4px" }}>GSTIN is required</p>}
-                                    </div>
-                                )}
                             </div>
                         </div>
 
-                        {/* Contact Person Details */}
-                        <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "24px", border: "1px solid #e2e8f0", boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
-                            <div style={{ padding: "0 0 16px", borderBottom: "4px solid #ec4899", display: "inline-block", marginBottom: "32px" }}>
-                                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.02em", fontStyle: "italic" }}>Contact Delegate</h3>
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
+                        <div style={{ backgroundColor: "#fdf2f8", padding: "24px", borderRadius: "16px", border: "1px solid #fbcfe8" }}>
+                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Full Contact Name <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Business Email *</label>
                                     <input 
-                                        type="text" 
-                                        value={kycFormData.fullName} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, fullName: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'fullName'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('fullName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                    {kycErrors.includes('fullName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Contact name is required</p>}
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Official Designation</label>
-                                    <input 
-                                        type="text" 
-                                        value={kycFormData.designation} 
-                                        onChange={e => setKycFormData({ ...kycFormData, designation: e.target.value })} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Work Email <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <input 
-                                        type="text" 
+                                        type="email" 
                                         value={kycFormData.email} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, email: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'email'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('email') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
+                                        onChange={e => setKycFormData({ ...kycFormData, email: e.target.value })} 
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('email') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Email is required</p>}
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Primary Mobile <span style={{ color: "#ef4444" }}>*</span></label>
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact Number *</label>
                                     <input 
                                         type="text" 
                                         value={kycFormData.mobile} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, mobile: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'mobile'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('mobile') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
+                                        onChange={e => setKycFormData({ ...kycFormData, mobile: e.target.value })} 
+                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
                                     />
-                                    {kycErrors.includes('mobile') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Mobile is required</p>}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Bank Details */}
-                        <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "24px", border: "1px solid #e2e8f0", boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
-                            <div style={{ padding: "0 0 16px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "32px" }}>
-                                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.02em", fontStyle: "italic" }}>Financial Settlement</h3>
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
+                        <div style={{ backgroundColor: "#eff6ff", padding: "24px", borderRadius: "16px", border: "1px solid #dbeafe" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Payee Name <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        value={kycFormData.beneficiaryName} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, beneficiaryName: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'beneficiaryName'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('beneficiaryName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                    {kycErrors.includes('beneficiaryName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Beneficiary Name is required</p>}
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Beneficiary Name</label>
+                                    <input type="text" placeholder="Account Holder Name" value={kycFormData.beneficiaryName} onChange={e => setKycFormData({ ...kycFormData, beneficiaryName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Account Type <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <select 
-                                        value={kycFormData.accountType} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, accountType: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'accountType'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('accountType') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }}
-                                    >
-                                        <option value="Savings account">Savings account</option>
-                                        <option value="Current account">Current account</option>
-                                        <option value="Salary account">Salary account</option>
-                                        <option value="NRI account">NRI account</option>
-                                    </select>
-                                    {kycErrors.includes('accountType') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Account Type is required</p>}
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</label>
+                                    <input type="text" placeholder="HDFC0001234" value={kycFormData.ifscCode} onChange={e => handleIfscChange(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Official IFSC <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="SBIN0001763" 
-                                        value={kycFormData.ifscCode} 
-                                        onChange={e => {
-                                            handleIfscChange(e.target.value);
-                                            setKycErrors(prev => prev.filter(f => f !== 'ifscCode'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('ifscCode') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                    {kycFormData.bankName && (
-                                        <div style={{ fontSize: "11px", color: "#16a34a", marginTop: "12px", padding: "16px", backgroundColor: "#f0fdf4", borderRadius: "16px", border: "1px solid #dcfce7" }}>
-                                            <div style={{ fontWeight: 900, display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", textTransform: "uppercase" }}>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#22c55e" }}></div>
-                                                {kycFormData.bankName} Verified
-                                            </div>
-                                            
-                                            <div style={{ display: "grid", gap: "12px" }}>
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "10px", color: "#166534", marginBottom: "4px", fontWeight: 900, textTransform: "uppercase" }}>Branch Access</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={kycFormData.branchName} 
-                                                        onChange={e => setKycFormData({ ...kycFormData, branchName: e.target.value })} 
-                                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #bbf7d0", backgroundColor: "#fff", fontSize: "12px", color: "#166534", outline: "none", fontWeight: 600 }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {kycErrors.includes('ifscCode') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>IFSC Code is required</p>}
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Banking Institution <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <select 
-                                        value={kycFormData.bankName} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, bankName: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'bankName'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('bankName') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }}
-                                    >
-                                        <option value="">Select Bank</option>
-                                        {INDIAN_BANKS.map(bank => (
-                                            <option key={bank} value={bank}>{bank}</option>
-                                        ))}
-                                    </select>
-                                    {kycErrors.includes('bankName') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Bank Name is required</p>}
-                                </div>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "11px", color: "#94a3b8", marginBottom: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>Account Number <span style={{ color: "#ef4444" }}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        value={kycFormData.accountNumber} 
-                                        onChange={e => {
-                                            setKycFormData({ ...kycFormData, accountNumber: e.target.value });
-                                            setKycErrors(prev => prev.filter(f => f !== 'accountNumber'));
-                                        }} 
-                                        style={{ width: "100%", padding: "14px 18px", borderRadius: "12px", border: kycErrors.includes('accountNumber') ? "2px solid #ef4444" : "1px solid #e2e8f0", color: "#0f172a", backgroundColor: "#f8fafc", outline: "none", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                    {kycErrors.includes('accountNumber') && <p style={{ color: "#ef4444", fontSize: "10px", marginTop: "6px", fontWeight: 700 }}>Account Number is required</p>}
+                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Account No</label>
+                                    <input type="text" placeholder="0000 0000 0000" value={kycFormData.accountNumber} onChange={e => setKycFormData({ ...kycFormData, accountNumber: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700 }} />
                                 </div>
                             </div>
                         </div>
@@ -1929,124 +1751,71 @@ function OrganiserPanel() {
                 )}
 
                 {kycStep === 2 && (
-                    <div style={{ backgroundColor: "#ffffff", padding: "32px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
-                        {[
-                            { id: 'pan', label: 'Upload PAN', file: kycFiles.pan },
-                            { id: 'cheque', label: 'Upload Cancelled Cheque', file: kycFiles.cheque },
-                            { id: 'aadhar', label: 'Upload Aadhar card', file: kycFiles.aadhar }
-                        ].map((doc, idx) => (
-                            <div key={doc.id} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <label style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>{doc.label} <span style={{ color: "#ef4444" }}>*</span></label>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                                    <input
-                                        type="file"
-                                        id={`${doc.id}-upload`}
-                                        style={{ fontSize: "12px", color: "#64748b" }}
-                                        onChange={(e) => {
-                                            const f = e.target.files?.[0];
-                                            if (f) setKycFiles({ ...kycFiles, [doc.id]: f.name });
-                                        }}
-                                    />
-                                    <button style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>View Sample</button>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-                                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>Max 1 MB</span>
-                                        {doc.file && <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 700, maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={doc.file}>✓ {doc.file}</span>}
+                    <div style={{ padding: "30px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
+                            {['pan', 'cheque', 'aadhar'].map(id => (
+                                <div key={id} style={{ border: "2px dashed #cbd5e1", padding: "24px", borderRadius: "16px", flex: 1, cursor: "pointer", transition: "all 0.3s" }} className="hover:border-blue-500 hover:bg-blue-50">
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#64748b" }}>
+                                        <Building size={24} />
                                     </div>
+                                    <label style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>{id.toUpperCase()}</label>
+                                    <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "16px" }}>Upload clear photo or PDF</p>
+                                    <input type="file" onChange={e => setKycFiles({ ...kycFiles, [id]: e.target.files?.[0]?.name })} style={{ fontSize: "12px", width: "100%" }} />
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {kycStep === 3 && (
-                    <div style={{ backgroundColor: "#ffffff", padding: "40px", borderRadius: "12px", border: `1px solid #e2e8f0`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                        <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", justifyContent: "center", padding: "40px" }}>
-                            <input
-                                type="checkbox"
-                                id="vendor-agree"
-                                checked={agreedToVendor}
-                                onChange={(e) => setAgreedToVendor(e.target.checked)}
-                                style={{ width: "20px", height: "20px", cursor: "pointer", accentColor: "#f43f5e", marginTop: "2px" }}
-                            />
-                            <label htmlFor="vendor-agree" style={{ fontSize: "16px", color: "#1e293b", fontWeight: 600, cursor: "pointer" }}>
-                                I have read and agreed to the <span onClick={(e) => { e.preventDefault(); setShowVendorModal(true); }} style={{ color: "#3b82f6", textDecoration: "underline" }}>vendor agreement</span>
-                            </label>
+                            ))}
                         </div>
                     </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "40px" }}>
-                    <button
-                        onClick={() => setKycStep(kycStep - 1)}
-                        disabled={kycStep === 1}
-                        style={{ padding: "16px 36px", borderRadius: "100px", background: kycStep === 1 ? "#f1f5f9" : "#ffffff", color: kycStep === 1 ? "#94a3b8" : "#0f172a", border: kycStep === 1 ? "none" : "2px solid #0f172a", fontWeight: 900, cursor: kycStep === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "all 0.3s ease", fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.1em" }}
+                {kycStep === 3 && (
+                    <div style={{ padding: "60px", textAlign: "center" }}>
+                        <div style={{ width: "80px", height: "80px", borderRadius: "20px", backgroundColor: "#ec489910", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", color: "#ec4899" }}>
+                            <FileCheck size={40} />
+                        </div>
+                        <h3 style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "12px" }}>Final Consensus</h3>
+                        <p style={{ color: "#64748b", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
+                        <label style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}>
+                            <input type="checkbox" checked={agreedToVendor} onChange={e => setAgreedToVendor(e.target.checked)} style={{ width: "20px", height: "20px" }} />
+                            I accept the Partner Agreement
+                        </label>
+                    </div>
+                )}
+
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 30px", borderTop: "1.5px solid #f1f5f9", backgroundColor: "#ffffff" }}>
+                    <button 
+                        onClick={() => setKycStep(kycStep - 1)} 
+                        disabled={kycStep === 1} 
+                        style={{ padding: "10px 24px", borderRadius: "10px", border: "1.5px solid #0f172a", background: "none", color: "#0f172a", fontWeight: 800, fontSize: "13px", cursor: kycStep === 1 ? "default" : "pointer", opacity: kycStep === 1 ? 0.3 : 1 }}
                     >
-                        <ArrowLeft size={18} strokeWidth={3} /> Return
+                        Back
                     </button>
-                    <button
+                    <button 
                         onClick={() => {
                             if (kycStep === 3) {
-                                if (!agreedToVendor) { alert("Please agree to the terms first."); return; }
+                                if (!agreedToVendor) { showToast("Please agree to terms", "error"); return; }
                                 if (organiserData?._id) {
                                     const kycPayload = {
                                         id: organiserData._id,
-                                        kycDetails: {
-                                            category: organiserData.category || kycFormData.category,
-                                            email: kycFormData.email,
-                                            mobile: kycFormData.mobile,
-                                            address: kycFormData.address,
-                                            beneficiaryName: kycFormData.beneficiaryName,
-                                            accountType: kycFormData.accountType,
-                                            bankName: kycFormData.bankName,
-                                            accountNumber: kycFormData.accountNumber,
-                                            ifscCode: kycFormData.ifscCode,
-                                            agreementAccepted: agreedToVendor,
-                                            panNumber: kycFormData.panCard,
-                                            fullName: kycFormData.fullName,
-                                            designation: kycFormData.designation,
-                                            hasOSTIN: kycFormData.ostin === "Yes",
-                                            gstin: kycFormData.gstin,
-                                            panFile: kycFiles.pan || "",
-                                            chequeFile: kycFiles.cheque || "",
-                                            aadharFile: kycFiles.aadhar || "",
-                                        }
+                                        kycDetails: { ...kycFormData, agreementAccepted: agreedToVendor }
                                     };
-                                    
                                     submitKycMutation(kycPayload).then(() => {
                                         setCurrentStage("pending");
                                         setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
-                                    }).catch(err => {
-                                        console.error("KYC Submission error:", err);
-                                        alert("Submission failed: " + (err.message || "Unknown error"));
                                     });
-                                } else {
-                                    alert("Organiser account not found. Please try again later.");
                                 }
                             } else {
-                                // Validation logic per step
-                                if (kycStep === 1) {
-                                    const required = ['name', 'panCard', 'address', 'fullName', 'email', 'mobile', 'beneficiaryName', 'bankName', 'accountNumber', 'ifscCode'];
-                                    const missing = required.filter(f => !kycFormData[f]);
-                                    if (missing.length > 0) {
-                                        setKycErrors(missing);
-                                        return;
-                                    }
-                                }
-                                setKycErrors([]);
                                 setKycStep(kycStep + 1);
                             }
-                        }}
-                        style={{ padding: "16px 48px", borderRadius: "100px", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", color: "#fff", border: "none", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", transition: "all 0.3s ease", boxShadow: "0 15px 30px rgba(15, 23, 42, 0.2)", fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.1em" }}
+                        }} 
+                        style={{ padding: "10px 32px", borderRadius: "10px", backgroundColor: "#0f172a", color: "#fff", border: "none", fontWeight: 800, fontSize: "13px", cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}
                     >
-                        {kycStep === 3 ? "Submit Protocol" : "Proceed"} <ArrowRight size={18} strokeWidth={3} />
+                        {kycStep === 3 ? "Submit Verification" : "Next Step"}
                     </button>
                 </div>
-
-                <div style={{ marginTop: "40px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", color: "#22c55e", fontSize: "12px", fontWeight: 700 }}>
-                    <CheckCircle size={14} /> All data in transit is safe and secure, encrypted to BookMyTicket
-                </div>
             </div>
-        </div >
+        </div>
     );
 
     // Pending View
@@ -4816,7 +4585,7 @@ function OrganiserPanel() {
 
     // Restricted Sidebar for Stages (MFA/KYC/Pending)
     const renderRestrictedSidebar = (children) => (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
+        <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased', overflow: "hidden" }}>
             {styles}
             <aside className="sidebar">
                 <div className="sidebar-logo">
@@ -4861,7 +4630,7 @@ function OrganiserPanel() {
             <main className="main-content">
                 <header className="top-header">
                     <div>
-                        <h1 style={{ fontSize: "18px", fontWeight: 800, color: t.textMain, margin: 0 }}>
+                        <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
                             {isProfessionalService 
                                 ? `${organiserData?.category || 'Service'} Onboarding` 
                                 : "Organiser Onboarding"
@@ -4871,7 +4640,7 @@ function OrganiserPanel() {
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     </div>
                 </header>
-                <div style={{ padding: "40px" }}>{children}</div>
+                <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column" }}>{children}</div>
             </main>
         </div>
     );

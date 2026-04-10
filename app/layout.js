@@ -11,6 +11,9 @@ export const metadata = {
 
 import { AuthProvider } from '@/components/AuthContext';
 import ConvexClientProvider from '@/components/ConvexClientProvider';
+import { ToastProvider } from '@/context/ToastContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
+import ToastContainer from '@/components/ui/ToastContainer';
 
 export default function RootLayout({ children }) {
   return (
@@ -25,13 +28,18 @@ export default function RootLayout({ children }) {
       </head>
       <body style={{ ['--font-heading']: '"Space Grotesk", sans-serif', ['--font-body']: '"Figtree", sans-serif' }} suppressHydrationWarning>
         <ConvexClientProvider>
-          <AuthProvider>
-            <Suspense fallback={null}>
-              <ConditionalNavbar />
-              <CustomerAdPopup />
-              {children}
-            </Suspense>
-          </AuthProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <AuthProvider>
+                <Suspense fallback={null}>
+                  <ConditionalNavbar />
+                  <CustomerAdPopup />
+                  <ToastContainer />
+                  {children}
+                </Suspense>
+              </AuthProvider>
+            </ConfirmProvider>
+          </ToastProvider>
         </ConvexClientProvider>
       </body>
     </html>

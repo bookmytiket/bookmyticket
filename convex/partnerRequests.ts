@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { hashPassword } from "./utils";
 
 const generatePartnerEmailHTML = (firstName: string, lastName: string, category: string, role: string, brandLogo: string, siteUrl: string) => {
     return `
@@ -180,66 +181,43 @@ export const remove = mutation({
 });
 
 export const approve = mutation({
-    args: { id: v.id("partnerRequests") },
+    args: { 
+        id: v.id("partnerRequests"),
+        password: v.string()
+    },
     handler: async (ctx, args) => {
-        const request = await ctx.db.get(args.id);
+        const { id, password } = args;
+        const request = await ctx.db.get(id);
         if (!request) throw new Error("Request not found");
         if (request.status !== "Pending") throw new Error("Request is not pending or already processed");
 
-        // Logic only for 'organiser' types - if it's professional_service, we just mark as approved
-        if (request.type === "organiser") {
-            // Generate a random 8-character temporary password
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-            let tempPassword = "";
-            for (let i = 0; i < 8; i++) {
-                tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
+        // Hash the manual password
+        const hashedPassword = await hashPassword(password);
 
-            // Create the organiser account
-            await ctx.db.insert("organisers", {
-                userId: request.email,
-                password: tempPassword,
-                name: `${request.firstName} ${request.lastName}`,
-                category: request.category,
-                kycStatus: "KYC Pending",
-                walletBalance: 0,
-            });
+        // 1. Create Organiser Account
+        await ctx.db.insert("organisers", {
+            userId: request.email,
+            password: hashedPassword,
+            name: `${request.firstName} ${request.lastName}`,
+            firstName: request.firstName,
+            lastName: request.lastName,
+            kycStatus: "KYC Pending",
+            walletBalance: 0,
+        });
 
-            const branding = await ctx.db.query("siteBranding").first();
-            const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
-            let brandLogo = branding?.logoUrl || "/logo.png";
-            if (brandLogo.startsWith("/")) {
-                brandLogo = `${siteUrl}${brandLogo}`;
-            }
-            const brandNameDisplay = branding?.name || "BookMyTicket";
+        // 2. Update Request Status
+        await ctx.db.patch(id, {
+            status: "Approved",
+        });
 
-            // Send Email with credentials
-            await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
-                to: request.email,
-                subject: `Partner Account Approved - ${brandNameDisplay}`,
-                html: `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
-                        <h2 style="color: #333; margin-bottom: 20px;">Welcome to ${brandNameDisplay}!</h2>
-                        <p style="color: #555; font-size: 16px; text-align: left;">Hi ${request.firstName},</p>
-                        <p style="color: #555; font-size: 16px; text-align: left; margin-bottom: 25px;">Your request to become a Partner (${request.type === 'organiser' ? 'Organiser' : 'Professional Service'}) has been <strong>approved</strong>. You can now log in to your dashboard using these credentials:</p>
-                        
-                        <div style="background-color: #fdf2f8; padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: left; border: 1px solid #ff007f33;">
-                            <p style="margin: 5px 0; color: #333;"><strong>Email:</strong> ${request.email}</p>
-                            <p style="margin: 5px 0; color: #333;"><strong>Password:</strong> <code style="background: #fff; padding: 2px 6px; border-radius: 4px;">${tempPassword}</code></p>
-                        </div>
+        // 3. Schedule Credentials Delivery (Email + SMS)
+        await ctx.scheduler.runAfter(0, api.notificationActions.sendPartnerApprovalCredentials, {
+            email: request.email,
+            firstName: request.firstName,
+            password: password, // Sending plain password to notification action for the email/sms
+            phone: request.phone,
+        });
 
-                        <p style="color: #555; text-align: left; margin-bottom: 30px;">Please log in, update your password, and complete your KYC onboarding immediately.</p>
-                        
-                        <a href="${siteUrl}/signin" style="display: inline-block; background: linear-gradient(to right, #ff007f, #8000ff); color: white; padding: 14px 35px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 0, 127, 0.2);">Go to Dashboard</a>
-                    </div>
-                `
-            });
-        }
-
-        // Update the request status
-        await ctx.db.patch(args.id, { status: "Approved" });
-
-        return true;
+        return { success: true };
     },
 });

@@ -34,7 +34,6 @@ import type * as migrations from "../migrations.js";
 import type * as mobileBanners from "../mobileBanners.js";
 import type * as notificationActions from "../notificationActions.js";
 import type * as notifications from "../notifications.js";
-import type * as organiserRequests from "../organiserRequests.js";
 import type * as organisers from "../organisers.js";
 import type * as pages from "../pages.js";
 import type * as partnerRequests from "../partnerRequests.js";
@@ -102,7 +101,6 @@ declare const fullApi: ApiFromModules<{
   mobileBanners: typeof mobileBanners;
   notificationActions: typeof notificationActions;
   notifications: typeof notifications;
-  organiserRequests: typeof organiserRequests;
   organisers: typeof organisers;
   pages: typeof pages;
   partnerRequests: typeof partnerRequests;

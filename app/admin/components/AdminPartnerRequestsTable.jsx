@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail } from "lucide-react";
+import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail, AlertTriangle } from "lucide-react";
+import { useToast } from "@/context/ToastContext";
 
 export default function AdminPartnerRequestsTable({ t, theme }) {
     const requests = useQuery(api.partnerRequests.getAll) || [];
     const updateStatus = useMutation(api.partnerRequests.updateStatus);
     const approveMutation = useMutation(api.partnerRequests.approve);
     const removeRequest = useMutation(api.partnerRequests.remove);
+    const { showToast } = useToast();
 
     const [filterType, setFilterType] = useState("all");
     const [filterStatus, setFilterStatus] = useState("Pending");
@@ -22,11 +24,11 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleUpdate = async (id, status) => {
-        if (!confirm(`Are you sure you want to mark this request as ${status}?`)) return;
         try {
             await updateStatus({ id, status });
+            showToast(`Request ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
-            alert("Error updating status: " + err.message);
+            showToast("Error updating status: " + err.message, 'error');
         }
     };
 
@@ -39,15 +41,15 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const submitApproval = async () => {
         if (!manualPassword) {
-            alert("Please enter a password.");
+            showToast("Please enter a password.", "error");
             return;
         }
         if (manualPassword !== confirmPassword) {
-            alert("Passwords do not match!");
+            showToast("Passwords do not match!", "error");
             return;
         }
         if (manualPassword.length < 8) {
-            alert("Password must be at least 8 characters.");
+            showToast("Password must be at least 8 characters.", "error");
             return;
         }
 
@@ -58,20 +60,20 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                 password: manualPassword 
             });
             setShowApproveModal(false);
-            alert("Partner approved successfully! Credentials sent via Email and SMS.");
+            showToast("Partner approved! Credentials sent via Email and SMS.", "success");
         } catch (err) {
-            alert("Error approving request: " + err.message);
+            showToast("Error approving request: " + err.message, "error");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm(`Are you sure you want to DELETE this request permanently?`)) return;
         try {
             await removeRequest({ id });
+            showToast("Request deleted successfully", "info");
         } catch (err) {
-            alert("Error deleting request: " + err.message);
+            showToast("Error deleting request: " + err.message, "error");
         }
     };
 
@@ -228,30 +230,30 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
             {/* Approval Modal */}
             {showApproveModal && selectedRequest && (
-                <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
-                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "480px", borderRadius: "24px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "32px", textAlign: "center", position: "relative" }}>
-                            <button onClick={() => setShowApproveModal(false)} style={{ position: "absolute", top: "20px", right: "20px", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
-                            <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
-                                <ShieldCheck size={32} />
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999999, padding: "20px" }}>
+                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "440px", borderRadius: "20px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "24px 20px", textAlign: "center", position: "relative" }}>
+                            <button onClick={() => setShowApproveModal(false)} style={{ position: "absolute", top: "16px", right: "16px", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+                            <div style={{ width: "48px", height: "48px", borderRadius: "14px", backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
+                                <ShieldCheck size={24} />
                             </div>
-                            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize Partner</h2>
-                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "14px", marginTop: "8px" }}>Approving <strong>{selectedRequest.firstName} {selectedRequest.lastName}</strong></p>
+                            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize Partner</h2>
+                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>Approving <strong>{selectedRequest.firstName} {selectedRequest.lastName}</strong></p>
                         </div>
 
-                        <div style={{ padding: "32px" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                                <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                    <Mail size={18} color="#3b82f6" style={{ marginTop: "2px" }} />
+                        <div style={{ padding: "24px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', padding: "12px 16px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    <Mail size={16} color="#3b82f6" />
                                     <div>
-                                        <p style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, margin: "0 0 2px 0", textTransform: "uppercase" }}>Login Account</p>
-                                        <p style={{ fontSize: "15px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedRequest.email}</p>
+                                        <p style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, margin: 0, textTransform: "uppercase" }}>Login Account</p>
+                                        <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedRequest.email}</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: t.textSub, marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <Key size={14} /> MANUAL PASSWORD
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Key size={12} /> MANUAL PASSWORD
                                     </label>
                                     <div style={{ position: "relative" }}>
                                         <input 
@@ -259,25 +261,25 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             value={manualPassword}
                                             onChange={(e) => setManualPassword(e.target.value)}
                                             placeholder="Enter secure password"
-                                            style={{ width: "100%", padding: "14px 45px 14px 16px", borderRadius: "14px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "15px", outline: "none", boxSizing: "border-box" }}
+                                            style={{ width: "100%", padding: "12px 40px 12px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                                         />
                                         <button 
                                             onClick={() => setShowPass(!showPass)}
-                                            style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.textSub, cursor: "pointer" }}
+                                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: t.textSub, cursor: "pointer" }}
                                         >
-                                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: t.textSub, marginBottom: "8px" }}>CONFIRM PASSWORD</label>
+                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>CONFIRM PASSWORD</label>
                                     <input 
                                         type={showPass ? "text" : "password"} 
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="Repeat password"
-                                        style={{ width: "100%", padding: "14px 16px", borderRadius: "14px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "15px", outline: "none", boxSizing: "border-box" }}
+                                        style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                                     />
                                 </div>
 
@@ -286,24 +288,24 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                     disabled={isSubmitting}
                                     style={{ 
                                         width: "100%", 
-                                        padding: "16px", 
-                                        borderRadius: "14px", 
+                                        padding: "14px", 
+                                        borderRadius: "12px", 
                                         background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", 
                                         color: "#fff", 
                                         border: "none", 
                                         fontWeight: 800, 
-                                        fontSize: "16px", 
+                                        fontSize: "15px", 
                                         cursor: "pointer", 
-                                        marginTop: "8px",
+                                        marginTop: "4px",
                                         opacity: isSubmitting ? 0.7 : 1,
-                                        boxShadow: "0 10px 20px rgba(255, 61, 110, 0.2)"
+                                        boxShadow: "0 10px 20px rgba(255, 61, 110, 0.15)"
                                     }}
                                 >
                                     {isSubmitting ? "Finalizing Approval..." : "Approve & Send Credentials"}
                                 </button>
                                 
-                                <p style={{ fontSize: "12px", color: t.textSub, textAlign: "center", margin: 0 }}>
-                                    Partner will be notified via <strong>Email</strong> and <strong>SMS</strong> immediately.
+                                <p style={{ fontSize: "11px", color: t.textSub, textAlign: "center", margin: 0 }}>
+                                    Partner will be notified via <strong>Email</strong> and <strong>SMS</strong>.
                                 </p>
                             </div>
                         </div>

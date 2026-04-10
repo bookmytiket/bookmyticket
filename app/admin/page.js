@@ -13,6 +13,8 @@ import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as Ima
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 
 const SERVICE_CATEGORIES = ["Mehendi Artist", "Mehandi Artist", "Photographer/Studio", "Makeup Artist", "Personal Service", "Artist"];
 // Standardize icons
@@ -105,6 +107,7 @@ export default function AdminHomePageWrapper() {
 const SubscribersTable = ({ t, theme }) => {
     const subscribers = useQuery(api.subscribers.list);
     const removeSubscriber = useMutation(api.subscribers.remove);
+    const { showToast } = useToast();
 
     if (subscribers === undefined) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading subscribers...</div>;
     if (subscribers.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No subscribers found.</div>;
@@ -147,7 +150,14 @@ const SubscribersTable = ({ t, theme }) => {
                         </td>
                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                             <button 
-                                onClick={() => { if(confirm("Permanently delete this subscriber?")) removeSubscriber({ id: subs._id }); }}
+                                onClick={async () => { 
+                                    try {
+                                        await removeSubscriber({ id: subs._id }); 
+                                        showToast("Subscriber removed", "success");
+                                    } catch (err) {
+                                        showToast("Error removing subscriber", "error");
+                                    }
+                                }}
                                 style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                             >
                                 <Trash2 size={14} />
@@ -163,6 +173,7 @@ const SubscribersTable = ({ t, theme }) => {
 const AdminMeetingsTable = ({ t, router }) => {
     const meetings = useQuery(api.meetings.listAll);
     const deleteMeeting = useMutation(api.meetings.deleteMeeting);
+    const { showToast } = useToast();
 
     if (meetings === undefined) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading meetings...</div>;
     if (meetings.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No meetings scheduled on the platform.</div>;
@@ -222,7 +233,14 @@ const AdminMeetingsTable = ({ t, router }) => {
                                     Join
                                 </button>
                                 <button 
-                                    onClick={() => { if(confirm("Delete this meeting?")) deleteMeeting({ meetingId: meeting._id }); }}
+                                    onClick={async () => { 
+                                        try {
+                                            await deleteMeeting({ meetingId: meeting._id }); 
+                                            showToast("Meeting deleted", "success");
+                                        } catch (err) {
+                                            showToast("Error deleting meeting", "error");
+                                        }
+                                    }}
                                     style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                                 >
                                     Delete
@@ -311,6 +329,8 @@ const TurfBookingsTable = ({ t }) => {
 
 function AdminHomePage() {
     const { user, loading, logout } = useAuth();
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -412,9 +432,9 @@ function AdminHomePage() {
                 convenienceFeeValue: localFeeSettings.convenienceFeeValue,
                 gstPercent: localFeeSettings.gstPercent
             });
-            alert("Settings updated successfully!");
+            showToast("Settings updated successfully!", "success");
         } catch (err) {
-            alert("Error: " + err.message);
+            showToast("Error: " + err.message, "error");
         } finally {
             setIsSavingFees(false);
         }
@@ -484,11 +504,11 @@ function AdminHomePage() {
             if (data.success) {
                 setMemoryForm({ ...memoryForm, imageUrl: data.imageUrl });
             } else {
-                alert("Upload failed: " + data.error);
+                showToast("Upload failed: " + data.error, "error");
             }
         } catch (err) {
             console.error(err);
-            alert("Upload error");
+            showToast("Upload error", "error");
         } finally {
             setIsUploading(false);
         }
@@ -496,7 +516,7 @@ function AdminHomePage() {
 
     const handleSaveMemory = async () => {
         if (!memoryForm.imageUrl || !memoryForm.altText) {
-            alert("Please provide both an image and alt text.");
+            showToast("Please provide both an image and alt text.", "error");
             return;
         }
         await createMemoryMutation({
@@ -507,15 +527,11 @@ function AdminHomePage() {
     };
 
     const handleDeleteMemory = async (id) => {
-        console.log("Attempting to delete memory with ID:", id);
-        if (confirm("Are you sure you want to delete this memory?")) {
-            try {
-                await deleteMemoryMutation({ id });
-                console.log("Memory deleted successfully");
-            } catch (err) {
-                console.error("Error deleting memory:", err);
-                alert("Failed to delete memory. Check console for details.");
-            }
+        try {
+            await deleteMemoryMutation({ id });
+            showToast("Memory deleted successfully", "success");
+        } catch (err) {
+            showToast("Failed to delete memory", "error");
         }
     };
 
@@ -723,7 +739,7 @@ function AdminHomePage() {
             setPageModal(null);
             setPageForm({ title: "", slug: "", content: "", showInFooter: true, order: 0 });
         } catch (e) {
-            alert("Error saving page: " + e.message);
+            showToast("Error saving page: " + e.message, "error");
         }
     };
 
@@ -731,8 +747,9 @@ function AdminHomePage() {
         try {
             await deletePageMutation({ id });
             setPageToDelete(null);
+            showToast("Page deleted successfully", "success");
         } catch(e) {
-            alert("Error deleting page: " + e.message);
+            showToast("Error deleting page", "error");
         }
     };
 
@@ -930,7 +947,7 @@ function AdminHomePage() {
     const [showAdPopupForm, setShowAdPopupForm] = useState(false);
 
     const handleSaveAdPopup = async () => {
-        if (!adPopupForm.title) { alert("Title is required"); return; }
+        if (!adPopupForm.title) { showToast("Title is required", "error"); return; }
         setAdPopupSaving(true);
         try {
             let finalImageUrl = adPopupForm.imageUrl;
@@ -951,7 +968,8 @@ function AdminHomePage() {
             setAdPopupEditingId(null);
             setAdPopupImageFile(null);
             setShowAdPopupForm(false);
-        } catch(e) { alert("Error saving popup: " + e.message); }
+            showToast("Popup saved successfully", "success");
+        } catch(e) { showToast("Error saving popup", "error"); }
         finally { setAdPopupSaving(false); }
     };
 
@@ -969,11 +987,11 @@ function AdminHomePage() {
     };
 
     const handleDeleteAdPopup = async (id) => {
-        if (!confirm("Delete this popup?")) return;
         try {
             await deleteAdPopupMutation({ id });
+            showToast("Popup deleted", "info");
         } catch(e) {
-            alert("Error deleting popup: " + e.message);
+            showToast("Error deleting popup", "error");
         }
     };
 
@@ -992,9 +1010,9 @@ function AdminHomePage() {
     const handleSaveBrandingPricing = async () => {
         try {
             await updateBrandingPricingMutation(brandingPricing);
-            alert("Premium Banner Pricing updated successfully!");
+            showToast("Premium Banner Pricing updated successfully!", "success");
         } catch (e) {
-            alert("Error updating pricing");
+            showToast("Error updating pricing", "error");
         }
     };
 
@@ -1777,16 +1795,16 @@ function AdminHomePage() {
                                     <button
                                         onClick={async () => {
                                             if(!newAdmin.fullName || !newAdmin.username || !newAdmin.email || !newAdmin.password) {
-                                                alert("Please fill in all fields.");
+                                                showToast("Please fill in all fields.", "warning");
                                                 return;
                                             }
                                             try {
                                                 await createAdminMutation(newAdmin);
-                                                alert("Admin account created successfully!");
+                                                showToast("Admin account created successfully!", "success");
                                                 setAdminModal(null);
                                                 setNewAdmin({ fullName: '', username: '', email: '', password: '', role: 'Admin' });
                                             } catch (err) {
-                                                alert("Error creating admin: " + err.message);
+                                                showToast("Error creating admin: " + err.message, "error");
                                             }
                                         }}
                                         style={{ marginTop: "12px", padding: "12px", borderRadius: "10px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", fontSize: "16px", boxShadow: "0 10px 24px rgba(236,72,153,0.18)" }}
@@ -1823,7 +1841,7 @@ function AdminHomePage() {
                                                     const res = await fetch("/api/memories/upload", { method: "POST", body: formData });
                                                     const data = await res.json();
                                                     if (data.success) setBannerImage(data.imageUrl);
-                                                } catch (err) { alert("Upload failed"); }
+                                                } catch (err) { showToast("Upload failed", "error"); }
                                             }}
                                         />
                                         <label htmlFor="banner-upload" style={{ cursor: "pointer" }}>
@@ -1842,7 +1860,7 @@ function AdminHomePage() {
                                 <div style={{ display: "flex", gap: "12px" }}>
                                     <button
                                         onClick={async () => {
-                                            if (!bannerImage) { alert("Please upload an image"); return; }
+                                            if (!bannerImage) { showToast("Please upload an image", "warning"); return; }
                                             await approveBannerMutation({
                                                 id: approvingBanner._id,
                                                 imageUrl: bannerImage,
@@ -2421,7 +2439,7 @@ function AdminHomePage() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Manage Sub Navigation Menu</h3>
                                 <button
-                                    onClick={() => alert('Sub navigation menu is auto-saved to backend.')}
+                                    onClick={() => showToast('Sub navigation menu is auto-saved to backend.', 'info')}
                                     style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
                                 >
                                     <Save size={18} /> Save
@@ -2458,7 +2476,7 @@ function AdminHomePage() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Video Banner Settings</h3>
                                 <button
-                                    onClick={() => alert('Video Banner menu is saved seamlessly to the frontend via Convex Config!')}
+                                    onClick={() => showToast('Video Banner menu is saved seamlessly to the frontend via Convex Config!', 'info')}
                                     style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}
                                 >
                                     <Save size={18} /> Save Settings
@@ -2755,7 +2773,7 @@ function AdminHomePage() {
                                                 btn.innerText = "Saved!";
                                                 setTimeout(() => { btn.innerText = originalText; }, 2000);
                                             } catch(err) {
-                                                alert("Error saving: " + err.message);
+                                                showToast("Error saving: " + err.message, "error");
                                                 btn.innerText = originalText;
                                             }
                                         }}
@@ -3024,7 +3042,7 @@ function AdminHomePage() {
                                                                     <X size={16} /> Reject User
                                                                 </button>
                                                                 <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
-                                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("Are you sure you want to delete this organiser?")) { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); } }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                <button onClick={async (e) => { e.stopPropagation(); if (await confirm("Delete Organiser", "Are you sure you want to delete this organiser?")) { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); } }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <Trash2 size={16} /> Delete User
                                                                 </button>
                                                             </div>
@@ -3163,7 +3181,10 @@ function AdminHomePage() {
                                     <button
                                         type="button"
                                         onClick={async () => {
-                                            if (!notificationForm.subject || !notificationForm.message) return alert("Please fill in both subject and message.");
+                                            if (!notificationForm.subject || !notificationForm.message) {
+                                                showToast("Please fill in both subject and message.", "warning");
+                                                return;
+                                            }
                                             const targetCount = notificationForm.target === 'all' ? mappedOrganizers.length :
                                                 notificationForm.target === 'active' ? mappedOrganizers.filter(o => o.status === 'Active').length :
                                                     mappedOrganizers.filter(o => ["KYC Pending", "Pending", "Submitted"].includes(o.status)).length;
@@ -3174,7 +3195,7 @@ function AdminHomePage() {
                                                 target: notificationForm.target
                                             });
 
-                                            alert(`Broadcast initiated! Notifications saved to history and sent to ${targetCount} recipients.`);
+                                            showToast(`Broadcast initiated! Notifications saved to history and sent to ${targetCount} recipients.`, "success");
                                             setNotificationForm({ subject: "", message: "", target: "all" });
                                         }}
                                         style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px", borderRadius: "10px", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "0.2s" }}
@@ -3654,9 +3675,9 @@ function AdminHomePage() {
                                                         id: _id,
                                                         port: parseInt(localEmailSettings.port) || 0
                                                     });
-                                                    alert("Settings saved successfully!");
+                                                    showToast("Settings saved successfully!", "success");
                                                 } catch (err) {
-                                                    alert("Error saving settings: " + err.message);
+                                                    showToast("Error saving settings: " + err.message, "error");
                                                 }
                                             }}
                                             style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
@@ -3665,7 +3686,7 @@ function AdminHomePage() {
                                         <button
                                             onClick={async () => {
                                                 if (!localEmailSettings.user) {
-                                                    alert("Please set a recipient/username first.");
+                                                    showToast("Please set a recipient/username first.", "warning");
                                                     return;
                                                 }
                                                 const { _id, _creationTime, updatedAt, ...rest } = localEmailSettings;
@@ -3679,9 +3700,9 @@ function AdminHomePage() {
                                                     }
                                                 });
                                                 if (result.success) {
-                                                    alert(`Test email sent successfully!\n\nMessage ID: ${result.messageId}\n\nResponse: ${result.response}\n\nPlease check your inbox/spam folder.`);
+                                                    showToast("Test email sent successfully!", "success");
                                                 } else {
-                                                    alert("Error sending test email: " + result.error);
+                                                    showToast("Error sending test email: " + result.error, "error");
                                                 }
                                             }}
                                             style={{ backgroundColor: "#fff", color: "#3b82f6", border: "1px solid #3b82f6", padding: "10px 22px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }}>
@@ -3786,10 +3807,10 @@ function AdminHomePage() {
                                                             name: editingTemplate.name,
                                                             identifier: editingTemplate.identifier
                                                         });
-                                                        alert("Template saved successfully!");
+                                                        showToast("Template saved successfully!", "success");
                                                     } catch (err) {
                                                         console.error("Failed to save template:", err);
-                                                        alert("Error saving template.");
+                                                        showToast("Error saving template.", "error");
                                                     }
                                                 }}
                                                 style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
@@ -3867,7 +3888,7 @@ function AdminHomePage() {
 
                                     <div style={{ mt: "8px" }}>
                                         <button
-                                            onClick={() => alert("Legal policies updated successfully!")}
+                                            onClick={() => showToast("Legal policies updated successfully!", "success")}
                                             style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px 28px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", transition: "0.2s", width: "100%" }}
                                             onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
                                             onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
@@ -4219,7 +4240,7 @@ function AdminHomePage() {
                                             globalDescription: metaSettings.global.description,
                                             metaAdsCode: metaSettings.global.metaAdsCode
                                         });
-                                        alert("Global Meta Settings Saved!");
+                                        showToast("Global Meta Settings Saved!", "success");
                                     }}
                                     style={{ marginTop: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}>
                                     Save Global Settings
@@ -4280,11 +4301,11 @@ function AdminHomePage() {
                                                             />
                                                         </td>
                                                         <td style={{ padding: "12px" }}>
-                                                            <button
-                                                                onClick={() => alert(`Meta Ads updated for ${ev.title}`)}
-                                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
-                                                                Update
-                                                            </button>
+                                            <button
+                                                onClick={() => showToast(`Meta Ads updated for ${ev.title}`, "success")}
+                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
+                                                Update
+                                            </button>
                                                         </td>
                                                     </tr>
                                                 );
@@ -4465,7 +4486,7 @@ function AdminHomePage() {
                                                     {adm.lastLogin ? new Date(adm.lastLogin).toLocaleString() : "Never logged in"}
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
-                                                    <button onClick={() => { if(confirm("Delete this admin account?")) deleteAdminMutation({ id: adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
+                                                    <button onClick={async () => { if(await confirm("Delete Admin", "Are you sure you want to delete this admin account?")) deleteAdminMutation({ id: adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -4713,9 +4734,9 @@ function AdminHomePage() {
                                                     setShowApprovalModal(false);
                                                     setShowTempPasswordModal(true);
                                                     setManualApprovalPassword("");
-                                                } catch (err) {
-                                                    alert("Error: " + err.message);
-                                                }
+                                                    } catch (err) {
+                                                        showToast("Error: " + err.message, "error");
+                                                    }
                                             }}
                                             style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "white", fontWeight: 600, cursor: "pointer" }}
                                         >
@@ -4760,7 +4781,7 @@ function AdminHomePage() {
                                     <button
                                         onClick={() => {
                                             navigator.clipboard.writeText(generatedTempPassword);
-                                            alert("Password copied to clipboard!");
+                                            showToast("Password copied to clipboard!", "success");
                                         }}
                                         style={{
                                             position: "absolute",
@@ -4908,8 +4929,8 @@ function AdminHomePage() {
 
                                 <div style={{ display: "flex", gap: "16px", marginTop: "24px", paddingTop: "24px", borderTop: `1px solid ${t.border}` }}>
                                     <button
-                                        onClick={() => {
-                                            if (confirm("Are you sure you want to REJECT this KYC application?")) {
+                                        onClick={async () => {
+                                            if (await confirm("Reject KYC", "Are you sure you want to REJECT this KYC application?", { type: 'danger' })) {
                                                 patchOrganizerMutation({ id: selectedKycOrg.id, kycStatus: 'Rejected' });
                                                 setSelectedKycOrg(null);
                                             }
