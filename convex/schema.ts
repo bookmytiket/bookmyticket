@@ -262,14 +262,21 @@ export default defineSchema({
     }),
 
     emailSettings: defineTable({
-        host: v.string(),
-        port: v.number(),
-        user: v.string(),
-        pass: v.string(), // store as string, handle encryption/security if needed
+        provider: v.optional(v.string()), // "SMTP" | "MICROSOFT_365"
+        host: v.optional(v.string()),
+        port: v.optional(v.number()),
+        user: v.optional(v.string()),
+        pass: v.optional(v.string()),
         from: v.string(),
         fromName: v.optional(v.string()),
         encryption: v.optional(v.string()), // "TLS", "SSL", "None"
         authMethod: v.optional(v.string()), // "App Password", "Basic Authentication", "None"
+        microsoft365: v.optional(v.object({
+            clientId: v.string(),
+            tenantId: v.string(),
+            clientSecret: v.string(),
+            status: v.optional(v.string()), // "Connected" | "Not Connected"
+        })),
         updatedAt: v.number(),
     }),
 

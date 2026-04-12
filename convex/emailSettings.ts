@@ -10,14 +10,21 @@ export const get = query({
 export const update = mutation({
     args: {
         id: v.optional(v.id("emailSettings")),
-        host: v.string(),
-        port: v.number(),
-        user: v.string(),
-        pass: v.string(),
+        provider: v.optional(v.string()),
+        host: v.optional(v.string()),
+        port: v.optional(v.number()),
+        user: v.optional(v.string()),
+        pass: v.optional(v.string()),
         from: v.string(),
         fromName: v.optional(v.string()),
         encryption: v.optional(v.string()),
         authMethod: v.optional(v.string()),
+        microsoft365: v.optional(v.object({
+            clientId: v.string(),
+            tenantId: v.string(),
+            clientSecret: v.string(),
+            status: v.optional(v.string()),
+        })),
     },
     handler: async (ctx, args) => {
         const { id, ...settings } = args;

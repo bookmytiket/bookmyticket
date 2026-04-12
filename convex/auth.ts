@@ -53,6 +53,9 @@ export const forgotPassword = mutation({
                     <p style="color: #555; font-size: 16px; margin-bottom: 30px;">You recently requested a password reset for your ${brandNameDisplay} account. Please click the button below to proceed:</p>
                     <a href="${resetLink}" style="display: inline-block; background-color: #ff007f; background: linear-gradient(to right, #ff007f, #8000ff); color: white; padding: 14px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 0, 127, 0.2);">Reset Password</a>
                     <p style="color: #999; font-size: 14px; margin-top: 35px;">If you did not request a password reset, you can safely ignore this email. This link is valid for 30 minutes.</p>
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
+                        <p>Need help? Contact us at <a href="mailto:hello@bookmyticket.net" style="color: #6366f1; text-decoration: none;">hello@bookmyticket.net</a></p>
+                    </div>
                 </div>
             `,
         });
@@ -190,14 +193,23 @@ async function internalSendOTP(ctx: MutationCtx, rawEmail: string, purpose: stri
                     <span style="font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #be185d;">${otp}</span>
                 </div>
                 
+                <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 16px; margin-bottom: 32px; text-align: left;">
+                    <p style="margin: 0; font-size: 14px; color: #e11d48; font-weight: 600;">⚠️ Security Instructions:</p>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #9f1239;">
+                        <li>This code is valid for <b>10 minutes</b>.</li>
+                        <li>Never share this OTP with anyone, including our staff.</li>
+                        <li>If you did not request this, please change your password immediately.</li>
+                    </ul>
+                </div>
+                
                 <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
-                    This code will expire in <strong>10 minutes</strong>. If you did not request this code, you can safely ignore this email.
+                    If you did not request this code, you can safely ignore this email.
                 </p>
                 
                 <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; line-height: 18px;">
                     <p style="margin: 0;">&copy; ${new Date().getFullYear()} ${brandNameDisplay}. All rights reserved.</p>
+                    <p style="margin: 4px 0;">Support: <a href="mailto:hello@bookmyticket.net" style="color: #6366f1; text-decoration: none;">hello@bookmyticket.net</a></p>
                     <p style="margin: 4px 0;">This is an automated message from <a href="${siteUrl}" style="color: #6366f1; text-decoration: none;">${brandNameDisplay}</a></p>
-                    <p style="margin: 12px 0 0 0;">Don't want to receive these? Please contact support via our website.</p>
                 </div>
             </div>
         `,

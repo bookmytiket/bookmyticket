@@ -191,6 +191,7 @@ Book your tickets here: ${eventLink}`;
                     
                     <div class="footer">
                         <p>© 2026 ${brandNameDisplay}. All rights reserved.</p>
+                        <p>Need help? Contact <a href="mailto:hello@bookmyticket.net" style="color: #f844a4; text-decoration: none;">hello@bookmyticket.net</a></p>
                         <p>You received this email because you are a registered member of ${brandNameDisplay}.</p>
                     </div>
                 </div>
@@ -278,6 +279,7 @@ export const sendSignupGreeting = action({
                     <a href="${siteUrl}" style="background: #f844a4; background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%); color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block;">Start Exploring Events</a>
                 </p>
                 <p style="margin-top: 30px;">Best regards,<br/>The ${brandNameDisplay} Team</p>
+                <p style="font-size: 12px; color: #999; margin-top: 20px;">Support: <a href="mailto:hello@bookmyticket.net" style="color: #ff007f; text-decoration: none;">hello@bookmyticket.net</a></p>
             </div>
         `;
 
@@ -350,7 +352,7 @@ export const sendBulkGreetingToAll = action({
                         You are receiving this email because you subscribed to updates from ${brandNameDisplay}.
                     </div>
                     <div class="footer-text">
-                        Need help? <a href="${siteUrl}/support" class="support-link">Contact Support</a>
+                        Need help? <a href="mailto:hello@bookmyticket.net" class="support-link">hello@bookmyticket.net</a>
                     </div>
                     <div class="footer-text" style="margin-bottom: 0; font-size: 12px;">
                         &copy; ${new Date().getFullYear()} ${brandNameDisplay}. All rights reserved.
@@ -429,6 +431,7 @@ export const sendSubscriptionWelcome = action({
                 </div>
                 <div style="background-color: #f8fafc; padding: 25px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #f1f5f9;">
                     © 2026 ${brandNameDisplay}. All rights reserved.<br/>
+                    Support: <a href="mailto:hello@bookmyticket.net" style="color: #64748b; text-decoration: none;">hello@bookmyticket.net</a><br/>
                     You're receiving this because you subscribed at <a href="${siteUrl}" style="color: #64748b; text-decoration: underline;">bookmyticket.net</a>
                 </div>
             </div>
@@ -541,7 +544,7 @@ export const sendTurfBookingConfirmation = action({
                     ` : ''}
                 </div>
                 <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px; border-top: 1px solid #f1f5f9;">
-                    © 2026 ${brandNameDisplay}. All rights reserved.
+                    © 2026 ${brandNameDisplay}. All rights reserved. | Support: hello@bookmyticket.net
                 </div>
             </div>
         `;
@@ -657,6 +660,7 @@ export const sendPartnerApprovalCredentials = action({
                         </div>
                         <div class="footer">
                             <p>&copy; ${new Date().getFullYear()} ${brandNameDisplay}. Quality Ticketing Experience.</p>
+                            <p>Support: <a href="mailto:hello@bookmyticket.net" style="color: #94a3b8; text-decoration: underline;">hello@bookmyticket.net</a></p>
                             <p>You received this because your partner application was approved by our administration team.</p>
                         </div>
                     </div>

@@ -59,7 +59,7 @@ export const sendFailedLoginAlert = action({
                 </div>
                 <div style="padding: 30px; color: #1e293b; line-height: 1.6;">
                     <p>Hello,</p>
-                    <p>We detected a failed login attempt on your <b>Nexvant Technologies</b> account.</p>
+                    <p>We detected a failed login attempt on your <b>BookMyTicket</b> account.</p>
                     
                     <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #cbd5e1;">
                         <p style="margin: 0 0 10px 0;"><b>Details of the attempt:</b></p>
@@ -77,9 +77,13 @@ export const sendFailedLoginAlert = action({
                     <div style="text-align: center; margin-top: 30px;">
                         <a href="https://www.bookmyticket.net/signin?mode=forgot" style="background: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Secure My Account</a>
                     </div>
+                    
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 24px; text-align: center;">
+                        Need assistance? Contact <a href="mailto:hello@bookmyticket.net" style="color: #6366f1; text-decoration: none;">hello@bookmyticket.net</a>
+                    </p>
                 </div>
                 <div style="background: #f1f5f9; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px;">
-                    © ${new Date().getFullYear()} Nexvant Technologies. All rights reserved.
+                    © ${new Date().getFullYear()} BookMyTicket. All rights reserved.
                 </div>
             </div>
         `;
