@@ -815,4 +815,10 @@ export default defineSchema({
         pricingType: v.string(), // "inclusive" | "exclusive"
         updatedAt: v.number(),
     }),
+    systemLogs: defineTable({
+        type: v.string(), // "email_attempt", "email_error", "auth_alert", "system_event"
+        message: v.string(),
+        details: v.optional(v.any()), // Extra context (e.g., email recipient, error stack)
+        timestamp: v.number(),
+    }).index("by_type", ["type"]).index("by_timestamp", ["timestamp"]),
 });

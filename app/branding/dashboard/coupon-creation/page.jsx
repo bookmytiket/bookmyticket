@@ -16,7 +16,7 @@ const C = {
   primary: '#4f46e5',
 };
 
-const BASE_URL = "https://bookmyticket-nu.vercel.app";
+const BASE_URL = "https://bookmyticket.net";
 const LOGO_IMG = `${BASE_URL}/branding/nykaa_logo.png`;
 const BANNER_IMG = `${BASE_URL}/branding/beauty_banner.png`;
 

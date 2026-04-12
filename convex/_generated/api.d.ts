@@ -53,6 +53,7 @@ import type * as staff from "../staff.js";
 import type * as subscribers from "../subscribers.js";
 import type * as supportTickets from "../supportTickets.js";
 import type * as systemConfig from "../systemConfig.js";
+import type * as systemLogs from "../systemLogs.js";
 import type * as test from "../test.js";
 import type * as ticketSettings from "../ticketSettings.js";
 import type * as turfBookings from "../turfBookings.js";
@@ -120,6 +121,7 @@ declare const fullApi: ApiFromModules<{
   subscribers: typeof subscribers;
   supportTickets: typeof supportTickets;
   systemConfig: typeof systemConfig;
+  systemLogs: typeof systemLogs;
   test: typeof test;
   ticketSettings: typeof ticketSettings;
   turfBookings: typeof turfBookings;

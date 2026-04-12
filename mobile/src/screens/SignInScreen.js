@@ -261,7 +261,7 @@ export default function SignInScreen() {
         <View style={styles.header}>
           <Image
             style={styles.logoImage}
-            source={{ uri: 'https://bookmysticket-nu.vercel.app/logo.png' }}
+            source={{ uri: 'https://bookmyticket.net/logo.png' }}
             resizeMode="contain"
           />
           <Text style={styles.tagline}>Premium Event Experience</Text>

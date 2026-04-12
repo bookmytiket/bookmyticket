@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { calculateGst } from "./gst";
+import { bookingConfirmationTemplate } from "./emailTemplates";
 
 export const getBookings = query({
     args: {},
@@ -217,7 +218,8 @@ export const createBooking = mutation({
                 }
             }
             const branding = await ctx.db.query("siteBranding").first();
-            const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+            const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
             let brandLogo = branding?.logoUrl || "/logo.png";
             if (brandLogo.startsWith("/")) {
                 brandLogo = `${siteUrl}${brandLogo}`;
@@ -229,26 +231,13 @@ export const createBooking = mutation({
             await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
                 to: targetEmail,
                 subject: `Booking Confirmed: ${eventName}`,
-                html: `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-                        <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
-                        <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
-                        <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${args.ticketCount}</strong> ticket(s) for:</p>
-                        <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
-                        <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${args.totalPrice}</strong></p>
-                        
-                        ${(event && (event as any).virtual) ? `
-                        <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
-                            <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
-                            <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
-                            <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
-                            <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
-                        </div>
-                        ` : ''}
-
-                        <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
-                    </div>
-                `,
+                html: bookingConfirmationTemplate({
+                    customerName: args.customerDetails?.name || "Customer",
+                    itemName: eventName,
+                    totalAmount: args.totalPrice,
+                    bookingId: bookingId,
+                    details: (event && (event as any).virtual) ? `Virtual Meeting Code: ${(event as any).meetingUrl}` : null
+                }, branding),
             });
         }
 
@@ -287,7 +276,8 @@ export const confirmBooking = mutation({
         }
 
         const branding = await ctx.db.query("siteBranding").first();
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -299,26 +289,13 @@ export const confirmBooking = mutation({
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: targetEmail,
             subject: `Booking Confirmed: ${eventName}`,
-            html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px;">
-                    <h2 style="color: #333; margin-bottom: 20px;">Tickets Confirmed! 🎉</h2>
-                    <p style="color: #555; font-size: 16px; margin-bottom: 20px;">Thank you for booking with ${brandNameDisplay}. You have successfully purchased <strong>${booking.ticketCount}</strong> ticket(s) for:</p>
-                    <div style="font-size: 20px; font-weight: 700; color: #ff007f; margin-bottom: 20px;">${eventName}</div>
-                    <p style="color: #555; margin-bottom: 30px;">Total amount paid: <strong>Rs. ${booking.totalPrice}</strong></p>
-                    
-                    ${(event && (event as any).virtual) ? `
-                    <div style="margin: 30px 0; padding: 25px; background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 16px; text-align: center;">
-                        <h3 style="margin: 0 0 10px; color: #065f46; font-size: 18px; font-weight: 800;">Virtual Meeting Access 🎥</h3>
-                        <p style="margin: 0 0 5px; color: #059669; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Meeting Code</p>
-                        <p style="margin: 0 0 20px; color: #064e3b; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 900; letter-spacing: 3px;">${(event as any).meetingUrl}</p>
-                        <a href="${siteUrl}/${(event as any).meetingUrl}" style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">Join Meeting Now</a>
-                    </div>
-                    ` : ''}
-
-                    <p style="color: #999; font-size: 14px;">You can view your tickets in your account dashboard.</p>
-                </div>
-            `,
+            html: bookingConfirmationTemplate({
+                customerName: booking.customerDetails?.name || "Customer",
+                itemName: eventName,
+                totalAmount: booking.totalPrice,
+                bookingId: args.id,
+                details: null // Add meeting info here if needed
+            }, branding),
         });
     },
 });

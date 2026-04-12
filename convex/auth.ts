@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, action, MutationCtx } from "./_generated/server";
 import { api } from "./_generated/api";
+import { otpTemplate, resetPasswordTemplate } from "./emailTemplates";
 
 export const forgotPassword = mutation({
     args: { email: v.string() },
@@ -33,31 +34,14 @@ export const forgotPassword = mutation({
         });
 
         const branding = await ctx.db.query("siteBranding").first();
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
-        let brandLogo = branding?.logoUrl || "/logo.png";
-        if (brandLogo.startsWith("/")) {
-            brandLogo = `${siteUrl}${brandLogo}`;
-        }
-        const brandNameDisplay = branding?.name || "BookMyTicket";
-
+        const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || branding?.siteUrl || "https://bookmyticket.net";
         const resetLink = `${siteUrl}/reset-password?token=${token}&email=${args.email}`;
 
         // Trigger the email action
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: args.email,
-            subject: `Reset Your ${brandNameDisplay} Password`,
-            html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px 20px; border: 1px solid #eee; border-radius: 12px; text-align: center;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px; color: #333; font-size: 24px; font-weight: bold;">
-                    <h2 style="color: #333; margin-bottom: 20px;">Password Reset</h2>
-                    <p style="color: #555; font-size: 16px; margin-bottom: 30px;">You recently requested a password reset for your ${brandNameDisplay} account. Please click the button below to proceed:</p>
-                    <a href="${resetLink}" style="display: inline-block; background-color: #ff007f; background: linear-gradient(to right, #ff007f, #8000ff); color: white; padding: 14px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 0, 127, 0.2);">Reset Password</a>
-                    <p style="color: #999; font-size: 14px; margin-top: 35px;">If you did not request a password reset, you can safely ignore this email. This link is valid for 30 minutes.</p>
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
-                        <p>Need help? Contact us at <a href="mailto:hello@bookmyticket.net" style="color: #6366f1; text-decoration: none;">hello@bookmyticket.net</a></p>
-                    </div>
-                </div>
-            `,
+            subject: `Reset Your Password`,
+            html: resetPasswordTemplate(resetLink, branding),
         });
 
         // Store it in systemConfig for backward compatibility with testing if needed
@@ -152,67 +136,13 @@ async function internalSendOTP(ctx: MutationCtx, rawEmail: string, purpose: stri
         await ctx.db.insert("systemConfig", { key: configKey, value: otp });
     }
 
-    console.log("=================================================");
-    console.log(`🎟️ [OTP DEBUG] Purpose: ${purpose}`);
-    console.log(`🎟️ [OTP DEBUG] Email: ${email}`);
-    console.log(`🎟️ [OTP DEBUG] Generated OTP: ${otp} (Length: ${otp.length})`);
-    console.log(`🎟️ [OTP DEBUG] Stored in systemConfig as: ${configKey}`);
-    console.log("=================================================");
-
     const branding = await ctx.db.query("siteBranding").first();
-    const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
-    let brandLogo = branding?.logoUrl || "/logo.png";
-    if (brandLogo.startsWith("/")) {
-        brandLogo = `${siteUrl}${brandLogo}`;
-    }
     const brandNameDisplay = branding?.name || "BookMyTicket";
     
-    // Check for SMTP settings to avoid silent failure
-    const settings = await ctx.db.query("emailSettings").first();
-    if (!settings || !settings.host || !settings.user || !settings.pass) {
-        console.error("🎟️ [OTP ERROR] SMTP settings are not configured. Cannot send email.");
-        console.log(`🎟️ [OTP DEBUG] OTP ${otp} is available in systemConfig for key: ${configKey}`);
-        throw new Error("Email service not configured. Admin: Please set SMTP in Admin Panel > Email Settings.");
-    }
-
     await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
         to: email,
         subject: `${otp} is your ${brandNameDisplay} verification code`,
-        html: `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 40px auto; padding: 40px 20px; border: 1px solid #e2e8f0; border-radius: 16px; text-align: center; color: #1e293b; background-color: #ffffff;">
-                <div style="margin-bottom: 30px;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 60px; width: auto; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: #0f172a;">Verify your email</h1>
-                <p style="font-size: 16px; line-height: 24px; color: #475569; margin-bottom: 32px;">
-                    Hello! To complete your ${purpose === 'signup' ? 'registration' : 'login'} on ${brandNameDisplay}, please use the verification code below:
-                </p>
-                
-                <div style="display: inline-block; padding: 16px 32px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 32px;">
-                    <span style="font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #be185d;">${otp}</span>
-                </div>
-                
-                <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 16px; margin-bottom: 32px; text-align: left;">
-                    <p style="margin: 0; font-size: 14px; color: #e11d48; font-weight: 600;">⚠️ Security Instructions:</p>
-                    <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #9f1239;">
-                        <li>This code is valid for <b>10 minutes</b>.</li>
-                        <li>Never share this OTP with anyone, including our staff.</li>
-                        <li>If you did not request this, please change your password immediately.</li>
-                    </ul>
-                </div>
-                
-                <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
-                    If you did not request this code, you can safely ignore this email.
-                </p>
-                
-                <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; line-height: 18px;">
-                    <p style="margin: 0;">&copy; ${new Date().getFullYear()} ${brandNameDisplay}. All rights reserved.</p>
-                    <p style="margin: 4px 0;">Support: <a href="mailto:hello@bookmyticket.net" style="color: #6366f1; text-decoration: none;">hello@bookmyticket.net</a></p>
-                    <p style="margin: 4px 0;">This is an automated message from <a href="${siteUrl}" style="color: #6366f1; text-decoration: none;">${brandNameDisplay}</a></p>
-                </div>
-            </div>
-        `,
+        html: otpTemplate(otp, purpose === 'signup' ? 'Registration' : 'Login', branding),
     });
 }
 

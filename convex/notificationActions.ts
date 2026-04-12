@@ -1,8 +1,7 @@
-"use node";
-
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
+import { eventNotificationTemplate, welcomeTemplate, partnerApprovalTemplate } from "./emailTemplates";
 
 export const sendEventCreationNotifications = action({
     args: {
@@ -52,7 +51,8 @@ export const sendEventCreationNotifications = action({
         console.log(`Unique recipients: ${emailRecipients.size} emails, ${whatsappRecipients.size} WhatsApp numbers.`);
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -65,139 +65,14 @@ Date: ${date || "To be announced"}
 Location: ${location || "To be announced"}
 Book your tickets here: ${eventLink}`;
 
-        const htmlMessage = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    .email-container {
-                        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                        max-width: 600px;
-                        margin: 0 auto;
-                        background-color: #ffffff;
-                        border: 1px solid #e0e0e0;
-                        border-radius: 16px;
-                        overflow: hidden;
-                    }
-                    .header {
-                        padding: 30px;
-                        text-align: center;
-                    }
-                    .event-image {
-                        width: 100%;
-                        height: 300px;
-                        object-fit: cover;
-                        display: block;
-                    }
-                    .content {
-                        padding: 30px;
-                    }
-                    .event-badge {
-                        display: inline-block;
-                        background: #fdf2f8;
-                        color: #f844a4;
-                        padding: 4px 12px;
-                        border-radius: 20px;
-                        font-size: 14px;
-                        font-weight: 600;
-                        margin-bottom: 12px;
-                    }
-                    .event-title {
-                        font-size: 28px;
-                        font-weight: 800;
-                        color: #1a1a1a;
-                        margin: 0 0 16px 0;
-                        line-height: 1.2;
-                    }
-                    .details-card {
-                        background: #f8f9fa;
-                        border-radius: 12px;
-                        padding: 20px;
-                        margin-bottom: 25px;
-                    }
-                    .detail-row {
-                        margin-bottom: 10px;
-                        display: flex;
-                        align-items: center;
-                    }
-                    .detail-label {
-                        color: #666;
-                        font-size: 14px;
-                        width: 80px;
-                        flex-shrink: 0;
-                    }
-                    .detail-value {
-                        color: #333;
-                        font-weight: 600;
-                        font-size: 15px;
-                    }
-                    .cta-button {
-                        display: block;
-                        background: #f844a4; /* Fallback for older clients */
-                        background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%);
-                        color: #ffffff !important;
-                        text-align: center;
-                        padding: 16px 32px;
-                        text-decoration: none;
-                        border-radius: 12px;
-                        font-weight: 700;
-                        font-size: 18px;
-                        box-shadow: 0 4px 15px rgba(248, 68, 164, 0.3);
-                        margin-top: 10px;
-                    }
-                    .footer {
-                        padding: 24px;
-                        background: #f8f9fa;
-                        text-align: center;
-                        color: #888;
-                        font-size: 13px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="email-container">
-                    <div class="header">
-                        <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 50px; width: auto;">
-                    </div>
-                    
-                    ${imageUrl ? `<img src="${imageUrl}" class="event-image" alt="${title}">` : ''}
-                    
-                    <div class="content">
-                        <span class="event-badge">NEW EVENT</span>
-                        <h1 class="event-title">${title}</h1>
-                        
-                        <div class="details-card">
-                            <div class="detail-row">
-                                <span class="detail-label">Organiser</span>
-                                <span class="detail-value">${organiserName}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Date</span>
-                                <span class="detail-value">${date || "To be announced"}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Location</span>
-                                <span class="detail-value">${location || "To be announced"}</span>
-                            </div>
-                        </div>
-                        
-                        <p style="color: #444; line-height: 1.6; margin-bottom: 24px;">
-                            We have an exciting new event happening on <strong>${brandNameDisplay}</strong>! 
-                            Don't miss out on this incredible experience. Get your tickets before they're gone!
-                        </p>
-                        
-                        <a href="${eventLink}" class="cta-button">Book Now</a>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>© 2026 ${brandNameDisplay}. All rights reserved.</p>
-                        <p>Need help? Contact <a href="mailto:hello@bookmyticket.net" style="color: #f844a4; text-decoration: none;">hello@bookmyticket.net</a></p>
-                        <p>You received this email because you are a registered member of ${brandNameDisplay}.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
+        const htmlMessage = eventNotificationTemplate({
+            title,
+            organiserName,
+            date,
+            location,
+            imageUrl,
+            eventLink,
+        }, branding);
 
         // 2. Send Emails
         const emailPromises = Array.from(emailRecipients).map((to) => 
@@ -261,27 +136,15 @@ export const sendSignupGreeting = action({
     handler: async (ctx, args) => {
         const { email, fullName } = args;
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
         }
         const brandNameDisplay = branding?.name || "BookMyTicket";
 
-        const htmlMessage = `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px;">
-                <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 70px; width: auto; margin-bottom: 25px;">
-                <h2 style="color: #ff007f;">Welcome to ${brandNameDisplay}!</h2>
-                <p>Hello ${fullName},</p>
-                <p>Thank you for joining ${brandNameDisplay}. We're thrilled to have you with us!</p>
-                <p>You can now browse and book tickets for the most exciting events happening around you.</p>
-                <p style="margin-top: 20px;">
-                    <a href="${siteUrl}" style="background: #f844a4; background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%); color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block;">Start Exploring Events</a>
-                </p>
-                <p style="margin-top: 30px;">Best regards,<br/>The ${brandNameDisplay} Team</p>
-                <p style="font-size: 12px; color: #999; margin-top: 20px;">Support: <a href="mailto:hello@bookmyticket.net" style="color: #ff007f; text-decoration: none;">hello@bookmyticket.net</a></p>
-            </div>
-        `;
+        const htmlMessage = welcomeTemplate(fullName, branding);
 
         await ctx.runAction(api.emailActions.sendEmail, {
             to: email,
@@ -313,7 +176,8 @@ export const sendBulkGreetingToAll = action({
         subscribers.forEach((s: any) => { if (s.email) emailRecipients.add(s.email); });
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;
@@ -407,7 +271,8 @@ export const sendSubscriptionWelcome = action({
     handler: async (ctx, args): Promise<any> => {
         const { email } = args;
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
         const brandNameDisplay = branding?.name || "BookMyTicket";
@@ -512,7 +377,8 @@ export const sendTurfBookingConfirmation = action({
         const { bookingId, email, phone, name, turfName, date, time, participantCount, amountPaid, lat, lng } = args;
         
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
         const brandNameDisplay = branding?.name || "BookMyTicket";
@@ -595,79 +461,19 @@ export const sendPartnerApprovalCredentials = action({
         const { email, firstName, password, phone } = args;
 
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo && brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
         const brandNameDisplay = branding?.name || "BookMyTicket";
 
         // 1. Email Notification (Premium Gradient-Based Template)
-        const emailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
-                    .wrapper { padding: 40px 20px; }
-                    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
-                    .header-banner { background: linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%); padding: 60px 40px; text-align: center; color: #ffffff; }
-                    .logo { height: 50px; width: auto; margin-bottom: 24px; filter: brightness(0) invert(1); }
-                    .header-title { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
-                    .content { padding: 48px; color: #334155; }
-                    .welcome-text { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
-                    .body-text { font-size: 16px; line-height: 1.7; color: #64748b; margin-bottom: 32px; }
-                    .credential-box { background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 32px; margin-bottom: 32px; }
-                    .credential-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-                    .credential-row:last-child { border-bottom: none; }
-                    .label { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; width: 100px; letter-spacing: 0.5px; }
-                    .value { font-size: 15px; font-weight: 700; color: #1e293b; font-family: 'JetBrains Mono', monospace; }
-                    .btn { display: block; background: linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%); color: #ffffff !important; padding: 18px 30px; text-decoration: none; border-radius: 14px; font-weight: 700; font-size: 16px; text-align: center; margin-top: 24px; }
-                    .footer { padding: 40px; text-align: center; background-color: #f8fafc; color: #94a3b8; font-size: 13px; line-height: 1.5; }
-                    .security-alert { background-color: #fff1f2; border-radius: 12px; padding: 16px; margin-top: 32px; border-left: 4px solid #f43f5e; }
-                    .security-alert p { margin: 0; font-size: 13px; color: #e11d48; font-weight: 600; }
-                </style>
-            </head>
-            <body>
-                <div class="wrapper">
-                    <div class="container">
-                        <div class="header-banner">
-                            <img src="${brandLogo}" alt="${brandNameDisplay}" class="logo" onerror="this.style.display='none'">
-                            <h2 class="header-title">Approved & Ready! 🎟️</h2>
-                        </div>
-                        <div class="content">
-                            <div class="welcome-text">Hi ${firstName},</div>
-                            <p class="body-text">We've verified your partner application and your account is now fully active. You can start creating and managing events immediately.</p>
-                            
-                            <div class="credential-box">
-                                <div class="credential-row">
-                                    <span class="label">Login URL</span>
-                                    <span class="value"><a href="${siteUrl}/signin" style="color: #6366f1; text-decoration: none;">Click Here to Login</a></span>
-                                </div>
-                                <div class="credential-row">
-                                    <span class="label">User Email</span>
-                                    <span class="value">${email}</span>
-                                </div>
-                                <div class="credential-row">
-                                    <span class="label">Password</span>
-                                    <span class="value">${password}</span>
-                                </div>
-                            </div>
-                            
-                            <a href="${siteUrl}/signin" class="btn">Access Your Dashboard</a>
-                            
-                            <div class="security-alert">
-                                <p>⚠️ Important: For security reasons, please update your temporary password immediately upon your first login.</p>
-                            </div>
-                        </div>
-                        <div class="footer">
-                            <p>&copy; ${new Date().getFullYear()} ${brandNameDisplay}. Quality Ticketing Experience.</p>
-                            <p>Support: <a href="mailto:hello@bookmyticket.net" style="color: #94a3b8; text-decoration: underline;">hello@bookmyticket.net</a></p>
-                            <p>You received this because your partner application was approved by our administration team.</p>
-                        </div>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
+        const emailHtml = partnerApprovalTemplate({
+            firstName,
+            email,
+            password,
+            loginUrl: `${siteUrl}/signin`,
+        }, branding);
 
         await ctx.runAction(api.emailActions.sendEmail, {
             to: email,

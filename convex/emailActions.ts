@@ -3,156 +3,107 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
-import nodemailer from "nodemailer";
 
 export const sendEmail = action({
     args: {
         to: v.string(),
         subject: v.string(),
         html: v.string(),
-        settings: v.optional(v.object({
-            provider: v.optional(v.string()), // "SMTP" | "MICROSOFT_365"
-            host: v.optional(v.string()),
-            port: v.optional(v.number()),
-            user: v.optional(v.string()),
-            pass: v.optional(v.string()),
-            from: v.string(),
-            fromName: v.optional(v.string()),
-            encryption: v.optional(v.string()),
-            authMethod: v.optional(v.string()),
-            microsoft365: v.optional(v.object({
-                clientId: v.string(),
-                tenantId: v.string(),
-                clientSecret: v.string(),
-                status: v.optional(v.string()),
-            })),
-        })),
     },
     handler: async (ctx, args) => {
-        let settings = args.settings;
-        if (!settings) {
-            settings = await ctx.runQuery(api.emailSettings.get) as any;
-        }
-        
-        if (!settings) {
-            console.error("Email settings are not configured in the admin panel.");
-            return { success: false, error: "Email settings not configured." };
-        }
-
-        const provider = settings.provider || "SMTP";
-
-        if (provider === "MICROSOFT_365" && settings.microsoft365) {
-            const { clientId, tenantId, clientSecret } = settings.microsoft365;
-            const fromEmail = settings.from;
-
-            try {
-                console.log(`Attempting to send email via Microsoft 365 (Graph API) to ${args.to}...`);
-                
-                // 1. Get Access Token (Client Credentials Flow)
-                const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        grant_type: 'client_credentials',
-                        client_id: clientId,
-                        client_secret: clientSecret,
-                        scope: 'https://graph.microsoft.com/.default'
-                    })
-                });
-
-                if (!tokenResponse.ok) {
-                    const error = await tokenResponse.json();
-                    throw new Error(`Failed to get access token: ${error.error_description || error.error}`);
-                }
-
-                const tokenData = await tokenResponse.json();
-                const accessToken = tokenData.access_token;
-
-                // 2. Send Email
-                const sendMailResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${fromEmail}/sendMail`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: {
-                            subject: args.subject,
-                            body: {
-                                contentType: 'HTML',
-                                content: args.html
-                            },
-                            toRecipients: [
-                                { emailAddress: { address: args.to } }
-                            ]
-                        },
-                        saveToSentItems: 'true'
-                    })
-                });
-
-                if (!sendMailResponse.ok) {
-                    const error = await sendMailResponse.json();
-                    throw new Error(`Graph API sendMail failed: ${error.error?.message || JSON.stringify(error)}`);
-                }
-
-                console.log("✅ Email sent successfully via Microsoft 365.");
-                return { success: true };
-
-            } catch (error: any) {
-                console.error("❌ Microsoft 365 Error:", error);
-                return { success: false, error: String(error.message || error) };
-            }
-        }
-
-        // Fallback to SMTP
-        if (!settings.host || !settings.user || !settings.pass) {
-            console.error("SMTP settings are not fully configured.");
-            return { success: false, error: "SMTP settings not configured." };
-        }
-
-        const isSecure = settings.encryption === "SSL" || settings.port === 465;
-        const auth = settings.authMethod === "None" ? undefined : {
-            user: settings.user,
-            pass: settings.pass,
-        };
-
-        const transporter = nodemailer.createTransport({
-            host: settings.host,
-            port: settings.port,
-            secure: isSecure,
-            auth: auth,
-            requireTLS: settings.port === 587,
-            tls: {
-                ciphers: 'SSLv3',
-                rejectUnauthorized: false
-            }
+        // Audit: Track the attempt
+        const logId = await ctx.runMutation(api.systemLogs.create, {
+            type: "email_attempt",
+            message: `Attempting to send email: "${args.subject}" to ${args.to}`,
+            details: { recipient: args.to, subject: args.subject }
         });
 
-        try {
-            const fromName = settings.fromName || "BookMyTicket";
-            const fromEmail = settings.from || "hello@bookmyticket.net";
-            const toEmail = args.to.trim().toLowerCase();
-            
-            console.log(`Attempting to send email to ${toEmail} via SMTP (${settings.host})...`);
-            
-            await transporter.verify();
+        // Enforce centralized email settings from the database
+        const settings = await ctx.runQuery(api.emailSettings.get) as any;
+        
+        if (!settings || settings.provider !== "MICROSOFT_365" || !settings.microsoft365) {
+            console.error("❌ [EMAIL ERROR] Microsoft 365 is not configured in the Admin Panel.");
+            return { success: false, error: "Email service not configured. Please set up Microsoft 365 in Admin Panel." };
+        }
 
-            const info = await transporter.sendMail({
-                from: `"${fromName}" <${fromEmail}>`,
-                to: toEmail,
-                subject: args.subject,
-                html: args.html,
-                headers: {
-                    "X-Entity-Ref-ID": `${Date.now()}-${toEmail}`,
-                    "X-Auto-Response-Suppress": "OOF, AutoReply",
-                }
-            });
-            console.log("✅ Email sent successfully via SMTP.");
+        const { clientId, tenantId, clientSecret } = settings.microsoft365;
+        // Centralized Shared Mailbox
+        const fromEmail = "hello@bookmyticket.net";
+
+        try {
+            console.log(`📡 [GRAPH API] Sending email to ${args.to} via ${fromEmail}...`);
             
-            return { success: true, messageId: info.messageId };
+            // 1. Get Access Token (Client Credentials Flow)
+            const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    scope: 'https://graph.microsoft.com/.default'
+                })
+            });
+
+            if (!tokenResponse.ok) {
+                const error = await tokenResponse.json();
+                console.error("❌ [GRAPH AUTH ERROR]", JSON.stringify(error, null, 2));
+                throw new Error(`Failed to get access token: ${error.error_description || error.error}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+            const accessToken = tokenData.access_token;
+
+            // 2. Send Email via Graph API
+            const sendMailResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${fromEmail}/sendMail`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: {
+                        subject: args.subject,
+                        body: {
+                            contentType: 'HTML',
+                            content: args.html
+                        },
+                        toRecipients: [
+                            { emailAddress: { address: args.to.trim().toLowerCase() } }
+                        ]
+                    },
+                    saveToSentItems: 'true'
+                })
+            });
+
+            if (!sendMailResponse.ok) {
+                const error = await sendMailResponse.json();
+                console.error("❌ [GRAPH SEND ERROR]", JSON.stringify(error, null, 2));
+                
+                // Detailed error mapping
+                const errorCode = error.error?.code || "UnknownError";
+                const errorMsg = error.error?.message || "No specific error message provided";
+                
+                if (errorCode === "ErrorAccessDenied") {
+                    throw new Error("M365 Access Denied: Ensure the Azure App has 'Mail.Send' Application permissions and Admin Consent is granted.");
+                } else if (errorCode === "ResourceNotFound") {
+                    throw new Error(`M365 Resource Not Found: Check if mailbox '${fromEmail}' exists and is accessible.`);
+                }
+                
+                throw new Error(`Graph API sendMail failed: [${errorCode}] ${errorMsg}`);
+            }
+
+            console.log(`✅ [EMAIL SUCCESS] Sent to ${args.to}`);
+            return { success: true };
+
         } catch (error: any) {
-            console.error("❌ SMTP Error:", error);
-            return { success: false, error: String(error?.message || error) };
+            console.error("❌ [SYSTEM EMAIL ERROR]:", error);
+            await ctx.runMutation(api.systemLogs.create, {
+                type: "email_error",
+                message: `Failed to send email to ${args.to}: ${error.message || error}`,
+                details: { error: String(error), stack: error.stack }
+            });
+            return { success: false, error: String(error.message || error) };
         }
     },
 });

@@ -101,7 +101,8 @@ export const submitRequest = mutation({
         });
 
         const branding = await ctx.db.query("siteBranding").first();
-        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
         let brandLogo = branding?.logoUrl || "/logo.png";
         if (brandLogo.startsWith("/")) {
             brandLogo = `${siteUrl}${brandLogo}`;

@@ -13,7 +13,7 @@ export default function CouponOverlay({ visible, coupon, onClose }) {
   const resolveUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `https://bookmyticket-nu.vercel.app${url}`;
+    return `https://bookmyticket.net${url}`;
   };
 
   const bannerUri = resolveUrl(coupon.bannerUrl);

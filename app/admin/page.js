@@ -1100,15 +1100,9 @@ function AdminHomePage() {
         if (convexEmailSettings) {
             setLocalEmailSettings({
                 ...convexEmailSettings,
-                provider: convexEmailSettings.provider || "SMTP",
-                host: convexEmailSettings.host || "",
-                port: convexEmailSettings.port || 0,
-                user: convexEmailSettings.user || "",
-                pass: convexEmailSettings.pass || "",
-                from: convexEmailSettings.from || "",
-                fromName: convexEmailSettings.fromName || "",
-                encryption: convexEmailSettings.encryption || "None",
-                authMethod: convexEmailSettings.authMethod || "Basic Authentication",
+                provider: "MICROSOFT_365",
+                from: convexEmailSettings.from || "hello@bookmyticket.net",
+                fromName: convexEmailSettings.fromName || "BookMyTicket",
                 microsoft365: convexEmailSettings.microsoft365 || {
                     clientId: "",
                     tenantId: "",
@@ -1125,8 +1119,7 @@ function AdminHomePage() {
             const { _id, _creationTime, updatedAt, ...rest } = localEmailSettings;
             await updateEmailSettingsMutation({
                 ...rest,
-                id: _id,
-                port: parseInt(localEmailSettings.port) || 0
+                id: _id
             });
             showToast("Email settings saved successfully!", "success");
         } catch (err) {
@@ -1144,7 +1137,6 @@ function AdminHomePage() {
                 return;
             }
             const { _id, _creationTime, updatedAt, ...sanitizedSettings } = localEmailSettings;
-            if (sanitizedSettings.port) sanitizedSettings.port = parseInt(sanitizedSettings.port) || 0;
             const result = await sendEmailAction({
                 to: localEmailSettings.from,
                 subject: "Microsoft 365 Connection Validation",
@@ -3670,197 +3662,106 @@ function AdminHomePage() {
                                         </div>
                                     </div>
                                     
-                                    <div style={{ display: "flex", backgroundColor: theme === 'light' ? '#f1f5f9' : '#0f172a', padding: "4px", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                        <button 
-                                            onClick={() => setLocalEmailSettings({ ...localEmailSettings, provider: "MICROSOFT_365" })}
-                                            style={{
-                                                padding: "8px 16px",
-                                                borderRadius: "8px",
-                                                fontSize: "13px",
-                                                fontWeight: 600,
-                                                border: "none",
-                                                cursor: "pointer",
-                                                backgroundColor: localEmailSettings.provider === "MICROSOFT_365" ? (theme === 'light' ? '#fff' : t.cardBg) : "transparent",
-                                                color: localEmailSettings.provider === "MICROSOFT_365" ? ACCENT_BLUE : t.textSub,
-                                                boxShadow: localEmailSettings.provider === "MICROSOFT_365" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                                                transition: "0.2s"
-                                            }}
-                                        >
-                                            Microsoft 365
-                                        </button>
-                                        <button 
-                                            onClick={() => setLocalEmailSettings({ ...localEmailSettings, provider: "SMTP" })}
-                                            style={{
-                                                padding: "8px 16px",
-                                                borderRadius: "8px",
-                                                fontSize: "13px",
-                                                fontWeight: 600,
-                                                border: "none",
-                                                cursor: "pointer",
-                                                backgroundColor: localEmailSettings.provider === "SMTP" ? (theme === 'light' ? '#fff' : t.cardBg) : "transparent",
-                                                color: localEmailSettings.provider === "SMTP" ? ACCENT_BLUE : t.textSub,
-                                                boxShadow: localEmailSettings.provider === "SMTP" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                                                transition: "0.2s"
-                                            }}
-                                        >
-                                            SMTP
-                                        </button>
+                                    <div style={{ padding: "6px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 800, backgroundColor: "#ec489915", color: "#ec4899", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Shield size={14} />
+                                        GRAPH API ENABLED
                                     </div>
                                 </div>
 
-                                {localEmailSettings.provider === "MICROSOFT_365" ? (
-                                    <div style={{ animation: "slideDown 0.3s ease-out" }}>
-                                        <div style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", marginBottom: "20px", display: "flex", gap: "12px" }}>
-                                            <Info size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
-                                            <div>
-                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#1e40af" }}>Recommended: Microsoft 365 (Graph API)</p>
-                                                <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#3b82f6", lineHeight: "1.5" }}>
-                                                    Uses modern OAuth2 authentication which is more secure and reliable than SMTP. 
-                                                    Requires an Azure App Registration with <code style={{ backgroundColor: "#dbeafe", padding: "2px 4px", borderRadius: "4px" }}>Mail.Send</code> permissions.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                            <div style={{ gridColumn: "span 2" }}>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Tenant ID</label>
-                                                <input
-                                                    type="text"
-                                                    value={localEmailSettings.microsoft365?.tenantId || ""}
-                                                    onChange={(e) => setLocalEmailSettings({ 
-                                                        ...localEmailSettings, 
-                                                        microsoft365: { ...localEmailSettings.microsoft365, tenantId: e.target.value } 
-                                                    })}
-                                                    placeholder="e.g. 00000000-0000-0000-0000-000000000000"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Client ID</label>
-                                                <input
-                                                    type="text"
-                                                    value={localEmailSettings.microsoft365?.clientId || ""}
-                                                    onChange={(e) => setLocalEmailSettings({ 
-                                                        ...localEmailSettings, 
-                                                        microsoft365: { ...localEmailSettings.microsoft365, clientId: e.target.value } 
-                                                    })}
-                                                    placeholder="e.g. 00000000-0000-0000-0000-000000000000"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Client Secret</label>
-                                                <input
-                                                    type="password"
-                                                    value={localEmailSettings.microsoft365?.clientSecret || ""}
-                                                    onChange={(e) => setLocalEmailSettings({ 
-                                                        ...localEmailSettings, 
-                                                        microsoft365: { ...localEmailSettings.microsoft365, clientSecret: e.target.value } 
-                                                    })}
-                                                    placeholder="••••••••••••••••"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#0f172a' }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                <div style={{ 
-                                                    padding: "6px 12px", 
-                                                    borderRadius: "20px", 
-                                                    fontSize: "12px", 
-                                                    fontWeight: 700,
-                                                    backgroundColor: localEmailSettings.microsoft365?.status === "Connected" ? "#dcfce7" : "#fee2e2",
-                                                    color: localEmailSettings.microsoft365?.status === "Connected" ? "#16a34a" : "#dc2626",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "6px"
-                                                }}>
-                                                    {localEmailSettings.microsoft365?.status === "Connected" ? <CheckCircle size={14} /> : <X size={14} />}
-                                                    {localEmailSettings.microsoft365?.status === "Connected" ? "CONNECTED" : "NOT CONNECTED"}
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={handleValidateM365}
-                                                disabled={isValidatingM365}
-                                                style={{
-                                                    padding: "8px 16px",
-                                                    borderRadius: "8px",
-                                                    border: `1px solid ${ACCENT_BLUE}`,
-                                                    backgroundColor: "transparent",
-                                                    color: ACCENT_BLUE,
-                                                    fontSize: "13px",
-                                                    fontWeight: 600,
-                                                    cursor: isValidatingM365 ? "not-allowed" : "pointer",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "8px"
-                                                }}
-                                            >
-                                                {isValidatingM365 ? <RefreshCw size={14} className="animate-spin" /> : <Shield size={14} />}
-                                                {isValidatingM365 ? "Validating..." : "Validate Connection"}
-                                            </button>
+                                <div style={{ animation: "slideDown 0.3s ease-out" }}>
+                                    <div style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", marginBottom: "20px", display: "flex", gap: "12px" }}>
+                                        <Info size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                        <div>
+                                            <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#1e40af" }}>Recommended: Microsoft 365 (Graph API)</p>
+                                            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#3b82f6", lineHeight: "1.5" }}>
+                                                Uses modern OAuth2 authentication which is more secure and reliable than SMTP. 
+                                                Requires an Azure App Registration with <code style={{ backgroundColor: "#dbeafe", padding: "2px 4px", borderRadius: "4px" }}>Mail.Send</code> permissions.
+                                            </p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div style={{ animation: "slideDown 0.3s ease-out" }}>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                            <div style={{ gridColumn: "span 2" }}>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>SMTP Host</label>
-                                                <input
-                                                    type="text"
-                                                    value={localEmailSettings.host}
-                                                    onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, host: e.target.value })}
-                                                    placeholder="e.g. smtp.office365.com"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Port</label>
-                                                <input
-                                                    type="number"
-                                                    value={localEmailSettings.port}
-                                                    onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, port: parseInt(e.target.value) || 0 })}
-                                                    placeholder="587"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                                <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: t.textSub }}>Common: 587 (TLS), 465 (SSL)</p>
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Encryption</label>
-                                                <select
-                                                    value={localEmailSettings.encryption}
-                                                    onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, encryption: e.target.value })}
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none", cursor: "pointer" }}
-                                                >
-                                                    <option value="TLS">TLS / STARTTLS</option>
-                                                    <option value="SSL">SSL</option>
-                                                    <option value="None">None</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Username / User ID</label>
-                                                <input
-                                                    type="text"
-                                                    value={localEmailSettings.user}
-                                                    onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, user: e.target.value })}
-                                                    placeholder="your-email@example.com"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Password / App Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={localEmailSettings.pass}
-                                                    onChange={(e) => setLocalEmailSettings({ ...localEmailSettings, pass: e.target.value })}
-                                                    placeholder="••••••••••••"
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
-                                                />
-                                            </div>
+
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                        <div style={{ gridColumn: "span 2" }}>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Tenant ID</label>
+                                            <input
+                                                type="text"
+                                                value={localEmailSettings.microsoft365?.tenantId || ""}
+                                                onChange={(e) => setLocalEmailSettings({ 
+                                                    ...localEmailSettings, 
+                                                    microsoft365: { ...localEmailSettings.microsoft365, tenantId: e.target.value } 
+                                                })}
+                                                placeholder="e.g. 00000000-0000-0000-0000-000000000000"
+                                                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Client ID</label>
+                                            <input
+                                                type="text"
+                                                value={localEmailSettings.microsoft365?.clientId || ""}
+                                                onChange={(e) => setLocalEmailSettings({ 
+                                                    ...localEmailSettings, 
+                                                    microsoft365: { ...localEmailSettings.microsoft365, clientId: e.target.value } 
+                                                })}
+                                                placeholder="e.g. 00000000-0000-0000-0000-000000000000"
+                                                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: t.textMain }}>Client Secret</label>
+                                            <input
+                                                type="password"
+                                                value={localEmailSettings.microsoft365?.clientSecret || ""}
+                                                onChange={(e) => setLocalEmailSettings({ 
+                                                    ...localEmailSettings, 
+                                                    microsoft365: { ...localEmailSettings.microsoft365, clientSecret: e.target.value } 
+                                                })}
+                                                placeholder="••••••••••••••••"
+                                                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', color: t.textMain, fontSize: "14px", outline: "none" }}
+                                            />
                                         </div>
                                     </div>
-                                )}
+
+                                    <div style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#0f172a' }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <div style={{ 
+                                                padding: "6px 12px", 
+                                                borderRadius: "20px", 
+                                                fontSize: "12px", 
+                                                fontWeight: 700,
+                                                backgroundColor: localEmailSettings.microsoft365?.status === "Connected" ? "#dcfce7" : "#fee2e2",
+                                                color: localEmailSettings.microsoft365?.status === "Connected" ? "#16a34a" : "#dc2626",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "6px"
+                                            }}>
+                                                {localEmailSettings.microsoft365?.status === "Connected" ? <CheckCircle size={14} /> : <X size={14} />}
+                                                {localEmailSettings.microsoft365?.status === "Connected" ? "CONNECTED" : "NOT CONNECTED"}
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={handleValidateM365}
+                                            disabled={isValidatingM365}
+                                            style={{
+                                                padding: "8px 16px",
+                                                borderRadius: "8px",
+                                                border: `1px solid ${ACCENT_BLUE}`,
+                                                backgroundColor: "transparent",
+                                                color: ACCENT_BLUE,
+                                                fontSize: "13px",
+                                                fontWeight: 600,
+                                                border: "none",
+                                                cursor: isValidatingM365 ? "not-allowed" : "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px"
+                                            }}
+                                        >
+                                            {isValidatingM365 ? <RefreshCw size={14} className="animate-spin" /> : <Shield size={14} />}
+                                            {isValidatingM365 ? "Validating..." : "Validate Connection"}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Sender Details Card */}
@@ -3943,7 +3844,6 @@ function AdminHomePage() {
                                             setIsSendingTestEmail(true);
                                             try {
                                                 const { _id, _creationTime, updatedAt, ...sanitizedSettings } = localEmailSettings;
-                                                if (sanitizedSettings.port) sanitizedSettings.port = parseInt(sanitizedSettings.port) || 0;
                                                 const result = await sendEmailAction({
                                                     to: testEmailRecipient,
                                                     subject: "Test Email from BookMyTicket Admin",
