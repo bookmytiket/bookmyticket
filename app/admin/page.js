@@ -1143,11 +1143,13 @@ function AdminHomePage() {
                 showToast("Please provide 'From Email' for validation.", "warning");
                 return;
             }
+            const { _id, _creationTime, updatedAt, ...sanitizedSettings } = localEmailSettings;
+            if (sanitizedSettings.port) sanitizedSettings.port = parseInt(sanitizedSettings.port) || 0;
             const result = await sendEmailAction({
                 to: localEmailSettings.from,
                 subject: "Microsoft 365 Connection Validation",
                 html: "<p>Validating your Microsoft 365 OAuth2 configuration...</p>",
-                settings: localEmailSettings
+                settings: sanitizedSettings
             });
 
             if (result.success) {
@@ -3940,11 +3942,13 @@ function AdminHomePage() {
                                             }
                                             setIsSendingTestEmail(true);
                                             try {
+                                                const { _id, _creationTime, updatedAt, ...sanitizedSettings } = localEmailSettings;
+                                                if (sanitizedSettings.port) sanitizedSettings.port = parseInt(sanitizedSettings.port) || 0;
                                                 const result = await sendEmailAction({
                                                     to: testEmailRecipient,
                                                     subject: "Test Email from BookMyTicket Admin",
                                                     html: "<h1>Connection Test Successful!</h1><p>Your email settings are working perfectly. 🎉</p><p>Sent via: <strong>" + localEmailSettings.provider + "</strong></p>",
-                                                    settings: localEmailSettings
+                                                    settings: sanitizedSettings
                                                 });
                                                 if (result.success) {
                                                     showToast("Test email sent successully!", "success");
