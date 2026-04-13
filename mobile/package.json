@@ -8,8 +8,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:android": "eas build --platform android --profile production",
-    "build:android:preview": "eas build --platform android --profile preview",
-    "convex:sync": "cp -r ../convex/_generated/* convex/_generated/ 2>/dev/null || echo 'Run from project root: npx convex codegen && cp -r convex/_generated/* mobile/convex/_generated/'"
+    "build:android:preview": "eas build --platform android --profile preview"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

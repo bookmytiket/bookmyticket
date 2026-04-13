@@ -1,4 +1,9 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@convex/*": ["../convex/*"]
+    }
+  },
   "extends": "expo/tsconfig.base"
 }

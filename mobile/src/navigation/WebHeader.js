@@ -5,7 +5,7 @@ import { Colors } from '../theme/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { api } from '@convex/_generated/api';
 import { Linking, Alert } from 'react-native';
 
 export default function WebHeader() {
@@ -111,16 +111,6 @@ export default function WebHeader() {
           
           {!isStaff && (
             <>
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                  navigation.navigate('BecomeOrganiser');
-                }}
-              >
-                <Ionicons name="megaphone-outline" size={20} color={Colors.text} />
-                <Text style={styles.menuItemText}>Become an Organiser</Text>
-              </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => {

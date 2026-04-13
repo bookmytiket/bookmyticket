@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native'
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { api } from '@convex/_generated/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
@@ -81,13 +81,6 @@ export default function ProfileScreen() {
         {/* Action bounds for normal users to become partners */}
         {(!user?.role || user?.role === 'user') && (
           <>
-            <TouchableOpacity 
-              style={styles.actionBtn} 
-              onPress={() => navigation.navigate('BecomeOrganiser')}
-            >
-               <Ionicons name="megaphone-outline" size={20} color={Colors.secondary} />
-               <Text style={styles.actionText}>Become an Organiser</Text>
-            </TouchableOpacity>
             <TouchableOpacity 
               style={styles.actionBtn} 
               onPress={() => navigation.navigate('BecomePartner')}

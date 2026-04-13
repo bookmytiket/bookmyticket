@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { api } from '@convex/_generated/api';
 import { Colors } from '../theme/Theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

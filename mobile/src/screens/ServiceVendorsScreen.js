@@ -11,7 +11,7 @@ import {
   ScrollView
 } from 'react-native';
 import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { api } from '@convex/_generated/api';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
 import { Ionicons } from '@expo/vector-icons';
