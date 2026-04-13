@@ -5,8 +5,26 @@ import ConditionalNavbar from '@/components/ConditionalNavbar';
 import CustomerAdPopup from '@/components/CustomerAdPopup';
 
 export const metadata = {
-  title: 'BookMyTicket — Your Gateway to Amazing Events',
-  description: 'Book tickets for the best conferences, summits and professional events.',
+  title: 'BookMyTicket - Event Booking, Turf & Services Platform',
+  description: 'Book events, turf grounds, and professional services online with BookMyTicket. Easy, fast, and secure booking platform in India.',
+  keywords: 'event booking, ticket booking, turf booking, bookmyticket',
+  metadataBase: new URL('https://bookmyticket.net'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'BookMyTicket',
+    description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
+    url: 'https://bookmyticket.net',
+    siteName: 'BookMyTicket',
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'BookMyTicket',
+    description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
+  },
 };
 
 import { AuthProvider } from '@/components/AuthContext';
