@@ -16,15 +16,18 @@ export default function ProfileScreen() {
 
   const eventBookingsList = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
   const vendorBookingsList = useQuery(api.vendorBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+  const turfBookingsList = useQuery(api.turfBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
 
   const userBookings = [
-    ...(eventBookingsList || []),
-    ...(vendorBookingsList || [])
+    ...(eventBookingsList || []).map(b => ({ ...b, bookingType: 'event' })),
+    ...(vendorBookingsList || []).map(b => ({ ...b, bookingType: 'vendor' })),
+    ...(turfBookingsList || []).map(b => ({ ...b, bookingType: 'turf', eventName: b.turfName || 'Turf Booking', ticketCount: b.participantCount || 1 })),
   ].sort((a, b) => {
     const dateA = a.bookingDate || a._creationTime;
     const dateB = b.bookingDate || b._creationTime;
     return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
+
 
   if (!user) {
     return (
@@ -92,7 +95,15 @@ export default function ProfileScreen() {
                <Ionicons name="business-outline" size={20} color={Colors.secondary} />
                <Text style={styles.actionText}>Become a Partner</Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.actionBtn} 
+              onPress={() => navigation.navigate('PartnerStatus')}
+            >
+               <Ionicons name="document-text-outline" size={20} color="#f59e0b" />
+               <Text style={[styles.actionText, { color: '#f59e0b' }]}>Check Partner Status</Text>
+            </TouchableOpacity>
           </>
+
         )}
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
@@ -114,15 +125,29 @@ export default function ProfileScreen() {
               >
                 <View style={styles.bookingIcon}>
                   <Ionicons 
-                    name={booking.status === 'Cancelled' ? "close-circle" : (booking.scanned ? "checkmark-circle" : (booking.isVendorBooking ? "sparkles" : "ticket"))} 
+                    name={
+                      booking.status === 'Cancelled' ? "close-circle" :
+                      booking.scanned ? "checkmark-circle" :
+                      booking.bookingType === 'turf' ? "football-outline" :
+                      booking.bookingType === 'vendor' ? "sparkles" : "ticket"
+                    } 
                     size={24} 
-                    color={booking.status === 'Cancelled' ? Colors.error : (booking.isVendorBooking ? '#ec4899' : Colors.secondary)} 
+                    color={
+                      booking.status === 'Cancelled' ? Colors.error :
+                      booking.bookingType === 'turf' ? '#10b981' :
+                      booking.bookingType === 'vendor' ? '#ec4899' : Colors.secondary
+                    } 
                   />
                 </View>
                 <View style={styles.bookingInfo}>
                   <Text style={styles.eventName}>{booking.eventName}</Text>
                   <Text style={styles.bookingDetails}>
-                    {booking.isVendorBooking ? 'Service Session' : `${booking.ticketCount} Seats`} • ₹{booking.totalPrice}
+                    {booking.bookingType === 'turf'
+                      ? `${booking.slotTime || booking.date || 'Slot booked'}`
+                      : booking.bookingType === 'vendor'
+                      ? 'Service Session'
+                      : `${booking.ticketCount} Seat${booking.ticketCount !== 1 ? 's' : ''}`
+                    } • ₹{booking.totalPrice || booking.amount || 0}
                   </Text>
                   
                   {(booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
@@ -203,6 +228,8 @@ export default function ProfileScreen() {
             </View>
 
             <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
+            {selectedTicket?.date && <Text style={styles.modalBookingMeta}>📅 {selectedTicket.date}{selectedTicket.slotTime ? ` • ${selectedTicket.slotTime}` : ''}</Text>}
+            {selectedTicket?.ticketCount > 0 && <Text style={styles.modalBookingMeta}>🎫 {selectedTicket.ticketCount} Ticket{selectedTicket.ticketCount !== 1 ? 's' : ''}</Text>}
             <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?._id}</Text>
             
             {(selectedTicket?.meetingUrl || selectedTicket?.eventType === "Online" || selectedTicket?.virtual) && (
@@ -384,8 +411,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 10,
   },
-  modalEventName: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 8, textAlign: 'center' },
-  modalBookingId: { fontSize: 14, color: Colors.textMuted, marginBottom: 24 },
+  modalEventName: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 6, textAlign: 'center' },
+  modalBookingMeta: { fontSize: 13, color: Colors.textMuted, marginBottom: 4, textAlign: 'center' },
+  modalBookingId: { fontSize: 12, color: Colors.textMuted, marginBottom: 24, marginTop: 4 },
   modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

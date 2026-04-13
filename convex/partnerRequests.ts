@@ -160,6 +160,20 @@ export const getAll = query({
     }
 });
 
+export const getByEmail = query({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const all = await ctx.db
+            .query("partnerRequests")
+            .order("desc")
+            .collect();
+        return all.filter(r =>
+            r.email?.toLowerCase() === args.email.toLowerCase() ||
+            r.phone?.toLowerCase() === args.email.toLowerCase()
+        );
+    }
+});
+
 export const updateStatus = mutation({
     args: {
         id: v.id("partnerRequests"),

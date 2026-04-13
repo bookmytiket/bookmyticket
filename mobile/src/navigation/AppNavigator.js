@@ -21,6 +21,8 @@ import MeetingPortalScreen from '../screens/MeetingPortalScreen';
 import MeetingWaitingRoomScreen from '../screens/MeetingWaitingRoomScreen';
 import VendorSignInScreen from '../screens/VendorSignInScreen';
 import SplashScreen from '../screens/SplashScreen';
+import PartnerStatusScreen from '../screens/PartnerStatusScreen';
+
 
 import { Colors } from '../theme/Theme';
 import WebHeader from './WebHeader';
@@ -138,7 +140,13 @@ export default function AppNavigator() {
           component={MeetingWaitingRoomScreen}
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="PartnerStatus"
+          component={PartnerStatusScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
