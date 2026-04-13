@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Camera, Palette, Sparkles, Users, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
@@ -39,11 +39,20 @@ const CATEGORIES = [
 ];
 
 export default function ServiceCategories() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-      gap: "24px",
+      gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+      gap: isMobile ? "12px" : "24px",
       width: "100%"
     }}>
       {CATEGORIES.map((cat) => (
@@ -55,8 +64,8 @@ export default function ServiceCategories() {
           <div
             style={{
               position: "relative",
-              height: "240px",
-              borderRadius: "24px",
+              height: isMobile ? "180px" : "240px",
+              borderRadius: isMobile ? "16px" : "24px",
               overflow: "hidden",
               cursor: "pointer",
               transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -116,60 +125,64 @@ export default function ServiceCategories() {
             {/* Content */}
             <div style={{
               position: "absolute", bottom: 0, left: 0, right: 0,
-              padding: "20px",
-              display: "flex", flexDirection: "column", gap: "6px",
+              padding: isMobile ? "12px" : "20px",
+              display: "flex", flexDirection: "column", gap: isMobile ? "4px" : "6px",
             }}>
               {/* Icon pill */}
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: "7px",
                 background: cat.gradient,
-                borderRadius: "12px",
-                padding: "6px 12px",
+                borderRadius: isMobile ? "8px" : "12px",
+                padding: isMobile ? "4px 8px" : "6px 12px",
                 width: "fit-content",
-                marginBottom: "6px",
+                marginBottom: isMobile ? "2px" : "6px",
                 boxShadow: `0 6px 16px ${cat.color}55`,
               }}>
                 <span style={{ color: "#fff", display: "flex" }}>
-                  {React.cloneElement(cat.icon, { size: 16 })}
+                  {React.cloneElement(cat.icon, { size: isMobile ? 12 : 16 })}
                 </span>
-                <span style={{ fontSize: "11px", fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <span style={{ fontSize: isMobile ? "8px" : "11px", fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   {cat.name}
                 </span>
               </div>
 
-              <p style={{
-                fontSize: "12px", color: "rgba(255,255,255,0.8)",
-                lineHeight: 1.5, margin: 0, maxWidth: "220px"
-              }}>
-                {cat.description}
-              </p>
+              {!isMobile && (
+                <p style={{
+                  fontSize: "12px", color: "rgba(255,255,255,0.8)",
+                  lineHeight: 1.5, margin: 0, maxWidth: "220px"
+                }}>
+                  {cat.description}
+                </p>
+              )}
 
               {/* Explore row */}
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                marginTop: "4px",
+                marginTop: isMobile ? "2px" : "4px",
               }}>
                 <span style={{
-                  fontSize: "11px", fontWeight: 800, color: "#fff",
+                  fontSize: isMobile ? "9px" : "11px", fontWeight: 800, color: "#fff",
                   textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.9,
                 }}>
-                  Browse Experts →
+                  {isMobile ? "Explore →" : "Browse Experts →"}
                 </span>
-                <div
-                  className="card-arrow"
-                  style={{
-                    width: 30, height: 30,
-                    background: "rgba(255,255,255,0.2)",
-                    backdropFilter: "blur(8px)",
-                    borderRadius: "50%",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: 0,
-                    transform: "translate(-4px, 4px)",
-                    transition: "all 0.3s ease",
-                  }}
-                >
-                  <ArrowUpRight size={15} color="#fff" />
-                </div>
+                {!isMobile && (
+                  <div
+                    className="card-arrow"
+                    style={{
+                      width: 30, height: 30,
+                      background: "rgba(255,255,255,0.2)",
+                      backdropFilter: "blur(8px)",
+                      borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      opacity: 0,
+                      transform: "translate(-4px, 4px)",
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    <ArrowUpRight size={15} color="#fff" />
+                  </div>
+                )}
               </div>
             </div>
           </div>

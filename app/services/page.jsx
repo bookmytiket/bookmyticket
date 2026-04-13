@@ -8,7 +8,7 @@ import { Star, ArrowLeft, ChevronLeft, ChevronRight, Briefcase } from "lucide-re
 import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
 import BecomePartnerModal from "@/components/BecomePartnerModal";
 
-const PAGE_SIZE = 16; // 4×4 grid
+const PAGE_SIZE = 4; // 2x2 grid (or 4 columns)
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -81,41 +81,43 @@ export default function ServicesPage() {
         borderBottom: "1px solid #e2e8f0",
         boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
       }}>
-        <div style={{
+        <div className="top-bar-content" style={{
           maxWidth: "1280px", margin: "0 auto",
-          padding: "0 24px",
-          height: "72px",
+          padding: "12px 24px",
           display: "flex", alignItems: "center",
           justifyContent: "space-between",
+          gap: "12px",
+          flexWrap: "wrap"
         }}>
-          {/* Back button — uses Next Link for reliable navigation */}
+          {/* Back button */}
           <Link
             href="/"
             style={{
               display: "flex", alignItems: "center", gap: "8px",
-              color: "#374151", fontWeight: 700, fontSize: "14px",
+              color: "#374151", fontWeight: 700, fontSize: "12px",
               textDecoration: "none",
-              padding: "8px 14px",
+              padding: "6px 12px",
               borderRadius: "10px",
               border: "1px solid #e5e7eb",
               background: "#fff",
+              whiteSpace: "nowrap",
               transition: "all 0.15s",
             }}
             onMouseEnter={e => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
           >
-            <ArrowLeft size={15} strokeWidth={2.5} />
-            Back to Home
+            <ArrowLeft size={14} strokeWidth={2.5} />
+            Home
           </Link>
 
           {/* Logo */}
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-            <img src="/logo.png" alt="BookMyTicket" style={{ height: "64px", width: "auto" }} />
+          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }} className="top-bar-logo">
+            <img src="/logo.png" alt="BookMyTicket" style={{ height: "48px", width: "auto" }} />
           </Link>
 
           {/* Become a Partner Button */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 600 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600 }} className="desktop-only-text">
                 Professional Services
               </div>
               <button 
@@ -124,12 +126,13 @@ export default function ServicesPage() {
                   display: "flex", alignItems: "center", gap: "6px",
                   background: "linear-gradient(135deg, #8b5cf6, #d946ef)",
                   color: "#fff", border: "none", borderRadius: "10px",
-                  padding: "8px 16px", fontSize: "13px", fontWeight: "700",
-                  cursor: "pointer", boxShadow: "0 4px 12px rgba(139,92,246,0.25)"
+                  padding: "8px 14px", fontSize: "12px", fontWeight: "700",
+                  cursor: "pointer", boxShadow: "0 4px 12px rgba(139,92,246,0.25)",
+                  whiteSpace: "nowrap"
                 }}
               >
                 <Briefcase size={14} />
-                Become a Partner
+                Partner
               </button>
           </div>
         </div>
@@ -191,7 +194,7 @@ export default function ServicesPage() {
       {/* ── Hero Header ────────────────────────────────────────────── */}
       <div style={{
         background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-        padding: "24px 24px 28px",
+        padding: "32px 24px 36px",
       }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{
@@ -485,7 +488,12 @@ export default function ServicesPage() {
       <style>{`
         @media (max-width: 1100px) { .services-grid { grid-template-columns: repeat(3,1fr) !important; } }
         @media (max-width: 768px)  { .services-grid { grid-template-columns: repeat(2,1fr) !important; } }
-        @media (max-width: 480px)  { .services-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 600px)  { 
+           .services-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; } 
+           .top-bar-content { justify-content: center !important; }
+           .desktop-only-text { display: none !important; }
+           .top-bar-logo { order: -1; width: 100%; justify-content: center; margin-bottom: 4px; }
+        }
       `}</style>
     </main>
   );

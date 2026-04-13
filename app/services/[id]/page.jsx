@@ -287,7 +287,7 @@ export default function ArtistProfilePage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
                                     <div className="relative group">
