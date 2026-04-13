@@ -17,6 +17,14 @@ export const metadata = {
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
     url: 'https://bookmyticket.net',
     siteName: 'BookMyTicket',
+    images: [
+      {
+        url: '/logo.png',
+        width: 800,
+        height: 600,
+        alt: 'BookMyTicket Logo',
+      },
+    ],
     locale: 'en_IN',
     type: 'website',
   },
@@ -24,6 +32,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'BookMyTicket',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
+    images: ['/logo.png'],
   },
 };
 
@@ -42,6 +51,23 @@ export default function RootLayout({ children }) {
         <link
           href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
           rel="stylesheet"
+        />
+        <Script
+          id="structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "BookMyTicket",
+              "url": "https://bookmyticket.net",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://bookmyticket.net/?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            }),
+          }}
         />
       </head>
       <body style={{ ['--font-heading']: '"Space Grotesk", sans-serif', ['--font-body']: '"Figtree", sans-serif' }} suppressHydrationWarning>
