@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { calculateGst } from "./gst";
-import { bookingConfirmationTemplate } from "./emailTemplates";
+import { bookingConfirmationTemplate, adminNotificationTemplate } from "./emailTemplates";
 
 export const list = query({
     args: { vendorId: v.string(), status: v.optional(v.string()) },
@@ -85,13 +85,16 @@ export const create = mutation({
             bookingId: id,
         });
 
+        const branding = await ctx.db.query("siteBranding").first();
+        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
+
         // Send confirmation email to customer (non-blocking)
         const refId = id.slice(-8).toUpperCase();
         const customerEmail = args.customerDetails.email;
         const customerName = args.customerDetails.name;
 
         if (customerEmail) {
-            const branding = await ctx.db.query("siteBranding").first();
             const emailHtml = bookingConfirmationTemplate({
                 customerName: customerName,
                 itemName: `${args.serviceType} (Ref #${refId})`,
@@ -107,6 +110,25 @@ export const create = mutation({
                 html: emailHtml,
             });
         }
+
+        // Notify Admin
+        const adminEmail = "bookmytiket.io@gmail.com";
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: adminEmail,
+            subject: `Revenue Alert: New Service Booking - Ref #${refId}`,
+            html: adminNotificationTemplate({
+                title: "New Vendor Service Booking",
+                fields: [
+                    { label: "Service", value: args.serviceType },
+                    { label: "Customer", value: customerName },
+                    { label: "Email", value: customerEmail },
+                    { label: "Amount", value: `₹${args.totalAmount}` },
+                    { label: "Booking ID", value: id },
+                ],
+                actionUrl: `${siteUrl}/admin`,
+                actionText: "Manage Bookings"
+            }, branding)
+        });
 
         return id;
     },

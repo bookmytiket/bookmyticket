@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
-import { eventNotificationTemplate, welcomeTemplate, partnerApprovalTemplate } from "./emailTemplates";
+import { eventNotificationTemplate, welcomeTemplate, partnerApprovalTemplate, bookingConfirmationTemplate, subscriptionWelcomeTemplate } from "./emailTemplates";
 
 export const sendEventCreationNotifications = action({
     args: {
@@ -271,91 +271,24 @@ export const sendSubscriptionWelcome = action({
     handler: async (ctx, args): Promise<any> => {
         const { email } = args;
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
-        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
-        let brandLogo = branding?.logoUrl || "/logo.png";
-        if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
         const brandNameDisplay = branding?.name || "BookMyTicket";
-
-        // CLEAN MINIMAL VERSION - NO EMOJIS, SIMPLE INLINE STYLES, LOGO INCLUDED
-        const welcomeHtml = `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); background: #ffffff;">
-                <div style="background: linear-gradient(135deg, #f844a4 0%, #a855f7 100%); padding: 50px 30px; text-align: center;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="height: 45px; width: auto; filter: brightness(0) invert(1);">
-                    <h1 style="color: #ffffff; margin-top: 20px; font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Welcome to the Club! 🎉</h1>
-                </div>
-                <div style="padding: 40px; color: #334155; line-height: 1.7;">
-                    <p style="font-size: 17px; margin-top: 0;">Hello there,</p>
-                    <p style="font-size: 16px;">Thank you for subscribing to our newsletter! You're now on the list to receive first-hand updates on the most exciting events, exclusive deals, and community highlights.</p>
-                    
-                    <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #f1f5f9;">
-                        <h4 style="margin: 0 0 10px; font-size: 18px; color: #0f172a;">What's Next?</h4>
-                        <p style="margin: 0 0 20px; font-size: 14px; color: #64748b;">Ready to find your next great experience? Check out what's happening this week.</p>
-                        <a href="${siteUrl}/events" style="background-color: #f844a4; color: white; padding: 12px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 14px; box-shadow: 0 4px 12px rgba(248, 68, 164, 0.25);">Explore Events</a>
-                    </div>
-                </div>
-                <div style="background-color: #f8fafc; padding: 25px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #f1f5f9;">
-                    © 2026 ${brandNameDisplay}. All rights reserved.<br/>
-                    Support: <a href="mailto:hello@bookmyticket.net" style="color: #64748b; text-decoration: none;">hello@bookmyticket.net</a><br/>
-                    You're receiving this because you subscribed at <a href="${siteUrl}" style="color: #64748b; text-decoration: underline;">bookmyticket.net</a>
-                </div>
-            </div>
-        `;
 
         console.log(`[Notification] Sending welcome email to ${email}...`);
         
-        await ctx.runMutation(api.notifications.send, {
-            subject: `Welcome to ${brandNameDisplay}! 🎉`,
-            message: `Newsletter welcome process started for ${email}`,
-            target: "users"
-        });
-
         const result: any = await ctx.runAction(api.emailActions.sendEmail, {
             to: email,
             subject: `Welcome to ${brandNameDisplay}`,
-            html: welcomeHtml,
+            html: subscriptionWelcomeTemplate(branding),
         });
 
         if (result.success) {
             await ctx.runMutation(api.notifications.send, {
                 subject: `Email Sent: ${email}`,
-                message: `Successfully sent welcome email to ${email}. SMTP Response: ${result.response || 'OK'}`,
-                target: "users"
-            });
-        } else {
-            await ctx.runMutation(api.notifications.send, {
-                subject: `Email Failed: ${email}`,
-                message: `FAILED to send welcome email to ${email}. Error: ${result.error}`,
+                message: `Successfully sent welcome email to ${email}.`,
                 target: "users"
             });
         }
-
         return result;
-    },
-});
-
-export const sendToExistingSubscribers = action({
-    args: {},
-    handler: async (ctx): Promise<any> => {
-        const subscribers = await ctx.runQuery(api.subscribers.list);
-        console.log(`[Batch] Found ${subscribers.length} active subscribers.`);
-        
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const sub of subscribers) {
-            console.log(`[Batch] Sending to ${sub.email}...`);
-            const result: any = await ctx.runAction(api.notificationActions.sendSubscriptionWelcome, { email: sub.email });
-            if (result.success) {
-                successCount++;
-            } else {
-                failCount++;
-                console.error(`[Batch] Failed for ${sub.email}:`, result.error);
-            }
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        return { successCount, failCount };
     },
 });
 
@@ -375,57 +308,28 @@ export const sendTurfBookingConfirmation = action({
     },
     handler: async (ctx, args) => {
         const { bookingId, email, phone, name, turfName, date, time, participantCount, amountPaid, lat, lng } = args;
-        
         const branding = await ctx.runQuery(api.siteBranding.get) as any;
-        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
-        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
-        let brandLogo = branding?.logoUrl || "/logo.png";
-        if (brandLogo.startsWith("/")) brandLogo = `${siteUrl}${brandLogo}`;
-        const brandNameDisplay = branding?.name || "BookMyTicket";
 
-        const mapsUrl = (lat && lng) ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null;
-
-        const emailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                <div style="background-color: #f8fafc; padding: 30px; text-align: center; border-bottom: 3px solid #f844a4;">
-                    <img src="${brandLogo}" alt="${brandNameDisplay}" style="max-height: 50px; width: auto;">
-                    <h2 style="color: #1e293b; margin-top: 20px;">Booking Confirmed! ✅</h2>
-                </div>
-                <div style="padding: 30px; color: #334155; line-height: 1.6;">
-                    <p style="font-size: 16px;">Hello <strong>${name}</strong>,</p>
-                    <p style="font-size: 16px;">Your booking for <strong>${turfName}</strong> has been confirmed successfully.</p>
-                    
-                    <div style="background-color: #f1f5f9; padding: 20px; border-radius: 10px; margin-top: 20px; margin-bottom: 25px;">
-                        <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
-                        <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
-                        <p style="margin: 5px 0;"><strong>Participants:</strong> ${participantCount} players</p>
-                        <p style="margin: 5px 0;"><strong>Paid Amount:</strong> ₹${amountPaid}</p>
-                        <p style="margin: 5px 0;"><strong>Booking ID:</strong> ${bookingId as string}</p>
-                    </div>
-
-                    ${mapsUrl ? `
-                    <div style="text-align: center; margin-top: 30px;">
-                        <a href="${mapsUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Navigate to Turf 📍</a>
-                    </div>
-                    ` : ''}
-                </div>
-                <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px; border-top: 1px solid #f1f5f9;">
-                    © 2026 ${brandNameDisplay}. All rights reserved. | Support: hello@bookmyticket.net
-                </div>
-            </div>
-        `;
+        const htmlContent = bookingConfirmationTemplate({
+            customerName: name,
+            itemName: turfName,
+            totalAmount: amountPaid,
+            bookingId: bookingId,
+            details: `Slot: ${date} at ${time} (${participantCount} players)`
+        }, branding);
 
         // 1. Send Email
         const emailPromise = ctx.runAction(api.emailActions.sendEmail, {
             to: email,
             subject: `Booking Confirmed: ${turfName}`,
-            html: emailHtml,
+            html: htmlContent,
         }).catch(err => console.error("Email failed:", err));
 
         // 2. Send WhatsApp
         let whatsappPromise = Promise.resolve();
         const whatsappSettings = await ctx.runQuery(api.whatsappSettings.get) as any;
         if (phone && whatsappSettings && whatsappSettings.isActive && whatsappSettings.accountSid && whatsappSettings.authToken) {
+            const mapsUrl = (lat && lng) ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : null;
             const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
             
             let waMessage = `✅ *Booking Confirmed!*\n\nHi ${name}, your booking at *${turfName}* is confirmed.\n\n📅 Date: ${date}\n⏰ Time: ${time}\n👥 Players: ${participantCount}\n💰 Amount Paid: ₹${amountPaid}`;

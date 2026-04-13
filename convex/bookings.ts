@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { calculateGst } from "./gst";
-import { bookingConfirmationTemplate } from "./emailTemplates";
+import { bookingConfirmationTemplate, adminNotificationTemplate } from "./emailTemplates";
 
 export const getBookings = query({
     args: {},
@@ -226,7 +226,7 @@ export const createBooking = mutation({
             }
             const brandNameDisplay = branding?.name || "BookMyTicket";
 
-            // Send Email Confirmation
+            // Send Email Confirmation to User
             const targetEmail = args.customerDetails?.email || args.userId;
             await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
                 to: targetEmail,
@@ -238,6 +238,26 @@ export const createBooking = mutation({
                     bookingId: bookingId,
                     details: (event && (event as any).virtual) ? `Virtual Meeting Code: ${(event as any).meetingUrl}` : null
                 }, branding),
+            });
+
+            // Notify Admin of New Revenue
+            const adminEmail = "bookmytiket.io@gmail.com";
+            await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                to: adminEmail,
+                subject: `Revenue Alert: New Booking for ${eventName}`,
+                html: adminNotificationTemplate({
+                    title: "New Booking Received",
+                    fields: [
+                        { label: "Event", value: eventName },
+                        { label: "Customer", value: args.customerDetails?.name || "Guest" },
+                        { label: "Email", value: targetEmail },
+                        { label: "Amount", value: `₹${args.totalPrice}` },
+                        { label: "Ticket Count", value: String(args.ticketCount) },
+                        { label: "Booking ID", value: bookingId },
+                    ],
+                    actionUrl: `${siteUrl}/admin`,
+                    actionText: "Manage Bookings"
+                }, branding)
             });
         }
 

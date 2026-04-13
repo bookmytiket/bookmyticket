@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { calculateGst } from "./gst";
+import { bookingConfirmationTemplate, adminNotificationTemplate } from "./emailTemplates";
 
 // Create a new booking
 export const create = mutation({
@@ -89,8 +90,6 @@ export const create = mutation({
             createdAt: Date.now(),
         });
 
-        // Initialize a chat room for communication if needed or send notification
-        // For now, return the ID
         return bookingId;
     },
 });
@@ -116,19 +115,40 @@ export const confirmPayment = mutation({
         if (args.paymentStatus === "fully_paid" || args.paymentStatus === "advance_paid") {
             const turf = await ctx.db.get(booking.turfId);
             if (turf) {
-                // Schedule Notifications
-                await ctx.scheduler.runAfter(0, api.notificationActions.sendTurfBookingConfirmation, {
-                    bookingId: booking._id,
-                    email: booking.customerDetails.email,
-                    phone: booking.customerDetails.phone,
-                    name: booking.customerDetails.name,
-                    turfName: turf.name,
-                    date: booking.date,
-                    time: `${booking.startTime}`,
-                    participantCount: booking.participantCount || 1,
-                    amountPaid: args.paymentStatus === "fully_paid" ? booking.totalAmount : booking.advancePaid,
-                    lat: turf.lat,
-                    lng: turf.lng,
+                const branding = await ctx.db.query("siteBranding").first();
+                const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
+                const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
+
+                // 1. Notify User
+                await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                    to: booking.customerDetails.email,
+                    subject: `Turf Booking Confirmed: ${turf.name}`,
+                    html: bookingConfirmationTemplate({
+                        customerName: booking.customerDetails.name,
+                        itemName: turf.name,
+                        totalAmount: booking.totalAmount,
+                        bookingId: booking._id,
+                        details: `Slot: ${booking.date} at ${booking.startTime}`
+                    }, branding)
+                });
+
+                // 2. Notify Admin
+                const adminEmail = "bookmytiket.io@gmail.com";
+                await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                    to: adminEmail,
+                    subject: `Revenue Alert: New Turf Booking - ${turf.name}`,
+                    html: adminNotificationTemplate({
+                        title: "New Turf Reservation",
+                        fields: [
+                            { label: "Facility", value: turf.name },
+                            { label: "Customer", value: booking.customerDetails.name },
+                            { label: "Email", value: booking.customerDetails.email },
+                            { label: "Amount", value: `₹${booking.totalAmount}` },
+                            { label: "Booking ID", value: booking._id },
+                        ],
+                        actionUrl: `${siteUrl}/admin`,
+                        actionText: "Manage Reservations"
+                    }, branding)
                 });
 
                 const organiser = await ctx.db

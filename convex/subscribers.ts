@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { subscriptionWelcomeTemplate } from "./emailTemplates";
 
 export const add = mutation({
     args: {
@@ -9,6 +10,7 @@ export const add = mutation({
     },
     handler: async (ctx, args) => {
         const email = args.email.trim().toLowerCase();
+        const branding = await ctx.db.query("siteBranding").first();
         
         const existing = await ctx.db
             .query("subscribers")
@@ -19,8 +21,12 @@ export const add = mutation({
             if (existing.status === "Unsubscribed") {
                 await ctx.db.patch(existing._id, { status: "Active", updatedAt: Date.now() } as any);
             }
-            // Always trigger welcome email for testing/redundancy
-            await ctx.scheduler.runAfter(0, api.notificationActions.sendSubscriptionWelcome, { email });
+            // Trigger standardized welcome email
+            await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+                to: email,
+                subject: `Welcome to the Club!`,
+                html: subscriptionWelcomeTemplate(branding)
+            });
             return existing._id;
         }
 
@@ -32,7 +38,11 @@ export const add = mutation({
         });
 
         // Send welcome email to new subscribers
-        await ctx.scheduler.runAfter(0, api.notificationActions.sendSubscriptionWelcome, { email });
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: email,
+            subject: `Welcome to the Club!`,
+            html: subscriptionWelcomeTemplate(branding)
+        });
 
         return subscriberId;
     },

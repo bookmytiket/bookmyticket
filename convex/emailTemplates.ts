@@ -1,3 +1,6 @@
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+
 // Centralized email templates for BookMyTicket
 
 /**
@@ -170,6 +173,80 @@ export const bookingConfirmationTemplate = (args: any, branding: any) => {
 };
 
 /**
+ * Partner Request Received Template (For Applicants)
+ */
+export const partnerRequestReceivedTemplate = (args: { firstName: string; lastName: string; category: string; role: string }, branding: any) => {
+    const { firstName, lastName, category, role } = args;
+    const content = `
+        <h2 style="color: #1e293b; font-size: 24px; font-weight: 800;">Partner Request Received</h2>
+        <div class="greeting">Hi ${firstName} ${lastName},</div>
+        <div class="message">
+            Thank you for applying to become a Partner! Your request has been successfully submitted and is currently under review by our administration team.
+            We aim to process all applications rapidly and will reach out to you within 24-48 hours.
+        </div>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase;">Category</span>
+                <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${category}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <span style="font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase;">Role Type</span>
+                <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${role}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase;">Status</span>
+                <span style="font-size: 15px; font-weight: 700; color: #f59e0b;">Under Review</span>
+            </div>
+        </div>
+        
+        <p>If you have any immediate questions, feel free to contact our partner support team. We look forward to working with you!</p>
+    `;
+    return baseTemplate(content, branding);
+};
+
+/**
+ * Admin Notification Template (Internal)
+ */
+export const adminNotificationTemplate = (args: { title: string; fields: { label: string; value: string }[]; actionUrl?: string; actionText?: string }, branding: any) => {
+    const { title, fields, actionUrl, actionText } = args;
+    const content = `
+        <h2 style="color: #1e293b; font-size: 20px; font-weight: 800; margin-bottom: 20px;">${title}</h2>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+            ${fields.map(f => `
+                <div style="margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                    <div style="font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">${f.label}</div>
+                    <div style="font-size: 15px; font-weight: 700; color: #0f172a;">${f.value}</div>
+                </div>
+            `).join('')}
+        </div>
+        ${actionUrl ? `
+            <div style="text-align: center;">
+                <a href="${actionUrl}" class="btn">${actionText || 'Review Details'}</a>
+            </div>
+        ` : ''}
+    `;
+    return baseTemplate(content, branding);
+};
+
+/**
+ * Subscription Welcome Template
+ */
+export const subscriptionWelcomeTemplate = (branding: any) => {
+    const content = `
+        <h2 style="color: #1e293b; font-size: 24px; font-weight: 800;">You're on the list! ✉️</h2>
+        <p>Thanks for subscribing to our newsletter! You'll now be the first to know about:</p>
+        <ul style="color: #475569; line-height: 1.6; margin: 20px 0;">
+            <li>Early bird ticket access</li>
+            <li>Exclusive partner discounts</li>
+            <li>New event launches in your city</li>
+        </ul>
+        <p>We promise not to spam you. Welcome to the BookMyTicket community!</p>
+    `;
+    return baseTemplate(content, branding);
+};
+
+/**
  * Security Alert Template
  */
 export const securityAlertTemplate = (args: { dateStr: string; ip: string; location: string; userAgent: string }, branding: any) => {
@@ -209,3 +286,50 @@ export const securityAlertTemplate = (args: { dateStr: string; ip: string; locat
     `;
     return baseTemplate(content, branding);
 };
+
+export const list = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db.query("emailTemplates").collect();
+    },
+});
+
+export const add = mutation({
+    args: {
+        identifier: v.string(),
+        name: v.string(),
+        subject: v.string(),
+        body: v.string(),
+        autoSend: v.boolean(),
+    },
+    handler: async (ctx, args) => {
+        return await ctx.db.insert("emailTemplates", {
+            ...args,
+            updatedAt: Date.now(),
+        });
+    },
+});
+
+export const patch = mutation({
+    args: {
+        id: v.id("emailTemplates"),
+        identifier: v.optional(v.string()),
+        name: v.optional(v.string()),
+        subject: v.optional(v.string()),
+        body: v.optional(v.string()),
+        autoSend: v.optional(v.boolean()),
+    },
+    handler: async (ctx, { id, ...args }) => {
+        return await ctx.db.patch(id, {
+            ...args,
+            updatedAt: Date.now(),
+        });
+    },
+});
+
+export const remove = mutation({
+    args: { id: v.id("emailTemplates") },
+    handler: async (ctx, args) => {
+        return await ctx.db.delete(args.id);
+    },
+});
