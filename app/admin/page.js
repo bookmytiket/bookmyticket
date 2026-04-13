@@ -379,7 +379,11 @@ function AdminHomePage() {
     const [activeTemplate, setActiveTemplate] = useState(null);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [categories, setCategories] = useState([]);
+    const [editingCategory, setEditingCategory] = useState(null);
     const [eventPartners, setEventPartners] = useState([]);
+    const [partnerModal, setPartnerModal] = useState(null); // 'add' | 'edit'
+    const [editingPartner, setEditingPartner] = useState(null);
+    const [partnerForm, setPartnerForm] = useState({ name: "", logo: "", url: "" });
     const allConfig = useQuery(api.systemConfig.getAllConfig);
 
     const rawPaymentGateways = useQuery(api.paymentGateways.list);
@@ -465,6 +469,19 @@ function AdminHomePage() {
     const sendEmailAction = useAction(api.emailActions.sendEmail);
 
     const convexCategories = useQuery(api.homeSettings.getCategories) || [];
+    const addCategoryMutation = useMutation(api.homeSettings.addCategory);
+    const patchCategoryMutation = useMutation(api.homeSettings.patchCategory);
+    const removeCategoryMutation = useMutation(api.homeSettings.removeCategory);
+
+    const convexEventPartners = useQuery(api.homeSettings.getEventPartners) || [];
+    const addEventPartnerMutation = useMutation(api.homeSettings.addEventPartner);
+    const patchEventPartnerMutation = useMutation(api.homeSettings.patchEventPartner);
+    const removeEventPartnerMutation = useMutation(api.homeSettings.removeEventPartner);
+
+    const convexBannerSlides = useQuery(api.homeSettings.getBannerSlides) || [];
+    const addBannerSlideMutation = useMutation(api.homeSettings.addBannerSlide);
+    const updateBannerSlideMutation = useMutation(api.homeSettings.updateBannerSlide);
+    const removeBannerSlideMutation = useMutation(api.homeSettings.removeBannerSlide);
 
     // Pages management
     const convexPages = useQuery(api.pages.list) || [];
@@ -475,7 +492,9 @@ function AdminHomePage() {
     // Recent Memories management
     const memories = useQuery(api.memories.getMemories) || [];
     const createMemoryMutation = useMutation(api.memories.createMemory);
+    const updateMemoryMutation = useMutation(api.memories.updateMemory);
     const deleteMemoryMutation = useMutation(api.memories.deleteMemory);
+    const [editingMemoryObj, setEditingMemoryObj] = useState(null);
     const [memoryForm, setMemoryForm] = useState({ imageUrl: "", altText: "" });
     const [isUploading, setIsUploading] = useState(false);
 
@@ -519,11 +538,26 @@ function AdminHomePage() {
             showToast("Please provide both an image and alt text.", "error");
             return;
         }
-        await createMemoryMutation({
-            imageUrl: memoryForm.imageUrl,
-            altText: memoryForm.altText,
-        });
-        setMemoryForm({ imageUrl: "", altText: "" });
+        try {
+            if (editingMemoryObj) {
+                await updateMemoryMutation({
+                    id: editingMemoryObj._id,
+                    imageUrl: memoryForm.imageUrl,
+                    altText: memoryForm.altText,
+                });
+                showToast("Memory updated successfully", "success");
+            } else {
+                await createMemoryMutation({
+                    imageUrl: memoryForm.imageUrl,
+                    altText: memoryForm.altText,
+                });
+                showToast("Memory created successfully", "success");
+            }
+            setMemoryForm({ imageUrl: "", altText: "" });
+            setEditingMemoryObj(null);
+        } catch (err) {
+            showToast("Error saving memory: " + err.message, "error");
+        }
     };
 
     const handleDeleteMemory = async (id) => {
@@ -865,16 +899,16 @@ function AdminHomePage() {
     const homeSectionsOrder = useMemo(() => convexHomeSections?.order || [
         "Hero Banner", "Sub Navigation", "Featured Events", "Coming Soon", "Spotlight", "Top Hand-picked"
     ], [convexHomeSections]);
+    
+    const [slides, setSlides] = useState([]);
+    useEffect(() => {
+        if (convexBannerSlides.length > 0) {
+            setSlides(convexBannerSlides);
+        } else if (slides.length === 0) {
+            setSlides(HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })));
+        }
+    }, [convexBannerSlides]);
 
-    const convexBannerSlides = useQuery(api.homeSettings.getBannerSlides) || [];
-    const addBannerSlideMutation = useMutation(api.homeSettings.addBannerSlide);
-    const updateBannerSlideMutation = useMutation(api.homeSettings.updateBannerSlide);
-    const removeBannerSlideMutation = useMutation(api.homeSettings.removeBannerSlide);
-    const slides = useMemo(() => convexBannerSlides.length > 0 ? convexBannerSlides : HERO_BANNER_SLIDES.map((s, i) => ({ id: s.id ?? i + 1, img: s.img || "", title: s.title || "", sub: s.sub || "", alt: s.title || `Slide ${i + 1}`, url: s.link || "" })), [convexBannerSlides]);
-
-    const convexEventPartners = useQuery(api.homeSettings.getEventPartners) || [];
-    const addEventPartnerMutation = useMutation(api.homeSettings.addEventPartner);
-    const removeEventPartnerMutation = useMutation(api.homeSettings.removeEventPartner);
     const [categoryModal, setCategoryModal] = useState(null);
     const [categoryForm, setCategoryForm] = useState({ name: "", slug: "", icon: "📁" });
     const [supportTickets, setSupportTickets] = useState([]);
@@ -1061,12 +1095,84 @@ function AdminHomePage() {
         }
     }, [convexCategories]);
 
+    const handleSaveCategory = async () => {
+        const name = (categoryForm.name || "").trim();
+        const slug = (categoryForm.slug || name.toLowerCase().replace(/\s+/g, "-")).trim();
+        if (!name) return;
+
+        try {
+            if (categoryModal === "add") {
+                await addCategoryMutation({
+                    name,
+                    slug,
+                    icon: categoryForm.icon || "📁",
+                    count: 0,
+                    order: categories.length + 1
+                });
+                showToast("Category added", "success");
+            } else if (categoryModal === "edit" && editingCategory) {
+                await patchCategoryMutation({
+                    id: editingCategory._id,
+                    name,
+                    slug,
+                    icon: categoryForm.icon || "📁"
+                });
+                showToast("Category updated", "success");
+            }
+            closeCategoryModal();
+        } catch (err) {
+            showToast("Error saving category: " + err.message, "error");
+        }
+    };
+
+    const closeCategoryModal = () => {
+        setCategoryModal(null);
+        setEditingCategory(null);
+        setCategoryForm({ name: "", slug: "", icon: "📁" });
+    };
+
     // Sync event partners from Convex
     useEffect(() => {
         if (convexEventPartners.length > 0) {
             setEventPartners(convexEventPartners.map(p => ({ ...p, id: p._id })));
         }
     }, [convexEventPartners]);
+
+    const handleSavePartner = async () => {
+        if (!partnerForm.name || !partnerForm.logo) {
+            showToast("Name and Logo are required", "error");
+            return;
+        }
+
+        try {
+            if (partnerModal === "add") {
+                await addEventPartnerMutation({
+                    name: partnerForm.name,
+                    logo: partnerForm.logo,
+                    url: partnerForm.url,
+                    order: eventPartners.length + 1
+                });
+                showToast("Partner added", "success");
+            } else if (partnerModal === "edit" && editingPartner) {
+                await patchEventPartnerMutation({
+                    id: editingPartner._id,
+                    name: partnerForm.name,
+                    logo: partnerForm.logo,
+                    url: partnerForm.url
+                });
+                showToast("Partner updated", "success");
+            }
+            closePartnerModal();
+        } catch (err) {
+            showToast("Error saving partner: " + err.message, "error");
+        }
+    };
+
+    const closePartnerModal = () => {
+        setPartnerModal(null);
+        setEditingPartner(null);
+        setPartnerForm({ name: "", logo: "", url: "" });
+    };
 
     // Seed default API keys if empty
     useEffect(() => {
@@ -1198,23 +1304,57 @@ function AdminHomePage() {
 
     const t = colors[theme] || colors.dark;
 
-    const addSlide = () => {
-        const newId = slides.length > 0 ? Math.max(...slides.map(s => s.id)) + 1 : 1;
-        setSlides([...slides, {
-            id: newId,
-            img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1200&h=480&fit=crop",
-            title: "",
-            sub: "",
-            alt: `Slide ${newId}`,
-            url: ""
-        }]);
+    const addSlide = async () => {
+        try {
+            await addBannerSlideMutation({
+                img: "https://images.unsplash.com/photo-1540039155733-d71efd44f808?q=80&w=1200&h=480&fit=crop",
+                title: "New Slide",
+                sub: "Subtitle here",
+                alt: "New Slide",
+                url: "",
+                order: slides.length
+            });
+            showToast("Slide added", "success");
+        } catch (err) {
+            showToast("Error adding slide", "error");
+        }
     };
 
-    const removeSlide = (id) => {
-        setSlides(slides.filter(s => s.id !== id));
+    const removeSlide = async (id, convexId) => {
+        if (!confirm("Are you sure you want to remove this slide?")) return;
+        try {
+            if (convexId) {
+                await removeBannerSlideMutation({ id: convexId });
+            }
+            // Fallback for local-only slides if any
+            setSlides(slides.filter(s => s.id !== id));
+            showToast("Slide removed", "success");
+        } catch (err) {
+            showToast("Error removing slide", "error");
+        }
     };
 
-    const updateSlide = (id, field, value) => {
+    const handleSaveSlide = async (slide) => {
+        try {
+            if (slide._id) {
+                await updateBannerSlideMutation({
+                    id: slide._id,
+                    img: slide.img,
+                    title: slide.title,
+                    sub: slide.sub,
+                    alt: slide.alt,
+                    url: slide.url
+                });
+                showToast("Slide updated", "success");
+            } else {
+                showToast("Slide not persisted yet. Add it properly first.", "warning");
+            }
+        } catch (err) {
+            showToast("Error updating slide", "error");
+        }
+    };
+
+    const updateSlideLocal = (id, field, value) => {
         setSlides(slides.map(s => s.id === id ? { ...s, [field]: value } : s));
     };
 
@@ -2212,8 +2352,31 @@ function AdminHomePage() {
                                                     <td style={{ padding: "12px 16px", fontSize: "14px", color: t.textSub }}>{cat.slug}</td>
                                                     <td style={{ padding: "12px 16px", fontSize: "14px" }}><span style={{ backgroundColor: theme === "light" ? "#eff6ff" : "#1e3a5f", color: "#3b82f6", padding: "2px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>{count}</span></td>
                                                     <td style={{ padding: "12px 16px" }}>
-                                                        <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", marginRight: "12px" }}>Edit</button>
-                                                        <button onClick={() => setCategories(categories.filter(c => c.id !== cat.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setEditingCategory(cat);
+                                                                setCategoryForm({ name: cat.name, slug: cat.slug, icon: cat.icon || "📁" });
+                                                                setCategoryModal("edit");
+                                                            }}
+                                                            style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", marginRight: "12px", fontWeight: 600 }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button 
+                                                            onClick={async () => { 
+                                                                if (confirm("Are you sure you want to delete this category?")) {
+                                                                    try {
+                                                                        await removeCategoryMutation({ id: cat._id });
+                                                                        showToast("Category removed", "success");
+                                                                    } catch (err) {
+                                                                        showToast("Error removing category", "error");
+                                                                    }
+                                                                }
+                                                            }} 
+                                                            style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+                                                        >
+                                                            Delete
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
@@ -2282,52 +2445,59 @@ function AdminHomePage() {
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
                                 {slides.map((slide) => (
-                                    <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: t.bg }}>
+                                    <div key={slide.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: t.bg, display: "flex", flexDirection: "column" }}>
                                         <div style={{ position: "relative", height: "150px" }}>
                                             <img src={slide.img || "/banner-hero-events.png"} alt={slide.alt || "Slide"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            <button onClick={() => removeSlide(slide.id)} style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+                                            <button onClick={() => removeSlide(slide.id, slide._id)} style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
                                         </div>
-                                        <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Image URL</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Slide Image URL"
-                                                value={slide.img || ""}
-                                                onChange={(e) => updateSlide(slide.id, 'img', e.target.value)}
-                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
-                                            />
-                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Title</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Live Concerts"
-                                                value={slide.title || ""}
-                                                onChange={(e) => updateSlide(slide.id, 'title', e.target.value)}
-                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
-                                            />
-                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Subtitle</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Book your favourite artists"
-                                                value={slide.sub || ""}
-                                                onChange={(e) => updateSlide(slide.id, 'sub', e.target.value)}
-                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
-                                            />
-                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Alt Text (accessibility)</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Alt Text"
-                                                value={slide.alt || ""}
-                                                onChange={(e) => updateSlide(slide.id, 'alt', e.target.value)}
-                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
-                                            />
-                                            <label style={{ fontSize: "11px", color: t.textSub, marginBottom: "-4px" }}>Target URL (optional)</label>
-                                            <input
-                                                type="text"
-                                                placeholder="/events or full URL"
-                                                value={slide.url || ""}
-                                                onChange={(e) => updateSlide(slide.id, 'url', e.target.value)}
-                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "12px" }}
-                                            />
+                                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Image URL</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Slide Image URL"
+                                                    value={slide.img || ""}
+                                                    onChange={(e) => updateSlideLocal(slide.id, 'img', e.target.value)}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Title</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Live Concerts"
+                                                    value={slide.title || ""}
+                                                    onChange={(e) => updateSlideLocal(slide.id, 'title', e.target.value)}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Subtitle</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Book your favourite artists"
+                                                    value={slide.sub || ""}
+                                                    onChange={(e) => updateSlideLocal(slide.id, 'sub', e.target.value)}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                <label style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, textTransform: "uppercase" }}>Target URL</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="/events or full URL"
+                                                    value={slide.url || ""}
+                                                    onChange={(e) => updateSlideLocal(slide.id, 'url', e.target.value)}
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                />
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => handleSaveSlide(slide)}
+                                                style={{ marginTop: "8px", padding: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                                            >
+                                                <Save size={16} /> Save Slide
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -2343,72 +2513,76 @@ function AdminHomePage() {
 
                     {activeTab === "event_partners" && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                <button
-                                    onClick={() => setActiveTab("dashboard")}
-                                    style={{ padding: "8px 16px", backgroundColor: "#334155", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-                                >
-                                    Return to Dashboard
-                                </button>
-                            </div>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-                                    <div>
-                                        <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 4px" }}>Event Partners Logos</h3>
-                                        <p style={{ fontSize: "13px", color: t.textSub, margin: 0 }}>Manage the "Our Event Partners" section logos on the homepage.</p>
-                                    </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Event Partners & Organisers</h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
                                     <button
-                                        onClick={() => setEventPartners([...eventPartners, { id: Date.now(), name: "New Partner", logo: "", eventCount: 0 }])}
-                                        style={{ padding: "8px 16px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.12)" }}>
+                                        onClick={() => {
+                                            setPartnerForm({ name: "", logo: "", url: "" });
+                                            setPartnerModal("add");
+                                        }}
+                                        style={{ padding: "8px 16px", backgroundColor: "#3b82f6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
                                         <Plus size={18} /> Add Partner
                                     </button>
+                                    <button
+                                        onClick={() => setActiveTab("dashboard")}
+                                        style={{ padding: "8px 16px", backgroundColor: "#334155", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                                    >
+                                        Return to Dashboard
+                                    </button>
                                 </div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    {eventPartners.map(partner => (
-                                        <div key={partner.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "8px", backgroundColor: t.bg }}>
-                                            <div style={{ width: "64px", height: "64px", borderRadius: "8px", backgroundColor: "#f1f5f9", overflow: "hidden", flexShrink: 0, position: "relative" }}>
-                                                {partner.logo ? (
-                                                    <img src={partner.logo} alt={partner.name} style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "multiply", backgroundColor: "transparent" }} />
-                                                ) : (
-                                                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
-                                                        <ImageIcon size={24} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", justifyContent: "center" }}>
-                                                <div style={{ display: "flex", gap: "8px" }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Logo URL"
-                                                        value={partner.logo}
-                                                        onChange={(e) => setEventPartners(eventPartners.map(p => p.id === partner.id ? { ...p, logo: e.target.value } : p))}
-                                                        style={{ flex: 1, padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain }}
-                                                    />
-                                                    <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 12px", backgroundColor: t.border, color: t.textMain, borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
-                                                        <Upload size={14} /> Upload Image
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            style={{ display: "none" }}
-                                                            onChange={(e) => {
-                                                                const file = e.target.files[0];
-                                                                if (file) {
-                                                                    const reader = new FileReader();
-                                                                    reader.onload = (ev) => setEventPartners(eventPartners.map(p => p.id === partner.id ? { ...p, logo: ev.target.result } : p));
-                                                                    reader.readAsDataURL(file);
-                                                                }
-                                                            }}
-                                                        />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => setEventPartners(eventPartners.filter(p => p.id !== partner.id))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: "8px" }}><Trash2 size={20} /></button>
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "20px" }}>
+                                {eventPartners.map(partner => (
+                                    <div key={partner.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "12px", backgroundColor: t.bg, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                                        <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f8fafc", overflow: "hidden", flexShrink: 0, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            {partner.logo ? (
+                                                <img src={partner.logo} alt={partner.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", mixBlendMode: theme === 'light' ? 'multiply' : 'normal' }} />
+                                            ) : (
+                                                <ImageIcon size={32} color="#cbd5e1" />
+                                            )}
                                         </div>
-                                    ))}
-                                    {eventPartners.length === 0 && (
-                                        <p style={{ textAlign: "center", padding: "24px", color: t.textSub }}>No partners added. Click the button to add one.</p>
-                                    )}
-                                </div>
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, margin: "0 0 4px 0" }}>{partner.name}</h4>
+                                            <p style={{ fontSize: "12px", color: t.textSub, margin: "0 0 12px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{partner.url || "No website linked"}</p>
+                                            <div style={{ display: "flex", gap: "12px" }}>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingPartner(partner);
+                                                        setPartnerForm({ name: partner.name, logo: partner.logo, url: partner.url || "" });
+                                                        setPartnerModal("edit");
+                                                    }}
+                                                    style={{ display: "flex", alignItems: "center", gap: "6px", color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 700 }}
+                                                >
+                                                    <Edit size={14} /> Edit
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (confirm(`Remove ${partner.name}?`)) {
+                                                            try {
+                                                                await removeEventPartnerMutation({ id: partner._id });
+                                                                showToast("Partner removed", "success");
+                                                            } catch (err) {
+                                                                showToast("Error removing partner", "error");
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ display: "flex", alignItems: "center", gap: "6px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 700 }}
+                                                >
+                                                    <Trash2 size={14} /> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {eventPartners.length === 0 && (
+                                    <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px", backgroundColor: t.cardBg, borderRadius: "12px", border: `2px dashed ${t.border}` }}>
+                                        <Users size={48} color={t.textSub} style={{ opacity: 0.3, marginBottom: "16px" }} />
+                                        <p style={{ color: t.textSub, fontWeight: 600 }}>No event partners have been added yet.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -4993,29 +5167,29 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {categoryModal === "add" && (
-                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }} onClick={() => setCategoryModal(null)}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", width: "380px", border: `1px solid ${t.border}` }} onClick={e => e.stopPropagation()}>
+                    {categoryModal && (
+                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }} onClick={closeCategoryModal}>
+                            <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "450px", borderRadius: "16px", padding: "28px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", border: `1px solid ${t.border}`, position: "relative" }} onClick={e => e.stopPropagation()}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Create a Category</h3>
-                                    <button type="button" onClick={() => setCategoryModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub }}><X size={20} /></button>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{categoryModal === "edit" ? "Edit Category" : "Add New Category"}</h3>
+                                    <button type="button" onClick={closeCategoryModal} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub }}><X size={20} /></button>
                                 </div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Name</label>
-                                        <input type="text" value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value, slug: e.target.value.toLowerCase().trim().replace(/\s+/g, "-") }))} placeholder="e.g. Concert" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>Category Name</label>
+                                        <input type="text" value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value, slug: e.target.value.toLowerCase().trim().replace(/\s+/g, "-") }))} placeholder="e.g. Concert" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
                                     </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Slug</label>
-                                        <input type="text" value={categoryForm.slug} onChange={e => setCategoryForm(f => ({ ...f, slug: e.target.value }))} placeholder="e.g. concert" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>URL Slug</label>
+                                        <input type="text" value={categoryForm.slug} onChange={e => setCategoryForm(f => ({ ...f, slug: e.target.value }))} placeholder="e.g. concert" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
                                     </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "4px", color: t.textMain }}>Icon (emoji)</label>
-                                        <input type="text" value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value || "📁" }))} placeholder="🎫" style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px" }} />
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>Icon (Emoji)</label>
+                                        <input type="text" value={categoryForm.icon} onChange={e => setCategoryForm(f => ({ ...f, icon: e.target.value || "📁" }))} placeholder="🎫" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
                                     </div>
-                                    <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                                        <button type="button" onClick={() => setCategoryModal(null)} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontWeight: 600 }}>Cancel</button>
-                                        <button type="button" onClick={() => { const name = (categoryForm.name || "").trim(); const slug = (categoryForm.slug || name.toLowerCase().replace(/\s+/g, "-")).trim(); if (!name) return; const newId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1; setCategories([...categories, { id: newId, name, slug: slug || "category", count: 0, icon: categoryForm.icon || "📁" }]); setCategoryForm({ name: "", slug: "", icon: "📁" }); setCategoryModal(null); }} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save</button>
+                                    <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+                                        <button type="button" onClick={closeCategoryModal} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontWeight: 700, fontSize: "14px" }}>Cancel</button>
+                                        <button type="button" onClick={handleSaveCategory} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: "14px" }}>{categoryModal === "edit" ? "Update Category" : "Save Category"}</button>
                                     </div>
                                 </div>
                             </div>
@@ -5180,8 +5354,49 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "checkout_footer" && <AdminCheckoutFooter theme={theme} t={t} />}
                     {activeTab === "mobile_banners" && <MobileBannersAdmin theme={theme} t={t} />}
+
+                    {partnerModal && (
+                        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1001 }} onClick={closePartnerModal}>
+                            <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "500px", borderRadius: "20px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", border: `1px solid ${t.border}`, position: "relative" }} onClick={e => e.stopPropagation()}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                    <h3 style={{ fontSize: "22px", fontWeight: 800, color: t.textMain }}>{partnerModal === "edit" ? "Edit Partner" : "Add New Partner"}</h3>
+                                    <button type="button" onClick={closePartnerModal} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub }}><X size={24} /></button>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>Partner Name</label>
+                                        <input type="text" value={partnerForm.name} onChange={e => setPartnerForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Red Bull" style={{ width: "100%", padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>Logo URL</label>
+                                        <div style={{ display: "flex", gap: "12px" }}>
+                                            <input type="text" value={partnerForm.logo} onChange={e => setPartnerForm(f => ({ ...f, logo: e.target.value }))} placeholder="https://logo.url/img.png" style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
+                                            <label style={{ padding: "14px 20px", backgroundColor: t.border, borderRadius: "12px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "14px" }}>
+                                                <Upload size={18} />
+                                                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = (ev) => setPartnerForm({ ...partnerForm, logo: ev.target.result });
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }} />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <label style={{ fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", letterSpacing: "0.5px" }}>Website URL (optional)</label>
+                                        <input type="text" value={partnerForm.url} onChange={e => setPartnerForm(f => ({ ...f, url: e.target.value }))} placeholder="https://redbull.com" style={{ width: "100%", padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === "light" ? "#fff" : "#1e293b", color: t.textMain, fontSize: "14px", fontWeight: 500 }} />
+                                    </div>
+                                    <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
+                                        <button type="button" onClick={closePartnerModal} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, cursor: "pointer", fontWeight: 700, fontSize: "16px" }}>Cancel</button>
+                                        <button type="button" onClick={handleSavePartner} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: "16px" }}>{partnerModal === "edit" ? "Update Partner" : "Save Partner"}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                 </main>
             </div>
