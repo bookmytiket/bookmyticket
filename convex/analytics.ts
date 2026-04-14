@@ -3,11 +3,12 @@ import { query } from "./_generated/server";
 export const getDashboardStats = query({
     args: {},
     handler: async (ctx) => {
-        const [events, bookings, users, organisers] = await Promise.all([
+        const [events, bookings, users, organisers, serviceProviders] = await Promise.all([
             ctx.db.query("events").collect(),
             ctx.db.query("bookings").collect(),
             ctx.db.query("users").collect(),
             ctx.db.query("organisers").collect(),
+            ctx.db.query("serviceProviders").collect(),
         ]);
 
         const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
@@ -15,6 +16,7 @@ export const getDashboardStats = query({
         const totalEvents = events.length;
         const totalUsers = users.length;
         const totalOrganisers = organisers.length;
+        const totalServiceProviders = serviceProviders.length;
         const totalBookings = bookings.length;
 
         // Monthly revenue (last 6 months)
@@ -48,6 +50,7 @@ export const getDashboardStats = query({
             totalEvents,
             totalUsers,
             totalOrganisers,
+            totalServiceProviders,
             totalBookings,
             monthlyRevenue,
             topEvents,

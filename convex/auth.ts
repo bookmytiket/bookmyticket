@@ -18,7 +18,13 @@ export const forgotPassword = mutation({
             .filter((q) => q.eq(q.field("userId"), args.email))
             .unique();
 
-        if (!user && !organiser) {
+        // Also check serviceProviders if not found in users or organisers
+        const serviceProvider = (user || organiser) ? null : await ctx.db
+            .query("serviceProviders")
+            .filter((q) => q.eq(q.field("userId"), args.email))
+            .unique();
+
+        if (!user && !organiser && !serviceProvider) {
             // We don't want to reveal if an email exists or not for security, 
             // but for this app's context, let's just return null if not found.
             return null;
@@ -96,7 +102,15 @@ export const resetPassword = mutation({
             if (organiser) {
                 await ctx.db.patch(organiser._id, { password: args.newPassword });
             } else {
-                throw new Error("User not found");
+                const serviceProvider = await ctx.db
+                    .query("serviceProviders")
+                    .filter((q) => q.eq(q.field("userId"), args.email))
+                    .unique();
+                if (serviceProvider) {
+                    await ctx.db.patch(serviceProvider._id, { password: args.newPassword });
+                } else {
+                    throw new Error("User not found");
+                }
             }
         }
 
@@ -120,7 +134,20 @@ export const updateForcedPassword = mutation({
             .withIndex("by_userId", (q) => q.eq("userId", email))
             .unique();
 
-        if (!organiser) throw new Error("Organiser not found");
+        if (!organiser) {
+            const serviceProvider = await ctx.db
+                .query("serviceProviders")
+                .withIndex("by_userId", (q) => q.eq("userId", email))
+                .unique();
+            
+            if (!serviceProvider) throw new Error("Account not found");
+            
+            await ctx.db.patch(serviceProvider._id, { 
+                password: args.newPassword,
+                forcePasswordChange: false 
+            });
+            return true;
+        }
         
         await ctx.db.patch(organiser._id, { 
             password: args.newPassword,
@@ -320,7 +347,7 @@ export const login = mutation({
 
         // 3. PRIORITY: Check Organisers table — must come before Users
         // This prevents organisers who also have a user record from being
-        // incorrectly routed through the OTP flow.
+        // correctly routed through the OTP flow.
         const organiser = await ctx.db
             .query("organisers")
             .withIndex("by_userId", (q) => q.eq("userId", identifier))
@@ -331,13 +358,32 @@ export const login = mutation({
                 if (!organiser.isApproved) {
                     return { success: false, error: "Account approval is pending." };
                 }
-                if (organiser.type === "event_organiser" && organiser.kycStatus !== "Verified") {
-                    return { success: false, error: "KYC verification is required before organiser access." };
-                }
                 if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
                     return { success: false, error: "Account is restricted." };
                 }
                 return { success: true, role: "organiser", data: organiser };
+            } else {
+                await logFailedAttempt();
+            }
+        }
+
+        // 3.5 PRIORITY: Check serviceProviders table
+        const serviceProvider = await ctx.db
+            .query("serviceProviders")
+            .withIndex("by_userId", (q) => q.eq("userId", identifier))
+            .unique();
+
+        if (serviceProvider) {
+            if (serviceProvider.password === args.password) {
+                if (!serviceProvider.isApproved) {
+                    return { success: false, error: "Account approval is pending." };
+                }
+                if (serviceProvider.kycStatus === "Banned" || serviceProvider.kycStatus === "Rejected") {
+                    return { success: false, error: "Account is restricted." };
+                }
+                // Return 'organiser' role for service providers too, as they share the vendor-style dashboards
+                // but we can distinguish them by their category/data if needed.
+                return { success: true, role: "organiser", data: serviceProvider };
             } else {
                 await logFailedAttempt();
             }
@@ -425,13 +471,26 @@ export const verifyLoginOTP = mutation({
             if (!organiserOnly.isApproved) {
                 throw new Error("Account approval is pending.");
             }
-            if (organiserOnly.type === "event_organiser" && organiserOnly.kycStatus !== "Verified") {
-                throw new Error("KYC verification is required before organiser access.");
-            }
             if (organiserOnly.kycStatus === "Banned" || organiserOnly.kycStatus === "Rejected") {
                 throw new Error("Account is restricted.");
             }
             return { success: true, role: "organiser", data: organiserOnly };
+        }
+
+        // If not in organisers, check serviceProviders specifically
+        const serviceProviderOnly = await ctx.db
+            .query("serviceProviders")
+            .withIndex("by_userId", (q) => q.eq("userId", args.email))
+            .unique();
+
+        if (serviceProviderOnly) {
+            if (!serviceProviderOnly.isApproved) {
+                throw new Error("Account approval is pending.");
+            }
+            if (serviceProviderOnly.kycStatus === "Banned" || serviceProviderOnly.kycStatus === "Rejected") {
+                throw new Error("Account is restricted.");
+            }
+            return { success: true, role: "organiser", data: serviceProviderOnly };
         }
 
         throw new Error("User not found");
@@ -464,6 +523,9 @@ export const getUserByIdentifier = query({
 
         const organiser = await ctx.db.query("organisers").withIndex("by_userId", (q) => q.eq("userId", identifier)).unique();
         if (organiser) return { ...organiser, email: organiser.userId };
+
+        const serviceProvider = await ctx.db.query("serviceProviders").withIndex("by_userId", (q) => q.eq("userId", identifier)).unique();
+        if (serviceProvider) return { ...serviceProvider, email: serviceProvider.userId };
 
         const user = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", identifier)).unique()
                      || await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", identifier)).unique();

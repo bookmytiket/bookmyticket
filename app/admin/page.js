@@ -833,10 +833,14 @@ function AdminHomePage() {
 
     const [organizers, setOrganizers] = useState([]);
     const convexOrganizers = useQuery(api.organisers.list) || [];
+    const convexServiceProviders = useQuery(api.serviceProviders.list) || [];
     const createOrganizerMutation = useMutation(api.organisers.create);
     const patchOrganizerMutation = useMutation(api.organisers.patch);
     const removeOrganizerMutation = useMutation(api.organisers.remove);
+    const patchServiceProviderMutation = useMutation(api.serviceProviders.patch);
+    const removeServiceProviderMutation = useMutation(api.serviceProviders.remove);
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
+    const [serviceCategoryFilter, setServiceCategoryFilter] = useState("all");
     const isProfService = (cat) => {
         const c = String(cat || "").trim().toLowerCase();
         const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering", "turf"];
@@ -872,18 +876,22 @@ function AdminHomePage() {
 
 
     const serviceActive = useMemo(() => {
-        return convexOrganizers.filter(o => 
-            o.type === "professional_service" && 
-            o.kycStatus !== "Banned"
-        );
-    }, [convexOrganizers]);
+        if (!convexServiceProviders) return [];
+        let filtered = convexServiceProviders.filter(o => o.kycStatus === "Active" || o.kycStatus === "Not Required" || o.kycStatus === "KYC Completed");
+        if (serviceCategoryFilter !== "all") {
+            filtered = filtered.filter(o => (o.category || o.kycDetails?.category) === serviceCategoryFilter);
+        }
+        return filtered;
+    }, [convexServiceProviders, serviceCategoryFilter]);
 
     const serviceBanned = useMemo(() => {
-        return convexOrganizers.filter(o => 
-            o.type === "professional_service" && 
-            o.kycStatus === "Banned"
-        );
-    }, [convexOrganizers]);
+        if (!convexServiceProviders) return [];
+        let filtered = convexServiceProviders.filter(o => o.kycStatus === "Banned");
+        if (serviceCategoryFilter !== "all") {
+            filtered = filtered.filter(o => (o.category || o.kycDetails?.category) === serviceCategoryFilter);
+        }
+        return filtered;
+    }, [convexServiceProviders, serviceCategoryFilter]);
 
     const [events, setEvents] = useState([]);
 
@@ -1835,6 +1843,7 @@ function AdminHomePage() {
                                     { label: "Tickets Sold", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", icon: Ticket, color: "#ec4899", trend: "+8.1%" },
                                     { label: "Customers", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", icon: UserCircle, color: "#f59e0b", trend: "+2.4%" },
                                     { label: "Organisers", value: dashboardStats ? dashboardStats.totalOrganisers.toString() : "…", icon: Users, color: "#10b981", trend: "+1.8%" },
+                                    { label: "Service Providers", value: dashboardStats ? (dashboardStats.totalServiceProviders || 0).toString() : "…", icon: Briefcase, color: "#f97316", trend: "+4.2%" },
                                     { label: "Bookings", value: dashboardStats ? dashboardStats.totalBookings.toString() : "…", icon: ShoppingCart, color: "#06b6d4", trend: "+14.2%" }
                                 ].map((stat, i) => (
                                     <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -3295,10 +3304,29 @@ function AdminHomePage() {
 
                     {["service_active", "service_banned"].includes(activeTab) && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>
-                                    {activeTab === "service_active" ? "Active Service Providers" : "Banned Service Providers"}
-                                </h3>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ width: "4px", height: "24px", background: ACCENT_GRADIENT, borderRadius: "2px" }}></div>
+                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>
+                                        {activeTab === "service_active" ? "Active Service Providers" : "Banned Service Providers"}
+                                    </h3>
+                                    <span style={{ fontSize: "12px", background: `${ACCENT_BLUE}15`, color: ACCENT_BLUE, padding: "2px 8px", borderRadius: "12px", fontWeight: 600 }}>
+                                        {(activeTab === "service_active" ? serviceActive : serviceBanned).length} Total
+                                    </span>
+                                </div>
+                                <div style={{ display: "flex", gap: "12px", alignItems: "center", background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: "6px 12px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                    <span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>Filter:</span>
+                                    <select 
+                                        value={serviceCategoryFilter}
+                                        onChange={(e) => setServiceCategoryFilter(e.target.value)}
+                                        style={{ padding: "6px 10px", borderRadius: "8px", border: "none", background: "transparent", color: t.textMain, fontSize: "13px", fontWeight: 600, outline: "none", cursor: "pointer" }}
+                                    >
+                                        <option value="all">All Categories</option>
+                                        {Array.from(new Set(convexServiceProviders.map(s => s.category || s.kycDetails?.category).filter(Boolean))).map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div style={{ overflowX: "auto", paddingBottom: "160px" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -3313,16 +3341,18 @@ function AdminHomePage() {
                                     <tbody>
                                         {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
                                             <tr key={org._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{org.name}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>
+                                                    {org.name || (org.firstName ? `${org.firstName} ${org.lastName || ""}`.trim() : (org.kycDetails?.orgName || org.userId))}
+                                                </td>
                                                 <td style={{ padding: "12px" }}>{org.userId}</td>
                                                 <td style={{ padding: "12px" }}>{org.category || org.kycDetails?.category}</td>
                                                 <td style={{ padding: "12px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {activeTab === "service_active" && (
-                                                            <button onClick={() => patchOrganizerMutation({ id: org._id, kycStatus: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
+                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kycStatus: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
                                                         )}
                                                         {activeTab === "service_banned" && (
-                                                            <button onClick={() => patchOrganizerMutation({ id: org._id, kycStatus: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
+                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kycStatus: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
                                                         )}
                                                     </div>
                                                 </td>

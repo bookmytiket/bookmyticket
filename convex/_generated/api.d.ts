@@ -48,6 +48,7 @@ import type * as seedLocal from "../seedLocal.js";
 import type * as seedMehendi from "../seedMehendi.js";
 import type * as seedServices from "../seedServices.js";
 import type * as seoSettings from "../seoSettings.js";
+import type * as serviceProviders from "../serviceProviders.js";
 import type * as siteBranding from "../siteBranding.js";
 import type * as ssoSettings from "../ssoSettings.js";
 import type * as staff from "../staff.js";
@@ -117,6 +118,7 @@ declare const fullApi: ApiFromModules<{
   seedMehendi: typeof seedMehendi;
   seedServices: typeof seedServices;
   seoSettings: typeof seoSettings;
+  serviceProviders: typeof serviceProviders;
   siteBranding: typeof siteBranding;
   ssoSettings: typeof ssoSettings;
   staff: typeof staff;

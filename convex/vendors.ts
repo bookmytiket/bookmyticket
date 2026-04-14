@@ -19,15 +19,10 @@ export const listByCategory = query({
         let organisers;
         
         if (targetCat === "" || targetCat === "All Services") {
-            const allOrgs = await ctx.db.query("organisers").collect();
-            // Filter for professional service roles (excluding generic organisers if needed)
-            organisers = allOrgs.filter(org => 
-                org.category && 
-                org.category !== "Event Organiser"
-            );
+            organisers = await ctx.db.query("serviceProviders").collect();
         } else {
             organisers = await ctx.db
-                .query("organisers")
+                .query("serviceProviders")
                 .withIndex("by_category", (q) => q.eq("category", targetCat))
                 .collect();
         }
@@ -78,14 +73,10 @@ export const listByCategoryPaginated = query({
         let organisers;
 
         if (targetCat === "" || targetCat === "All Services") {
-            const allOrgs = await ctx.db.query("organisers").collect();
-            organisers = allOrgs.filter(org => 
-                org.category && 
-                org.category !== "Event Organiser"
-            );
+            organisers = await ctx.db.query("serviceProviders").collect();
         } else {
             organisers = await ctx.db
-                .query("organisers")
+                .query("serviceProviders")
                 .withIndex("by_category", (q) => q.eq("category", targetCat))
                 .collect();
         }
@@ -131,7 +122,7 @@ export const getFullProfile = query({
     args: { organiserId: v.string() },
     handler: async (ctx, args) => {
         const organiser = await ctx.db
-            .query("organisers")
+            .query("serviceProviders")
             .withIndex("by_userId", (q) => q.eq("userId", args.organiserId))
             .unique();
         
@@ -187,9 +178,9 @@ export const updateProfile = mutation({
             });
         }
 
-        // Sync category to organisers table to maintain single source of truth for filtering
+        // Sync category to serviceProviders table to maintain single source of truth for filtering
         const org = await ctx.db
-            .query("organisers")
+            .query("serviceProviders")
             .withIndex("by_userId", (q) => q.eq("userId", organiserId))
             .unique();
         if (org) {
@@ -240,7 +231,7 @@ export const getActiveVendors = query({
         const results = [];
         for (const profile of vendorProfiles) {
             const org = await ctx.db
-                .query("organisers")
+                .query("serviceProviders")
                 .withIndex("by_userId", (q) => q.eq("userId", profile.organiserId))
                 .unique();
             

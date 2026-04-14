@@ -174,3 +174,45 @@ export const normalizePartnerRequestTypes = mutation({
         };
     },
 });
+
+export const splitOrganisersAndServices = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const organisers = await ctx.db.query("organisers").collect();
+        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering", "turf"];
+        
+        let movedCount = 0;
+        let deletedCount = 0;
+
+        for (const org of organisers) {
+            const cat = (org.category || org.kycDetails?.category || "").toLowerCase();
+            const isService = org.type === "professional_service" || serviceKeywords.some(k => cat.includes(k));
+            
+            if (isService) {
+                // 1. Check if already in serviceProviders to avoid dupes
+                const existing = await ctx.db
+                    .query("serviceProviders")
+                    .withIndex("by_userId", (q) => q.eq("userId", org.userId))
+                    .unique();
+                
+                if (!existing) {
+                    // 2. Insert into serviceProviders
+                    const { _id, _creationTime, ...orgData } = org;
+                    await ctx.db.insert("serviceProviders", {
+                        ...orgData,
+                    });
+                    movedCount++;
+                }
+
+                // 3. Delete from organisers
+                await ctx.db.delete(org._id);
+                deletedCount++;
+            }
+        }
+
+        return {
+            movedServiceProviders: movedCount,
+            deletedFromOrganisers: deletedCount
+        };
+    },
+});

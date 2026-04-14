@@ -165,6 +165,51 @@ export default defineSchema({
       .index("by_kycStatus", ["kycStatus"])
       .index("by_category", ["category"]),
 
+    serviceProviders: defineTable({
+        userId: v.string(), // acts as email/username
+        password: v.optional(v.string()),
+        name: v.string(),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
+        category: v.optional(v.string()), // Mehendi Artist, Photographer, etc.
+        type: v.optional(v.string()), // "event_organiser" | "professional_service"
+        kycStatus: v.optional(v.string()),
+        isApproved: v.optional(v.boolean()),
+        walletBalance: v.optional(v.number()),
+        kycDetails: v.optional(
+            v.object({
+                category: v.optional(v.string()),
+                panNumber: v.optional(v.string()),
+                socialMediaLink: v.optional(v.string()),
+                hasITR: v.optional(v.boolean()),
+                fullName: v.optional(v.string()),
+                email: v.optional(v.string()),
+                mobile: v.optional(v.string()),
+                alternateNumber: v.optional(v.string()),
+                designation: v.optional(v.string()),
+                city: v.optional(v.string()),
+                address: v.optional(v.string()),
+                websiteLink: v.optional(v.string()),
+                hasOSTIN: v.optional(v.boolean()),
+                gstin: v.optional(v.string()),
+                panFile: v.optional(v.string()),
+                chequeFile: v.optional(v.string()),
+                aadharFile: v.optional(v.string()),
+                beneficiaryName: v.optional(v.string()),
+                accountType: v.optional(v.string()),
+                bankName: v.optional(v.string()),
+                accountNumber: v.optional(v.string()),
+                ifscCode: v.optional(v.string()),
+                agreementAccepted: v.boolean(),
+            })
+        ),
+        forcePasswordChange: v.optional(v.boolean()),
+    }).index("by_userId", ["userId"])
+      .index("by_kycStatus", ["kycStatus"])
+      .index("by_category", ["category"]),
+
 
 
     partnerRequests: defineTable({

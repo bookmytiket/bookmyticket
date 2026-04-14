@@ -85,13 +85,18 @@ export const submitRequest = mutation({
         const normalizedEmail = args.email.toLowerCase();
         const normalizedPhone = args.phone.trim();
 
-        // 1. Check for existing approved account
-        const existingAccount = await ctx.db
+        // 1. Check for existing approved account (check both tables)
+        const existingOrganiser = await ctx.db
             .query("organisers")
             .withIndex("by_userId", (q) => q.eq("userId", normalizedEmail))
             .first();
         
-        if (existingAccount) {
+        const existingServiceProvider = !existingOrganiser ? await ctx.db
+            .query("serviceProviders")
+            .withIndex("by_userId", (q) => q.eq("userId", normalizedEmail))
+            .first() : null;
+        
+        if (existingOrganiser || existingServiceProvider) {
             throw new Error(`Account already exists for ${normalizedEmail}. Please sign in instead.`);
         }
 
@@ -315,11 +320,17 @@ export const approve = mutation({
         const request = normalizeRequest(raw);
         if (!request) throw new Error("Request not found");
 
-        const existingAccount = await ctx.db
+        const existingOrganiser = await ctx.db
             .query("organisers")
             .withIndex("by_userId", (q) => q.eq("userId", request.email))
             .unique();
-        if (existingAccount) {
+        
+        const existingServiceProvider = await ctx.db
+            .query("serviceProviders")
+            .withIndex("by_userId", (q) => q.eq("userId", request.email))
+            .unique();
+
+        if (existingOrganiser || existingServiceProvider) {
             throw new Error("An account already exists for this email");
         }
 
@@ -339,8 +350,9 @@ export const approve = mutation({
 
         const hashedPassword = await hashPassword(args.password);
 
-        // 1. Create Organiser/Vendor Account
-        await ctx.db.insert("organisers", {
+        // 1. Create Organiser/Vendor Account in correct table
+        const targetTable = request.type === REQUEST_TYPE.PROFESSIONAL_SERVICE ? "serviceProviders" : "organisers";
+        await ctx.db.insert(targetTable, {
             userId: request.email,
             password: hashedPassword,
             name: `${request.firstName} ${request.lastName}`,
