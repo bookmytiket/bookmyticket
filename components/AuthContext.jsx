@@ -138,7 +138,8 @@ export function AuthProvider({ children }) {
                     role: "organiser", 
                     name: userData.name, 
                     id: userData._id,
-                    category: topCategory || kycCategory
+                    category: topCategory || kycCategory,
+                    forcePasswordChange: userData.forcePasswordChange || false
                 };
                 localStorage.setItem("user", JSON.stringify(authUser));
                 setUser(authUser);

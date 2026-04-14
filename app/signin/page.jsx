@@ -215,6 +215,12 @@ export default function SignInPage() {
                 }
                 // Handle all roles (Admin, Staff, Organiser) immediate login
                 await login(id, hashed, res.role, res.data, redirectPath);
+                
+                // If it's an organiser and needs to change password, redirect them immediately after login
+                if (res.role === "organiser" && res.data.forcePasswordChange) {
+                    console.log("Forcing password change for organiser");
+                    router.replace(`/reset-password?email=${encodeURIComponent(id)}&force=true`);
+                }
                 return;
             } else {
                 setLoginError(res.error || "Invalid username / email or password.");

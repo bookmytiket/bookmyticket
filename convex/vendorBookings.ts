@@ -112,7 +112,7 @@ export const create = mutation({
         }
 
         // Notify Admin
-        const adminEmail = "bookmytiket.io@gmail.com";
+        const adminEmail = "hello@bookmyticket.net";
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: adminEmail,
             subject: `Revenue Alert: New Service Booking - Ref #${refId}`,

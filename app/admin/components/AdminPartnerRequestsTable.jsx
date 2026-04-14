@@ -4,6 +4,21 @@ import { api } from "@/convex/_generated/api";
 import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail, AlertTriangle, FileText, Send } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 
+// Client-side fail-safe categorization
+const isServiceProvider = (category) => {
+    if (!category) return false;
+    const c = String(category).trim().toLowerCase();
+    return (
+        c.includes("mehandi") ||
+        c.includes("mehendi") ||
+        c.includes("photograph") ||
+        c.includes("makeup") ||
+        c.includes("artist") ||
+        c.includes("turf") ||
+        c.includes("personal service")
+    );
+};
+
 export default function AdminPartnerRequestsTable({ t, theme }) {
     const requests = useQuery(api.partnerRequests.getAll) || [];
     const updateStatus = useMutation(api.partnerRequests.updateStatus);
@@ -90,7 +105,10 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
-            const matchesType = req.type === activeTab;
+            // Apply client-side normalization to the type
+            const trueType = isServiceProvider(req.category) ? "professional_service" : req.type;
+            const matchesType = trueType === activeTab;
+            
             const matchesStatus = filterStatus === "all" || req.status === filterStatus;
             const search = searchTerm.toLowerCase();
             const matchesSearch = !searchTerm || 
@@ -104,8 +122,16 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const stats = useMemo(() => {
         return {
-            ps: requests.filter(r => r.type === "professional_service" && r.status === "Pending").length,
-            orgs: requests.filter(r => r.type === "event_organiser" && (r.status === "Pending" || r.status === "KYC Completed")).length
+            ps: requests.filter(r => {
+                const type = isServiceProvider(r.category) ? "professional_service" : r.type;
+                return type === "professional_service" && r.status === "Pending";
+            }).length,
+            orgs: requests.filter(r => {
+                const type = isServiceProvider(r.category) ? "professional_service" : r.type;
+                return type === "event_organiser" && (r.status === "Pending" || r.status === "KYC Completed");
+            }).length,
+            totalPs: requests.filter(r => (isServiceProvider(r.category) ? "professional_service" : r.type) === "professional_service").length,
+            totalOrgs: requests.filter(r => (isServiceProvider(r.category) ? "professional_service" : r.type) === "event_organiser").length
         };
     }, [requests]);
 
@@ -118,24 +144,24 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                     style={{ 
                         padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, 
                         display: "flex", alignItems: "center", gap: "8px", transition: "0.2s",
-                        backgroundColor: activeTab === "professional_service" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
+                        backgroundColor: activeTab === "professional_service" ? "#000" : "transparent",
                         background: activeTab === "professional_service" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
                         color: activeTab === "professional_service" ? "#fff" : t.textSub
                     }}
                 >
-                    <Briefcase size={16} /> Professional Services {stats.ps > 0 && <span style={{ background: "#fff", color: "#FF3D6E", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.ps}</span>}
+                    <Briefcase size={16} /> Professional Services {stats.ps > 0 && <span style={{ background: "#fff", color: "#FF3D6E", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.ps} New</span>}
                 </button>
                 <button 
                     onClick={() => setActiveTab("event_organiser")}
                     style={{ 
                         padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, 
                         display: "flex", alignItems: "center", gap: "8px", transition: "0.2s",
-                        backgroundColor: activeTab === "event_organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
+                        backgroundColor: activeTab === "event_organiser" ? "#000" : "transparent",
                         background: activeTab === "event_organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
                         color: activeTab === "event_organiser" ? "#fff" : t.textSub
                     }}
                 >
-                    <User size={16} /> Event Organisers {stats.orgs > 0 && <span style={{ background: "#fff", color: "#A855F7", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.orgs}</span>}
+                    <User size={16} /> Event Organisers {stats.orgs > 0 && <span style={{ background: "#fff", color: "#A855F7", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.orgs} New</span>}
                 </button>
             </div>
 
@@ -164,7 +190,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                         <option value="KYC Pending">Waiting for KYC</option>
                         <option value="KYC Completed">KYC Completed</option>
                         <option value="Approved">Approved</option>
-                        <option value="Access Granted">Access Granted</option>
+                        <option value="Access Granted">Active</option>
                         <option value="Rejected">Rejected</option>
                     </select>
                 </div>
@@ -229,7 +255,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 req.status === "KYC Completed" ? "#1e40af" :
                                                 req.status === "KYC Pending" ? "#92400e" : "#475569"
                                         }}>
-                                            {req.status}
+                                            {req.status === "Access Granted" ? "Active" : req.status}
                                         </div>
                                     </td>
                                     <td style={{ padding: "16px", textAlign: "right" }}>
@@ -340,6 +366,11 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                         placeholder="Repeat password"
                                         style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: `1.5px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                                     />
+                                </div>
+
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center", padding: "10px", backgroundColor: "#f0fdf4", borderRadius: "10px", border: "1px solid #bbf7d0", marginTop: "4px" }}>
+                                    <Send size={14} color="#16a34a" />
+                                    <span style={{ fontSize: "12px", color: "#166534", fontWeight: 600 }}>Credentials will be sent via Email & SMS</span>
                                 </div>
 
                                 <button 

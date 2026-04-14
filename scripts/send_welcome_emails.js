@@ -4,7 +4,7 @@ const config = {
   host: "smtp.gmail.com",
   port: 587,
   auth: {
-    user: "bookmytiket.io@gmail.com",
+    user: "hello@bookmyticket.net",
     pass: "ekdt upgc ursb jplk"
   }
 };
@@ -53,7 +53,7 @@ async function sendWelcome(email) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"${brandName}" <bookmytiket.io@gmail.com>`,
+      from: `"${brandName}" <hello@bookmyticket.net>`,
       to: email,
       subject: `Welcome to ${brandName}`,
       html: html

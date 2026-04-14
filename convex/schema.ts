@@ -160,6 +160,7 @@ export default defineSchema({
                 agreementAccepted: v.boolean(),
             })
         ),
+        forcePasswordChange: v.optional(v.boolean()),
     }).index("by_userId", ["userId"])
       .index("by_kycStatus", ["kycStatus"])
       .index("by_category", ["category"]),
@@ -199,6 +200,7 @@ export default defineSchema({
         ),
         approvedAt: v.optional(v.number()),
         accessGrantedAt: v.optional(v.number()),
+        passwordCreated: v.optional(v.boolean()),
         createdAt: v.number(),
     }).index("by_status", ["status"]).index("by_email", ["email"]).index("by_type", ["type"]),
 

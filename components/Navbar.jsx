@@ -122,7 +122,7 @@ const POPULAR_CITIES_BY_COUNTRY = {
   ]
 };
 
-import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
+import { SERVICE_CATEGORIES, isServiceProvider } from "@/app/data/serviceCategories";
 
 const EVENT_CATEGORIES = [...SERVICE_CATEGORIES, "Other"];
 
@@ -236,7 +236,8 @@ export default function Navbar() {
     }
     setOrgLoading(true);
     try {
-      await createPartnerRequest({ ...orgForm, type: "organiser" });
+      const type = isServiceProvider(orgForm.category) ? "professional_service" : "event_organiser";
+      await createPartnerRequest({ ...orgForm, type });
       setOrgSent(true);
       setTimeout(() => {
         setOrgSent(false);
@@ -837,36 +838,36 @@ export default function Navbar() {
                   <form className="org-form" onSubmit={handleOrgSubmit} noValidate>
                     <div className="org-row">
                       <div className="org-field">
-                        <label htmlFor="fn">First Name <span>*</span></label>
+                        <label htmlFor="fn">FIRST NAME <span>*</span></label>
                         <input id="fn" required placeholder="John" {...field("firstName")} />
                       </div>
                       <div className="org-field">
-                        <label htmlFor="ln">Last Name <span>*</span></label>
+                        <label htmlFor="ln">LAST NAME <span>*</span></label>
                         <input id="ln" required placeholder="Doe" {...field("lastName")} />
                       </div>
                     </div>
 
                     <div className="org-row">
                       <div className="org-field">
-                        <label htmlFor="em">Email ID <span>*</span></label>
+                        <label htmlFor="em">EMAIL ID <span>*</span></label>
                         <input id="em" required type="email" placeholder="john@example.com" {...field("email")} />
                       </div>
                       <div className="org-field">
-                        <label htmlFor="ph">Contact Number <span>*</span></label>
+                        <label htmlFor="ph">CONTACT NUMBER <span>*</span></label>
                         <input id="ph" required type="tel" placeholder="+91 98765 43210" {...field("phone")} />
                       </div>
                     </div>
 
                     <div className="org-row">
                       <div className="org-field">
-                        <label htmlFor="cat">Category <span>*</span></label>
+                        <label htmlFor="cat">CATEGORY <span>*</span></label>
                         <select id="cat" required {...field("category")}>
                           <option value="">Select a category</option>
                           {EVENT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                         </select>
                       </div>
                       <div className="org-field">
-                        <label htmlFor="role">Role <span>*</span></label>
+                        <label htmlFor="role">ROLE <span>*</span></label>
                         <select id="role" required {...field("role")}>
                           <option>Organiser</option>
                           <option>Individual</option>
@@ -877,7 +878,7 @@ export default function Navbar() {
                     </div>
 
                     <div className="org-field org-field-full">
-                      <label htmlFor="rem">Remarks</label>
+                      <label htmlFor="rem">REMARKS</label>
                       <textarea id="rem" rows={3} placeholder="Tell us about your events..." {...field("remarks")} />
                     </div>
 

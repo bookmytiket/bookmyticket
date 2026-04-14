@@ -111,6 +111,26 @@ export const resetPassword = mutation({
     },
 });
 
+export const updateForcedPassword = mutation({
+    args: { email: v.string(), newPassword: v.string() },
+    handler: async (ctx, args) => {
+        const email = args.email.trim().toLowerCase();
+        const organiser = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", email))
+            .unique();
+
+        if (!organiser) throw new Error("Organiser not found");
+        
+        await ctx.db.patch(organiser._id, { 
+            password: args.newPassword,
+            forcePasswordChange: false 
+        });
+
+        return true;
+    },
+});
+
 // Internal helper for OTP generation and delivery
 async function internalSendOTP(ctx: MutationCtx, rawEmail: string, purpose: string) {
     const email = rawEmail.trim().toLowerCase();

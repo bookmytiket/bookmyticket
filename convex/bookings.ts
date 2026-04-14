@@ -241,7 +241,7 @@ export const createBooking = mutation({
             });
 
             // Notify Admin of New Revenue
-            const adminEmail = "bookmytiket.io@gmail.com";
+            const adminEmail = "hello@bookmyticket.net";
             await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
                 to: adminEmail,
                 subject: `Revenue Alert: New Booking for ${eventName}`,

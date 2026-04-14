@@ -133,7 +133,7 @@ export const confirmPayment = mutation({
                 });
 
                 // 2. Notify Admin
-                const adminEmail = "bookmytiket.io@gmail.com";
+                const adminEmail = "hello@bookmyticket.net";
                 await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
                     to: adminEmail,
                     subject: `Revenue Alert: New Turf Booking - ${turf.name}`,

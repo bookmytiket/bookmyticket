@@ -13,6 +13,7 @@ function ResetPasswordForm() {
     const router = useRouter();
     const token = searchParams.get("token");
     const email = searchParams.get("email");
+    const isForced = searchParams.get("force") === "true";
 
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,6 +25,7 @@ function ResetPasswordForm() {
         token && email ? { token, email } : "skip"
     );
     const resetPassMutation = useMutation(api.auth.resetPassword);
+    const forceResetMutation = useMutation(api.auth.updateForcedPassword);
 
     const handleReset = async (e) => {
         e.preventDefault();
@@ -39,15 +41,29 @@ function ResetPasswordForm() {
         setStatus("loading");
         try {
             const hashed = await hashPassword(newPassword);
-            await resetPassMutation({ token, email, newPassword: hashed });
+            if (isForced) {
+                await forceResetMutation({ email, newPassword: hashed });
+            } else {
+                await resetPassMutation({ token, email, newPassword: hashed });
+            }
             setStatus("success");
+            
+            // Helpful for forced reset: clear the flag in the local user object if present
+            const storedUser = localStorage.getItem("user");
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                if (parsed.identifier === email) {
+                    parsed.forcePasswordChange = false;
+                    localStorage.setItem("user", JSON.stringify(parsed));
+                }
+            }
         } catch (err) {
             setStatus("error");
             setErrorMessage(err.message || "Failed to reset password. Link may be expired.");
         }
     };
 
-    if (!token || !email) {
+    if (!isForced && (!token || !email)) {
         return (
             <div style={cardStyle}>
                 <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
@@ -69,7 +85,7 @@ function ResetPasswordForm() {
         );
     }
 
-    if (verifyToken === false) {
+    if (!isForced && verifyToken === false) {
         return (
             <div style={cardStyle}>
                 <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
@@ -84,8 +100,12 @@ function ResetPasswordForm() {
         <div style={cardStyle}>
             <div style={{ textAlign: "center", marginBottom: "24px" }}>
                 <img src="/logo.png" alt="Logo" style={{ height: "60px", marginBottom: "16px" }} />
-                <h2 style={titleStyle}>Set New Password</h2>
-                <p style={subStyle}>Enter a new password for <strong>{email}</strong></p>
+                <h2 style={titleStyle}>{isForced ? "Security Update" : "Set New Password"}</h2>
+                <p style={subStyle}>
+                    {isForced 
+                        ? "For your security, you must update the temporary password provided by the administrator."
+                        : `Enter a new password for ${email}`}
+                </p>
             </div>
 
             <form onSubmit={handleReset} style={{ width: "100%" }}>
