@@ -45,7 +45,7 @@ export default function BecomeOrganiserScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await submitPartnerRequest({ ...form, type: "organiser" });
+      await submitPartnerRequest({ ...form, type: "event_organiser" });
       setSuccess(true);
       setTimeout(() => {
         navigation.goBack();

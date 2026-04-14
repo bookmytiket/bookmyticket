@@ -125,6 +125,20 @@ export default function PartnerKycPage() {
         );
     }
 
+    if (request.type !== "event_organiser") {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full mx-4">
+                    <ShieldCheck size={48} className="text-amber-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">KYC Not Required</h2>
+                    <p className="text-gray-500 text-sm">
+                        This onboarding request is for a Professional Service provider and does not require KYC.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (success) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">

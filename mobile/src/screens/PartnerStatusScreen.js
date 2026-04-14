@@ -18,6 +18,33 @@ const STATUS_CONFIG = {
     label: 'Under Review',
     message: 'Your application is being reviewed by our team. We\'ll notify you within 3-5 business days.',
   },
+  'kyc pending': {
+    icon: 'shield-checkmark-outline',
+    color: '#a16207',
+    bg: '#fffbeb',
+    border: '#fde68a',
+    gradientColors: ['#f59e0b', '#ca8a04'],
+    label: 'KYC Pending',
+    message: 'Please complete your KYC verification to continue your Event Organiser onboarding.',
+  },
+  'kyc completed': {
+    icon: 'document-text-outline',
+    color: '#1d4ed8',
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    gradientColors: ['#3b82f6', '#2563eb'],
+    label: 'KYC Submitted',
+    message: 'Your KYC documents are submitted. Admin review is in progress.',
+  },
+  'access granted': {
+    icon: 'checkmark-done-circle',
+    color: '#059669',
+    bg: '#ecfdf5',
+    border: '#bbf7d0',
+    gradientColors: ['#10b981', '#059669'],
+    label: 'Access Granted',
+    message: 'Your onboarding is complete. You can now access your panel.',
+  },
   approved: {
     icon: 'checkmark-circle',
     color: '#10b981',
@@ -145,7 +172,7 @@ export default function PartnerStatusScreen() {
         </View>
 
         {/* Actions */}
-        {status === 'approved' && (
+        {(status === 'approved' || status === 'access granted') && (
           <TouchableOpacity
             style={styles.dashboardBtn}
             onPress={() => navigation.navigate('Dashboard')}

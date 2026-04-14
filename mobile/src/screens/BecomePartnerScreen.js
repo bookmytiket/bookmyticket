@@ -49,7 +49,7 @@ export default function BecomePartnerScreen({ navigation }) {
     try {
       await submitRequest({
         ...form,
-        type: form.category === "Event Organiser" ? "organiser" : "professional_service"
+        type: form.category === "Event Organiser" ? "event_organiser" : "professional_service"
       });
       setSuccess(true);
       setTimeout(() => {

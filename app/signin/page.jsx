@@ -99,7 +99,7 @@ export default function SignInPage() {
                 destination = "/branding/dashboard";
             } else if (user.role === "organiser") {
                 // If it's a professional service vendor, always go to vendor dashboard
-                if (user.category && isServiceProvider(user.category)) {
+                if (user.type === "professional_service" || (user.category && isServiceProvider(user.category))) {
                     destination = "/vendor/dashboard";
                 } else if (redirectPath?.startsWith("/organiser")) {
                     // Respect specific redirects to organiser sub-pages if they already point to the dashboard

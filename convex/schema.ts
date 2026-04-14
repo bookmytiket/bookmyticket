@@ -129,6 +129,7 @@ export default defineSchema({
         lat: v.optional(v.number()),
         lng: v.optional(v.number()),
         category: v.optional(v.string()), // Mehendi Artist, Photographer, etc.
+        type: v.optional(v.string()), // "event_organiser" | "professional_service"
         kycStatus: v.optional(v.string()),
         isApproved: v.optional(v.boolean()), // New field for access control
         walletBalance: v.optional(v.number()),
@@ -166,7 +167,13 @@ export default defineSchema({
 
 
     partnerRequests: defineTable({
-        type: v.string(), // "event_organiser" | "professional_service"
+        // Keep legacy "organiser" temporarily to unblock schema validation on older rows.
+        // Run migrations.normalizePartnerRequestTypes and then remove this literal.
+        type: v.optional(v.union(
+            v.literal("event_organiser"),
+            v.literal("professional_service"),
+            v.literal("organiser")
+        )),
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
@@ -174,7 +181,8 @@ export default defineSchema({
         category: v.string(),
         role: v.string(), // e.g., "Individual", "Company"
         remarks: v.optional(v.string()),
-        status: v.string(), // "Pending", "KYC Pending", "KYC Completed", "Approved", "Rejected"
+        status: v.string(), // "Pending", "KYC Pending", "KYC Completed", "Approved", "Access Granted", "Rejected"
+        kycStatus: v.optional(v.string()), // "Not Required" | "Not Started" | "Pending" | "Completed" | "Verified"
         kycDetails: v.optional(
             v.object({
                 panNumber: v.optional(v.string()),
@@ -189,6 +197,8 @@ export default defineSchema({
                 agreementAccepted: v.optional(v.boolean()),
             })
         ),
+        approvedAt: v.optional(v.number()),
+        accessGrantedAt: v.optional(v.number()),
         createdAt: v.number(),
     }).index("by_status", ["status"]).index("by_email", ["email"]).index("by_type", ["type"]),
 

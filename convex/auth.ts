@@ -308,6 +308,12 @@ export const login = mutation({
 
         if (organiser) {
             if (organiser.password === args.password) {
+                if (!organiser.isApproved) {
+                    return { success: false, error: "Account approval is pending." };
+                }
+                if (organiser.type === "event_organiser" && organiser.kycStatus !== "Verified") {
+                    return { success: false, error: "KYC verification is required before organiser access." };
+                }
                 if (organiser.kycStatus === "Banned" || organiser.kycStatus === "Rejected") {
                     return { success: false, error: "Account is restricted." };
                 }
@@ -376,7 +382,13 @@ export const verifyLoginOTP = mutation({
                 .withIndex("by_userId", (q) => q.eq("userId", args.email))
                 .unique();
             
-            if (organiser && organiser.kycStatus !== "Banned" && organiser.kycStatus !== "Rejected") {
+            if (
+                organiser &&
+                organiser.isApproved &&
+                organiser.kycStatus !== "Banned" &&
+                organiser.kycStatus !== "Rejected" &&
+                (organiser.type !== "event_organiser" || organiser.kycStatus === "Verified")
+            ) {
                 return { success: true, role: "organiser", data: organiser };
             }
 
@@ -390,6 +402,12 @@ export const verifyLoginOTP = mutation({
             .unique();
 
         if (organiserOnly) {
+            if (!organiserOnly.isApproved) {
+                throw new Error("Account approval is pending.");
+            }
+            if (organiserOnly.type === "event_organiser" && organiserOnly.kycStatus !== "Verified") {
+                throw new Error("KYC verification is required before organiser access.");
+            }
             if (organiserOnly.kycStatus === "Banned" || organiserOnly.kycStatus === "Rejected") {
                 throw new Error("Account is restricted.");
             }

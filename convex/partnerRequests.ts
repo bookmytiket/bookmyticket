@@ -2,11 +2,36 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { hashPassword } from "./utils";
-import { partnerRequestReceivedTemplate, adminNotificationTemplate } from "./emailTemplates";
+import {
+    partnerRequestReceivedTemplate,
+    adminNotificationTemplate,
+    kycInvitationTemplate,
+    kycCompletedNotificationTemplate,
+    partnerApprovalTemplate,
+} from "./emailTemplates";
+
+const REQUEST_TYPE = {
+    PROFESSIONAL_SERVICE: "professional_service",
+    EVENT_ORGANISER: "event_organiser",
+} as const;
+
+const REQUEST_STATUS = {
+    PENDING: "Pending",
+    KYC_PENDING: "KYC Pending",
+    KYC_COMPLETED: "KYC Completed",
+    APPROVED: "Approved",
+    ACCESS_GRANTED: "Access Granted",
+    REJECTED: "Rejected",
+} as const;
+
+function normalizeType(type: string | undefined) {
+    if (type === REQUEST_TYPE.PROFESSIONAL_SERVICE) return REQUEST_TYPE.PROFESSIONAL_SERVICE;
+    return REQUEST_TYPE.EVENT_ORGANISER;
+}
 
 export const submitRequest = mutation({
     args: {
-        type: v.string(), // "event_organiser" | "professional_service"
+        type: v.union(v.literal("event_organiser"), v.literal("professional_service")),
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
@@ -25,7 +50,10 @@ export const submitRequest = mutation({
             category: args.category,
             role: args.role,
             remarks: args.remarks || "",
-            status: "Pending",
+            status: REQUEST_STATUS.PENDING,
+            kycStatus: args.type === REQUEST_TYPE.EVENT_ORGANISER ? "Not Started" : "Not Required",
+            approvedAt: undefined,
+            accessGrantedAt: undefined,
             createdAt: Date.now(),
         });
 
@@ -68,44 +96,87 @@ export const submitRequest = mutation({
 export const getById = query({
     args: { id: v.id("partnerRequests") },
     handler: async (ctx, args) => {
-        return await ctx.db.get(args.id);
+        const row: any = await ctx.db.get(args.id);
+        if (!row) return null;
+        const type = normalizeType(row.type);
+        return {
+            ...row,
+            type,
+            kycStatus: row.kycStatus || (type === REQUEST_TYPE.EVENT_ORGANISER ? "Not Started" : "Not Required"),
+        };
     }
 });
 
 export const getAll = query({
     args: {},
     handler: async (ctx) => {
-        return await ctx.db.query("partnerRequests").order("desc").collect();
+        const rows: any[] = await ctx.db.query("partnerRequests").order("desc").collect();
+        return rows.map((row) => {
+            const type = normalizeType(row.type);
+            return {
+                ...row,
+                type,
+                kycStatus: row.kycStatus || (type === REQUEST_TYPE.EVENT_ORGANISER ? "Not Started" : "Not Required"),
+            };
+        });
+    }
+});
+
+export const getByEmail = query({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const normalizedEmail = args.email.toLowerCase();
+        const rows: any[] = await ctx.db
+            .query("partnerRequests")
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+            .order("desc")
+            .collect();
+        return rows.map((row) => {
+            const type = normalizeType(row.type);
+            return {
+                ...row,
+                type,
+                kycStatus: row.kycStatus || (type === REQUEST_TYPE.EVENT_ORGANISER ? "Not Started" : "Not Required"),
+            };
+        });
+    }
+});
+
+export const getByType = query({
+    args: { type: v.union(v.literal("event_organiser"), v.literal("professional_service")) },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("partnerRequests")
+            .withIndex("by_type", (q) => q.eq("type", args.type))
+            .order("desc")
+            .collect();
     }
 });
 
 export const initiateKyc = mutation({
     args: { id: v.id("partnerRequests") },
     handler: async (ctx, args) => {
-        const request = await ctx.db.get(args.id);
+        const requestRaw: any = await ctx.db.get(args.id);
+        const request = requestRaw ? { ...requestRaw, type: normalizeType(requestRaw.type) } : null;
         if (!request) throw new Error("Request not found");
-        if (request.type !== "event_organiser") throw new Error("KYC only required for Event Organisers");
+        if (request.type !== REQUEST_TYPE.EVENT_ORGANISER) throw new Error("KYC only required for Event Organisers");
+        if (request.status !== REQUEST_STATUS.PENDING) {
+            throw new Error("KYC can only be initiated from Pending status");
+        }
 
-        await ctx.db.patch(args.id, { status: "KYC Pending" });
+        await ctx.db.patch(args.id, {
+            status: REQUEST_STATUS.KYC_PENDING,
+            kycStatus: "Pending",
+        });
 
         const branding = await ctx.db.query("siteBranding").first();
         const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
 
-        // Send KYC Invitation Email
+        const kycUrl = `${siteUrl}/partner-kyc/${args.id}`;
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: request.email,
             subject: "Action Required: Complete Your KYC Onboarding",
-            html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>KYC Onboarding Required</h2>
-                    <p>Hi ${request.firstName},</p>
-                    <p>To proceed with your Event Organiser application, we need you to provide some additional verification documents.</p>
-                    <div style="margin: 30px 0;">
-                        <a href="${siteUrl}/partner-kyc/${args.id}" style="background: #8000ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Complete KYC Now</a>
-                    </div>
-                    <p>If you have any questions, please reply to this email.</p>
-                </div>
-            `
+            html: kycInvitationTemplate({ firstName: request.firstName, kycUrl }, branding),
         });
     }
 });
@@ -127,11 +198,19 @@ export const submitKycForRequest = mutation({
         })
     },
     handler: async (ctx, args) => {
-        const request = await ctx.db.get(args.id);
+        const requestRaw: any = await ctx.db.get(args.id);
+        const request = requestRaw ? { ...requestRaw, type: normalizeType(requestRaw.type) } : null;
         if (!request) throw new Error("Request not found");
+        if (request.type !== REQUEST_TYPE.EVENT_ORGANISER) {
+            throw new Error("KYC submission is only allowed for Event Organiser requests");
+        }
+        if (request.status !== REQUEST_STATUS.KYC_PENDING) {
+            throw new Error("KYC can only be submitted after KYC is initiated");
+        }
 
         await ctx.db.patch(args.id, {
-            status: "KYC Completed",
+            status: REQUEST_STATUS.KYC_COMPLETED,
+            kycStatus: "Completed",
             kycDetails: args.kycDetails
         });
 
@@ -140,7 +219,10 @@ export const submitKycForRequest = mutation({
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: "bookmytiket.io@gmail.com",
             subject: `KYC Completed: ${request.firstName} ${request.lastName}`,
-            html: `<p>Partner ${request.firstName} ${request.lastName} has submitted their KYC documents. Please review and approve in the admin panel.</p>`
+            html: kycCompletedNotificationTemplate({
+                name: `${request.firstName} ${request.lastName}`,
+                email: request.email
+            }, branding)
         });
 
         // Notify User of KYC completion
@@ -165,11 +247,29 @@ export const approve = mutation({
         password: v.string()
     },
     handler: async (ctx, args) => {
-        const request = await ctx.db.get(args.id);
+        const requestRaw: any = await ctx.db.get(args.id);
+        const request = requestRaw ? { ...requestRaw, type: normalizeType(requestRaw.type) } : null;
         if (!request) throw new Error("Request not found");
-        
-        if (request.type === "event_organiser" && request.status !== "KYC Completed") {
+
+        const existingAccount = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", request.email))
+            .unique();
+        if (existingAccount) {
+            throw new Error("An account already exists for this email");
+        }
+
+        if (
+            request.type === REQUEST_TYPE.EVENT_ORGANISER &&
+            request.status !== REQUEST_STATUS.KYC_COMPLETED
+        ) {
             throw new Error("Event Organisers must complete KYC before approval");
+        }
+        if (
+            request.type === REQUEST_TYPE.PROFESSIONAL_SERVICE &&
+            request.status !== REQUEST_STATUS.PENDING
+        ) {
+            throw new Error("Professional Service requests can only be approved from Pending status");
         }
 
         const hashedPassword = await hashPassword(args.password);
@@ -181,17 +281,41 @@ export const approve = mutation({
             name: `${request.firstName} ${request.lastName}`,
             firstName: request.firstName,
             lastName: request.lastName,
+            type: request.type,
             category: request.category,
-            kycStatus: request.type === "event_organiser" ? "Verified" : "Active",
+            kycStatus: request.type === REQUEST_TYPE.EVENT_ORGANISER ? "Verified" : "Not Required",
             isApproved: true,
             walletBalance: 0,
             kycDetails: request.kycDetails as any,
         });
 
-        // 2. Update Request Status
-        await ctx.db.patch(args.id, { status: "Approved" });
+        const now = Date.now();
+        // 2. Update Request Status and access state
+        await ctx.db.patch(args.id, {
+            status: REQUEST_STATUS.ACCESS_GRANTED,
+            kycStatus: request.type === REQUEST_TYPE.EVENT_ORGANISER ? "Verified" : "Not Required",
+            approvedAt: now,
+            accessGrantedAt: now,
+        });
 
-        // 3. Send Credentials
+        // 3. Send Credentials + approval email flow
+        const branding = await ctx.db.query("siteBranding").first();
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: request.email,
+            subject:
+                request.type === REQUEST_TYPE.PROFESSIONAL_SERVICE
+                    ? "Professional Service Approved - Vendor Panel Access Granted"
+                    : "Event Organiser Approved - Organiser Panel Access Granted",
+            html: partnerApprovalTemplate({
+                firstName: request.firstName,
+                email: request.email,
+                password: args.password,
+                loginUrl: `${siteUrl}/signin`,
+            }, branding),
+        });
+
         await ctx.scheduler.runAfter(0, api.notificationActions.sendPartnerApprovalCredentials, {
             email: request.email,
             firstName: request.firstName,
@@ -208,5 +332,33 @@ export const remove = mutation({
     handler: async (ctx, args) => {
         await ctx.db.delete(args.id);
         return true;
+    }
+});
+
+export const updateStatus = mutation({
+    args: {
+        id: v.id("partnerRequests"),
+        status: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const requestRaw: any = await ctx.db.get(args.id);
+        const request = requestRaw ? { ...requestRaw, type: normalizeType(requestRaw.type) } : null;
+        if (!request) throw new Error("Request not found");
+
+        if (args.status === REQUEST_STATUS.REJECTED) {
+            await ctx.db.patch(args.id, { status: REQUEST_STATUS.REJECTED });
+            return { success: true };
+        }
+
+        if (
+            request.type === REQUEST_TYPE.EVENT_ORGANISER &&
+            args.status === REQUEST_STATUS.KYC_PENDING &&
+            request.status === REQUEST_STATUS.PENDING
+        ) {
+            await ctx.db.patch(args.id, { status: REQUEST_STATUS.KYC_PENDING, kycStatus: "Pending" });
+            return { success: true };
+        }
+
+        throw new Error("Unsupported status transition");
     }
 });

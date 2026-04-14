@@ -164,6 +164,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                         <option value="KYC Pending">Waiting for KYC</option>
                         <option value="KYC Completed">KYC Completed</option>
                         <option value="Approved">Approved</option>
+                        <option value="Access Granted">Access Granted</option>
                         <option value="Rejected">Rejected</option>
                     </select>
                 </div>
@@ -182,6 +183,8 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                 <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Applicant</th>
                                 <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact</th>
                                 <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category</th>
+                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Type</th>
+                                <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>KYC</th>
                                 <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</th>
                                 <th style={{ padding: "14px 16px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
                                 <th style={{ padding: "14px 16px", textAlign: "right", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Actions</th>
@@ -202,6 +205,12 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                         <div style={{ fontSize: "13px", color: t.textMain, fontWeight: 500 }}>{req.category}</div>
                                     </td>
                                     <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
+                                        {req.type === "professional_service" ? "Professional Service" : "Event Organiser"}
+                                    </td>
+                                    <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
+                                        {req.type === "event_organiser" ? (req.kycStatus || "Not Started") : "Not Required"}
+                                    </td>
+                                    <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
                                         {new Date(req.createdAt).toLocaleDateString()}
                                     </td>
                                     <td style={{ padding: "16px" }}>
@@ -209,11 +218,13 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             display: "inline-flex", padding: "4px 10px", borderRadius: "99px", fontSize: "11px", fontWeight: 700,
                                             backgroundColor: 
                                                 req.status === "Approved" ? "#dcfce7" : 
+                                                req.status === "Access Granted" ? "#dcfce7" :
                                                 req.status === "Rejected" ? "#fee2e2" : 
                                                 req.status === "KYC Completed" ? "#dbeafe" :
                                                 req.status === "KYC Pending" ? "#fef3c7" : "#f1f5f9",
                                             color: 
                                                 req.status === "Approved" ? "#166534" : 
+                                                req.status === "Access Granted" ? "#166534" :
                                                 req.status === "Rejected" ? "#991b1b" : 
                                                 req.status === "KYC Completed" ? "#1e40af" :
                                                 req.status === "KYC Pending" ? "#92400e" : "#475569"
@@ -246,7 +257,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 </button>
                                             )}
 
-                                            {req.status !== "Approved" && req.status !== "Rejected" && (
+                                            {req.status !== "Approved" && req.status !== "Access Granted" && req.status !== "Rejected" && (
                                                 <button 
                                                     onClick={() => handleUpdate(req._id, "Rejected")} 
                                                     title="Reject Request"

@@ -372,12 +372,12 @@ function OrganiserPanel() {
     const { confirm } = useConfirm();
     const router = useRouter();
 
-    const isProfService = (cat) => {
-        return isServiceProvider(cat);
+    const isProfService = (cat, type) => {
+        return type === "professional_service" || isServiceProvider(cat);
     };
 
     // IMMEDIATE GUARD: If the session already knows this is a professional service, redirect NOW.
-    if (!loading && user && isProfService(user.category)) {
+    if (!loading && user && isProfService(user.category, user.type)) {
         if (typeof window !== "undefined") {
             router.replace("/vendor/dashboard");
         }
@@ -515,8 +515,11 @@ function OrganiserPanel() {
     const submitKycMutation = useMutation(api.organisers.submitKyc);
 
     const isProfessionalService = useMemo(() => {
-        return isProfService(organiserData?.category || organiserData?.kycDetails?.category || user?.category);
-    }, [organiserData?.category, organiserData?.kycDetails?.category, user?.category]);
+        return isProfService(
+            organiserData?.category || organiserData?.kycDetails?.category || user?.category,
+            organiserData?.type || user?.type
+        );
+    }, [organiserData?.category, organiserData?.kycDetails?.category, user?.category, organiserData?.type, user?.type]);
 
     const handleIfscChange = async (ifsc) => {
         setKycFormData(prev => ({ ...prev, ifscCode: ifsc.toUpperCase() }));

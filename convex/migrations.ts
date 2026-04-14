@@ -150,3 +150,27 @@ export const fixCategoryStrings = mutation({
         };
     },
 });
+
+export const normalizePartnerRequestTypes = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const requests = await ctx.db.query("partnerRequests").collect();
+        let updated = 0;
+
+        for (const request of requests) {
+            const legacyType = (request as any).type;
+            if (!legacyType || legacyType === "organiser") {
+                await ctx.db.patch(request._id, {
+                    type: "event_organiser" as any,
+                    kycStatus: request.kycStatus ?? "Not Started",
+                } as any);
+                updated++;
+            }
+        }
+
+        return {
+            total: requests.length,
+            normalized: updated,
+        };
+    },
+});
