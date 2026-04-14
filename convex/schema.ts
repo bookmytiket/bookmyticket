@@ -202,7 +202,10 @@ export default defineSchema({
         accessGrantedAt: v.optional(v.number()),
         passwordCreated: v.optional(v.boolean()),
         createdAt: v.number(),
-    }).index("by_status", ["status"]).index("by_email", ["email"]).index("by_type", ["type"]),
+    }).index("by_status", ["status"])
+      .index("by_email", ["email"])
+      .index("by_phone", ["phone"])
+      .index("by_type", ["type"]),
 
     systemConfig: defineTable({
         key: v.string(),

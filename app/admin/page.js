@@ -845,10 +845,7 @@ function AdminHomePage() {
 
     const mappedOrganizers = useMemo(() => {
         return convexOrganizers
-            .filter(o => {
-                const cat = o.category || o.kycDetails?.category;
-                return !isProfService(cat);
-            })
+            .filter(o => o.type !== "professional_service")
             .map(o => ({
                 id: o._id,
                 username: o.name,
@@ -864,10 +861,7 @@ function AdminHomePage() {
 
 
     const organiserKycVerified = useMemo(() => {
-        return convexOrganizers.filter(o => {
-            const cat = o.category || o.kycDetails?.category;
-            return !isProfService(cat) && o.kycStatus === "Submitted";
-        });
+        return convexOrganizers.filter(o => o.type !== "professional_service" && o.kycStatus === "Submitted");
     }, [convexOrganizers]);
 
 
@@ -879,14 +873,14 @@ function AdminHomePage() {
 
     const serviceActive = useMemo(() => {
         return convexOrganizers.filter(o => 
-            isProfService(o.category || o.kycDetails?.category) && 
+            o.type === "professional_service" && 
             o.kycStatus !== "Banned"
         );
     }, [convexOrganizers]);
 
     const serviceBanned = useMemo(() => {
         return convexOrganizers.filter(o => 
-            isProfService(o.category || o.kycDetails?.category) && 
+            o.type === "professional_service" && 
             o.kycStatus === "Banned"
         );
     }, [convexOrganizers]);
@@ -1599,7 +1593,7 @@ function AdminHomePage() {
                         const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
                             <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
                                 <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
-                                <span className={`text-[11px] uppercase tracking-widest ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                <span className={`text-[11px] uppercase tracking-widest whitespace-nowrap ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
                                 {active && <div className="absolute right-4 w-1 h-4 bg-pink-500 rounded-full"></div>}
                             </button>
                         );
@@ -1613,7 +1607,7 @@ function AdminHomePage() {
                             >
                                 <div className="flex items-center space-x-3">
                                     <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
-                                    <span className={`text-[11px] uppercase tracking-[0.2em] ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                    <span className={`text-[11px] uppercase tracking-[0.2em] whitespace-nowrap ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
                                 </div>
                                 <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                             </button>
@@ -1621,7 +1615,7 @@ function AdminHomePage() {
                         const SidebarSubItem = ({ id, label, onClick, active }) => (
                             <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
-                                <span className="text-[10px] uppercase tracking-widest font-bold">{label}</span>
+                                <span className="text-[10px] uppercase tracking-widest font-bold whitespace-nowrap">{label}</span>
                             </button>
                         );
 
@@ -4955,7 +4949,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "with_balance", "org_requests", "partner_requests", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "promotions", "financials", "support_tickets", "hero", "video", "admin_management", "ad_popups", "meetings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "turf_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

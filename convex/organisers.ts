@@ -312,3 +312,49 @@ export const fixSriharini = mutation({
         return "Not found";
     },
 });
+
+export const removeSpecificUsers = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const emailsToDelete = [
+            "sriharini15501@gmail.com",
+            "mehendi@bookmyticket.com",
+            "test@gmail.com",
+            "madhu662008@gmail.com"
+        ];
+        let count = 0;
+        for (const email of emailsToDelete) {
+            const org = await ctx.db
+                .query("organisers")
+                .withIndex("by_userId", (q) => q.eq("userId", email))
+                .unique();
+            if (org) {
+                await ctx.db.delete(org._id);
+                count++;
+            }
+        }
+        return { deleted: count };
+    },
+});
+
+export const normalizeExistingOrganisers = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const organisers = await ctx.db.query("organisers").collect();
+        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering", "turf"];
+        
+        let count = 0;
+        for (const org of organisers) {
+            if (!org.type) {
+                const cat = (org.category || org.kycDetails?.category || "").toLowerCase();
+                const type = serviceKeywords.some(k => cat.includes(k)) 
+                    ? "professional_service" 
+                    : "event_organiser";
+                
+                await ctx.db.patch(org._id, { type });
+                count++;
+            }
+        }
+        return { normalized: count };
+    },
+});

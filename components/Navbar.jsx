@@ -245,7 +245,7 @@ export default function Navbar() {
         setOrgForm({ firstName: "", lastName: "", email: "", phone: "", category: "", role: "Organiser", remarks: "" });
       }, 2600);
     } catch (err) {
-      alert("Failed to send request. Please try again later.");
+      alert(err.message || "Failed to send request. Please try again later.");
       console.error(err);
     } finally {
       setOrgLoading(false);

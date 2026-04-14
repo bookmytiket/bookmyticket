@@ -82,6 +82,40 @@ export const submitRequest = mutation({
         remarks: v.optional(v.string())
     },
     handler: async (ctx, args) => {
+        const normalizedEmail = args.email.toLowerCase();
+        const normalizedPhone = args.phone.trim();
+
+        // 1. Check for existing approved account
+        const existingAccount = await ctx.db
+            .query("organisers")
+            .withIndex("by_userId", (q) => q.eq("userId", normalizedEmail))
+            .first();
+        
+        if (existingAccount) {
+            throw new Error(`Account already exists for ${normalizedEmail}. Please sign in instead.`);
+        }
+
+        // 2. Check for duplicate pending/active request (excluding Rejected)
+        const emailRequest = await ctx.db
+            .query("partnerRequests")
+            .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+            .filter((q) => q.neq(q.field("status"), REQUEST_STATUS.REJECTED))
+            .first();
+
+        if (emailRequest) {
+            throw new Error(`A request with email ${normalizedEmail} is already being processed.`);
+        }
+
+        const phoneRequest = await ctx.db
+            .query("partnerRequests")
+            .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
+            .filter((q) => q.neq(q.field("status"), REQUEST_STATUS.REJECTED))
+            .first();
+
+        if (phoneRequest) {
+            throw new Error(`A request with phone number ${normalizedPhone} is already being processed.`);
+        }
+
         // Apply normalization before insertion to ensure data integrity
         const normalized = normalizeRequest({ 
             type: args.type, 
@@ -292,8 +326,9 @@ export const approve = mutation({
         // Defensive check: If it's an Event Organiser, they must complete KYC.
         // Professional Services bypass this.
         if (request.type === REQUEST_TYPE.EVENT_ORGANISER) {
-             if (request.status !== REQUEST_STATUS.KYC_COMPLETED && request.status !== REQUEST_STATUS.APPROVED) {
-                 throw new Error(`Event Organisers must complete KYC before approval (Current Status: ${request.status})`);
+             const allowedStatuses = [REQUEST_STATUS.KYC_PENDING, REQUEST_STATUS.KYC_COMPLETED, REQUEST_STATUS.APPROVED];
+             if (!allowedStatuses.includes(request.status as any)) {
+                 throw new Error(`Event Organisers must be in KYC Pending or KYC Completed state for approval (Current Status: ${request.status})`);
              }
         } 
         else if (request.type === REQUEST_TYPE.PROFESSIONAL_SERVICE) {
@@ -393,4 +428,27 @@ export const updateStatus = mutation({
 
         throw new Error("Unsupported status transition");
     }
+});
+
+export const normalizeExistingRequests = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const requests = await ctx.db.query("partnerRequests").collect();
+        const serviceKeywords = ["mehandi", "mehendi", "photograph", "makeup", "artist", "personal service", "studio", "decorator", "catering", "turf"];
+        
+        let count = 0;
+        for (const req of requests) {
+            // Check if type is missing or invalid
+            if (!req.type || (req.type as string) === "organiser") {
+                const cat = (req.category || "").toLowerCase();
+                const type = serviceKeywords.some(k => cat.includes(k)) 
+                    ? "professional_service" 
+                    : "event_organiser";
+                
+                await ctx.db.patch(req._id, { type: type as any });
+                count++;
+            }
+        }
+        return { normalized: count };
+    },
 });

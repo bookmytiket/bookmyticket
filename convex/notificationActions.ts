@@ -388,14 +388,17 @@ export const sendPartnerApprovalCredentials = action({
         // 2. SMS Notification (via Twilio)
         const settings = await ctx.runQuery(api.whatsappSettings.get) as any;
         if (settings && settings.isActive && settings.accountSid && settings.authToken && settings.fromNumber) {
-            const smsMessage = `Your ${brandNameDisplay} partner account is approved!\nLogin: ${email}\nPassword: ${password}\nLogin here: ${siteUrl}/signin`;
+            const smsMessage = `✅ Your ${brandNameDisplay} account is APPROVED!\n\nEmail: ${email}\nPassword: ${password}\n\nLogin here: ${siteUrl}/signin\n\nPlease change your password after logging in.`;
             
             try {
                 const cleanPhone = phone.replace(/\D/g, "");
-                const formattedPhone = cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`;
+                // Ensure international format (defaulting to +91 if 10 digits and no prefix provided)
+                const formattedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : (cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`);
+                
+                console.log(`[Notification] Attempting to send credentials SMS to ${formattedPhone}...`);
                 
                 const auth = Buffer.from(`${settings.accountSid}:${settings.authToken}`).toString("base64");
-                await fetch(`https://api.twilio.com/2010-04-01/Accounts/${settings.accountSid}/Messages.json`, {
+                const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${settings.accountSid}/Messages.json`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/x-www-form-urlencoded",
@@ -403,14 +406,22 @@ export const sendPartnerApprovalCredentials = action({
                     },
                     body: new URLSearchParams({
                         To: formattedPhone,
-                        From: settings.fromNumber, // Assuming fromNumber is set in settings
+                        From: settings.fromNumber,
                         Body: smsMessage
                     })
                 });
-                console.log(`✅ Credentials SMS sent to ${formattedPhone}`);
+
+                const result = await response.json();
+                if (response.ok) {
+                    console.log(`✅ Credentials SMS sent successfully to ${formattedPhone}. SID: ${result.sid}`);
+                } else {
+                    console.error("❌ Twilio API Error:", result);
+                }
             } catch (smsError) {
                 console.error("❌ Failed to send credentials SMS:", smsError);
             }
+        } else {
+            console.log("[Notification] SMS notification skipped (Twilio settings incomplete or inactive).");
         }
 
         return { success: true };

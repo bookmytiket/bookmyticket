@@ -271,9 +271,9 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 </button>
                                             )}
 
-                                            {/* Approval for PS or post-KYC Organisers */}
+                                            {/* Approval for PS or post-KYC/KYC-Pending Organisers */}
                                             {((activeTab === "professional_service" && req.status === "Pending") || 
-                                              (activeTab === "event_organiser" && req.status === "KYC Completed")) && (
+                                              (activeTab === "event_organiser" && (req.status === "KYC Completed" || req.status === "KYC Pending"))) && (
                                                 <button 
                                                     onClick={() => handleApprove(req)} 
                                                     title="Final Approval"
