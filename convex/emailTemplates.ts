@@ -230,6 +230,46 @@ export const adminNotificationTemplate = (args: { title: string; fields: { label
 };
 
 /**
+ * KYC Invitation Template
+ */
+export const kycInvitationTemplate = (args: { firstName: string; kycUrl: string }, branding: any) => {
+    const content = `
+        <h2 style="color: #1e293b; font-size: 24px; font-weight: 800;">Action Required: Verification 🛡️</h2>
+        <p>Hi ${args.firstName},</p>
+        <p>Thank you for your interest in becoming an Event Organiser on our platform.</p>
+        <p>To proceed with your application, we require you to complete the KYC (Know Your Customer) verification process. This helps us ensure a safe and trusted environment for all users.</p>
+        
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="${args.kycUrl}" class="btn">Complete KYC Check</a>
+        </div>
+        
+        <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #854d0e; font-size: 14px;"><strong>Note:</strong> You will need your PAN card, Aadhar card, and bank details ready to complete the submission.</p>
+        </div>
+        
+        <p style="font-size: 14px; color: #64748b;">If you have any questions, feel free to reply to this email.</p>
+    `;
+    return baseTemplate(content, branding);
+};
+
+/**
+ * KYC Completion Notification (For Admin)
+ */
+export const kycCompletedNotificationTemplate = (args: { name: string; email: string }, branding: any) => {
+    const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+    const content = `
+        <h2 style="color: #1e293b; font-size: 20px; font-weight: 800;">KYC Documents Received</h2>
+        <p>Partner <strong>${args.name}</strong> (${args.email}) has submitted their KYC documents.</p>
+        <p>Please review the application and approve or reject it in the admin dashboard.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${siteUrl}/admin" class="btn">Review Application</a>
+        </div>
+    `;
+    return baseTemplate(content, branding);
+};
+
+/**
  * Subscription Welcome Template
  */
 export const subscriptionWelcomeTemplate = (branding: any) => {

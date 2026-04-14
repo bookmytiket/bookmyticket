@@ -130,6 +130,7 @@ export default defineSchema({
         lng: v.optional(v.number()),
         category: v.optional(v.string()), // Mehendi Artist, Photographer, etc.
         kycStatus: v.optional(v.string()),
+        isApproved: v.optional(v.boolean()), // New field for access control
         walletBalance: v.optional(v.number()),
         kycDetails: v.optional(
             v.object({
@@ -165,7 +166,7 @@ export default defineSchema({
 
 
     partnerRequests: defineTable({
-        type: v.optional(v.string()), // "organiser" | "professional_service"
+        type: v.string(), // "organiser" | "professional_service"
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
@@ -173,7 +174,21 @@ export default defineSchema({
         category: v.string(),
         role: v.string(), // e.g., "Individual", "Company"
         remarks: v.optional(v.string()),
-        status: v.string(), // "Pending", "Approved", "Rejected"
+        status: v.string(), // "Pending", "KYC Pending", "KYC Completed", "Approved", "Rejected"
+        kycDetails: v.optional(
+            v.object({
+                panNumber: v.optional(v.string()),
+                panFile: v.optional(v.string()),
+                aadharFile: v.optional(v.string()),
+                chequeFile: v.optional(v.string()),
+                beneficiaryName: v.optional(v.string()),
+                bankName: v.optional(v.string()),
+                accountNumber: v.optional(v.string()),
+                ifscCode: v.optional(v.string()),
+                accountType: v.optional(v.string()),
+                agreementAccepted: v.optional(v.boolean()),
+            })
+        ),
         createdAt: v.number(),
     }).index("by_status", ["status"]).index("by_email", ["email"]).index("by_type", ["type"]),
 

@@ -16,7 +16,6 @@ export const submitRequest = mutation({
         remarks: v.optional(v.string())
     },
     handler: async (ctx, args) => {
-        // 1. Insert into Database
         const requestId = await ctx.db.insert("partnerRequests", {
             type: args.type,
             firstName: args.firstName,
@@ -31,31 +30,26 @@ export const submitRequest = mutation({
         });
 
         const branding = await ctx.db.query("siteBranding").first();
-        const rawSiteUrl = branding?.siteUrl || "https://bookmyticket.net";
-        const siteUrl = (rawSiteUrl.includes("localhost") || rawSiteUrl.includes("vercel.app")) ? "https://bookmyticket.net" : rawSiteUrl;
-        
         const adminEmail = "bookmytiket.io@gmail.com";
 
-        // 2. Notify the Admin asynchronously
+        // Notify Admin
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: adminEmail,
             subject: `New Partner Request: ${args.firstName} ${args.lastName}`,
             html: adminNotificationTemplate({
                 title: "New Partner Application",
                 fields: [
+                    { label: "Type", value: args.type === "organiser" ? "Event Organiser" : "Professional Service" },
                     { label: "Name", value: `${args.firstName} ${args.lastName}` },
                     { label: "Email", value: args.email.toLowerCase() },
                     { label: "Phone", value: args.phone },
                     { label: "Category", value: args.category },
-                    { label: "Role Type", value: args.role },
-                    { label: "Remarks", value: args.remarks || "None" },
                 ],
-                actionUrl: `${siteUrl}/admin`,
                 actionText: "Review in Admin Panel"
             }, branding)
         });
 
-        // 3. Schedule Email Notification to the User asynchronously
+        // Notify User
         await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
             to: args.email.toLowerCase(),
             subject: "Your Partner Request is Under Review",
@@ -71,49 +65,83 @@ export const submitRequest = mutation({
     }
 });
 
-// Admin Queries
+export const getById = query({
+    args: { id: v.id("partnerRequests") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.id);
+    }
+});
+
 export const getAll = query({
     args: {},
     handler: async (ctx) => {
-        return await ctx.db
-            .query("partnerRequests")
-            .order("desc")
-            .collect();
+        return await ctx.db.query("partnerRequests").order("desc").collect();
     }
 });
 
-export const getByEmail = query({
-    args: { email: v.string() },
-    handler: async (ctx, args) => {
-        const all = await ctx.db
-            .query("partnerRequests")
-            .order("desc")
-            .collect();
-        return all.filter(r =>
-            r.email?.toLowerCase() === args.email.toLowerCase() ||
-            r.phone?.toLowerCase() === args.email.toLowerCase()
-        );
-    }
-});
-
-export const updateStatus = mutation({
-    args: {
-        id: v.id("partnerRequests"),
-        status: v.string(), // "Approved" | "Rejected"
-    },
-    handler: async (ctx, args) => {
-        await ctx.db.patch(args.id, {
-            status: args.status
-        });
-        return true;
-    }
-});
-
-export const remove = mutation({
+export const initiateKyc = mutation({
     args: { id: v.id("partnerRequests") },
     handler: async (ctx, args) => {
-        await ctx.db.delete(args.id);
-        return true;
+        const request = await ctx.db.get(args.id);
+        if (!request) throw new Error("Request not found");
+        if (request.type !== "organiser") throw new Error("KYC only required for Event Organisers");
+
+        await ctx.db.patch(args.id, { status: "KYC Pending" });
+
+        const branding = await ctx.db.query("siteBranding").first();
+        const siteUrl = branding?.siteUrl || "https://bookmyticket.net";
+
+        // Send KYC Invitation Email
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: request.email,
+            subject: "Action Required: Complete Your KYC Onboarding",
+            html: `
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <h2>KYC Onboarding Required</h2>
+                    <p>Hi ${request.firstName},</p>
+                    <p>To proceed with your Event Organiser application, we need you to provide some additional verification documents.</p>
+                    <div style="margin: 30px 0;">
+                        <a href="${siteUrl}/partner-kyc/${args.id}" style="background: #8000ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Complete KYC Now</a>
+                    </div>
+                    <p>If you have any questions, please reply to this email.</p>
+                </div>
+            `
+        });
+    }
+});
+
+export const submitKycForRequest = mutation({
+    args: {
+        id: v.id("partnerRequests"),
+        kycDetails: v.object({
+            panNumber: v.optional(v.string()),
+            panFile: v.optional(v.string()),
+            aadharFile: v.optional(v.string()),
+            chequeFile: v.optional(v.string()),
+            beneficiaryName: v.optional(v.string()),
+            bankName: v.optional(v.string()),
+            accountNumber: v.optional(v.string()),
+            ifscCode: v.optional(v.string()),
+            accountType: v.optional(v.string()),
+            agreementAccepted: v.boolean(),
+        })
+    },
+    handler: async (ctx, args) => {
+        const request = await ctx.db.get(args.id);
+        if (!request) throw new Error("Request not found");
+
+        await ctx.db.patch(args.id, {
+            status: "KYC Completed",
+            kycDetails: args.kycDetails
+        });
+
+        // Notify Admin of KYC completion
+        const branding = await ctx.db.query("siteBranding").first();
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: "bookmytiket.io@gmail.com",
+            subject: `KYC Completed: ${request.firstName} ${request.lastName}`,
+            html: `<p>Partner ${request.firstName} ${request.lastName} has submitted their KYC documents. Please review and approve in the admin panel.</p>`
+        });
     }
 });
 
@@ -123,38 +151,48 @@ export const approve = mutation({
         password: v.string()
     },
     handler: async (ctx, args) => {
-        const { id, password } = args;
-        const request = await ctx.db.get(id);
+        const request = await ctx.db.get(args.id);
         if (!request) throw new Error("Request not found");
-        if (request.status !== "Pending") throw new Error("Request is not pending or already processed");
+        
+        if (request.type === "organiser" && request.status !== "KYC Completed") {
+            throw new Error("Event Organisers must complete KYC before approval");
+        }
 
-        // Hash the manual password
-        const hashedPassword = await hashPassword(password);
+        const hashedPassword = await hashPassword(args.password);
 
-        // 1. Create Organiser Account
+        // 1. Create Organiser/Vendor Account
         await ctx.db.insert("organisers", {
             userId: request.email,
             password: hashedPassword,
             name: `${request.firstName} ${request.lastName}`,
             firstName: request.firstName,
             lastName: request.lastName,
-            kycStatus: "KYC Pending",
+            category: request.category,
+            kycStatus: request.type === "organiser" ? "Verified" : "Active",
+            isApproved: true,
             walletBalance: 0,
+            kycDetails: request.kycDetails as any,
         });
 
         // 2. Update Request Status
-        await ctx.db.patch(id, {
-            status: "Approved",
-        });
+        await ctx.db.patch(args.id, { status: "Approved" });
 
-        // 3. Schedule Credentials Delivery (Email + SMS)
+        // 3. Send Credentials
         await ctx.scheduler.runAfter(0, api.notificationActions.sendPartnerApprovalCredentials, {
             email: request.email,
             firstName: request.firstName,
-            password: password, // Sending plain password to notification action for the email/sms
+            password: args.password,
             phone: request.phone,
         });
 
         return { success: true };
     },
+});
+
+export const remove = mutation({
+    args: { id: v.id("partnerRequests") },
+    handler: async (ctx, args) => {
+        await ctx.db.delete(args.id);
+        return true;
+    }
 });
