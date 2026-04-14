@@ -217,8 +217,10 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredRequests.map((req) => (
-                                <tr key={req._id} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
+                            {filteredRequests.map((req) => {
+                                const hasRequestId = Boolean(req?._id);
+                                return (
+                                <tr key={req._id || req.email} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
                                     <td style={{ padding: "16px" }}>
                                         <div style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.firstName} {req.lastName}</div>
                                         <div style={{ fontSize: "12px", color: t.textSub }}>{req.role}</div>
@@ -261,7 +263,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                     <td style={{ padding: "16px", textAlign: "right" }}>
                                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                                             {/* Logic for Organisers */}
-                                            {activeTab === "event_organiser" && req.status === "Pending" && (
+                                            {hasRequestId && activeTab === "event_organiser" && req.status === "Pending" && (
                                                 <button 
                                                     onClick={() => handleInitiateKyc(req._id)} 
                                                     title="Initiate KYC Process"
@@ -272,7 +274,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             )}
 
                                             {/* Approval for PS or post-KYC/KYC-Pending Organisers */}
-                                            {((activeTab === "professional_service" && req.status === "Pending") || 
+                                            {(hasRequestId && ((activeTab === "professional_service" && req.status === "Pending") || 
                                               (activeTab === "event_organiser" && (req.status === "KYC Completed" || req.status === "KYC Pending"))) && (
                                                 <button 
                                                     onClick={() => handleApprove(req)} 
@@ -281,9 +283,9 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 >
                                                     <CheckCircle size={18} />
                                                 </button>
-                                            )}
+                                            ))}
 
-                                            {req.status !== "Approved" && req.status !== "Access Granted" && req.status !== "Rejected" && (
+                                            {hasRequestId && req.status !== "Approved" && req.status !== "Access Granted" && req.status !== "Rejected" && (
                                                 <button 
                                                     onClick={() => handleUpdate(req._id, "Rejected")} 
                                                     title="Reject Request"
@@ -293,17 +295,19 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 </button>
                                             )}
                                             
-                                            <button 
-                                                onClick={() => handleDelete(req._id)} 
-                                                title="Delete Log"
-                                                style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: theme === 'dark' ? '#1e293b' : '#f1f5f9', color: t.textSub, cursor: "pointer" }}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            {hasRequestId ? (
+                                                <button 
+                                                    onClick={() => handleDelete(req._id)} 
+                                                    title="Delete Log"
+                                                    style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: theme === 'dark' ? '#1e293b' : '#f1f5f9', color: t.textSub, cursor: "pointer" }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            ) : null}
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                 )}
