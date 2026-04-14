@@ -97,6 +97,16 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function AdminHomePageWrapper() {
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) {
+        return null;
+    }
+
     return (
         <ErrorBoundary>
             <AdminHomePage />
