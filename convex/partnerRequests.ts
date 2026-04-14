@@ -70,6 +70,37 @@ function normalizeRequest(row: any) {
     };
 }
 
+function buildRequestFromAccount(account: any, type: "professional_service" | "event_organiser") {
+    if (!account?.userId) return null;
+
+    const firstName = account.firstName || account.name?.split(" ")?.[0] || "Partner";
+    const lastName =
+        account.lastName ||
+        (account.name?.split(" ").slice(1).join(" ") || "");
+    const fallbackPhone =
+        account.kycDetails?.mobile ||
+        account.kycDetails?.alternateNumber ||
+        "";
+
+    return normalizeRequest({
+        type,
+        firstName,
+        lastName,
+        email: account.userId,
+        phone: fallbackPhone,
+        category: account.category || (type === REQUEST_TYPE.PROFESSIONAL_SERVICE ? "Professional Service" : "Event Organiser"),
+        role: "Individual",
+        status: account.isApproved ? REQUEST_STATUS.ACCESS_GRANTED : REQUEST_STATUS.PENDING,
+        kycStatus:
+            account.kycStatus ||
+            (type === REQUEST_TYPE.EVENT_ORGANISER ? "Not Started" : "Not Required"),
+        createdAt: account._creationTime || Date.now(),
+        approvedAt: account._creationTime,
+        accessGrantedAt: account._creationTime,
+        passwordCreated: Boolean(account.password),
+    });
+}
+
 export const submitRequest = mutation({
     args: {
         type: v.union(v.literal("event_organiser"), v.literal("professional_service")),
@@ -191,7 +222,29 @@ export const getAll = query({
     args: {},
     handler: async (ctx) => {
         const rows = await ctx.db.query("partnerRequests").order("desc").collect();
-        return rows.map(normalizeRequest);
+        const normalizedRows = rows.map(normalizeRequest).filter(Boolean);
+
+        const existingEmails = new Set(
+            normalizedRows.map((row: any) => String(row.email || "").toLowerCase())
+        );
+
+        const [serviceProviders, organisers] = await Promise.all([
+            ctx.db.query("serviceProviders").collect(),
+            ctx.db.query("organisers").collect(),
+        ]);
+
+        const inferredFromAccounts = [
+            ...serviceProviders
+                .map((sp) => buildRequestFromAccount(sp, REQUEST_TYPE.PROFESSIONAL_SERVICE))
+                .filter((row) => row && !existingEmails.has(String(row.email).toLowerCase())),
+            ...organisers
+                .map((org) => buildRequestFromAccount(org, REQUEST_TYPE.EVENT_ORGANISER))
+                .filter((row) => row && !existingEmails.has(String(row.email).toLowerCase())),
+        ];
+
+        return [...normalizedRows, ...inferredFromAccounts].sort(
+            (a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)
+        );
     }
 });
 
