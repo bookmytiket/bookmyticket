@@ -166,7 +166,7 @@ export default defineSchema({
 
 
     partnerRequests: defineTable({
-        type: v.string(), // "organiser" | "professional_service"
+        type: v.string(), // "event_organiser" | "professional_service"
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),

@@ -12,7 +12,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const removeRequest = useMutation(api.partnerRequests.remove);
     const { showToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState("professional_service"); // "professional_service" or "organiser"
+    const [activeTab, setActiveTab] = useState("professional_service"); // "professional_service" or "event_organiser"
     const [filterStatus, setFilterStatus] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -105,7 +105,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const stats = useMemo(() => {
         return {
             ps: requests.filter(r => r.type === "professional_service" && r.status === "Pending").length,
-            orgs: requests.filter(r => r.type === "organiser" && (r.status === "Pending" || r.status === "KYC Completed")).length
+            orgs: requests.filter(r => r.type === "event_organiser" && (r.status === "Pending" || r.status === "KYC Completed")).length
         };
     }, [requests]);
 
@@ -126,13 +126,13 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                     <Briefcase size={16} /> Professional Services {stats.ps > 0 && <span style={{ background: "#fff", color: "#FF3D6E", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.ps}</span>}
                 </button>
                 <button 
-                    onClick={() => setActiveTab("organiser")}
+                    onClick={() => setActiveTab("event_organiser")}
                     style={{ 
                         padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 700, 
                         display: "flex", alignItems: "center", gap: "8px", transition: "0.2s",
-                        backgroundColor: activeTab === "organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
-                        background: activeTab === "organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
-                        color: activeTab === "organiser" ? "#fff" : t.textSub
+                        backgroundColor: activeTab === "event_organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
+                        background: activeTab === "event_organiser" ? "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)" : "transparent",
+                        color: activeTab === "event_organiser" ? "#fff" : t.textSub
                     }}
                 >
                     <User size={16} /> Event Organisers {stats.orgs > 0 && <span style={{ background: "#fff", color: "#A855F7", padding: "2px 6px", borderRadius: "10px", fontSize: "10px" }}>{stats.orgs}</span>}
@@ -224,7 +224,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                     <td style={{ padding: "16px", textAlign: "right" }}>
                                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                                             {/* Logic for Organisers */}
-                                            {activeTab === "organiser" && req.status === "Pending" && (
+                                            {activeTab === "event_organiser" && req.status === "Pending" && (
                                                 <button 
                                                     onClick={() => handleInitiateKyc(req._id)} 
                                                     title="Initiate KYC Process"
@@ -236,7 +236,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
                                             {/* Approval for PS or post-KYC Organisers */}
                                             {((activeTab === "professional_service" && req.status === "Pending") || 
-                                              (activeTab === "organiser" && req.status === "KYC Completed")) && (
+                                              (activeTab === "event_organiser" && req.status === "KYC Completed")) && (
                                                 <button 
                                                     onClick={() => handleApprove(req)} 
                                                     title="Final Approval"
@@ -285,7 +285,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                             <div style={{ width: "48px", height: "48px", borderRadius: "14px", backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
                                 <ShieldCheck size={24} />
                             </div>
-                            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize {activeTab === 'organiser' ? 'Organiser' : 'Vendor'}</h2>
+                            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize {activeTab === 'event_organiser' ? 'Organiser' : 'Vendor'}</h2>
                             <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>Setting credentials for <strong>{selectedRequest.firstName} {selectedRequest.lastName}</strong></p>
                         </div>
 

@@ -6,7 +6,7 @@ import { partnerRequestReceivedTemplate, adminNotificationTemplate } from "./ema
 
 export const submitRequest = mutation({
     args: {
-        type: v.string(), // "organiser" | "professional_service"
+        type: v.string(), // "event_organiser" | "professional_service"
         firstName: v.string(),
         lastName: v.string(),
         email: v.string(),
@@ -39,7 +39,7 @@ export const submitRequest = mutation({
             html: adminNotificationTemplate({
                 title: "New Partner Application",
                 fields: [
-                    { label: "Type", value: args.type === "organiser" ? "Event Organiser" : "Professional Service" },
+                    { label: "Type", value: args.type === "event_organiser" ? "Event Organiser" : "Professional Service" },
                     { label: "Name", value: `${args.firstName} ${args.lastName}` },
                     { label: "Email", value: args.email.toLowerCase() },
                     { label: "Phone", value: args.phone },
@@ -84,7 +84,7 @@ export const initiateKyc = mutation({
     handler: async (ctx, args) => {
         const request = await ctx.db.get(args.id);
         if (!request) throw new Error("Request not found");
-        if (request.type !== "organiser") throw new Error("KYC only required for Event Organisers");
+        if (request.type !== "event_organiser") throw new Error("KYC only required for Event Organisers");
 
         await ctx.db.patch(args.id, { status: "KYC Pending" });
 
@@ -142,6 +142,20 @@ export const submitKycForRequest = mutation({
             subject: `KYC Completed: ${request.firstName} ${request.lastName}`,
             html: `<p>Partner ${request.firstName} ${request.lastName} has submitted their KYC documents. Please review and approve in the admin panel.</p>`
         });
+
+        // Notify User of KYC completion
+        await ctx.scheduler.runAfter(0, api.emailActions.sendEmail, {
+            to: request.email,
+            subject: "Your KYC Has Been Submitted",
+            html: `
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <h2>KYC Submitted Successfully</h2>
+                    <p>Hi ${request.firstName},</p>
+                    <p>Your KYC documents have been successfully received and are currently under review by our admin team.</p>
+                    <p>We will notify you once your application has been approved.</p>
+                </div>
+            `
+        });
     }
 });
 
@@ -154,7 +168,7 @@ export const approve = mutation({
         const request = await ctx.db.get(args.id);
         if (!request) throw new Error("Request not found");
         
-        if (request.type === "organiser" && request.status !== "KYC Completed") {
+        if (request.type === "event_organiser" && request.status !== "KYC Completed") {
             throw new Error("Event Organisers must complete KYC before approval");
         }
 
@@ -168,7 +182,7 @@ export const approve = mutation({
             firstName: request.firstName,
             lastName: request.lastName,
             category: request.category,
-            kycStatus: request.type === "organiser" ? "Verified" : "Active",
+            kycStatus: request.type === "event_organiser" ? "Verified" : "Active",
             isApproved: true,
             walletBalance: 0,
             kycDetails: request.kycDetails as any,
