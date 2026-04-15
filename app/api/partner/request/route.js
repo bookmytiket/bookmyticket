@@ -67,7 +67,7 @@ export async function POST(request) {
         email: email,
         phone: phone,
         category: category,
-        type: type || 'event_organiser',
+        type: category === "Turf Booking" ? "professional_service" : (type || "event_organiser"),
         role: role,
         remarks: remarks,
         status: 'Pending'

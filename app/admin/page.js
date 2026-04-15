@@ -280,6 +280,79 @@ const AdminMeetingsTable = ({ t, router }) => {
     );
 };
 
+const TurfsTable = ({ t }) => {
+    const { data: turfs = [], loading } = useSupabaseQuery('turfs', (q) => q.order('created_at', { ascending: false }));
+
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading turfs...</div>;
+    if (turfs.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No turfs found.</div>;
+
+    return (
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+            <thead>
+                <tr style={{ textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Turf Identity</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Location / Venue</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Price Model</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Amenities</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {turfs.map((turf) => (
+                    <tr key={turf.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                {turf.images?.[0] ? (
+                                    <img src={turf.images[0]} style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover" }} />
+                                ) : (
+                                    <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                                        <ImageIcon size={20} />
+                                    </div>
+                                )}
+                                <div>
+                                    <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>{turf.name}</p>
+                                    <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>ID: {turf.id.slice(0, 8)}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: t.textMain }}>
+                                <MapPin size={14} style={{ color: t.accent }} />
+                                {turf.location || "On-field"}
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 700, color: t.textMain }}>
+                                {turf.pricing_type === 'tiered' ? 'Tiered Pricing' : `₹${turf.flat_price || 0}/hr`}
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                {(turf.amenities || []).slice(0, 2).map((am, i) => (
+                                    <span key={i} style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#f1f5f9", color: "#64748b", fontWeight: 600 }}>{am}</span>
+                                ))}
+                                {turf.amenities?.length > 2 && <span style={{ fontSize: "10px", color: t.textSub }}>+{turf.amenities.length - 2}</span>}
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <span style={{ 
+                                padding: "4px 10px", 
+                                borderRadius: "100px", 
+                                fontSize: "11px", 
+                                fontWeight: 800, 
+                                backgroundColor: "#22c55e20",
+                                color: "#22c55e"
+                            }}>
+                                ACTIVE
+                            </span>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 const TurfBookingsTable = ({ t }) => {
     const { data: bookings = [], loading } = useSupabaseQuery('turf_bookings', (q) => q.order('created_at', { ascending: false }));
 
@@ -352,6 +425,14 @@ const TurfBookingsTable = ({ t }) => {
         </table>
     );
 };
+
+const MapPin = ({ size, style }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+    </svg>
+);
+
 
 function AdminHomePage() {
     const { user, loading, logout } = useAuth();
@@ -1591,7 +1672,6 @@ function AdminHomePage() {
                                 <SidebarGroupTitle title="Operations" />
                                 <SidebarItem id="all_events" label="Events" icon={Calendar} active={activeTab === "all_events"} onClick={() => setActiveTab("all_events")} />
                                 <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
-                                <SidebarItem id="turf_bookings" label="Turf Bookings" icon={Briefcase} active={activeTab === "turf_bookings"} onClick={() => setActiveTab("turf_bookings")} />
                                 <SidebarItem id="meetings" label="Meetings" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
                                 <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
 
@@ -1617,8 +1697,10 @@ function AdminHomePage() {
                                 {isServicesOpen && (
                                     <div className="space-y-0.5">
                                         {[
-                                            { label: "Active Users", id: "service_active" },
-                                            { label: "Banned Users", id: "service_banned" },
+                                            { label: "All Turfs", id: "all_turfs" },
+                                            { label: "Turf Bookings", id: "turf_bookings" },
+                                            { label: "Active Professionals", id: "service_active" },
+                                            { label: "Banned Professionals", id: "service_banned" },
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
@@ -2126,6 +2208,22 @@ function AdminHomePage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "all_turfs" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Turf Facility Management</h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button style={{ padding: "8px 16px", borderRadius: "8px", background: "#f1f5f9", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                                        Add New Turf
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="table-container">
+                                <TurfsTable t={t} />
                             </div>
                         </div>
                     )}

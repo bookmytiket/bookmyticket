@@ -24,7 +24,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         email: "",
         phone: "",
         category: "Turf Booking",
-        type: "event_organiser",
+        type: "professional_service",
         role: "Individual",
         remarks: ""
     });
@@ -34,7 +34,16 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
     const [errorMsg, setErrorMsg] = useState("");
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        let newForm = { ...form, [name]: value };
+
+        // Automatically set type based on category Selection
+        if (name === "category") {
+            const isProfessional = value !== "General Event";
+            newForm.type = isProfessional ? "professional_service" : "event_organiser";
+        }
+
+        setForm(newForm);
     };
 
     const handleSubmit = async (e) => {
