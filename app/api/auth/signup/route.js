@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Use service-role key so we can call auth.admin.createUser with email_confirm: true.
-// This is safe because this runs server-side only.
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
-
 export async function POST(request) {
+    // Use service-role key so we can call auth.admin.createUser with email_confirm: true.
+    // This is safe because this runs server-side only.
+    const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
+
     try {
         const { email, password, full_name } = await request.json();
 

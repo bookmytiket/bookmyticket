@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Admin client with service-role key for internal operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 // Helper: Microsoft 365 Graph API Email Dispatch
 const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
   const client_id = m365Config.client_id || m365Config.clientId;
@@ -55,6 +49,11 @@ const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) =
 };
 
 export async function POST(request) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
   try {
     const { action, data } = await request.json();
 
