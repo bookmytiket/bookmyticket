@@ -1,6 +1,8 @@
 import { SERVICE_CATEGORIES } from './data/serviceCategories';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap() {
   const baseUrl = 'https://bookmyticket.net';
 
@@ -28,13 +30,21 @@ export default async function sitemap() {
   }));
 
   // 3. Event Category routes (Priority: 0.7)
-  const eventCategories = ['Concert', 'Sports', 'Comedy', 'Theater', 'Festivals', 'Virtual'];
-  const eventCategoryRoutes = eventCategories.map((category) => ({
+  const eventCategoryRoutes = ['Concert', 'Sports', 'Comedy', 'Theater', 'Festivals', 'Virtual'].map((category) => ({
     url: `${baseUrl}/?category=${encodeURIComponent(category)}`,
     lastModified: new Date().toISOString(),
     changeFrequency: 'daily',
     priority: 0.7,
   }));
+
+  // If supabase is not initialized (e.g. during build without env vars), return only core routes
+  if (!supabase) {
+    return [
+      ...coreRoutes,
+      ...serviceCategoryRoutes,
+      ...eventCategoryRoutes
+    ];
+  }
 
   // 4. Dynamic Event routes (Priority: 0.9)
   const { data: events = [] } = await supabase.from('events').select('id');
