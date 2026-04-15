@@ -118,14 +118,14 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(req => {
-            // Apply client-side normalization to the type
-            const trueType = isServiceProvider(req.category) ? "professional_service" : req.type;
+            // Apply client-side normalization to the type, prioritizing DB value
+            const trueType = req.type || (isServiceProvider(req.category) ? "professional_service" : "event_organiser");
             const matchesType = trueType === activeTab;
             
             const matchesStatus = filterStatus === "all" || req.status === filterStatus;
             const search = searchTerm.toLowerCase();
             const matchesSearch = !searchTerm || 
-                `${req.firstName} ${req.lastName}`.toLowerCase().includes(search) || 
+                `${req.first_name || req.firstName} ${req.last_name || req.lastName}`.toLowerCase().includes(search) || 
                 req.email.toLowerCase().includes(search) ||
                 (req.phone && req.phone.includes(searchTerm));
             
@@ -136,15 +136,15 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const stats = useMemo(() => {
         return {
             ps: requests.filter(r => {
-                const type = isServiceProvider(r.category) ? "professional_service" : r.type;
+                const type = r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser");
                 return type === "professional_service" && r.status === "Pending";
             }).length,
             orgs: requests.filter(r => {
-                const type = isServiceProvider(r.category) ? "professional_service" : r.type;
+                const type = r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser");
                 return type === "event_organiser" && (r.status === "Pending" || r.status === "KYC Completed");
             }).length,
-            totalPs: requests.filter(r => (isServiceProvider(r.category) ? "professional_service" : r.type) === "professional_service").length,
-            totalOrgs: requests.filter(r => (isServiceProvider(r.category) ? "professional_service" : r.type) === "event_organiser").length
+            totalPs: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "professional_service").length,
+            totalOrgs: requests.filter(r => (r.type || (isServiceProvider(r.category) ? "professional_service" : "event_organiser")) === "event_organiser").length
         };
     }, [requests]);
 
@@ -235,7 +235,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                 return (
                                 <tr key={req._id || req.email} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
                                     <td style={{ padding: "16px" }}>
-                                        <div style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.firstName} {req.lastName}</div>
+                                        <div style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.first_name || req.firstName} {req.last_name || req.lastName}</div>
                                         <div style={{ fontSize: "12px", color: t.textSub }}>{req.role}</div>
                                     </td>
                                     <td style={{ padding: "16px" }}>
@@ -249,10 +249,10 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                         {req.type === "professional_service" ? "Professional Service" : "Event Organiser"}
                                     </td>
                                     <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
-                                        {req.type === "event_organiser" ? (req.kycStatus || "Not Started") : "Not Required"}
+                                        {req.type === "event_organiser" ? (req.kyc_status || req.kycStatus || "Not Started") : "Not Required"}
                                     </td>
                                     <td style={{ padding: "16px", fontSize: "12px", color: t.textSub }}>
-                                        {new Date(req.createdAt).toLocaleDateString()}
+                                        {req.created_at ? new Date(req.created_at).toLocaleDateString() : new Date(req.createdAt).toLocaleDateString()}
                                     </td>
                                     <td style={{ padding: "16px" }}>
                                         <div style={{
@@ -340,7 +340,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                 <ShieldCheck size={24} />
                             </div>
                             <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>Authorize {activeTab === 'event_organiser' ? 'Organiser' : 'Vendor'}</h2>
-                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>Setting credentials for <strong>{selectedRequest.firstName} {selectedRequest.lastName}</strong></p>
+                            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>Setting credentials for <strong>{selectedRequest.first_name || selectedRequest.firstName} {selectedRequest.last_name || selectedRequest.lastName}</strong></p>
                         </div>
 
                         <div style={{ padding: "24px" }}>

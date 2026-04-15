@@ -24,6 +24,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         email: "",
         phone: "",
         category: "Turf Booking",
+        type: "event_organiser",
         role: "Individual",
         remarks: ""
     });
@@ -47,23 +48,19 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase.from('partner_requests').insert({
-                first_name: form.firstName,
-                last_name: form.lastName,
-                email: form.email,
-                phone: form.phone,
-                category: form.category,
-                role: form.role,
-                remarks: form.remarks,
-                type: 'professional_service',
-                status: 'pending',
+            const res = await fetch("/api/partner/request", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form)
             });
-            if (error) throw error;
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || "Submission failed");
+            
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);
                 onClose();
-                setForm({ firstName: "", lastName: "", email: "", phone: "", category: "Turf Booking", role: "Individual", remarks: "" });
+                setForm({ firstName: "", lastName: "", email: "", phone: "", category: "Turf Booking", type: "event_organiser", role: "Individual", remarks: "" });
             }, 3000);
         } catch (err) {
             setErrorMsg(err.message || "Something went wrong. Please try again.");
@@ -150,9 +147,16 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
 
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
                             <div>
-                                <label className="partner-label">CATEGORY <span style={{color:"#ef4444"}}>*</span></label>
-                                <select name="category" value={form.category} onChange={handleChange} className="partner-input" required>
-                                    {SERVICE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                <label className="partner-label">REQUEST TYPE <span style={{color:"#ef4444"}}>*</span></label>
+                                <select 
+                                    name="type" 
+                                    value={form.type || 'event_organiser'} 
+                                    onChange={handleChange} 
+                                    className="partner-input" 
+                                    required
+                                >
+                                    <option value="event_organiser">Event Organiser</option>
+                                    <option value="professional_service">Professional Service</option>
                                 </select>
                             </div>
                             <div>
@@ -163,6 +167,13 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                                     <option value="Agency">Agency</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div style={{ marginBottom: "30px" }}>
+                            <label className="partner-label">CATEGORY <span style={{color:"#ef4444"}}>*</span></label>
+                            <select name="category" value={form.category} onChange={handleChange} className="partner-input" required>
+                                {SERVICE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
                         </div>
 
                         <div style={{ marginBottom: "30px" }}>

@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
         try {
             const { data: profile, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('*, is_temporary_password')
                 .eq('id', supabaseUser.id)
                 .single();
 

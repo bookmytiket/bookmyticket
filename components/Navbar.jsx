@@ -259,11 +259,14 @@ export default function Navbar() {
     setOrgLoading(true);
     try {
       const type = isServiceProvider(orgForm.category) ? "professional_service" : "event_organiser";
-      const { error } = await supabase
-        .from('partner_requests')
-        .insert([{ ...orgForm, type }]);
+      const res = await fetch("/api/partner/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...orgForm, type })
+      });
       
-      if (error) throw error;
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Submission failed");
       
       setOrgSent(true);
       setTimeout(() => {

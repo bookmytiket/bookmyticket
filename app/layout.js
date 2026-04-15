@@ -41,6 +41,7 @@ import MaintenanceGuard from '@/components/MaintenanceGuard';
 import { ToastProvider } from '@/context/ToastContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 export default function RootLayout({ children }) {
   return (
@@ -79,6 +80,7 @@ export default function RootLayout({ children }) {
                   <ConditionalNavbar />
                   <CustomerAdPopup />
                   <ToastContainer />
+                  <ChangePasswordModal />
                   {children}
                 </Suspense>
               </MaintenanceGuard>

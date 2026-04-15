@@ -86,7 +86,7 @@ export async function POST(request) {
     }
 
     if (action === "approve-partner") {
-      const { requestId, password } = data;
+      const { requestId, password: manualPassword } = data;
 
       // 1. Fetch the request
       const { data: partnerReq, error: reqError } = await supabaseAdmin
@@ -97,14 +97,17 @@ export async function POST(request) {
 
       if (reqError || !partnerReq) throw new Error("Partner request not found");
 
-      // 2. Create Auth User
+      // 2. Generate temporary password if not provided
+      const tempPassword = manualPassword || Math.random().toString(36).slice(-10);
+
+      // 3. Create Auth User
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: partnerReq.email,
-        password: password,
+        password: tempPassword,
         email_confirm: true,
         user_metadata: {
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          role: 'organiser'
+          role: partnerReq.type === 'professional_service' ? 'organiser' : 'organiser' // Both use organiser role but handled differently
         }
       });
 
@@ -112,37 +115,87 @@ export async function POST(request) {
 
       const newUserId = authData.user.id;
 
-      // 3. Update Profile
-      await supabaseAdmin
+      // 4. Update Profile
+      const { error: profileError } = await supabaseAdmin
         .from("profiles")
         .update({
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          phone: partnerReq.phone
+          phone: partnerReq.phone,
+          is_temporary_password: true // Set the flag for force-reset
         })
         .eq("id", newUserId);
+      
+      if (profileError) throw profileError;
 
-      // 4. Update Organiser Details
-      await supabaseAdmin
+      // 5. Update Organiser Details or Service Provider
+      if (partnerReq.type === 'professional_service') {
+        const { error: spError } = await supabaseAdmin
+          .from("service_providers")
+          .upsert({
+            id: newUserId,
+            business_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+            category: partnerReq.category,
+            status: 'Approved'
+          });
+        if (spError) throw spError;
+      }
+
+      const { error: odError } = await supabaseAdmin
         .from("organiser_details")
         .upsert({
           id: newUserId,
-          business_name: `${partnerReq.first_name} ${partnerReq.last_name}'s Business`,
+          business_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
           category: partnerReq.category,
           type: partnerReq.type,
           is_approved: true,
-          kyc_status: partnerReq.type === 'professional_service' ? 'Not Required' : 'Completed'
+          kyc_status: partnerReq.type === 'professional_service' ? 'Not Required' : 'KYC Completed'
         });
+      
+      if (odError) throw odError;
 
-      // 5. Update Request Status
+      // 6. Update Request Status
       await supabaseAdmin
         .from("partner_requests")
         .update({
-          status: "Access Granted",
+          status: "Approved",
           approved_at: new Date().toISOString(),
           access_granted_at: new Date().toISOString()
         })
         .eq("id", requestId);
+
+      // 7. Send Approval Email
+      const { data: config } = await supabaseAdmin
+        .from('system_config')
+        .select('value')
+        .eq('key', 'email_settings')
+        .single();
+
+      const settings = config?.value ? (typeof config.value === 'string' ? JSON.parse(config.value) : config.value) : null;
+
+      if (settings && settings.provider === 'MICROSOFT_365' && settings.microsoft_365) {
+        const subject = "Your Partner Account has been Approved - BookMyTicket";
+        const content = `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #10b981;">Congratulations!</h2>
+            <p>Your request to become a partner at <strong>BookMyTicket</strong> has been approved.</p>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0 0 10px 0;"><strong>Login Email:</strong> ${partnerReq.email}</p>
+              <p style="margin: 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 6px; borderRadius: 4px;">${tempPassword}</code></p>
+            </div>
+            <p>Click the link below to login and set your new password:</p>
+            <div style="margin-top: 20px;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/signin" style="background: #8b5cf6; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Login & Reset Password</a>
+            </div>
+            <p style="margin-top: 24px; font-size: 13px; color: #666;">For security reasons, you will be required to change your password upon your first login.</p>
+          </div>
+        `;
+        try {
+          await sendM365Email(settings.microsoft_365, settings.from, partnerReq.email, subject, content);
+        } catch (emailErr) {
+          console.error("Failed to send approval email:", emailErr);
+        }
+      }
 
       return NextResponse.json({ success: true, userId: newUserId });
     }
