@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Briefcase, Sparkles, ArrowRight } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
-import { supabase } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { hashPassword } from "@/app/utils/hashPassword";
 
 export default function VendorSignInPage() {

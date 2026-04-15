@@ -1,3 +1,6 @@
+"use client";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { 
     Plus, 

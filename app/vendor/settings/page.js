@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSupabaseQuery, useSupabaseMutation, supabase } from "@/hooks/useSupabase";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 

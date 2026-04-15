@@ -1,3 +1,5 @@
+"use client";
+import React, { useState } from "react";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";

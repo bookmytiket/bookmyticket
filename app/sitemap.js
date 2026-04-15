@@ -1,5 +1,5 @@
 import { SERVICE_CATEGORIES } from './data/serviceCategories';
-import { getSitemapEvents, getSitemapVendors, getSitemapTurfs } from '../lib/convex-server';
+import { supabase } from '@/lib/supabase';
 
 export default async function sitemap() {
   const baseUrl = 'https://bookmyticket.net';
@@ -37,32 +37,35 @@ export default async function sitemap() {
   }));
 
   // 4. Dynamic Event routes (Priority: 0.9)
-  const events = await getSitemapEvents();
-  const eventRoutes = events.map((event) => ({
-    url: `${baseUrl}/events/detail?id=${event._id}`,
-    lastModified: new Date(event.updatedAt || Date.now()).toISOString(),
+  const { data: events = [] } = await supabase.from('events').select('id');
+  const eventRoutes = (events || []).map((event) => ({
+    url: `${baseUrl}/events/detail?id=${event.id}`,
+    lastModified: new Date().toISOString(),
     changeFrequency: 'always',
     priority: 0.9,
   }));
 
   // 5. Dynamic Professional Service routes (Priority: 0.9)
-  const allVendors = await getSitemapVendors();
-  const vendors = allVendors.filter(v => 
+  const { data: vendors = [] } = await supabase
+    .from('service_providers')
+    .select('id, status, category');
+  
+  const activeVendors = (vendors || []).filter(v => 
     v.category && 
-    (v.kycStatus === 'KYC Completed' || v.kycStatus === 'Active')
+    (v.status === 'KYC Completed' || v.status === 'Active' || v.status === 'Approved')
   );
-  const vendorRoutes = vendors.map((vendor) => ({
-    url: `${baseUrl}/services/${vendor._id}`,
-    lastModified: new Date(vendor.updatedAt || Date.now()).toISOString(),
+  const vendorRoutes = activeVendors.map((vendor) => ({
+    url: `${baseUrl}/services/${vendor.id}`,
+    lastModified: new Date().toISOString(),
     changeFrequency: 'weekly',
     priority: 0.9,
   }));
 
   // 6. Dynamic Turf routes (Priority: 0.9)
-  const turfs = await getSitemapTurfs();
-  const turfRoutes = turfs.map((turf) => ({
-    url: `${baseUrl}/turfs/${turf._id}`,
-    lastModified: new Date(turf.updatedAt || Date.now()).toISOString(),
+  const { data: turfs = [] } = await supabase.from('turfs').select('id');
+  const turfRoutes = (turfs || []).map((turf) => ({
+    url: `${baseUrl}/turfs/${turf.id}`,
+    lastModified: new Date().toISOString(),
     changeFrequency: 'weekly',
     priority: 0.9,
   }));
