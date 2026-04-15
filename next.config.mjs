@@ -11,6 +11,11 @@ const nextConfig = {
       { protocol: "https", hostname: "flagicons.lipis.dev" },
     ],
   },
+  experimental: {
+    turbo: {
+      root: ".",
+    },
+  },
 };
 
 export default nextConfig;

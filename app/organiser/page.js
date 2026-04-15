@@ -515,7 +515,7 @@ function OrganiserPanel() {
     // Supabase Queries
     const { data: organiserData } = useSupabaseQuery(
         "organiser_details",
-        (q) => q.eq("id", user?.id).single(),
+        (q) => q.eq("id", user?.id).maybeSingle(),
         [user?.id]
     );
 
@@ -621,21 +621,30 @@ function OrganiserPanel() {
     const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
 
     useEffect(() => {
-        if (supportTicketsData.length >= 0) {
-            const filtered = supportTicketsData.filter(t => t.user_id === user?.id);
-            setSupportTicketsList(filtered.map(t => ({
+        if (!supportTicketsData) return;
+        
+        // Stabilize mapping to prevent unnecessary re-renders
+        const mapped = supportTicketsData
+            .filter(t => t.user_id === user?.id)
+            .map(t => ({
                 id: t.id,
                 ticketId: t.id.slice(-6),
-                email: t.user_id, // Mapping user_id back to email for legacy UI consistency if needed
+                email: t.user_id,
                 subject: t.subject || "No Subject",
                 description: t.message,
                 status: t.status,
                 createdAt: t.created_at,
                 updatedAt: t.updated_at || t.created_at,
                 adminNotes: t.admin_notes || "",
-                replies: []
-            })));
-        }
+                replies: Array.isArray(t.replies) ? t.replies : []
+            }));
+            
+        // Only update if the stringified content actually changed to resolve loop
+        setSupportTicketsList(prev => {
+            const currentString = JSON.stringify(prev);
+            const nextString = JSON.stringify(mapped);
+            return currentString === nextString ? prev : mapped;
+        });
     }, [supportTicketsData, user?.id]);
 
     const { data: eventsData = [] } = useSupabaseQuery(
