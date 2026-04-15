@@ -22,7 +22,7 @@ export default function BrandingDashboard() {
   const [myCoupons, setMyCoupons] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [banner, setBanner] = useState(null);
-  const [convexPrices] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
+  const [platformPrices] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
 
   const isVerified = kycStatus === 'Verified';
   const isPending  = kycStatus === 'Verification Pending';
@@ -68,7 +68,7 @@ export default function BrandingDashboard() {
     setIsProcessing(true);
     try {
       await new Promise(r => setTimeout(r, 1500));
-      const amount = planType === 'Monthly' ? convexPrices.monthlyPrice : convexPrices.yearlyPrice;
+      const amount = planType === 'Monthly' ? platformPrices.monthlyPrice : platformPrices.yearlyPrice;
       const { error } = await supabase.from('brand_subscriptions').upsert({
         brand_id: user.id, plan_type: planType, amount_paid: amount,
         start_date: new Date().toISOString(),
@@ -240,7 +240,7 @@ export default function BrandingDashboard() {
                 <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
                   <div style={{ border: `2px solid ${C.border}`, borderRadius: 16, padding: 24, width: 260 }}>
                     <h4 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>Monthly</h4>
-                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{convexPrices?.monthlyPrice || '999'}</div>
+                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{platformPrices?.monthlyPrice || '999'}</div>
                     <button 
                       onClick={() => handlePayment('Monthly')}
                       disabled={isProcessing}
@@ -252,7 +252,7 @@ export default function BrandingDashboard() {
                   <div style={{ border: `2px solid ${C.accent}`, borderRadius: 16, padding: 24, width: 260, position: 'relative' }}>
                     <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: C.accent, color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12 }}>MOST POPULAR</div>
                     <h4 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>Yearly</h4>
-                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{convexPrices?.yearlyPrice || '9999'}</div>
+                    <div style={{ fontSize: 32, fontWeight: 900, color: C.text, marginBottom: 16 }}>₹{platformPrices?.yearlyPrice || '9999'}</div>
                     <button 
                       onClick={() => handlePayment('Yearly')}
                       disabled={isProcessing}

@@ -616,13 +616,13 @@ function OrganiserPanel() {
         }
     }, [organiserData, isProfessionalService, router]);
 
-    const { data: convexSupportTickets = [] } = useSupabaseQuery("support_tickets");
+    const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
     const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
     const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
 
     useEffect(() => {
-        if (convexSupportTickets.length >= 0) {
-            const filtered = convexSupportTickets.filter(t => t.user_id === user?.id);
+        if (supportTicketsData.length >= 0) {
+            const filtered = supportTicketsData.filter(t => t.user_id === user?.id);
             setSupportTicketsList(filtered.map(t => ({
                 id: t.id,
                 ticketId: t.id.slice(-6),
@@ -636,9 +636,9 @@ function OrganiserPanel() {
                 replies: []
             })));
         }
-    }, [convexSupportTickets, user?.id]);
+    }, [supportTicketsData, user?.id]);
 
-    const { data: convexEvents = [] } = useSupabaseQuery(
+    const { data: eventsData = [] } = useSupabaseQuery(
         "events",
         (q) => q.eq("organiser_id", user?.id),
         [user?.id]
@@ -648,7 +648,7 @@ function OrganiserPanel() {
     const [createMeetingForEvent] = useSupabaseMutation("meetings", "insert");
     const [deleteEventMutation] = useSupabaseMutation("events", "delete", (q, p) => q.eq("id", p.id));
 
-    const { data: convexBookings = [] } = useSupabaseQuery("bookings"); // Filtering will be handled in useMemo for legacy compatibility
+    const { data: bookingsData = [] } = useSupabaseQuery("bookings"); // Filtering will be handled in useMemo for legacy compatibility
     const [updateBookingMutation] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
@@ -670,10 +670,10 @@ function OrganiserPanel() {
 
     const [events, setEvents] = useState([]);
     useEffect(() => {
-        if (convexEvents) {
-            setEvents(convexEvents.map(e => ({ ...e, id: e.id })));
+        if (eventsData) {
+            setEvents(eventsData.map(e => ({ ...e, id: e.id })));
         }
-    }, [convexEvents]);
+    }, [eventsData]);
 
     const writeQueueRef = useRef([]);
     const isWritingRef = useRef(false);
