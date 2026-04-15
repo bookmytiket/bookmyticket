@@ -54,21 +54,44 @@ export function AuthProvider({ children }) {
         try {
             const { data: profile, error } = await supabase
                 .from('profiles')
-                .select('*, is_temporary_password')
+                .select('*')
                 .eq('id', supabaseUser.id)
                 .single();
 
-            // If the profile row doesn't exist yet (e.g. trigger hasn't fired),
-            // construct minimal user data from the auth record so login still succeeds.
+            let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase();
+
+            // Fallback: Check admins table if the profile role is not already 'admin'
+            if (role !== 'admin') {
+                try {
+                    const { data: adminRecord, error: adminErr } = await supabase
+                        .from('admins')
+                        .select('role')
+                        .eq('id', supabaseUser.id)
+                        .maybeSingle();
+
+                    if (adminErr) {
+                        console.error("AuthContext: Admins table lookup error:", adminErr.message);
+                    }
+
+                    if (adminRecord) {
+                        console.log("AuthContext: Admin record found, upgrading role. Admin role in DB:", adminRecord.role);
+                        role = 'admin';
+                    }
+                } catch (err) {
+                    console.error("AuthContext: Unexpected error checking admins table:", err);
+                }
+            }
+
+            // Construct unified user data
             const userData = {
                 id: supabaseUser.id,
                 identifier: supabaseUser.email,
                 email: supabaseUser.email,
-                role: profile?.role || supabaseUser.user_metadata?.role || 'user',
                 name: profile?.full_name || profile?.username ||
                       supabaseUser.user_metadata?.full_name ||
                       supabaseUser.email?.split('@')[0],
                 ...(profile || {}),
+                role: role, // Ensure final role property is normalized and fallback-aware
             };
 
             if (error && error.code !== 'PGRST116') {
@@ -156,10 +179,17 @@ export function AuthProvider({ children }) {
 
                 // Apply role-based defaults ONLY if no valid redirect was provided
                 if (isInvalidRedirect) {
-                    if (userData.role === "admin") destination = "/admin";
-                    else if (userData.role === "organiser") {
-                        const isProfessionalService = isServiceProvider(userData.category);
+                    if (userData.role === "admin") {
+                        destination = "/admin";
+                    } else if (userData.role === "staff") {
+                        destination = "/organiser?tab=pwa_scanner";
+                    } else if (userData.role === "branding_partner") {
+                        destination = "/branding/dashboard";
+                    } else if (userData.role === "organiser") {
+                        const isProfessionalService = isServiceProvider(userData.category) || userData.type === "professional_service";
                         destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                    } else {
+                        destination = "/profile";
                     }
                 }
                 

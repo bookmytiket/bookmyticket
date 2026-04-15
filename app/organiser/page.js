@@ -649,6 +649,7 @@ function OrganiserPanel() {
     const [deleteEventMutation] = useSupabaseMutation("events", "delete", (q, p) => q.eq("id", p.id));
 
     const { data: bookingsData = [] } = useSupabaseQuery("bookings"); // Filtering will be handled in useMemo for legacy compatibility
+    const convexBookings = useMemo(() => bookingsData || [], [bookingsData]);
     const [updateBookingMutation] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
@@ -4887,7 +4888,8 @@ function OrganiserPanel() {
     // Professional Services should never see the Organiser KYC/Onboarding screens.
     // We also hide the UI while organiserData is loading to prevent flashing the KYC screen
     // for users who are about to be identified as Professional Services and redirected.
-    if (isProfessionalService || !organiserData) return null;
+    // ADMIN BYPASS: Allow admins and staff even if organiserData is missing (they won't have an organiser record).
+    if (isProfessionalService || (!organiserData && user?.role !== 'admin' && user?.role !== 'staff')) return null;
 
     // Main Stage Dispatcher
     switch (currentStage) {

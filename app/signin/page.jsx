@@ -98,14 +98,9 @@ export default function SignInPage() {
                 } else if (user.role === "branding_partner") {
                     destination = "/branding/dashboard";
                 } else if (user.role === "organiser") {
-                    // If it''s a professional service vendor, always go to vendor dashboard
-                    if (user.type === "professional_service" || (user.category && isServiceProvider(user.category))) {
-                        destination = "/vendor/dashboard";
-                    } else {
-                        destination = "/organiser";
-                    }
+                    const isProfessional = user.type === "professional_service" || (user.category && isServiceProvider(user.category));
+                    destination = isProfessional ? "/vendor/dashboard" : "/organiser";
                 } else {
-                    // IMPORTANT: For public users, default to profile
                     destination = "/profile";
                 }
             }

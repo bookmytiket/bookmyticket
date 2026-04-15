@@ -55,13 +55,40 @@ export async function POST(request) {
   );
 
   try {
+    // SECURITY GUARD: Verify the requester is an authorized Admin
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    const { data: { user: requester }, error: authError } = await supabaseAdmin.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !requester) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
+
+    // Check against admins table
+    const { data: isAdmin, error: adminCheckError } = await supabaseAdmin
+      .from('admins')
+      .select('id')
+      .eq('id', requester.id)
+      .single();
+
+    if (adminCheckError || !isAdmin) {
+      console.warn(`Unauthorized admin action attempt by user ${requester.id}`);
+      return NextResponse.json({ error: "Unauthorized. Admin privileges required." }, { status: 403 });
+    }
+
     const { action, data } = await request.json();
 
     if (action === "validate-email-settings") {
       const { settings } = data;
-      if (settings.provider === "MICROSOFT_365") {
+      const m365Config = settings.microsoft365 || settings.microsoft_365;
+      if (settings.provider === "MICROSOFT_365" && m365Config) {
         await sendM365Email(
-          settings.microsoft365,
+          m365Config,
           settings.from,
           settings.from, // Send test to self
           "Microsoft 365 Connection Test",
@@ -73,9 +100,10 @@ export async function POST(request) {
 
     if (action === "send-test-email") {
       const { settings, to, subject, html } = data;
-      if (settings.provider === "MICROSOFT_365") {
+      const m365Config = settings.microsoft365 || settings.microsoft_365;
+      if (settings.provider === "MICROSOFT_365" && m365Config) {
         await sendM365Email(
-          settings.microsoft365,
+          m365Config,
           settings.from,
           to,
           subject || "Test Email",
@@ -172,8 +200,9 @@ export async function POST(request) {
         .single();
 
       const settings = config?.value ? (typeof config.value === 'string' ? JSON.parse(config.value) : config.value) : null;
+      const m365Config = settings?.microsoft365 || settings?.microsoft_365;
 
-      if (settings && settings.provider === 'MICROSOFT_365' && settings.microsoft_365) {
+      if (settings && settings.provider === 'MICROSOFT_365' && m365Config) {
         const subject = "Your Partner Account has been Approved - BookMyTicket";
         const content = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
