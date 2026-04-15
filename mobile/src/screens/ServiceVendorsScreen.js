@@ -10,8 +10,7 @@ import {
   SafeAreaView,
   ScrollView
 } from 'react-native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,22 +22,41 @@ export default function ServiceVendorsScreen() {
   const { category: initialCategory = "All" } = route.params || {};
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   
-  // Use listByCategory for the selected category
-  const vendors = useQuery(api.vendors.listByCategory, { 
-    category: selectedCategory === "All" ? "" : selectedCategory 
-  });
+  // Migrated to Supabase: Fetch vendors by category
+  const { data: vendorsRaw, loading: loadingVendors } = useSupabaseQuery('vendor_profiles', (q) => {
+    let query = q.select('*, organisers:organiser_id(*)');
+    if (selectedCategory !== "All" && selectedCategory !== "Turf Booking") {
+      query = query.eq('category', selectedCategory);
+    }
+    return query;
+  }, [selectedCategory]);
   
-  const turfsRaw = useQuery(api.turfs.listActive);
+  // Migrated to Supabase: Fetch active turfs
+  const { data: turfsRaw, loading: loadingTurfs } = useSupabaseQuery('turfs', (q) => 
+    q.select('*').eq('status', 'active'), 
+    []
+  );
 
   const mergedItems = useMemo(() => {
-    const vList = vendors || [];
+    const vList = (vendorsRaw || []).map(v => ({
+      id: v.id,
+      name: v.organisers?.name || v.organisers?.full_name || "Vendor",
+      category: v.category,
+      bio: v.bio,
+      portfolio: v.portfolio || [],
+      pricing: v.pricing || [],
+      rating: v.rating || 0,
+      reviewsCount: v.reviews_count || 0,
+      isTurf: false
+    }));
+
     const tList = (turfsRaw || []).map(t => ({
-      id: t._id,
+      id: t.id,
       name: t.name,
       category: "Turf Booking",
       bio: t.description || "Premium sports facility with great amenities.",
       portfolio: t.images?.map(img => ({ url: img, type: "image" })) || [],
-      pricing: [{ name: "Standard", price: t.pricePerHour || 0 }],
+      pricing: [{ name: "Standard", price: t.price_per_hour || 0 }],
       rating: 5.0, // Placeholder
       reviewsCount: 0,
       isTurf: true
@@ -53,7 +71,7 @@ export default function ServiceVendorsScreen() {
     }
 
     return vList;
-  }, [vendors, turfsRaw, selectedCategory]);
+  }, [vendorsRaw, turfsRaw, selectedCategory]);
 
   const filteredVendors = mergedItems || [];
 
@@ -117,7 +135,7 @@ export default function ServiceVendorsScreen() {
     );
   };
 
-  if (vendors === undefined || turfsRaw === undefined) {
+  if (loadingVendors && loadingTurfs) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.secondary} />

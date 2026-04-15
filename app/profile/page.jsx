@@ -5,8 +5,7 @@ import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { isVirtualEvent } from "@/app/utils/eventUtils";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import JoinNowButton from "@/components/JoinNowButton";
 import DigitalTicket from "@/components/DigitalTicket";
 
@@ -38,8 +37,17 @@ export default function ProfilePage() {
     const [bookingFilter, setBookingFilter] = useState("all");
     const [viewTicketModal, setViewTicketModal] = useState(null);
 
-    const eventBookingsList = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
-    const vendorBookingsList = useQuery(api.vendorBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+    const [eventBookingsList, setEventBookingsList] = useState([]);
+    const [vendorBookingsList, setVendorBookingsList] = useState([]);
+
+    useEffect(() => {
+        if (!user?.identifier && !user?.email) return;
+        const uid = user.identifier || user.email;
+        supabase.from('bookings').select('*').eq('user_id', uid)
+            .then(({ data }) => setEventBookingsList(data || []));
+        supabase.from('vendor_bookings').select('*').eq('user_id', uid)
+            .then(({ data }) => setVendorBookingsList((data || []).map(b => ({ ...b, isVendorBooking: true }))));
+    }, [user?.identifier, user?.email]);
 
     // Removed forced redirect for organisers/staff to allow them to view personal bookings and join meetings
     // Automatically redirect to signin if user is not found and loading is complete

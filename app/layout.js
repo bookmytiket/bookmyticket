@@ -37,7 +37,7 @@ export const metadata = {
 };
 
 import { AuthProvider } from '@/components/AuthContext';
-import ConvexClientProvider from '@/components/ConvexClientProvider';
+import MaintenanceGuard from '@/components/MaintenanceGuard';
 import { ToastProvider } from '@/context/ToastContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
@@ -71,20 +71,20 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body style={{ ['--font-heading']: '"Space Grotesk", sans-serif', ['--font-body']: '"Figtree", sans-serif' }} suppressHydrationWarning>
-        <ConvexClientProvider>
-          <ToastProvider>
-            <ConfirmProvider>
-              <AuthProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <MaintenanceGuard>
                 <Suspense fallback={null}>
                   <ConditionalNavbar />
                   <CustomerAdPopup />
                   <ToastContainer />
                   {children}
                 </Suspense>
-              </AuthProvider>
-            </ConfirmProvider>
-          </ToastProvider>
-        </ConvexClientProvider>
+              </MaintenanceGuard>
+            </AuthProvider>
+          </ConfirmProvider>
+        </ToastProvider>
       </body>
     </html>
   );

@@ -1,10 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink, Sparkles } from "lucide-react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "./AuthContext";
 
 const STORAGE_PREFIX = "bmt_adpopup_";
@@ -46,8 +45,20 @@ export default function CustomerAdPopup() {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   
-  // Safe-guard against undefined api.adPopups
-  const activePopups = useQuery(api.adPopups?.getActiveAdPopups) || [];
+  const { data: activePopupsRaw, error: popupError } = useSupabaseQuery('ad_popups', (q) => q.eq('is_active', true), []);
+  
+  const activePopups = useMemo(() => {
+    if (popupError || !activePopupsRaw) return [];
+    return activePopupsRaw.map(p => ({
+       ...p,
+       imageUrl: p.image_url,
+       ctaText: p.cta_text,
+       badgeText: p.badge_text,
+       bgColor: p.bg_color,
+       showEveryMinutes: p.show_every_minutes,
+       redirectUrl: p.redirect_url
+    }));
+  }, [activePopupsRaw, popupError]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -65,33 +76,33 @@ export default function CustomerAdPopup() {
       const lastId = localStorage.getItem(LAST_ID_KEY);
       
       // 1. Find all ads eligible to be shown based on their interval
-      const eligible = popups.filter(p => shouldShowPopup(p._id, p.showEveryMinutes));
+      const eligible = popups.filter(p => shouldShowPopup(p.id, p.showEveryMinutes));
       if (!eligible.length) return null;
-
+ 
       // 2. Mixing: Shuffle the eligible ads
       const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-
+ 
       // 3. Rotation: Try to pick one that isn't the same as the lastShownId
       if (shuffled.length > 1) {
-        const different = shuffled.find(p => p._id !== lastId);
+        const different = shuffled.find(p => p.id !== lastId);
         if (different) {
-          const idxInOriginal = popups.findIndex(p => p._id === different._id);
+          const idxInOriginal = popups.findIndex(p => p.id === different.id);
           return { popup: different, index: idxInOriginal };
         }
       }
-
+ 
       // 4. Fallback: If only one is eligible (even if it's the last one), show it
       const fallback = shuffled[0];
-      const fallbackIdx = popups.findIndex(p => p._id === fallback._id);
+      const fallbackIdx = popups.findIndex(p => p.id === fallback.id);
       return { popup: fallback, index: fallbackIdx };
     },
     []
   );
-
+ 
   // Trigger popup on page load or when user logs in
   useEffect(() => {
     if (!mounted || !activePopups.length) return;
-
+ 
     const timer = setTimeout(() => {
       const result = findNextPopup(activePopups);
       if (result) {
@@ -100,13 +111,13 @@ export default function CustomerAdPopup() {
         setVisible(true);
       }
     }, INITIAL_DELAY_MS);
-
+ 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, activePopups.length, user]); // re-trigger on login
-
+ 
   const handleClose = useCallback(() => {
-    if (currentPopup) markPopupSeen(currentPopup._id);
+    if (currentPopup) markPopupSeen(currentPopup.id);
     setVisible(false);
 
     // After close, queue next ad (if any) after interval
@@ -213,7 +224,7 @@ export default function CustomerAdPopup() {
               style={{
                 position: "relative",
                 height: hasImage ? "220px" : "160px",
-                background: hasImage ? "#0f172a" : gradientBg,
+                background: hasImage ? "#0f172a" : (currentPopup.bgColor || gradientBg),
                 overflow: "hidden",
               }}
             >
@@ -407,7 +418,7 @@ export default function CustomerAdPopup() {
               >
                 {activePopups.map((p, i) => (
                   <div
-                    key={p._id}
+                    key={p.id}
                     style={{
                       width: i === currentIndex ? "20px" : "6px",
                       height: "6px",

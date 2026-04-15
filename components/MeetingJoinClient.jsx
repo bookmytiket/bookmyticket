@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { useAuth } from './AuthContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { 
     Video, 
@@ -20,15 +18,38 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useAuth } from './AuthContext';
+
 export default function MeetingJoinClient({ id }) {
     const { user } = useAuth();
     const router = useRouter();
     const userId = user?.identifier || user?.email;
 
-    const access = useQuery(api.events.getMeetingAccess, { 
-        eventId: id, 
-        userId: userId || undefined 
-    });
+    const [access, setAccess] = useState(undefined); // undefined=loading
+
+    useEffect(() => {
+        if (!id) return;
+        supabase.from('events').select('id, title, date, time, description, is_virtual, meeting_url, meeting_status').eq('id', id).maybeSingle()
+            .then(async ({ data: event }) => {
+                if (!event) { setAccess({ status: 'not_found' }); return; }
+                if (!event.is_virtual) { setAccess({ status: 'not_virtual' }); return; }
+                let status = 'not_booked';
+                if (userId) {
+                    const { data: ticket } = await supabase.from('bookings').select('id').eq('event_id', id).eq('user_id', userId).maybeSingle();
+                    if (ticket) status = 'success';
+                }
+                const now = new Date();
+                const eventDate = event.date ? new Date(event.date) : null;
+                const meetingStatus = !eventDate ? 'upcoming' : eventDate < now ? 'expired' : 'live';
+                setAccess({
+                    status,
+                    url: event.meeting_url || '',
+                    type: 'external',
+                    meetingStatus,
+                    eventDetails: { title: event.title, date: event.date || '—', time: event.time || '—', description: event.description || '' },
+                });
+            });
+    }, [id, userId]);
 
     if (access === undefined) {
         return (

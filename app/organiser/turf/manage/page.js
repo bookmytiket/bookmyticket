@@ -1,7 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { 
     Plus, 
@@ -36,9 +35,10 @@ export default function ManageTurfs() {
     const { user } = useAuth();
     const vendorId = user?.userId || user?.identifier;
 
-    const turfs = useQuery(api.turfs.getByOrganiserId, { organiserId: vendorId || "" });
-    const saveTurf = useMutation(api.turfs.saveTurf);
-    const deleteTurf = useMutation(api.turfs.deleteTurf);
+    const [turfs, setTurfs] = useState([]);
+    const refreshTurfs = () => supabase.from('turfs').select('*').eq('organiser_id', vendorId || '')
+        .then(({ data }) => setTurfs(data || []));
+    useEffect(() => { if (vendorId) refreshTurfs(); }, [vendorId]);
     
     const [selectedTurf, setSelectedTurf] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -67,22 +67,24 @@ export default function ManageTurfs() {
     const handleSave = async (e) => {
         e.preventDefault();
         try {
-            await saveTurf({
-                ...formData,
-                organiserId: vendorId,
-                id: selectedTurf?._id
-            });
+            if (selectedTurf?.id) {
+                await supabase.from('turfs').update({ ...formData, organiser_id: vendorId }).eq('id', selectedTurf.id);
+            } else {
+                await supabase.from('turfs').insert({ ...formData, organiser_id: vendorId });
+            }
             setShowAddModal(false);
-            setFormData({ name: "", description: "", location: "", address: "", lat: null, lng: null, pricePerHour: 1000, advanceAmount: 200, status: "active" });
+            setFormData({ name: '', description: '', location: '', address: '', lat: null, lng: null, pricePerHour: 1000, advanceAmount: 200, status: 'active' });
             setSelectedTurf(null);
+            refreshTurfs();
         } catch (err) {
             alert(err.message);
         }
     };
 
     const handleDelete = async (id) => {
-        if (confirm("Are you sure you want to delete this turf? This will also delete all slot patterns.")) {
-            await deleteTurf({ id });
+        if (confirm('Are you sure you want to delete this turf?')) {
+            await supabase.from('turfs').delete().eq('id', id);
+            refreshTurfs();
         }
     };
 

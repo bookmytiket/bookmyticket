@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const FEATURES = [
     { num: "01", title: "Create Event Page", sub: "Do-it-yourself approach" },
@@ -65,13 +64,14 @@ function PromoSlide({ isMobile }) {
 }
 
 export default function HeroBanner({ slides: propSlides, showDetails = true, showPromo = true }) {
-    const activeAds = useQuery(api.banners.getActiveBanners) || [];
+    const { data: activeAdsRaw } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), []);
+    const activeAds = activeAdsRaw || [];
 
     const slides = useMemo(() => {
         const adSlides = activeAds.map(ad => ({
-            image: ad.imageUrl,
-            alt: "Advertisement",
-            url: ad.link,
+            image: ad.imageUrl || ad.img || ad.image_url,
+            alt: ad.title || "Advertisement",
+            url: ad.redirectUrl || ad.link,
             isAd: true
         }));
 

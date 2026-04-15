@@ -1,8 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { X, Loader2, ArrowRight } from "lucide-react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 
 const SERVICE_CATEGORIES = [
     "General Event",
@@ -18,7 +17,6 @@ const SERVICE_CATEGORIES = [
 ];
 
 export default function BecomePartnerModal({ isOpen, onClose }) {
-    const submitRequest = useMutation(api.partnerRequests.submitRequest);
 
     const [form, setForm] = useState({
         firstName: "",
@@ -49,7 +47,18 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
 
         setIsSubmitting(true);
         try {
-            await submitRequest({ ...form, type: "professional_service" });
+            const { error } = await supabase.from('partner_requests').insert({
+                first_name: form.firstName,
+                last_name: form.lastName,
+                email: form.email,
+                phone: form.phone,
+                category: form.category,
+                role: form.role,
+                remarks: form.remarks,
+                type: 'professional_service',
+                status: 'pending',
+            });
+            if (error) throw error;
             setSuccess(true);
             setTimeout(() => {
                 setSuccess(false);

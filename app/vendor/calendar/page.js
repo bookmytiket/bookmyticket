@@ -1,7 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect } from "react";
+import { useSupabaseQuery, useSupabaseMutation, supabase } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -27,30 +26,66 @@ export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    const bookings = useQuery(
-        api.vendorBookings.list,
-        vendorId ? { vendorId } : "skip"
-    ) || [];
+    // 1. Fetch Vendor Details
+    const { data: providerArr = [] } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
+    const provider = providerArr && !Array.isArray(providerArr) ? providerArr : null;
+    const isTurf = provider?.category?.toLowerCase() === 'turf';
 
-    const stats = useQuery(
-        api.vendors.getStats,
-        vendorId ? { vendorId } : "skip"
-    );
+    // 2. Fetch Bookings
+    const { data: turfBookings = [] } = useSupabaseQuery('turf_bookings', (q) => 
+        q.eq('turf_id', provider?.id)
+    , [provider?.id, isTurf]);
 
-    const availability = useQuery(
-        api.vendorCalendar.getAvailability,
-        vendorId ? { vendorId } : "skip"
-    );
+    const { data: artistBookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+        q.eq('vendor_id', provider?.id)
+    , [provider?.id, !isTurf]);
 
-    const toggleBlockDate = useMutation(api.vendorCalendar.toggleBlockDate);
+    const bookings = isTurf ? turfBookings : artistBookings;
 
-    const blockedDates = availability?.blockedDates || [];
+    // 3. Fetch Blocked Dates
+    const { data: turfBlocks = [] } = useSupabaseQuery('turf_manual_blocks', (q) => 
+        q.eq('turf_id', provider?.id)
+    , [provider?.id, isTurf]);
+
+    const { data: artistAvailability = [] } = useSupabaseQuery('service_availability', (q) => 
+        q.eq('vendor_id', provider?.id).single()
+    , [provider?.id, !isTurf]);
+
+    const [updateArtistAvailability] = useSupabaseMutation('service_availability', 'upsert', (q) => q.eq('vendor_id', provider?.id));
+    const [createTurfBlock] = useSupabaseMutation('turf_manual_blocks', 'insert');
+    const [deleteTurfBlock] = useSupabaseMutation('turf_manual_blocks', 'delete', (q, d) => q.eq('turf_id', provider?.id).eq('block_date', d.block_date));
+
+    const blockedDates = isTurf 
+        ? turfBlocks.map(b => b.block_date) 
+        : (artistAvailability && !Array.isArray(artistAvailability) ? (artistAvailability.blocked_dates || []) : []);
 
     const handleToggleBlockDate = async () => {
-        if (!vendorId || !selectedDate) return;
+        if (!vendorId || !selectedDate || !provider) return;
         const dateStr = selectedDate.toISOString().split("T")[0];
+        
         try {
-            await toggleBlockDate({ vendorId, date: dateStr });
+            if (isTurf) {
+                const isBlocked = blockedDates.includes(dateStr);
+                if (isBlocked) {
+                    await deleteTurfBlock({ block_date: dateStr });
+                } else {
+                    await createTurfBlock({ turf_id: provider.id, block_date: dateStr, reason: 'Manual Block' });
+                }
+            } else {
+                const currentBlocks = [...blockedDates];
+                const index = currentBlocks.indexOf(dateStr);
+                if (index > -1) {
+                    currentBlocks.splice(index, 1);
+                } else {
+                    currentBlocks.push(dateStr);
+                }
+                await updateArtistAvailability({ 
+                    vendor_id: provider.id, 
+                    blocked_dates: currentBlocks 
+                });
+            }
         } catch (error) {
             console.error("Failed to toggle block date:", error);
         }
@@ -66,19 +101,17 @@ export default function CalendarPage() {
         const totalDays = daysInMonth(year, month);
         const startingDay = firstDayOfMonth(year, month);
 
-        // Previous month days placeholders
         for (let i = 0; i < startingDay; i++) {
-            days.push(<div key={`empty-${i}`} className="h-28 md:h-32 bg-slate-50/30 border border-slate-50 opacity-20"></div>);
+            days.push(<div key={`empty-${i}`} className="h-20 md:h-24 bg-slate-50/30 border border-slate-50 opacity-20"></div>);
         }
 
-        // Current month days
         for (let day = 1; day <= totalDays; day++) {
             const date = new Date(year, month, day);
             const isSelected = selectedDate.toDateString() === date.toDateString();
             const isToday = new Date().toDateString() === date.toDateString();
             
             const dayBookings = bookings.filter(b => {
-                const bDate = new Date(b.date);
+                const bDate = new Date(b.booking_date || b.date);
                 return bDate.toDateString() === date.toDateString();
             });
             const dateStrForBlock = date.toISOString().split("T")[0];
@@ -107,7 +140,7 @@ export default function CalendarPage() {
                     <div className="mt-2 space-y-1">
                         {dayBookings.slice(0, 1).map((b, i) => (
                             <div key={i} className="text-[7px] font-black uppercase tracking-tighter truncate bg-slate-900 text-white px-1.5 py-0.5 rounded shadow-lg italic">
-                                {b.customerDetails?.name || "Job"}
+                                {b.customer_details?.name || "Job"}
                             </div>
                         ))}
                         {isBlocked && dayBookings.length === 0 && (
@@ -129,7 +162,7 @@ export default function CalendarPage() {
     };
 
     const selectedDayBookings = bookings.filter(b => {
-        const bDate = new Date(b.date);
+        const bDate = new Date(b.booking_date || b.date);
         return bDate.toDateString() === selectedDate.toDateString();
     });
 
@@ -201,16 +234,16 @@ export default function CalendarPage() {
                             {selectedDayBookings.length > 0 ? selectedDayBookings.map((b, i) => (
                                 <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 group hover:bg-pink-50 hover:border-pink-200 transition-all cursor-pointer shadow-inner">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight group-hover:text-pink-600 transition-colors">{b.customerDetails?.name || "Client"}</p>
+                                        <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight group-hover:text-pink-600 transition-colors">{b.customer_details?.name || "Client"}</p>
                                         <Clock size={12} className="text-slate-300 group-hover:text-pink-400" />
                                     </div>
                                     <div className="flex items-center space-x-2 text-[9px] text-slate-400 font-bold uppercase tracking-widest">
                                         <Clock size={10} />
-                                        <span>{b.time || "10:00 AM"}</span>
+                                        <span>{b.time || b.start_time || "10:00 AM"}</span>
                                     </div>
                                     <div className="flex items-center space-x-2 text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">
                                         <MapPin size={10} />
-                                        <span>{b.location || "On-site"}</span>
+                                        <span>{b.location || b.address || "On-site"}</span>
                                     </div>
                                 </div>
                             )) : isSelectedDateBlocked ? (

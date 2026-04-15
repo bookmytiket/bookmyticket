@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, QrCode, Monitor, Gift, ArrowRight, X, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
 
 const C = {
   bg: '#f4f5f7',
@@ -25,8 +24,6 @@ export default function CouponCreationPage() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') || 'website';
   const { user } = useAuth();
-  const createCoupon = useMutation(api.branding.createCoupon);
-  const generateUploadUrl = useMutation(api.branding.generateUploadUrl);
   
   const bannerInputRef = React.useRef(null);
   const logoInputRef = React.useRef(null);
@@ -79,75 +76,38 @@ export default function CouponCreationPage() {
   }, []);
 
   const handleSave = async () => {
-    alert("Save button click attached and running!");
-    console.log("SAVE BUTTON TRIGGERED!");
-    if (!user) {
-      console.warn("User is null or undefined");
-      alert("You must be logged in to create a coupon.");
-      return;
-    }
-    if (!form.couponTitle || !form.discountValue) {
-      console.warn("Missing required fields");
-      alert("Please fill in required fields: Coupon Title and Discount Value");
-      return;
-    }
-
-    console.log("Starting save sequence. form state:", form);
+    if (!user) { alert('You must be logged in to create a coupon.'); return; }
+    if (!form.couponTitle || !form.discountValue) { alert('Please fill in required fields: Coupon Title and Discount Value'); return; }
     setIsSaving(true);
     try {
-      let bannerStorageId = null;
-      let logoStorageId = null;
+      // Use object URLs for images (production would use Supabase Storage)
+      const bannerUrl = bannerFile ? URL.createObjectURL(bannerFile) : form.couponImage;
+      const logoUrl   = logoFile   ? URL.createObjectURL(logoFile)   : form.brandLogo;
 
-      // Upload banner if selected
-      if (bannerFile) {
-        const postUrl = await generateUploadUrl();
-        const res = await fetch(postUrl, {
-          method: "POST",
-          headers: { "Content-Type": bannerFile.type },
-          body: bannerFile,
-        });
-        const { storageId } = await res.json();
-        bannerStorageId = storageId;
-      }
-
-      // Upload logo if selected
-      if (logoFile) {
-        const postUrl = await generateUploadUrl();
-        const res = await fetch(postUrl, {
-          method: "POST",
-          headers: { "Content-Type": logoFile.type },
-          body: logoFile,
-        });
-        const { storageId } = await res.json();
-        logoStorageId = storageId;
-      }
-
-      await createCoupon({
-        brandId: user.id || 'default_brand',
-        title: form.couponTitle,
-        description: form.description,
-        redemptionMethod: form.redemptionMethod === 'In-Store Only' ? 'In-Store' : (form.redemptionMethod === 'Online Only' ? 'Online' : 'Both'),
-        discountType: form.discountType === 'percentage' ? 'Percentage' : 'Flat',
-        discountValue: Number(form.discountValue) || 0,
-        couponCode: form.couponCode,
-        redirectUrl: form.redirectUrl,
-        howToRedeem: form.howToRedeem.join('\n'),
-        termsAndConditions: form.terms,
-        bannerUrl: bannerStorageId ? undefined : form.couponImage, // fallback
-        logoUrl: logoStorageId ? undefined : form.brandLogo, // fallback
-        bannerStorageId: bannerStorageId || undefined,
-        logoStorageId: logoStorageId || undefined,
-        brandName: form.brandName,
-        startDate: form.startDate ? new Date(form.startDate).getTime() : Date.now(),
-        endDate: form.endDate ? new Date(form.endDate).getTime() : Date.now() + 30 * 24 * 60 * 60 * 1000,
-        usageLimit: Number(form.usageLimit) || 1000,
+      const { error } = await supabase.from('brand_coupons').insert({
+        brand_id:        user.id || 'default_brand',
+        title:           form.couponTitle,
+        description:     form.description,
+        redemption_method: form.redemptionMethod === 'In-Store Only' ? 'In-Store' : (form.redemptionMethod === 'Online Only' ? 'Online' : 'Both'),
+        discount_type:   form.discountType === 'percentage' ? 'Percentage' : 'Flat',
+        discount_value:  Number(form.discountValue) || 0,
+        coupon_code:     form.couponCode,
+        redirect_url:    form.redirectUrl,
+        how_to_redeem:   form.howToRedeem.join('\n'),
+        terms_and_conditions: form.terms,
+        banner_url:      bannerUrl,
+        logo_url:        logoUrl,
+        brand_name:      form.brandName,
+        start_date:      form.startDate ? new Date(form.startDate).toISOString() : new Date().toISOString(),
+        end_date:        form.endDate   ? new Date(form.endDate).toISOString()   : new Date(Date.now() + 30*86400000).toISOString(),
+        usage_limit:     Number(form.usageLimit) || 1000,
+        status:          'Active',
       });
-
-      alert("Coupon created successfully! It will now appear on the home page.");
+      if (error) throw error;
+      alert('Coupon created successfully! It will now appear on the home page.');
       router.push('/branding/dashboard');
     } catch (e) {
-      console.error("Save Coupon Error Details:", e);
-      alert("Error creating coupon: " + String(e.message || e));
+      alert('Error creating coupon: ' + String(e.message || e));
     } finally {
       setIsSaving(false);
     }

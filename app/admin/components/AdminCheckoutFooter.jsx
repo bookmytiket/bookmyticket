@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import React, { useState, useEffect } from "react";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import * as LucideIcons from "lucide-react";
+import { useToast } from "@/context/ToastContext";
 
 export default function AdminCheckoutFooter({ theme, t }) {
-    const footers = useQuery(api.checkoutFooters.listAll);
-    const addFooter = useMutation(api.checkoutFooters.add);
-    const updateFooter = useMutation(api.checkoutFooters.update);
-    const removeFooter = useMutation(api.checkoutFooters.remove);
-    const toggleActive = useMutation(api.checkoutFooters.toggleActive);
+    const { showToast } = useToast();
+    const { data: configData, loading } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_checkout_footers'));
+    const [upsertConfig] = useSupabaseMutation('system_config', 'upsert', (q, p) => q.eq('key', 'admin_checkout_footers'));
+
+    const footers = configData?.[0]?.value || [];
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
@@ -25,21 +25,48 @@ export default function AdminCheckoutFooter({ theme, t }) {
         isActive: true
     });
 
-    if (footers === undefined) return <div style={{ color: t.textMain }}>Loading...</div>;
+    if (loading) return <div style={{ color: t.textMain, padding: "20px" }}>Loading Checkout Footers...</div>;
+
+    const saveFooters = async (newList) => {
+        try {
+            await upsertConfig({ 
+                key: 'admin_checkout_footers', 
+                value: newList 
+            });
+            showToast("Changes saved successfully", "success");
+        } catch (err) {
+            showToast("Error saving: " + err.message, "error");
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            if (editingItem) {
-                await updateFooter({ id: editingItem._id, ...formData, order: parseInt(formData.order) });
-            } else {
-                await addFooter({ ...formData, order: parseInt(formData.order) });
-            }
-            setIsModalOpen(false);
-            setEditingItem(null);
-        } catch (err) {
-            alert("Error saving: " + err.message);
+        let newList;
+        const newItem = { 
+            ...formData, 
+            id: editingItem ? editingItem.id : crypto.randomUUID(),
+            order: parseInt(formData.order) 
+        };
+
+        if (editingItem) {
+            newList = footers.map(f => f.id === editingItem.id ? newItem : f);
+        } else {
+            newList = [...footers, newItem];
         }
+
+        await saveFooters(newList);
+        setIsModalOpen(false);
+        setEditingItem(null);
+    };
+
+    const removeFooter = async (id) => {
+        const newList = footers.filter(f => f.id !== id);
+        await saveFooters(newList);
+    };
+
+    const toggleActive = async (id) => {
+        const newList = footers.map(f => f.id === id ? { ...f, isActive: !f.isActive } : f);
+        await saveFooters(newList);
     };
 
     const openEdit = (item) => {
@@ -96,10 +123,10 @@ export default function AdminCheckoutFooter({ theme, t }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {footers.sort((a,b) => a.order - b.order).map((item) => {
+                    {[...footers].sort((a,b) => a.order - b.order).map((item) => {
                         const Icon = LucideIcons[item.iconName] || LucideIcons.Info;
                         return (
-                            <tr key={item._id} style={{ borderTop: `1px solid ${t.border}` }}>
+                            <tr key={item.id} style={{ borderTop: `1px solid ${t.border}` }}>
                                 <td style={{ padding: "16px", color: t.textMain }}>{item.order}</td>
                                 <td style={{ padding: "16px" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -117,7 +144,7 @@ export default function AdminCheckoutFooter({ theme, t }) {
                                 </td>
                                 <td style={{ padding: "16px" }}>
                                     <button 
-                                        onClick={() => toggleActive({ id: item._id, isActive: !item.isActive })}
+                                        onClick={() => toggleActive(item.id)}
                                         style={{ 
                                             padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 700, border: "none", cursor: "pointer",
                                             background: item.isActive ? "#22c55e20" : "#ef444420",
@@ -129,11 +156,16 @@ export default function AdminCheckoutFooter({ theme, t }) {
                                 </td>
                                 <td style={{ padding: "16px", display: "flex", gap: "8px" }}>
                                     <button onClick={() => openEdit(item)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#3b82f6" }}><LucideIcons.Edit size={16} /></button>
-                                    <button onClick={() => confirm("Delete this footer item?") && removeFooter({ id: item._id })} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#ef4444" }}><LucideIcons.Trash2 size={16} /></button>
+                                    <button onClick={() => confirm("Delete this footer item?") && removeFooter(item.id)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#ef4444" }}><LucideIcons.Trash2 size={16} /></button>
                                 </td>
                             </tr>
                         );
                     })}
+                    {footers.length === 0 && (
+                        <tr>
+                            <td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No footer items found.</td>
+                        </tr>
+                    ) }
                 </tbody>
             </table>
 

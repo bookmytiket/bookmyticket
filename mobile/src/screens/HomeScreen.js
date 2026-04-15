@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Image, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
+import { supabase } from '../lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
@@ -57,12 +57,15 @@ function FeaturedSection({ title, subtitle, events, onEventPress, gradientColors
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const convexEvents = useQuery(api.events.getActiveEvents);
-  const convexMeetings = useQuery(api.meetings.listAll) || [];
-  const convexVendors = useQuery(api.vendors.getActiveVendors);
-  const convexCategories = useQuery(api.homeSettings.getCategories);
-  const convexBanners = useQuery(api.homeSettings.getBannerSlides);
-  const convexCoupons = useQuery(api.branding.getHomeCoupons) || [];
+  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+  const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.eq('type', 'Meeting').eq('status', 'Active'), []);
+  const { data: convexVendors } = useSupabaseQuery('profiles', (q) => q.eq('role', 'organiser'), []);
+  const { data: convexCategories } = useSupabaseQuery('categories', (q) => q, []);
+  const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'banner_slides').single(), []);
+  const convexBanners = convexBannersRaw?.value || [];
+  const { data: convexCouponsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'home_coupons').single(), []);
+  const convexCoupons = convexCouponsRaw?.value || [];
+
   const allCoupons = useMemo(() => {
     return (convexCoupons && convexCoupons.length > 0) ? convexCoupons : BRAND_COUPONS;
   }, [convexCoupons]);
@@ -71,7 +74,6 @@ export default function HomeScreen() {
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
-  const subscribe = useMutation(api.subscribers.add);
 
   const handleSubscribe = async () => {
     if (!subscribeEmail) {
@@ -86,7 +88,12 @@ export default function HomeScreen() {
 
     setIsSubscribing(true);
     try {
-      await subscribe({ email: subscribeEmail });
+      const { error } = await supabase
+        .from('subscribers')
+        .insert([{ email: subscribeEmail }]);
+        
+      if (error) throw error;
+      
       Alert.alert("Success", "Thank you for subscribing today!");
       setSubscribeEmail('');
     } catch (err) {

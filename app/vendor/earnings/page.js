@@ -1,7 +1,4 @@
-"use client";
-import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -25,26 +22,40 @@ export default function EarningsPage() {
     const { user } = useAuth();
     const vendorId = getVendorAccountKey(user);
     
-    const stats = useQuery(
-        api.vendors.getStats,
-        vendorId ? { vendorId } : "skip"
-    ) || {
-        totalBookings: 0,
-        totalEarnings: 0,
-        upcomingJobs: 0,
-        avgRating: 0
+    // 1. Fetch Vendor Details
+    const { data: providerArr = [] } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
+    const provider = providerArr && !Array.isArray(providerArr) ? providerArr : null;
+    const isTurf = provider?.category?.toLowerCase() === 'turf';
+
+    // 2. Fetch Completed Bookings
+    const { data: turfBookings = [] } = useSupabaseQuery('turf_bookings', (q) => 
+        q.eq('turf_id', provider?.id).eq('payment_status', 'Paid')
+    , [provider?.id, isTurf]);
+
+    const { data: artistBookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+        q.eq('vendor_id', provider?.id).eq('status', 'Completed')
+    , [provider?.id, !isTurf]);
+
+    const bookings = isTurf ? turfBookings : artistBookings;
+
+    // 3. Calculate Stats
+    const totalEarnings = bookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
+    const totalBookings = bookings.length;
+
+    const stats = {
+        totalBookings,
+        totalEarnings,
+        upcomingJobs: 0, // Simplified or could fetch pending
+        avgRating: provider?.rating || 0
     };
 
-    const bookings = useQuery(
-        api.vendorBookings.list,
-        vendorId ? { vendorId, status: "completed" } : "skip"
-    ) || [];
-
     const transactions = bookings.map(b => ({
-        id: b._id,
-        desc: `${b.serviceType} for ${b.customerDetails?.name || "Customer"}`,
-        amount: `+₹${b.totalAmount}`,
-        date: new Date(b.createdAt).toLocaleDateString(),
+        id: b.id,
+        desc: `${isTurf ? 'Turf Booking' : (b.service_type || 'Professional Service')} for ${b.customer_details?.name || "Customer"}`,
+        amount: `+₹${b.total_amount}`,
+        date: new Date(b.booking_date || b.created_at).toLocaleDateString(),
         status: "Success",
         type: "credit"
     }));

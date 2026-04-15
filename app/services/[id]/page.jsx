@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { 
@@ -36,11 +35,22 @@ export default function ArtistProfilePage() {
     const [confirmedDetails, setConfirmedDetails] = useState(null);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-    const fullProfile = useQuery(api.vendors.getFullProfile, { organiserId: vendorId });
-    const reviews = useQuery(api.vendorReviews.getVendorReviews, { vendorId: vendorId }) || [];
-    const availability = useQuery(api.vendorCalendar.getAvailability, { vendorId: vendorId });
-    const blockedDates = availability?.blockedDates || [];
-    const confirmedBookings = availability?.confirmedBookings || [];
+    // Fetch full profile from Supabase
+    const { data: profileArr = [], loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
+        q.select('*, organiser_details(*)').eq('id', vendorId).single()
+    , [vendorId]);
+    
+    const fullProfile = profileArr && !Array.isArray(profileArr) ? { 
+        organiser: profileArr.organiser_details, 
+        vendorProfile: profileArr 
+    } : null;
+
+    const { data: reviews = [] } = useSupabaseQuery('service_reviews', (q) => q.eq('vendor_id', vendorId), [vendorId]);
+    const { data: availabilityArr = [] } = useSupabaseQuery('service_availability', (q) => q.eq('vendor_id', vendorId).single(), [vendorId]);
+    const availability = availabilityArr && !Array.isArray(availabilityArr) ? availabilityArr : null;
+    
+    const blockedDates = availability?.blocked_dates || [];
+    const confirmedBookings = availability?.confirmed_bookings || [];
 
     useEffect(() => {
         if (user) {
@@ -53,8 +63,8 @@ export default function ArtistProfilePage() {
         }
     }, [user]);
 
-    const createBooking = useMutation(api.vendorBookings.create);
-    const submitReview = useMutation(api.vendorReviews.submitReview);
+    const [createBooking] = useSupabaseMutation('service_bookings', 'insert');
+    const [submitReview] = useSupabaseMutation('service_reviews', 'insert');
 
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -67,8 +77,8 @@ export default function ArtistProfilePage() {
         setIsSubmittingReview(true);
         try {
             await submitReview({
-                vendorId: vendorId,
-                userId: user.email || user.identifier,
+                vendor_id: vendorId,
+                user_id: user.id || user.email || user.identifier,
                 rating: reviewForm.rating,
                 comment: reviewForm.comment
             });
@@ -104,27 +114,29 @@ export default function ArtistProfilePage() {
 
         setIsBooking(true);
         try {
-            const bookingId = await createBooking({
-                vendorId: organiser.userId,
-                userId: user?.identifier || user?.email || formData.email,
-                serviceType: organiser.category || "Professional Service",
-                bookingDate: formData.date,
-                totalAmount: selectedPackage.price,
-                customerDetails: {
+            const bookingResult = await createBooking({
+                vendor_id: fullProfile.organiser.id,
+                user_id: user?.id || user?.identifier || user?.email || formData.email,
+                service_type: fullProfile.organiser.category || "Professional Service",
+                booking_date: formData.date,
+                total_amount: selectedPackage.price,
+                customer_details: {
                     name: formData.name || user?.name || "Customer",
                     phone: formData.phone || user?.phone || "",
                     email: formData.email || user?.identifier || user?.email || "",
                     address: formData.address || "Multiple Locations"
                 },
-                remarks: formData.remarks || undefined
+                remarks: formData.remarks || undefined,
+                status: "Pending"
             });
             
+            const bookingId = bookingResult?.id;
+            
             // Store confirmed booking details and show success screen
-            // No setTimeout redirect — user navigates explicitly to avoid reload
             setConfirmedDetails({
                 bookingId,
-                service: organiser.category || "Professional Service",
-                vendor: organiser.name,
+                service: fullProfile.organiser.category || "Professional Service",
+                vendor: fullProfile.organiser.name,
                 date: formData.date,
                 package: selectedPackage.name,
                 amount: selectedPackage.price,
@@ -142,7 +154,7 @@ export default function ArtistProfilePage() {
 
     // Logic below depends on fullProfile being defined
 
-    if (fullProfile === undefined) {
+    if (profileLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#fafbfc]">
                 <Loader2 className="animate-spin text-[#FF5A5F]" size={48} />
@@ -190,7 +202,7 @@ export default function ArtistProfilePage() {
             const isToday = new Date().toISOString().split('T')[0] === dateStr;
             const isSelected = formData.date === dateStr;
             const isBlocked = blockedDates.includes(dateStr);
-            const isBooked = confirmedBookings.some(b => b.bookingDate === dateStr);
+            const isBooked = confirmedBookings.some(b => b.booking_date === dateStr);
             const isUnavailable = isBlocked || isBooked || (new Date(dateStr) < new Date(new Date().setHours(0,0,0,0)));
 
             days.push(

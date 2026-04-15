@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import { 
     Plus, 
     Trash2, 
@@ -25,10 +24,15 @@ function SlotManager() {
     const turfId = searchParams.get("turfId");
     const router = useRouter();
 
-    const turf = useQuery(api.turfs.getById, turfId ? { turfId } : "skip");
-    const slots = useQuery(api.turfs.getSlots, turfId ? { turfId } : "skip") || [];
-    const saveSlot = useMutation(api.turfs.saveSlot);
-    const deleteSlot = useMutation(api.turfs.deleteSlot);
+    const [turf, setTurf] = useState(null);
+    const [slots, setSlots] = useState([]);
+
+    const refreshSlots = () => {
+        if (!turfId) return;
+        supabase.from('turfs').select('*').eq('id', turfId).maybeSingle().then(({ data }) => setTurf(data));
+        supabase.from('turf_slots').select('*').eq('turf_id', turfId).then(({ data }) => setSlots(data || []));
+    };
+    useEffect(() => { refreshSlots(); }, [turfId]);
 
     const [newSlot, setNewSlot] = useState({
         dayOfWeek: 1,
@@ -40,18 +44,12 @@ function SlotManager() {
     const handleAddSlot = async () => {
         if (!turfId) return;
         try {
-            await saveSlot({
-                ...newSlot,
-                turfId: turfId,
-                isActive: true
-            });
-            // Reset maybe just time
-            const [h, m] = newSlot.endTime.split(":").map(Number);
-            const nextH = String((h + 1) % 24).padStart(2, "0");
-            setNewSlot({ ...newSlot, startTime: newSlot.endTime, endTime: `${nextH}:${String(m).padStart(2, "0")}` });
-        } catch (err) {
-            alert(err.message);
-        }
+            await supabase.from('turf_slots').insert({ ...newSlot, turf_id: turfId, is_active: true });
+            const [h, m] = newSlot.endTime.split(':').map(Number);
+            const nextH = String((h + 1) % 24).padStart(2, '0');
+            setNewSlot({ ...newSlot, startTime: newSlot.endTime, endTime: `${nextH}:${String(m).padStart(2, '0')}` });
+            refreshSlots();
+        } catch (err) { alert(err.message); }
     };
 
     if (!turfId) return <div className="p-12 text-center font-black uppercase tracking-widest text-slate-400">Invalid Turf ID</div>;
@@ -182,7 +180,7 @@ function SlotManager() {
                                                 </div>
                                             </div>
                                             <button 
-                                                onClick={() => deleteSlot({ id: slot._id })}
+                                                onClick={async () => { await supabase.from('turf_slots').delete().eq('id', slot.id); refreshSlots(); }}
                                                 className="p-2.5 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
                                             >
                                                 <Trash2 size={14} />

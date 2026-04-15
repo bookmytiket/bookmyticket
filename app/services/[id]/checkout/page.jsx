@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, MapPin, Clock, Loader2, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -26,15 +25,29 @@ export default function ServiceCheckoutPage() {
     
     const pkgName = searchParams.get('pkg');
     
-    // Fetch full artist profile (organiser + vendor details)
-    const fullProfile = useQuery(api.vendors.getFullProfile, { organiserId: decodeURIComponent(id) });
-    const availability = useQuery(api.vendorCalendar.getAvailability, { vendorId: decodeURIComponent(id) });
-    
+    const [fullProfile, setFullProfile] = useState(undefined);
+    const [blockedDates, setBlockedDates] = useState([]);
+    const [confirmedBookingDates, setConfirmedBookingDates] = useState([]);
+
+    useEffect(() => {
+        if (!id) return;
+        const decoded = decodeURIComponent(id);
+        supabase.from('users').select('*, vendor_profiles(*)').eq('identifier', decoded).maybeSingle()
+            .then(({ data }) => {
+                if (data) {
+                    setFullProfile({ organiser: data, vendorProfile: data.vendor_profiles?.[0] || null });
+                } else {
+                    setFullProfile(null);
+                }
+            });
+        supabase.from('vendor_bookings').select('booking_date').eq('vendor_id', decoded).eq('status', 'Confirmed')
+            .then(({ data }) => setConfirmedBookingDates((data || []).map(b => b.booking_date)));
+    }, [id]);
+
     const organiser = fullProfile?.organiser;
     const vendorProfile = fullProfile?.vendorProfile;
-    
-    const blockedDates = availability?.blockedDates || [];
-    const confirmedBookings = availability?.confirmedBookings || [];
+
+    const confirmedBookings = confirmedBookingDates.map(date => ({ bookingDate: date }));
 
     const [selectedPackage, setSelectedPackage] = useState(null);
     const [isBooking, setIsBooking] = useState(false);
@@ -89,7 +102,6 @@ export default function ServiceCheckoutPage() {
         }
     }, [pkgName, vendorProfile, selectedPackage]);
 
-    const createBooking = useMutation(api.vendorBookings.create);
 
     const handleBooking = async (e) => {
         e.preventDefault();
@@ -99,21 +111,22 @@ export default function ServiceCheckoutPage() {
 
         setIsBooking(true);
         try {
-            const bookingId = await createBooking({
-                vendorId: organiser.userId,
-                userId: user.identifier || user.email,
-                serviceType: organiser.category || "Professional Service",
-                bookingDate: bookingData.date,
-                bookingTime: bookingData.time || undefined,
-                totalAmount: selectedPackage.price,
-                customerDetails: {
-                    name: bookingData.name,
-                    phone: bookingData.phone,
-                    email: bookingData.email,
-                    address: bookingData.address
-                },
-                remarks: bookingData.remarks || undefined
-            });
+            const { data: booking, error } = await supabase.from('vendor_bookings').insert({
+                vendor_id: organiser.identifier || organiser.id,
+                user_id: user.identifier || user.email,
+                service_type: organiser.category || 'Professional Service',
+                booking_date: bookingData.date,
+                booking_time: bookingData.time || null,
+                total_amount: selectedPackage.price,
+                customer_name: bookingData.name,
+                customer_phone: bookingData.phone,
+                customer_email: bookingData.email,
+                customer_address: bookingData.address,
+                remarks: bookingData.remarks || null,
+                status: 'Pending',
+            }).select('id').single();
+            if (error) throw error;
+            const bookingId = booking.id;
             
             // Store confirmed details — NO setTimeout redirect (prevents page reload race)
             setConfirmedDetails({

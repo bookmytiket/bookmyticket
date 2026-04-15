@@ -1,7 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect } from "react";
+import { useSupabaseQuery, useSupabaseMutation, supabase } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -30,12 +29,12 @@ export default function SettingsPage() {
     const { user } = useAuth();
     const vendorId = getVendorAccountKey(user);
     
-    const profile = useQuery(
-        api.vendors.getByOrganiserId,
-        vendorId ? { organiserId: vendorId } : "skip"
-    );
-    const updateProfile = useMutation(api.vendors.updateProfile);
-    const generateUploadUrl = useMutation(api.images.generateUploadUrl);
+    const { data: profileArr = [], mutate: refreshProfile } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
+    const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
+
+    const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('organiser_id', vendorId));
 
     const [formData, setFormData] = useState({
         name: "",
@@ -55,19 +54,20 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if (profile) {
+            const adv = profile.advanced_settings || {};
             setFormData({
                 name: profile.name || user?.name || "",
                 bio: profile.bio || "",
                 category: profile.category || "",
-                profileImage: profile.advancedSettings?.profileImage || "",
-                website: profile.advancedSettings?.website || "",
-                instagram: profile.advancedSettings?.instagram || "",
-                facebook: profile.advancedSettings?.facebook || "",
-                phone: profile.advancedSettings?.phone || "",
-                address: profile.advancedSettings?.address || "",
-                experience: profile.advancedSettings?.experience || "",
-                serviceLocations: profile.advancedSettings?.serviceLocations || "",
-                contactVisible: profile.advancedSettings?.contactVisible ?? true
+                profileImage: profile.image_url || adv.profileImage || "",
+                website: adv.website || "",
+                instagram: adv.instagram || "",
+                facebook: adv.facebook || "",
+                phone: adv.phone || "",
+                address: adv.address || "",
+                experience: adv.experience || "",
+                serviceLocations: adv.serviceLocations || "",
+                contactVisible: adv.contactVisible ?? true
             });
         }
     }, [profile, user]);
@@ -77,14 +77,25 @@ export default function SettingsPage() {
         if (!file) return;
 
         try {
-            const postUrl = await generateUploadUrl();
-            const result = await fetch(postUrl, {
-                method: "POST",
-                headers: { "Content-Type": file.type },
-                body: file,
-            });
-            const { storageId } = await result.json();
-            setFormData(prev => ({ ...prev, profileImage: storageId }));
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${vendorId}/${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('vendor-assets')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('vendor-assets')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({ ...prev, profileImage: publicUrl }));
+            
+            // Auto update image_url in DB
+            await updateProfile({ image_url: publicUrl });
+            refreshProfile();
         } catch (error) {
             console.error("Failed to upload image:", error);
         }
@@ -94,11 +105,10 @@ export default function SettingsPage() {
         setIsSaving(true);
         try {
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Unknown",
                 bio: formData.bio,
-                advancedSettings: {
-                    ...profile?.advancedSettings,
+                name: formData.name,
+                advanced_settings: {
+                    ...(profile?.advanced_settings || {}),
                     profileImage: formData.profileImage,
                     website: formData.website,
                     instagram: formData.instagram,
@@ -110,6 +120,7 @@ export default function SettingsPage() {
                     contactVisible: formData.contactVisible
                 }
             });
+            refreshProfile();
         } catch (error) {
             console.error("Failed to save settings:", error);
         } finally {
@@ -152,7 +163,7 @@ export default function SettingsPage() {
                             <div className="relative w-56 h-56 rounded-[3.5rem] bg-white border-4 border-slate-50 p-1.5 transition-all duration-700 overflow-hidden shadow-2xl shadow-slate-200/50 group-hover:border-pink-500/50 group-hover:scale-[1.02]">
                                 <div className="w-full h-full rounded-[2.8rem] bg-slate-50 flex items-center justify-center text-slate-200 relative group overflow-hidden shadow-inner">
                                     {formData.profileImage ? (
-                                        <img src={formData.profileImage.startsWith('http') ? formData.profileImage : `https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=1080&auto=format&fit=crop`} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                     ) : (
                                         <User size={80} strokeWidth={1} className="group-hover:scale-110 transition-transform duration-700" />
                                     )}

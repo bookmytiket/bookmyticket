@@ -12,8 +12,7 @@ import {
   Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 

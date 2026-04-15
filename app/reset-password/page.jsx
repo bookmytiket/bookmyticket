@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import { Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -21,11 +20,26 @@ function ResetPasswordForm() {
     const [status, setStatus] = useState("idle"); // idle, loading, success, error
     const [errorMessage, setErrorMessage] = useState("");
 
-    const verifyToken = useQuery(api.auth.verifyResetToken,
-        token && email ? { token, email } : "skip"
-    );
-    const resetPassMutation = useMutation(api.auth.resetPassword);
-    const forceResetMutation = useMutation(api.auth.updateForcedPassword);
+    const [tokenValid, setTokenValid] = useState(null); // null=loading, true/false
+
+    useEffect(() => {
+        if (!token || !email || isForced) { setTokenValid(isForced ? true : false); return; }
+        const verifyToken = async () => {
+            try {
+                const res = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'verify', email, token })
+                });
+                const data = await res.json();
+                setTokenValid(data.success);
+            } catch (err) {
+                console.error("Verification error:", err);
+                setTokenValid(false);
+            }
+        };
+        verifyToken();
+    }, [token, email, isForced]);
 
     const handleReset = async (e) => {
         e.preventDefault();
@@ -40,12 +54,19 @@ function ResetPasswordForm() {
 
         setStatus("loading");
         try {
-            const hashed = await hashPassword(newPassword);
-            if (isForced) {
-                await forceResetMutation({ email, newPassword: hashed });
-            } else {
-                await resetPassMutation({ token, email, newPassword: hashed });
-            }
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: 'update', 
+                    email, 
+                    token, 
+                    newPassword 
+                })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to update password.");
+
             setStatus("success");
             
             // Helpful for forced reset: clear the flag in the local user object if present
@@ -85,12 +106,12 @@ function ResetPasswordForm() {
         );
     }
 
-    if (!isForced && verifyToken === false) {
+    if (!isForced && tokenValid === false) {
         return (
             <div style={cardStyle}>
                 <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
                 <h2 style={titleStyle}>Link Expired</h2>
-                <p style={subStyle}>This password reset link has expired (valid for 30 minutes) or has already been used. Please request a new link.</p>
+                <p style={subStyle}>This password reset link has expired (valid for 10 minutes) or has already been used. Please request a new link.</p>
                 <Link href="/signin" style={buttonStyle}>Back to Sign In</Link>
             </div>
         );

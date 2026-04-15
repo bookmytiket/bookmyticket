@@ -1,7 +1,6 @@
 "use client";
-import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { 
     CheckCircle, 
@@ -35,8 +34,16 @@ export default function TurfDashboard() {
     const { user } = useAuth();
     const vendorId = user?.userId || user?.identifier;
 
-    const turfs = useQuery(api.turfs.getByOrganiserId, { organiserId: vendorId || "" });
-    const bookings = useQuery(api.turfBookings.listByVendor, { organiserId: vendorId || "" }) || [];
+    const [turfs, setTurfs] = useState([]);
+    const [bookings, setBookings] = useState([]);
+
+    useEffect(() => {
+        if (!vendorId) return;
+        supabase.from('turfs').select('*').eq('organiser_id', vendorId)
+            .then(({ data }) => setTurfs(data || []));
+        supabase.from('turf_bookings').select('*').eq('organiser_id', vendorId)
+            .then(({ data }) => setBookings(data || []));
+    }, [vendorId]);
 
     const stats = {
         totalTurfs: turfs?.length || 0,

@@ -3,8 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from '@/lib/supabase';
 import { hashPassword } from "@/app/utils/hashPassword";
 import { isServiceProvider } from "@/app/data/serviceCategories";
 
@@ -76,13 +75,6 @@ export default function BrandingSignIn() {
   const [mode, setMode] = useState("signin");
   const [slide, setSlide] = useState(0);
 
-  // Mutations
-  const sendOTP = useMutation(api.auth.sendOTP);
-  const verifyOTPOnly = useMutation(api.auth.verifyOTPOnly);
-  const loginMutation = useMutation(api.auth.login);
-  const verifyLoginOTP = useMutation(api.auth.verifyLoginOTP);
-  const registerPartner = useMutation(api.branding.registerPartner);
-
   // Form states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -95,27 +87,21 @@ export default function BrandingSignIn() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
     try {
       const hashed = await hashPassword(password);
-      const res = await loginMutation({ identifier: email, password: hashed });
-        if (res.success) {
-          if (res.needsOtp) {
-            setStep(2);
-          } else if (res.role === "branding_partner") {
-            await login(email, hashed, "branding_partner", res.data);
-          } else if (isServiceProvider(res.data?.category)) {
-            // If they are an artist/vendor trying to login through branding, redirect them to their dashboard
-            await login(email, hashed, res.role, res.data);
-          } else {
-            setError("This account is not registered as a branding partner.");
-          }
-        } else {
-        setError(res.error || "Invalid credentials.");
+      const { data: userData, error: dbError } = await supabase
+        .from('users').select('*').eq('identifier', email).maybeSingle();
+      if (dbError || !userData) { setError('Invalid credentials.'); return; }
+      if (userData.password !== hashed) { setError('Invalid credentials.'); return; }
+      if (userData.role === 'branding_partner' || isServiceProvider(userData.category)) {
+        await login(email, hashed, userData.role || 'branding_partner', userData);
+      } else {
+        setError('This account is not registered as a branding partner.');
       }
     } catch (err) {
-      setError(err.message || "An error occurred.");
+      setError(err.message || 'An error occurred.');
     } finally {
       setLoading(false);
     }
@@ -123,50 +109,31 @@ export default function BrandingSignIn() {
 
   const handleSignupSendOTP = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await sendOTP({ email, purpose: "signup" });
-      setStep(2);
-    } catch {
-      setError("Failed to send verification code.");
-    } finally {
-      setLoading(false);
-    }
+    setError('');
+    // Skip OTP in Supabase mode — go directly to password step
+    setStep(3);
   };
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      if (mode === "signin") {
-        const res = await verifyLoginOTP({ email, code: otp });
-        if (res.success) await login(email, "", "branding_partner", res.data);
-      } else {
-        await verifyOTPOnly({ email, code: otp, purpose: "signup" });
-        setStep(3);
-      }
-    } catch {
-      setError("Invalid or expired code.");
-    } finally {
-      setLoading(false);
-    }
+    setError('OTP verification is not available in this mode.');
   };
 
   const handleCompleteSignup = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
     try {
       const hashed = await hashPassword(password);
-      const username = email.split("@")[0] + "_" + Math.floor(Math.random() * 1000);
-      const userId = await registerPartner({ email, password: hashed, name, username, code: otp });
-      if (userId) {
-        await login(email, hashed, "branding_partner", { _id: userId, fullName: name });
-      }
+      const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+      const { data: newUser, error: insertError } = await supabase.from('users').insert({
+        email, identifier: email, password: hashed,
+        full_name: name, username, role: 'branding_partner',
+      }).select('id').single();
+      if (insertError) throw insertError;
+      await login(email, hashed, 'branding_partner', { id: newUser.id, fullName: name });
     } catch (err) {
-      setError(err.message || "Signup failed. Please try again.");
+      setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }

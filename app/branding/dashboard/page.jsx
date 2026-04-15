@@ -5,8 +5,7 @@ import {
   Ticket, Store, BarChart3, CheckCircle2, Rocket, ChevronRight, Clock, AlertCircle, Image as ImageIcon, CreditCard, Upload
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
 import { StatCard } from './StatCard';
 import { DistributeChannelModal } from './DistributeChannelModal';
 
@@ -18,94 +17,70 @@ export default function BrandingDashboard() {
   const activeTab = searchParams?.get('tab') || 'dashboard';
   const [showCouponModal, setShowCouponModal] = useState(false);
 
-  // Premium Banners State
-  const convexPrices = useQuery(api.branding.getConfigPrices);
-  const subscription = useQuery(api.branding.getSubscription, { brandId: user?.id || '' });
-  const banner = useQuery(api.branding.getBanner, { brandId: user?.id || '' });
-  const simulatePayment = useMutation(api.branding.processPayment);
-  
+  // Supabase-backed state
+  const [kycStatus, setKycStatus] = useState('Verification Pending');
+  const [myCoupons, setMyCoupons] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [banner, setBanner] = useState(null);
+  const [convexPrices] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
+
+  const isVerified = kycStatus === 'Verified';
+  const isPending  = kycStatus === 'Verification Pending';
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [redirectUrl, setRedirectUrl] = useState(banner?.redirectUrl || '');
-  
+  const [redirectUrl, setRedirectUrl] = useState('');
   const [isMounted, setIsMounted] = useState(false);
-  
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+
+  useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
-    if (!loading && !user && isMounted) {
-      router.push("/signin?redirect=/branding/dashboard");
-    }
+    if (!loading && !user && isMounted) router.push('/signin?redirect=/branding/dashboard');
   }, [user, loading, router, isMounted]);
-  
-  const generateUploadUrl = useMutation(api.branding.generateUploadUrl);
-  const uploadBannerMutation = useMutation(api.branding.uploadBanner);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    // KYC
+    supabase.from('brand_kyc').select('status').eq('brand_id', user.id).maybeSingle()
+      .then(({ data }) => { if (data?.status) setKycStatus(data.status); });
+    // Coupons
+    supabase.from('brand_coupons').select('*').eq('brand_id', user.id)
+      .then(({ data }) => setMyCoupons(data || []));
+    // Subscription
+    supabase.from('brand_subscriptions').select('*').eq('brand_id', user.id).maybeSingle()
+      .then(({ data }) => setSubscription(data));
+    // Banner
+    supabase.from('brand_banners').select('*').eq('brand_id', user.id).maybeSingle()
+      .then(({ data }) => { setBanner(data); setRedirectUrl(data?.redirect_url || ''); });
+  }, [user?.id]);
 
   const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
 
   const handleSaveBanner = async () => {
-    if (!redirectUrl && !banner?.redirectUrl) {
-      alert("Please provide a redirect URL.");
-      return;
-    }
-    
-    setIsUploading(true);
-    try {
-      let storageId = null;
-      if (selectedFile) {
-         const postUrl = await generateUploadUrl();
-         const result = await fetch(postUrl, {
-            method: "POST",
-            headers: { "Content-Type": selectedFile.type },
-            body: selectedFile,
-         });
-         const { storageId: returnedId } = await result.json();
-         storageId = returnedId;
-      }
-      
-      // If we don't have a new file but have a new URL, we might need a distinct mutation or just fail for now
-      if (!storageId) {
-         alert("Please select a new banner image to upload.");
-         setIsUploading(false);
-         return;
-      }
-
-      await uploadBannerMutation({
-         brandId: user.id,
-         storageId,
-         redirectUrl
-      });
-      alert("Banner updated successfully!");
-      setSelectedFile(null);
-    } catch(e) {
-      alert("Error uploading banner: " + e.message);
-    } finally {
-      setIsUploading(false);
-    }
+    alert('Banner upload requires backend file storage — coming soon.');
   };
 
-  const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
-  const kycStatus = kycData?.status || 'Verification Pending';
-  const isVerified = kycStatus === 'Verified';
-  const isPending = kycStatus === 'Verification Pending';
-
-  const myCoupons = useQuery(api.branding.getBrandCoupons, user ? { brandId: user.id } : "skip") || [];
 
   if (!isMounted || !user) return null;
 
   const handlePayment = async (planType) => {
     setIsProcessing(true);
     try {
-      // Simulate real payment delay
       await new Promise(r => setTimeout(r, 1500));
-      const amount = planType === 'Monthly' ? convexPrices?.monthlyPrice : convexPrices?.yearlyPrice;
-      await simulatePayment({ brandId: user.id, planType, amountPaid: amount });
+      const amount = planType === 'Monthly' ? convexPrices.monthlyPrice : convexPrices.yearlyPrice;
+      const { error } = await supabase.from('brand_subscriptions').upsert({
+        brand_id: user.id, plan_type: planType, amount_paid: amount,
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + (planType === 'Monthly' ? 30 : 365) * 86400000).toISOString(),
+      }, { onConflict: 'brand_id' });
+      if (error) throw error;
       alert(`Successfully subscribed to ${planType} Premium Banners!`);
+      // Refresh subscription
+      const { data } = await supabase.from('brand_subscriptions').select('*').eq('brand_id', user.id).maybeSingle();
+      setSubscription(data);
     } catch (e) {
-      alert("Payment failed or cancelled.");
+      alert('Payment failed: ' + e.message);
     } finally {
       setIsProcessing(false);
     }

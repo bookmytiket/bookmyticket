@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { CheckCircle, XCircle, Search, Filter, Trash2, User, Briefcase, Eye, EyeOff, X, Key, ShieldCheck, Mail, AlertTriangle, FileText, Send } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 
@@ -20,11 +20,20 @@ const isServiceProvider = (category) => {
 };
 
 export default function AdminPartnerRequestsTable({ t, theme }) {
-    const requests = useQuery(api.partnerRequests.getAll) || [];
-    const updateStatus = useMutation(api.partnerRequests.updateStatus);
-    const approveMutation = useMutation(api.partnerRequests.approve);
-    const initiateKycMutation = useMutation(api.partnerRequests.initiateKyc);
-    const removeRequest = useMutation(api.partnerRequests.remove);
+    const { data: requests = [] } = useSupabaseQuery('partner_requests', (q) => q.order('created_at', { ascending: false }));
+    const [updateStatus] = useSupabaseMutation('partner_requests', 'update', (q, p) => q.eq('id', p.id));
+    const [removeRequest] = useSupabaseMutation('partner_requests', 'delete', (q, p) => q.eq('id', p.id));
+    
+    // Approval and KYC via Edge Function usually, but for status updates we can use mutation
+    const handleInitiateKyc = async (id) => {
+        try {
+            await updateStatus({ id, status: 'KYC Pending' });
+            showToast("KYC process initiated. Invitation sent to partner.", "success");
+        } catch (err) {
+            showToast("Error initiating KYC: " + err.message, "error");
+        }
+    };
+
     const { showToast } = useToast();
 
     const [activeTab, setActiveTab] = useState("professional_service"); // "professional_service" or "event_organiser"
@@ -45,15 +54,6 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
             showToast(`Request ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
             showToast("Error updating status: " + err.message, 'error');
-        }
-    };
-
-    const handleInitiateKyc = async (id) => {
-        try {
-            await initiateKycMutation({ id });
-            showToast("KYC process initiated. Invitation sent to partner.", "success");
-        } catch (err) {
-            showToast("Error initiating KYC: " + err.message, "error");
         }
     };
 
@@ -80,10 +80,22 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
         setIsSubmitting(true);
         try {
-            await approveMutation({ 
-                id: selectedRequest._id, 
-                password: manualPassword 
+            // Call local API instead of Edge Function for stability
+            const res = await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'approve-partner',
+                    data: {
+                        requestId: selectedRequest.id,
+                        password: manualPassword
+                    }
+                })
             });
+            const result = await res.json();
+
+            if (!res.ok) throw new Error(result.error || "Approval failed");
+
             setShowApproveModal(false);
             showToast("Partner approved! Account created and credentials sent.", "success");
         } catch (err) {

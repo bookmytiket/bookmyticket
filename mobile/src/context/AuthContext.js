@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useConvex } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { supabase } from '../lib/supabase';
 
 const isServiceProvider = (category) => {
   if (!category) return false;
@@ -22,11 +21,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState('');
   const [locationHierarchy, setLocationHierarchy] = useState(null);
-  const convex = useConvex();
-
-
   useEffect(() => {
     loadStoredUser();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        const authUser = {
+          id: session.user.id,
+          identifier: session.user.email,
+          email: session.user.email,
+          name: profile?.name || session.user.user_metadata?.name || 'User',
+          role: profile?.role || 'user',
+          category: profile?.category
+        };
+        setUser(authUser);
+        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+      } else {
+        setUser(null);
+        await AsyncStorage.removeItem('user');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadStoredUser = async () => {
@@ -58,18 +80,20 @@ export function AuthProvider({ children }) {
     }
 
     // Sync with backend if user is logged in
-    if (user?.identifier) {
+    if (user?.id) {
       try {
-        await convex.mutation(api.userSettings.updateLocation, {
-          userId: user.identifier,
-          city: city,
-          hierarchy: hierarchy || undefined
-        });
+        await supabase
+          .from('profiles')
+          .update({
+            city: city,
+            location_hierarchy: hierarchy
+          })
+          .eq('id', user.id);
       } catch (err) {
         console.error('Failed to sync location to backend:', err);
       }
     }
-  }, [user, convex]);
+  }, [user]);
 
 
   const login = useCallback(async (identifier, password, manualRole, userData = null) => {
@@ -84,132 +108,68 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Invalid admin credentials' };
     }
 
-    // 2. All other roles use the unified backend mutation
+    // 2. All other roles use Supabase Auth
     try {
       console.log('[DEBUG] Attempting login for:', identifier);
-      const result = await convex.mutation(api.auth.login, { identifier, password });
-      console.log('[DEBUG] Login result object:', JSON.stringify(result));
-      
-      if (result && result.success) {
-        if (result.needsOtp) {
-          console.log('[DEBUG] OTP required for login');
-          return { success: true, needsOtp: true, email: result.email };
-        }
-
-        if (result.role === 'organiser') {
-          const orgData = result.data || {};
-          if (!isServiceProvider(orgData.category)) {
-            return { 
-              success: false, 
-              error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
-            };
-          }
-        }
-
-        // Extremely safe extraction of user data
-        const userData = result.data || {};
-        const authUser = { 
-          identifier: identifier, 
-          role: result.role || 'user', 
-          name: userData.name || userData.fullName || 'User', 
-          id: userData._id || 'unknown',
-          category: userData.category
-        };
-        
-        console.log('[DEBUG] Constructed authUser:', JSON.stringify(authUser));
-
-        if (result.role === 'staff' && userData.organiserId) {
-          authUser.organiserId = userData.organiserId;
-        }
-
-        setUser(authUser);
-        await AsyncStorage.setItem('user', JSON.stringify(authUser));
-        return { success: true, role: authUser.role };
-      }
-      
-      const errorMsg = result?.error || 'Invalid credentials';
-      console.log('[DEBUG] Login failed:', errorMsg);
-      return { success: false, error: errorMsg };
-    } catch (err) {
-      console.error('[DEBUG] Unified login CRITICAL error:', err);
-      return { success: false, error: 'Network error or system failure' };
-    }
-  }, [convex]);
-
-  const vendorLogin = useCallback(async (identifier, password) => {
-    try {
-      console.log('[DEBUG] Attempting vendor login for:', identifier, password ? "yes" : "no");
-      const result = await convex.query(api.organisers.verifyVendorCredentials, { 
-        identifier, 
-        password 
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password: password,
       });
+
+      if (error) throw error;
       
-      if (result && result.success) {
-        const userData = result.organiser || {};
-        const authUser = { 
-          identifier: identifier, 
-          role: 'organiser', 
-          name: userData.name || 'Vendor', 
-          id: userData._id || 'unknown',
-          category: userData.category
-        };
-        
-        setUser(authUser);
-        await AsyncStorage.setItem('user', JSON.stringify(authUser));
-        return { success: true };
+      const sessionUser = data.user;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', sessionUser.id)
+        .single();
+
+      if (profile?.role === 'organiser') {
+        if (!isServiceProvider(profile.category)) {
+          return { 
+            success: false, 
+            error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
+          };
+        }
       }
-      return { success: false, error: result?.error || 'Invalid vendor credentials' };
+
+      const authUser = { 
+        id: sessionUser.id,
+        identifier: sessionUser.email, 
+        role: profile?.role || 'user', 
+        name: profile?.name || sessionUser.user_metadata?.name || 'User', 
+        category: profile?.category
+      };
+      
+      setUser(authUser);
+      await AsyncStorage.setItem('user', JSON.stringify(authUser));
+      return { success: true, role: authUser.role };
     } catch (err) {
-      console.error('[DEBUG] Vendor login error:', err);
-      return { success: false, error: 'System failure' };
+      console.error('[DEBUG] Login error:', err);
+      return { success: false, error: err.message || 'Invalid credentials' };
     }
-  }, [convex]);
+  }, []);
+
+
 
   const verifyLoginOTP = useCallback(async (email, code) => {
     try {
-      console.log('[DEBUG] Verifying OTP for:', email);
-      const result = await convex.mutation(api.auth.verifyLoginOTP, { email, code });
-      console.log('[DEBUG] OTP Verification result:', JSON.stringify(result));
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: 'email',
+      });
+
+      if (error) throw error;
       
-      if (result && result.success) {
-        if (result.role === 'organiser') {
-           const orgData = result.data || {};
-           if (!isServiceProvider(orgData.category)) {
-              return { 
-                success: false, 
-                error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
-              };
-           }
-        }
-
-        // Safe extraction of user data
-        const userData = result.data || {};
-        const authUser = { 
-          identifier: email, 
-          role: result.role || 'user', 
-          name: userData.name || userData.fullName || 'User', 
-          id: userData._id || 'unknown',
-          category: userData.category
-        };
-        
-        console.log('[DEBUG] OTP AuthUser created:', JSON.stringify(authUser));
-
-        if (result.role === 'staff' && userData.organiserId) {
-          authUser.organiserId = userData.organiserId;
-        }
-
-        setUser(authUser);
-        await AsyncStorage.setItem('user', JSON.stringify(authUser));
-        return { success: true, role: authUser.role };
-      }
-      const errorMsg = result?.error || 'Verification failed';
-      console.log('[DEBUG] OTP Verification failed:', errorMsg);
-      return { success: false, error: errorMsg };
+      // Verification logic similar to login
+      return { success: true };
     } catch (err) {
-      console.error('[DEBUG] OTP verification CRITICAL error:', err);
-      return { success: false, error: 'Network error or invalid code' };
+      console.error('[DEBUG] OTP error:', err);
+      return { success: false, error: err.message };
     }
-  }, [convex]);
+  }, []);
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
@@ -237,6 +197,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     await AsyncStorage.removeItem('user');
     setUser(null);
   }, []);
@@ -244,7 +205,6 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     login,
-    vendorLogin,
     verifyLoginOTP,
     logout,
     loading,

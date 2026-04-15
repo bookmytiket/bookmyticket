@@ -11,8 +11,7 @@ import {
   SafeAreaView,
   Alert
 } from 'react-native';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
@@ -32,11 +31,22 @@ export default function TurfDetailScreen() {
   
   const { user } = useAuth();
 
-  const turf = useQuery(api.turfs.getById, { turfId });
-  const slots = useQuery(api.turfs.getSlots, { turfId }) || [];
-  const reserveSlot = useMutation(api.turfBookings.reserveSlot);
+  // Migrated to Supabase: Fetch turf by ID
+  const { data: turf, loading: loadingTurf } = useSupabaseQuery('turfs', (q) => 
+    q.select('*').eq('id', turfId).single(),
+    [turfId]
+  );
 
-  if (turf === undefined) {
+  // Migrated to Supabase: Fetch slots
+  const { data: slots = [] } = useSupabaseQuery('turf_slots', (q) => 
+    q.select('*').eq('turf_id', turfId).eq('status', 'active'),
+    [turfId]
+  );
+
+  // Migrated to Supabase: Reserve slot
+  const { mutate: reserveSlot } = useSupabaseMutation('turf_bookings');
+
+  if (loadingTurf) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.secondary} />
@@ -44,7 +54,7 @@ export default function TurfDetailScreen() {
     );
   }
 
-  if (turf === null) {
+  if (!turf) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ fontSize: 18, color: Colors.textMuted }}>Turf not found.</Text>
@@ -53,18 +63,18 @@ export default function TurfDetailScreen() {
   }
 
   const currentDayOfWeek = new Date(selectedDate).getDay();
-  const daySlots = slots.filter(s => s.dayOfWeek === currentDayOfWeek).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const daySlots = slots.filter(s => s.day_of_week === currentDayOfWeek).sort((a,b) => a.start_time.localeCompare(b.start_time));
 
   const calculateTotal = () => {
     if (!selectedSlot || !turf) return 0;
-    let basePrice = selectedSlot.priceOverride || turf.pricePerHour;
+    let basePrice = selectedSlot.price_override || turf.price_per_hour;
     
-    if (turf.pricingType === "per_person") {
-        return (turf.pricePerPerson || basePrice) * participantCount;
-    } else if (turf.pricingType === "tiered" && turf.pricingTiers && turf.pricingTiers.length > 0) {
-        const tier = turf.pricingTiers.find(t => participantCount >= t.min && participantCount <= t.max);
+    if (turf.pricing_type === "per_person") {
+        return (turf.price_per_person || basePrice) * participantCount;
+    } else if (turf.pricing_type === "tiered" && turf.pricing_tiers && turf.pricing_tiers.length > 0) {
+        const tier = turf.pricing_tiers.find(t => participantCount >= t.min && participantCount <= t.max);
         if (tier) return tier.price;
-        const sortedTiers = [...turf.pricingTiers].sort((a, b) => b.max - a.max);
+        const sortedTiers = [...turf.pricing_tiers].sort((a, b) => b.max - a.max);
         if (participantCount > sortedTiers[0].max) return sortedTiers[0].price;
     }
     return basePrice;
@@ -93,19 +103,14 @@ export default function TurfDetailScreen() {
 
     setIsBooking(true);
     try {
-      // Direct booking simulation for mobile avoiding Razorpay complexity out-of-box.
       await reserveSlot({
-          turfId: turf._id,
-          userId: user.identifier || user.email,
-          date: selectedDate,
-          slotId: selectedSlot._id,
-          participantCount,
-          paymentType: "full",
-          customerDetails: {
-              name: user.name || "Customer",
-              email: user.identifier || user.email || "",
-              phone: user.phone || ""
-          }
+          turf_id: turfId,
+          user_id: user.id || user.identifier,
+          booking_date: selectedDate,
+          slot_id: selectedSlot.id,
+          participant_count: participantCount,
+          total_price: calculateTotal(),
+          status: "Confirmed" // For mobile demo, auto-confirm
       });
       
       Alert.alert(
@@ -148,11 +153,11 @@ export default function TurfDetailScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
-              <Text style={styles.statText}>{turf.location || turf.address || "Local Venue"}</Text>
+              <Text style={styles.statText}>{turf.location || "Local Venue"}</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="people-outline" size={16} color={Colors.textMuted} />
-              <Text style={styles.statText}>Max {turf.maxCapacity || "20"} Players</Text>
+              <Text style={styles.statText}>Max {turf.max_capacity || "20"} Players</Text>
             </View>
           </View>
 
@@ -188,25 +193,25 @@ export default function TurfDetailScreen() {
           {daySlots.length === 0 ? (
             <Text style={styles.noSlots}>No slots available on this day.</Text>
           ) : (
-            <View style={styles.slotsGrid}>
+            <div style={styles.slotsGrid}>
               {daySlots.map((slot) => {
-                const isSelected = selectedSlot?._id === slot._id;
+                const isSelected = selectedSlot?.id === slot.id;
                 return (
                   <TouchableOpacity 
-                    key={slot._id}
+                    key={slot.id}
                     style={[styles.slotCard, isSelected && styles.slotCardActive]}
                     onPress={() => setSelectedSlot(slot)}
                   >
                     <Text style={[styles.slotTime, isSelected && styles.slotTextActive]}>
-                      {slot.startTime} - {slot.endTime}
+                      {slot.start_time} - {slot.end_time}
                     </Text>
                     <Text style={[styles.slotPrice, isSelected && styles.slotTextActive]}>
-                      ₹{slot.priceOverride || turf.pricePerHour}
+                      ₹{slot.price_override || turf.price_per_hour}
                     </Text>
                   </TouchableOpacity>
                 )
               })}
-            </View>
+            </div>
           )}
 
           <Text style={styles.sectionTitle}>Number of Players (Optional)</Text>

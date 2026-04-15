@@ -80,8 +80,8 @@ function TicketCard({ event }) {
   );
 }
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const router = useRouter();
@@ -92,34 +92,45 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState([]);
   const [eventPartners, setEventPartners] = useState([]);
 
-  const allConfig = useQuery(api.systemConfig.getAllConfig);
+  const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
+
   const parseConfig = (val) => {
     if (val == null) return undefined;
     try { return typeof val === "string" ? JSON.parse(val) : val; } catch (_) { return val; }
   };
-  const homeSectionsOrderRaw = parseConfig(allConfig?.admin_home_sections_order);
+
+  const getConfigValue = (key) => {
+    const item = allConfig?.find(c => c.key === key);
+    return item ? item.value : undefined;
+  };
+
+  const homeSectionsOrderRaw = parseConfig(getConfigValue('admin_home_sections_order'));
   const homeSectionsOrder = Array.isArray(homeSectionsOrderRaw) ? homeSectionsOrderRaw : [
     "Hero Banner", "Sub Navigation", "Featured Events", "Venue Events", "Coming Soon", "Spotlight", "Top Hand-picked"
   ];
-  const siteBranding = parseConfig(allConfig?.admin_site_branding) || {
+  const siteBranding = parseConfig(getConfigValue('admin_site_branding')) || {
     name: "book my ticket",
     logoColor: "#111111",
     logoUrl: "/logo.png"
   };
-  const metaSettings = parseConfig(allConfig?.admin_meta_settings) || {
+  const metaSettings = parseConfig(getConfigValue('admin_meta_settings')) || {
     global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
   };
 
   const { user } = useAuth();
-  const userId = user?.identifier || user?.email;
-  const userBookings = useQuery(api.bookings.getByUser, userId ? { userId } : "skip");
+  const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
+    user?.id 
+      ? q.select('*, events(title, img)').eq('user_id', user.id).order('created_at', { ascending: false }) 
+      : q.eq('id', '00000000-0000-0000-0000-000000000000'),
+    [user?.id]
+  );
   const [viewTicketModal, setViewTicketModal] = useState(null);
 
   const activeBooking = useMemo(() => {
     if (!userBookings || userBookings.length === 0) return null;
     return userBookings
-      .filter(b => b.status === "Confirmed" || b.status === "Scanned")
-      .sort((a, b) => b._creationTime - a._creationTime)[0];
+      .filter(b => b.status === "Confirmed" || b.status === "Paid" || b.status === "Scanned")
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
   }, [userBookings]);
 
   useEffect(() => {
@@ -128,8 +139,8 @@ export default function Home() {
     }
   }, [metaSettings]);
 
-  const convexEventsRaw = useQuery(api.events.getActiveEvents);
-  const convexEvents = useMemo(() => convexEventsRaw || [], [convexEventsRaw]);
+  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+  const supabaseEvents = useMemo(() => supabaseEventsRaw || [], [supabaseEventsRaw]);
 
   const parseEventDate = (dateStr, timeStr) => {
     if (!dateStr) return null;
@@ -289,17 +300,17 @@ export default function Home() {
 
 
   useEffect(() => {
-    setNewOrgEvents(convexEvents);
-  }, [convexEvents]);
+    setNewOrgEvents(supabaseEvents);
+  }, [supabaseEvents]);
 
   // Fallback or old local storage cleanup (Optional: keep using convexEvents instead, logic below handles parsing well)
 
 
-  const heroSlidesConfig = useQuery(api.systemConfig.getConfig, { key: "admin_hero_slides" });
-  const eventPartnersConfig = useQuery(api.systemConfig.getConfig, { key: "admin_event_partners" });
-  const activeBannersRaw = useQuery(api.branding.getActiveBanners);
+  const heroSlidesConfig = getConfigValue("admin_hero_slides");
+  const eventPartnersConfig = getConfigValue("admin_event_partners");
+  const { data: activeBannersRaw } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), []);
   const activeBanners = useMemo(() => activeBannersRaw || [], [activeBannersRaw]);
-  const homeCouponsRaw = useQuery(api.branding.getHomeCoupons);
+  const { data: homeCouponsRaw } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
   const homeCoupons = useMemo(() => homeCouponsRaw || [], [homeCouponsRaw]);
   const allCoupons = useMemo(() => {
     // Merge Convex coupons with Static Partner deals
@@ -312,7 +323,7 @@ export default function Home() {
 
 
   // Stable key from activeBanners to prevent infinite re-renders
-  const activeBannersKey = activeBanners.map(b => b._id).join(',');
+  const activeBannersKey = activeBanners.map(b => b.id).join(',');
 
   useEffect(() => {
     const parsed = heroSlidesConfig != null ? parseConfig(heroSlidesConfig) : null;
@@ -323,7 +334,7 @@ export default function Home() {
     // Prepend active brand Premium Banners
     if (activeBanners.length > 0) {
       const brandSlides = activeBanners.map((b) => ({
-        id: b._id,
+        id: b.id,
         img: b.imageUrl,
         title: "",
         sub: "Premium Partner",
@@ -336,7 +347,7 @@ export default function Home() {
     // Inject active Home Coupons as advert banners
     if (homeCoupons.length > 0) {
       const couponSlides = homeCoupons.filter(c => c.bannerUrl).map((c) => ({
-        id: c._id,
+        id: c.id,
         img: c.bannerUrl,
         title: c.title,
         sub: c.discountType === "Percentage" ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`,
@@ -398,8 +409,8 @@ export default function Home() {
                   <Ticket size={18} />
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#fff' }}>Upcoming Event: {activeBooking.eventName}</p>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Confirmed Booking #{activeBooking._id.slice(-8).toUpperCase()}</p>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#fff' }}>Upcoming Event: {activeBooking.events?.title || activeBooking.eventName}</p>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Confirmed Booking #{String(activeBooking.id).slice(-8).toUpperCase()}</p>
                 </div>
               </div>
               <button 
@@ -525,7 +536,7 @@ export default function Home() {
             />
 
             {/* 1) Recently Viewed */}
-            <RecentlyViewedEvents liveEvents={convexEvents} />
+            <RecentlyViewedEvents liveEvents={supabaseEvents} />
 
             {/* 2) Featured Events */}
             <FeaturedEvents events={featuredEventsList} />

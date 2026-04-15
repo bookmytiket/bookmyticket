@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { useWebRTC } from "@/app/meeting/hooks/useWebRTC";
 import { 
@@ -27,12 +26,28 @@ export default function MeetingRoom() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
 
-    const meeting = useQuery(api.meetings.getByLink, { meetingLink: meetingLink });
-    const joinMeeting = useMutation(api.meetings.join);
-    const leaveMeeting = useMutation(api.meetings.leave);
-    const sendMessage = useMutation(api.meetings.sendMessage);
-    const messages = useQuery(api.meetings.getMessages, meeting?._id ? { meetingId: meeting._id } : "skip");
-    const participants = useQuery(api.meetings.getParticipants, meeting?._id ? { meetingId: meeting._id } : "skip");
+    const { data: meetingData, loading: meetingLoading } = useSupabaseQuery(
+        "meetings",
+        (q) => q.eq("meeting_link", meetingLink).single(),
+        [meetingLink]
+    );
+    const meeting = meetingData;
+
+    const [joinMeeting] = useSupabaseMutation("meeting_participants", "upsert");
+    const [leaveMeeting] = useSupabaseMutation("meeting_participants", "update", (q) => q.eq("meeting_id", meeting?.id).eq("user_id", user?.id));
+    const [sendMessage] = useSupabaseMutation("meeting_messages", "insert");
+
+    const { data: messages } = useSupabaseQuery(
+        "meeting_messages",
+        (q) => q.eq("meeting_id", meeting?.id).order("timestamp", { ascending: true }),
+        [meeting?.id]
+    );
+
+    const { data: participants } = useSupabaseQuery(
+        "meeting_participants",
+        (q) => q.eq("meeting_id", meeting?.id).eq("status", "joined"),
+        [meeting?.id]
+    );
 
     const [isJoined, setIsJoined] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
@@ -53,7 +68,7 @@ export default function MeetingRoom() {
         toggleScreenShare, isScreenSharing, screenStream,
         peerCount, mediaError, connectionStates, retryMedia 
     } = useWebRTC(
-        meeting?._id, 
+        meeting?.id, 
         isJoined ? myParticipantId : null,
         name || "Guest"
     );
@@ -142,14 +157,20 @@ export default function MeetingRoom() {
             console.warn("Could not resume AudioContext:", e);
         }
 
-        const pId = await joinMeeting({
-            meetingId: meeting._id,
-            userId: userId, 
+        const payload = {
+            meeting_id: meeting.id,
+            user_id: user?.id || userId, 
             name: name || "Guest",
-            role: (meeting.creatorId && user?.email && meeting.creatorId === user?.email) ? "host" : "participant",
-        });
-        setMyParticipantId(pId);
-        setIsJoined(true);
+            role: (meeting.creator_id && user?.email && meeting.creator_id === user?.email) ? "host" : "participant",
+            status: "joined",
+            joined_at: new Date().toISOString()
+        };
+
+        const result = await joinMeeting(payload);
+        if (result.success) {
+            setMyParticipantId(user?.id || userId);
+            setIsJoined(true);
+        }
     };
 
     const handleRetry = async () => {
@@ -190,7 +211,10 @@ export default function MeetingRoom() {
 
     const handleLeave = async () => {
         if (meeting) {
-            await leaveMeeting({ meetingId: meeting._id, userId: userId });
+            await leaveMeeting({ 
+                status: "left", 
+                left_at: new Date().toISOString() 
+            });
         }
         if (user?.role === "organiser" || user?.role === "admin") {
             router.push("/organiser");
@@ -203,10 +227,11 @@ export default function MeetingRoom() {
         e.preventDefault();
         if (!chatInput.trim() || !meeting) return;
         await sendMessage({
-            meetingId: meeting._id,
-            senderId: userId,
-            senderName: name || "Guest",
+            meeting_id: meeting.id,
+            sender_id: user?.id || userId,
+            sender_name: name || "Guest",
             text: chatInput,
+            timestamp: new Date().toISOString()
         });
         setChatInput("");
     };
@@ -324,7 +349,7 @@ export default function MeetingRoom() {
         );
     };
 
-    if (authLoading || meeting === undefined) {
+    if (authLoading || meetingLoading || meeting === undefined) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
@@ -822,16 +847,16 @@ export default function MeetingRoom() {
                                         </div>
                                         <div className="flex-1 overflow-y-auto py-4 space-y-4 bg-transparent min-h-0 custom-scrollbar">
                                             {messages?.map((msg) => (
-                                                <div key={msg._id} className={`flex flex-col ${msg.senderId === user?.email ? 'items-end' : 'items-start'}`}>
+                                                <div key={msg.id} className={`flex flex-col ${msg.sender_id === (user?.id || userId) ? 'items-end' : 'items-start'}`}>
                                                     <div className={`max-w-[95%] px-3.5 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed border shadow-sm ${
-                                                        msg.senderId === user?.email 
+                                                        msg.sender_id === (user?.id || userId) 
                                                         ? 'bg-blue-600 text-white rounded-tr-sm border-transparent' 
                                                         : 'bg-white border-slate-200 text-slate-700 rounded-tl-sm'
                                                     }`}>
                                                         {msg.text}
                                                     </div>
-                                                    <span className={`text-[9px] font-bold text-slate-400 mt-1 px-1 ${msg.senderId === user?.email ? 'text-right' : 'text-left'}`}>
-                                                        {msg.senderId === user?.email ? 'You' : msg.senderName} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    <span className={`text-[9px] font-bold text-slate-400 mt-1 px-1 ${msg.sender_id === (user?.id || userId) ? 'text-right' : 'text-left'}`}>
+                                                        {msg.sender_id === (user?.id || userId) ? 'You' : msg.sender_name} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                             ))}

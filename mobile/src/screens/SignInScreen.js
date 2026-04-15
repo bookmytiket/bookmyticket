@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useMutation, useConvex, useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
@@ -16,14 +15,8 @@ const { width } = Dimensions.get('window');
 export default function SignInScreen() {
   console.log('!!!!!!! [CRITICAL] SIGN IN SCREEN LOADED - VERSION 8 !!!!!!!');
   const { login, verifyLoginOTP, selectedCity } = useAuth();
-  const convex = useConvex();
   const navigation = useNavigation();
-
-  // Mutations
-  const sendOTPMutation = useMutation(api.auth.sendOTP);
-  const verifyOTPOnlyMutation = useMutation(api.auth.verifyOTPOnly);
-  const verifyOTPAndCreateAccountMutation = useMutation(api.auth.verifyOTPAndCreateAccount);
-  const forgotPasswordMutation = useMutation(api.auth.forgotPassword);
+  const API_URL = 'https://bookmyticket.net/api';
 
   const [mode, setMode] = useState('signin');
   const [identifier, setIdentifier] = useState('');
@@ -33,7 +26,7 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
 
   // Banner Logic
-  const convexBanners = useQuery(api.homeSettings.getBannerSlides);
+  const { data: convexBanners } = useSupabaseQuery('branding_banners');
   const [bannerIndex, setBannerIndex] = useState(0);
   const displayBanners = (convexBanners && convexBanners.length > 0) ? convexBanners : HERO_BANNER_SLIDES;
 
@@ -69,7 +62,12 @@ export default function SignInScreen() {
     }
     setLoading(true);
     try {
-      await forgotPasswordMutation({ email });
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', email })
+      });
+      if (!res.ok) throw new Error('Reset failed');
       setForgotSuccess(true);
     } catch (err) {
       setError('Failed to send reset email. Please try again.');
@@ -174,7 +172,12 @@ export default function SignInScreen() {
     }
     setLoading(true);
     try {
-      await sendOTPMutation({ email, purpose: 'signup' });
+      const res = await fetch(`${API_URL}/auth/otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', email, purpose: 'signup' })
+      });
+      if (!res.ok) throw new Error('Failed to send OTP');
       setSignupStep(2);
     } catch (err) {
       setError(err?.message || 'Failed to send OTP. Please try again.');
@@ -191,11 +194,12 @@ export default function SignInScreen() {
     }
     setLoading(true);
     try {
-      await verifyOTPOnlyMutation({ 
-        email: signupEmail.trim().toLowerCase(), 
-        code: otpCode, 
-        purpose: 'signup' 
+      const res = await fetch(`${API_URL}/auth/otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', email: signupEmail.trim().toLowerCase(), code: otpCode, purpose: 'signup' })
       });
+      if (!res.ok) throw new Error('Invalid code');
       setSignupStep(3);
     } catch (err) {
       setError('Invalid or expired code. Please check and try again.');
@@ -217,13 +221,18 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       const hashed = await hashPassword(signupPass);
-      await verifyOTPAndCreateAccountMutation({
-        email: signupEmail.trim().toLowerCase(),
-        code: otpCode,
-        fullName: signupName.trim(),
-        username: signupUsername.trim().toLowerCase(),
-        password: hashed,
+      const res = await fetch(`${API_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: signupEmail.trim().toLowerCase(),
+          code: otpCode,
+          fullName: signupName.trim(),
+          username: signupUsername.trim().toLowerCase(),
+          password: hashed,
+        })
       });
+      if (!res.ok) throw new Error('Signup failed on server');
       setSignupSuccess(true);
     } catch (err) {
       setError(err?.message || 'Sign up failed. Please try again.');

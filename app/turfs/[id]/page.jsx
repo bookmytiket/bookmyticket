@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { 
@@ -22,29 +21,36 @@ export default function TurfProfilePage() {
     const { user } = useAuth();
     const turfId = params.id;
 
-    const turf = useQuery(api.turfs.getById, { turfId });
-    const slots = useQuery(api.turfs.getSlots, { turfId }) || [];
-    const dateInputRef = useRef(null);
-    
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [selectedSlot, setSelectedSlot] = useState(null);
-    const [viewDate, setViewDate] = useState(new Date());
-    const [participantCount, setParticipantCount] = useState(1);
-    
-    // Custom Calendar State
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [calMonth, setCalMonth] = useState(new Date().getMonth());
-    const [calYear, setCalYear] = useState(new Date().getFullYear());
-    
-    // Calendar Utils
-    const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
-    const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
+    const [turf, setTurf] = useState(undefined);
+    const [slots, setSlots] = useState([]);
 
-    const reserveSlot = useMutation(api.turfBookings.reserveSlot);
-    const cancelBooking = useMutation(api.turfBookings.cancel);
-    const confirmPayment = useMutation(api.turfBookings.confirmPayment);
+    useEffect(() => {
+        if (!turfId) return;
+        supabase.from('turfs').select('*').eq('id', turfId).maybeSingle()
+            .then(({ data }) => setTurf(data ?? null));
+        supabase.from('turf_slots').select('*').eq('turf_id', turfId)
+            .then(({ data }) => setSlots(data || []));
+    }, [turfId]);
+
+    const reserveSlot = async (payload) => {
+        const { data, error } = await supabase.from('turf_bookings').insert({
+            turf_id: payload.turfId, user_id: payload.userId, date: payload.date,
+            slot_id: payload.slotId, participant_count: payload.participantCount,
+            payment_type: payload.paymentType,
+            customer_name: payload.customerDetails?.name,
+            customer_email: payload.customerDetails?.email,
+            customer_phone: payload.customerDetails?.phone,
+            booking_status: 'pending', total_amount: calculateTotal(),
+        }).select('id').single();
+        if (error) throw error;
+        return data.id;
+    };
+    const cancelBooking = async ({ bookingId }) => {
+        await supabase.from('turf_bookings').update({ booking_status: 'cancelled' }).eq('id', bookingId);
+    };
+    const confirmPayment = async ({ bookingId, paymentIntentId, paymentStatus }) => {
+        await supabase.from('turf_bookings').update({ payment_status: paymentStatus, payment_intent_id: paymentIntentId, booking_status: 'confirmed' }).eq('id', bookingId);
+    };
     const [isBooking, setIsBooking] = useState(false);
 
     // Calculate dynamic price

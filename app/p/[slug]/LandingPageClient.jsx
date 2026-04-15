@@ -1,12 +1,18 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function LandingPageClient({ slug }) {
-    const page = useQuery(api.pages.getBySlug, { slug });
+    const [page, setPage] = useState(undefined); // undefined = loading, null = not found
+
+    useEffect(() => {
+        if (!slug) { setPage(null); return; }
+        supabase.from('pages').select('*').eq('slug', slug).maybeSingle()
+            .then(({ data }) => setPage(data ?? null));
+    }, [slug]);
 
     if (page === undefined) {
         return (

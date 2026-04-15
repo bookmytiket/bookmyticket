@@ -2,14 +2,14 @@
 import React, { useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 export default function VideoHeroBanner() {
     const [searchQuery, setSearchQuery] = useState("");
     const router = useRouter();
 
-    const bannerConfig = useQuery(api.systemConfig.getConfig, { key: "admin_video_banner" });
+    const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
+    const bannerConfig = allConfig?.find(c => c.key === "admin_video_banner")?.value;
     const defaultConfig = {
         videoUrl: "/bookmyticket/videoplayback.mp4",
         title1: "Discover Your Next",

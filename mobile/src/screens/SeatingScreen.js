@@ -3,8 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Pla
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 
 const { width } = Dimensions.get('window');
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -35,7 +34,22 @@ export default function SeatingScreen() {
   const { eventId, event } = route.params || {};
   const [selectedSeats, setSelectedSeats] = useState([]);
   
-  const bookedSeats = useQuery(api.bookings.getBookedSeatsByEvent, { eventId: String(eventId || event?.id || event?._id) }) || [];
+  // Migrated to Supabase: Fetch booked seats by event
+  const { data: bookingsData } = useSupabaseQuery('bookings', (q) => 
+    q.select('selected_seats').eq('event_id', eventId || event?.id).neq('status', 'Cancelled'),
+    [eventId, event?.id]
+  );
+
+  const bookedSeats = useMemo(() => {
+    if (!bookingsData) return [];
+    const seats = [];
+    bookingsData.forEach(b => {
+      if (Array.isArray(b.selected_seats)) {
+        b.selected_seats.forEach(s => seats.push(s.id));
+      }
+    });
+    return seats;
+  }, [bookingsData]);
 
   const isSeatBooked = useCallback((seatId) => {
     return bookedSeats.includes(seatId);
@@ -43,21 +57,23 @@ export default function SeatingScreen() {
 
   const isSeating = useMemo(() => {
     return event &&
-      event.seatingEnabled !== false &&
-      Array.isArray(event.seatCategories) &&
-      event.seatCategories.length > 0 &&
+      event.seating_enabled !== false &&
+      Array.isArray(event.seat_categories || event.seatCategories) &&
+      (event.seat_categories || event.seatCategories).length > 0 &&
       Number(event.cols) > 0;
   }, [event]);
 
+  const seatCategories = useMemo(() => event.seat_categories || event.seatCategories || [], [event]);
+
   const totalRows = useMemo(() => {
     if (!isSeating) return 0;
-    return event.seatCategories.reduce((s, c) => s + Math.max(0, Math.floor(Number(c.rows) || 0)), 0);
-  }, [isSeating, event]);
+    return seatCategories.reduce((s, c) => s + Math.max(0, Math.floor(Number(c.rows) || 0)), 0);
+  }, [isSeating, seatCategories]);
 
   const cols = useMemo(() => Math.min(30, Math.max(0, Math.floor(Number(event?.cols) || 0))), [event]);
 
   const toggleSeat = (seatId, cat) => {
-    if (isSeatBooked(seatId)) return; // Prevent toggling booked seats
+    if (isSeatBooked(seatId)) return;
     setSelectedSeats(prev => {
       const idx = prev.findIndex(s => s.id === seatId);
       if (idx >= 0) return prev.filter(s => s.id !== seatId);
@@ -67,7 +83,6 @@ export default function SeatingScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Clear selected seats when returning to this screen
       setSelectedSeats([]);
     }, [])
   );
@@ -100,7 +115,7 @@ export default function SeatingScreen() {
 
       <View style={styles.legend}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legendList}>
-          {event.seatCategories.map(cat => (
+          {seatCategories.map(cat => (
             <View key={cat.name} style={styles.legendItem}>
               <View style={[styles.legendBox, { backgroundColor: getCatColor(cat.name) }]} />
               <Text style={styles.legendLabel}>{cat.name} {cat.isFree ? '(Free)' : `₹${cat.price}`}</Text>
@@ -127,7 +142,7 @@ export default function SeatingScreen() {
           <View style={styles.rowsContainer}>
             {[...Array(totalRows)].map((_, rIdx) => {
               const rowLabel = ROW_LABELS[rIdx] || `${rIdx + 1}`;
-              const cat = getCategoryForRow(event.seatCategories, rIdx);
+              const cat = getCategoryForRow(seatCategories, rIdx);
               const color = cat ? getCatColor(cat.name) : '#3b82f6';
               return (
                 <View key={rIdx} style={styles.row}>

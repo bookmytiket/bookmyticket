@@ -1,11 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 
 export default function PromotionBanner() {
-    const promotions = useQuery(api.promotions.list) || [];
-    const activePromos = promotions.filter(p => p.active);
+    const { data: activePromos } = useSupabaseQuery('promotions', (q) => q.eq('active', true));
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {

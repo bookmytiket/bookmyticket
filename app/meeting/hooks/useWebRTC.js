@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 
 const STUN_SERVERS = {
     iceServers: [
@@ -37,14 +36,16 @@ export function useWebRTC(meetingId, userId, name) {
     const isSettingRemoteDescription = useRef({}); // { userId: boolean }
     const ignoreOffer = useRef({}); // { userId: boolean }
 
-    const sendSignal = useMutation(api.meetings.sendSignal);
-    const signals = useQuery(
-        api.meetings.getSignals,
-        meetingId && userId ? { meetingId, receiverId: userId } : "skip"
+    const [sendSignal] = useSupabaseMutation("signals", "insert");
+    const { data: signals } = useSupabaseQuery(
+        "signals",
+        (q) => q.eq("meeting_id", meetingId).eq("receiver_id", userId),
+        [meetingId, userId]
     );
-    const activeParticipants = useQuery(
-        api.meetings.getParticipants,
-        meetingId ? { meetingId } : "skip"
+    const { data: activeParticipants } = useSupabaseQuery(
+        "meeting_participants",
+        (q) => q.eq("meeting_id", meetingId).eq("status", "joined"),
+        [meetingId]
     );
 
     const localStreamRef = useRef(null);
@@ -171,11 +172,12 @@ export function useWebRTC(meetingId, userId, name) {
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 sendSignal({
-                    meetingId,
-                    senderId: userId,
-                    receiverId: remoteUserId,
+                    meeting_id: meetingId,
+                    sender_id: userId,
+                    receiver_id: remoteUserId,
                     type: "ice-candidate",
                     data: JSON.stringify(event.candidate),
+                    timestamp: new Date().toISOString()
                 });
             }
         };
@@ -238,11 +240,12 @@ export function useWebRTC(meetingId, userId, name) {
                 if (pc.signalingState !== "stable") return;
                 await pc.setLocalDescription(offer);
                 sendSignal({
-                    meetingId,
-                    senderId: userId,
-                    receiverId: remoteUserId,
+                    meeting_id: meetingId,
+                    sender_id: userId,
+                    receiver_id: remoteUserId,
                     type: "offer",
                     data: JSON.stringify(pc.localDescription),
+                    timestamp: new Date().toISOString()
                 });
             } catch (err) {
                 console.error("Negotiation failed:", err);
@@ -259,17 +262,18 @@ export function useWebRTC(meetingId, userId, name) {
         if (!activeParticipants || !localStream || !userId) return;
 
         activeParticipants.forEach(participant => {
-            // Using participant._id for uniqueness across devices
-            if (participant._id !== userId && !pcs.current[participant._id]) {
+            // Using participant.user_id or participant.id for uniqueness
+            const pId = participant.user_id || participant.id;
+            if (pId !== userId && !pcs.current[pId]) {
                 // Determine initiator based on ID comparison (Lexicographical)
-                const isInitiator = userId < participant._id;
-                createPeerConnection(participant._id, participant.name, isInitiator);
+                const isInitiator = userId < pId;
+                createPeerConnection(pId, participant.name, isInitiator);
             }
         });
 
         // Cleanup stale connections
         Object.keys(pcs.current).forEach(pId => {
-            if (!activeParticipants.find(p => p._id === pId)) {
+            if (!activeParticipants.find(p => (p.user_id || p.id) === pId)) {
                 pcs.current[pId].close();
                 delete pcs.current[pId];
                 delete iceQueues.current[pId];
@@ -288,20 +292,21 @@ export function useWebRTC(meetingId, userId, name) {
         if (!signals || !localStream || !userId) return;
 
         // Sort signals by timestamp to ensure correct order (Offer -> Answer -> ICE)
-        const sortedSignals = [...signals].sort((a, b) => a.timestamp - b.timestamp);
+        const sortedSignals = [...signals].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
         sortedSignals.forEach(async (signal) => {
-            const { senderId, type, data, timestamp } = signal;
+            const { sender_id: senderId, type, data, timestamp } = signal;
+            const signalTimestamp = new Date(timestamp).getTime();
             
             // 0. SIGNAL SYNC GUARD (Fixes Zombie Handshakes & Flickering)
             // Ignore signals older than the session start or the last processed signal
-            if (timestamp < sessionStartTime.current || timestamp <= lastSignalTimestamp.current) {
+            if (signalTimestamp < sessionStartTime.current || signalTimestamp <= lastSignalTimestamp.current) {
                 console.log(`Skipping stale signal from ${senderId}`);
                 return;
             }
-            lastSignalTimestamp.current = timestamp;
+            lastSignalTimestamp.current = signalTimestamp;
 
-            const remoteParticipant = activeParticipants?.find(p => p._id === senderId);
+            const remoteParticipant = activeParticipants?.find(p => (p.user_id || p.id) === senderId);
             const remoteName = remoteParticipant?.name || "Guest";
             
             let pc = pcs.current[senderId];
@@ -334,11 +339,12 @@ export function useWebRTC(meetingId, userId, name) {
                     await pc.setLocalDescription(answer);
                     
                     sendSignal({
-                        meetingId,
-                        senderId: userId,
-                        receiverId: senderId,
+                        meeting_id: meetingId,
+                        sender_id: userId,
+                        receiver_id: senderId,
                         type: "answer",
                         data: JSON.stringify(pc.localDescription),
+                        timestamp: new Date().toISOString()
                     });
                     await drainIceQueue(senderId);
                 } else if (type === "answer") {

@@ -1,20 +1,21 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { Video, Image as ImageIcon, Plus, Trash2, Edit, Save, X, GripVertical } from "lucide-react";
 
 export default function MobileBannersAdmin() {
-    const banners = useQuery(api.mobileBanners.getAll) || [];
-    const allConfig = useQuery(api.systemConfig.getAllConfig);
-    const setConfigMutation = useMutation(api.systemConfig.setConfig);
+    // Fetch banners from Supabase mobile_video_banners table
+    const { data: bannersRes, loading: loadingBanners } = useSupabaseQuery('mobile_video_banners', (q) => q.order('sort_order', { ascending: true }));
+    const banners = bannersRes || [];
 
-    const createBanner = useMutation(api.mobileBanners.create);
-    const updateBanner = useMutation(api.mobileBanners.update);
-    const removeBanner = useMutation(api.mobileBanners.remove);
-    const toggleStatus = useMutation(api.mobileBanners.toggleStatus);
-    const reorderBanners = useMutation(api.mobileBanners.reorder);
-    const generateUploadUrl = useMutation(api.mobileBanners.generateUploadUrl);
+    // Fetch playback mode from system_config
+    const { data: configRes } = useSupabaseQuery('system_config', (q) => q.eq('key', 'mobile_banner_playback_mode'));
+    const [upsertConfig] = useSupabaseMutation('system_config', 'upsert', (q) => q.eq('key', 'mobile_banner_playback_mode'));
+
+    // Mutations
+    const [insertBanner] = useSupabaseMutation('mobile_video_banners', 'insert');
+    const [updateBanner] = useSupabaseMutation('mobile_video_banners', 'update', (q, { id }) => q.eq('id', id));
+    const [removeBannerMutation] = useSupabaseMutation('mobile_video_banners', 'delete', (q, { id }) => q.eq('id', id));
 
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -27,13 +28,13 @@ export default function MobileBannersAdmin() {
     });
     const [selectedFile, setSelectedFile] = useState(null);
     
-    // Playback mode from systemConfig
-    const playbackModeRaw = allConfig && allConfig["mobile_banner_playback_mode"];
-    const playbackMode = playbackModeRaw ? (typeof playbackModeRaw === "string" ? JSON.parse(playbackModeRaw) : playbackModeRaw) : "sequential";
+    // Playback mode processing
+    const playbackModeRaw = configRes?.[0]?.value;
+    const playbackMode = playbackModeRaw || "sequential";
 
     const handlePlaybackModeChange = async (e) => {
         const val = e.target.value;
-        await setConfigMutation({ key: "mobile_banner_playback_mode", value: JSON.stringify(val) });
+        await upsertConfig({ key: "mobile_banner_playback_mode", value: val });
     };
 
     const resetForm = () => {
@@ -44,12 +45,12 @@ export default function MobileBannersAdmin() {
     };
 
     const handleEdit = (b) => {
-        setEditingId(b._id);
+        setEditingId(b.id);
         setFormState({
             type: b.type,
-            mediaUrl: b.mediaUrl,
+            mediaUrl: b.media_url,
             title: b.title || "",
-            isActive: b.isActive,
+            isActive: b.is_active,
         });
         setShowForm(true);
     };
@@ -59,38 +60,27 @@ export default function MobileBannersAdmin() {
         setIsSaving(true);
         try {
             let finalMediaUrl = formState.mediaUrl;
-            let finalStorageId = undefined;
 
+            // Simplified: No direct file upload to Supabase Storage here yet, 
+            // as it requires specific bucket setup. Using URL for now.
             if (selectedFile) {
-                const uploadUrl = await generateUploadUrl();
-                const result = await fetch(uploadUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": selectedFile.type },
-                    body: selectedFile,
-                });
-                const { storageId } = await result.json();
-                finalStorageId = storageId;
-                // Since convex file storage requires url resolving, we handle it on client or pass storage id. 
-                // But typically for frontend URLs, we can either use api.storage.getUrl equivalent, or just store the media URL. 
-                // For Convex, we might need a function to transform storageId. Wait, actually we can just store the storageId and fetch in RN.
-                // Let's use the local API if available. 
-                // Wait, if it's external URL, they can just paste it in mediaUrl.
+                alert("File upload is currently being migrated. Please use an external URL for now.");
+                setIsSaving(false);
+                return;
             }
 
             const payload = {
                 type: formState.type,
-                mediaUrl: selectedFile ? "" : finalMediaUrl,
+                media_url: finalMediaUrl,
                 title: formState.title,
-                isActive: formState.isActive,
-                order: editingId ? banners.find(b => b._id === editingId).order : banners.length,
+                is_active: formState.isActive,
+                sort_order: editingId ? banners.find(b => b.id === editingId).sort_order : banners.length,
             };
-
-            if (finalStorageId) payload.storageId = finalStorageId;
 
             if (editingId) {
                 await updateBanner({ id: editingId, ...payload });
             } else {
-                await createBanner(payload);
+                await insertBanner(payload);
             }
             resetForm();
         } catch (error) {
@@ -115,9 +105,23 @@ export default function MobileBannersAdmin() {
     };
 
     const saveOrder = async (reorderedArray) => {
-        const items = reorderedArray.map((b, i) => ({ id: b._id, order: i }));
-        await reorderBanners({ items });
+        // Sequentially update each for simplicity in this mutation environment
+        for (let i = 0; i < reorderedArray.length; i++) {
+            await updateBanner({ id: reorderedArray[i].id, sort_order: i });
+        }
     };
+
+    const toggleStatus = async (banner) => {
+        await updateBanner({ id: banner.id, is_active: !banner.is_active });
+    };
+
+    const removeBanner = async (id) => {
+        if(confirm("Delete this banner?")) {
+            await removeBannerMutation({ id });
+        }
+    };
+
+    if (loadingBanners) return <div style={{ padding: "20px" }}>Loading banners...</div>;
 
     return (
         <div style={{ padding: "20px" }}>
@@ -230,7 +234,7 @@ export default function MobileBannersAdmin() {
                         </tr>
                     ) : (
                         banners.map((b, index) => (
-                            <tr key={b._id} style={{ backgroundColor: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", borderRadius: "8px" }}>
+                            <tr key={b.id} style={{ backgroundColor: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", borderRadius: "8px" }}>
                                 <td style={{ padding: "16px", borderRadius: "8px 0 0 8px" }}>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "24px" }}>
                                         <button onClick={() => handleMoveUp(index)} disabled={index===0} style={{ border: "none", background: "transparent", cursor: index===0 ? "default" : "pointer", color: index===0 ? "#d1d5db" : "#6b7280" }}>▲</button>
@@ -242,21 +246,20 @@ export default function MobileBannersAdmin() {
                                     <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>
                                         {b.type === "video" ? <Video size={20} /> : <ImageIcon size={20} />}
                                     </div>
-                                    {b.storageId && <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "4px" }}>File Uploaded</div>}
                                 </td>
                                 <td style={{ padding: "16px", fontWeight: "600" }}>{b.title || "-"}</td>
                                 <td style={{ padding: "16px", textTransform: "capitalize" }}>{b.type}</td>
                                 <td style={{ padding: "16px" }}>
                                     <button 
-                                        onClick={() => toggleStatus({ id: b._id, isActive: !b.isActive })}
-                                        style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "bold", border: "none", cursor: "pointer", backgroundColor: b.isActive ? "#dcfce7" : "#fee2e2", color: b.isActive ? "#166534" : "#991b1b" }}
+                                        onClick={() => toggleStatus(b)}
+                                        style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "12px", fontWeight: "bold", border: "none", cursor: "pointer", backgroundColor: b.is_active ? "#dcfce7" : "#fee2e2", color: b.is_active ? "#166534" : "#991b1b" }}
                                     >
-                                        {b.isActive ? "Enabled" : "Disabled"}
+                                        {b.is_active ? "Enabled" : "Disabled"}
                                     </button>
                                 </td>
                                 <td style={{ padding: "16px", borderRadius: "0 8px 8px 0", textAlign: "right" }}>
                                     <button onClick={() => handleEdit(b)} style={{ background: "transparent", border: "none", color: "#3b82f6", cursor: "pointer", marginRight: "12px" }}><Edit size={18} /></button>
-                                    <button onClick={() => { if(confirm("Delete this banner?")) removeBanner({ id: b._id }); }} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={18} /></button>
+                                    <button onClick={() => removeBanner(b.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer" }}><Trash2 size={18} /></button>
                                 </td>
                             </tr>
                         ))

@@ -1,8 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useQuery, useConvex, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { isServiceProvider } from "@/app/data/serviceCategories";
 
 const AuthContext = createContext();
@@ -13,62 +12,78 @@ export function AuthProvider({ children }) {
     const [selectedCity, setSelectedCity] = useState("");
     const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "" });
     const router = useRouter();
-    const convex = useConvex();
 
     useEffect(() => {
-        const storedCity = localStorage.getItem("selectedCity");
-        if (storedCity) {
-            setSelectedCity(storedCity);
-        }
-
-        try {
-            const storedHierarchy = localStorage.getItem("locationHierarchy");
-            if (storedHierarchy) {
-                setLocationHierarchy(JSON.parse(storedHierarchy));
+        // Initial session load
+        const initializeAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                await fetchAndSetUser(session.user);
             }
-        } catch (err) {
-            console.error("Error parsing stored hierarchy:", err);
-            localStorage.removeItem("locationHierarchy");
-        }
 
-        // Load user from localStorage
-        try {
-            const storedUser = localStorage.getItem("user");
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        } catch (err) {
-            console.error("Error parsing stored user:", err);
-            localStorage.removeItem("user");
-        }
-        
-        setLoading(false);
+            const storedCity = localStorage.getItem("selectedCity");
+            if (storedCity) setSelectedCity(storedCity);
 
-        // Cross-tab logout synchronization
-        const handleStorageChange = (e) => {
-            if (e.key === "user") {
-                console.log("AuthContext: storage event detected for 'user' key. Value changed to:", !!e.newValue);
-                if (!e.newValue) {
-                    setUser(null);
-                    console.log("AuthContext: user logged out in another tab, redirecting to signin.");
-                    router.push("/signin");
-                } else {
-                    try {
-                        const parsed = JSON.parse(e.newValue);
-                        setUser(parsed);
-                        console.log("AuthContext: user updated from another tab:", parsed.role);
-                    } catch (err) {
-                        console.error("AuthContext: error parsing user from storage event:", err);
-                    }
-                }
+            try {
+                const storedHierarchy = localStorage.getItem("locationHierarchy");
+                if (storedHierarchy) setLocationHierarchy(JSON.parse(storedHierarchy));
+            } catch (err) {
+                console.error("Error parsing stored hierarchy:", err);
             }
+            
+            setLoading(false);
         };
 
-        window.addEventListener("storage", handleStorageChange);
-        return () => window.removeEventListener("storage", handleStorageChange);
+        initializeAuth();
+
+        // Auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Supabase Auth Event:", event);
+            if (session) {
+                await fetchAndSetUser(session.user);
+            } else {
+                setUser(null);
+                localStorage.removeItem("user");
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, [router]);
 
-    const syncLocation = useMutation(api.userSettings.updateLocation);
+    const fetchAndSetUser = async (supabaseUser) => {
+        try {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', supabaseUser.id)
+                .single();
+
+            // If the profile row doesn't exist yet (e.g. trigger hasn't fired),
+            // construct minimal user data from the auth record so login still succeeds.
+            const userData = {
+                id: supabaseUser.id,
+                identifier: supabaseUser.email,
+                email: supabaseUser.email,
+                role: profile?.role || supabaseUser.user_metadata?.role || 'user',
+                name: profile?.full_name || profile?.username ||
+                      supabaseUser.user_metadata?.full_name ||
+                      supabaseUser.email?.split('@')[0],
+                ...(profile || {}),
+            };
+
+            if (error && error.code !== 'PGRST116') {
+                // PGRST116 = "no rows returned" — acceptable for brand-new users
+                console.warn("Profile fetch warning:", error.message);
+            }
+
+            setUser(userData);
+            localStorage.setItem("user", JSON.stringify(userData));
+            return userData;
+        } catch (err) {
+            console.error("Error fetching profile:", err);
+            return null;
+        }
+    };
 
     const updateCity = async (city, hierarchy = null) => {
         setSelectedCity(city);
@@ -79,175 +94,100 @@ export function AuthProvider({ children }) {
         }
 
         // Sync to backend if user is logged in
-        if (user?.identifier) {
+        if (user?.id) {
             try {
-                await syncLocation({ 
-                    userId: user.identifier, 
-                    city, 
-                    hierarchy: hierarchy || undefined 
-                });
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        selected_city: city, 
+                        location_hierarchy: hierarchy || undefined 
+                    })
+                    .eq('id', user.id);
             } catch (err) {
                 console.error("Failed to sync location to backend:", err);
             }
         }
     };
 
-    const login = async (identifier, password, role, userData = null, redirectPath = null) => {
-        // Master Admin and Admin Team are now handled via Convex auth.login
-        if ((role === "admin" || role === "admin_team") && userData) {
-            const authUser = { 
-                identifier, 
-                role: "admin", // All team members act as admins in the UI
-                teamRole: userData.role || "Admin", 
-                name: userData.fullName || userData.name, 
-                id: userData._id 
-            };
-            localStorage.setItem("user", JSON.stringify(authUser));
-            setUser(authUser);
+    const login = async (identifier, password, redirectPath = null) => {
+        setLoading(true);
+        try {
+            let email = identifier;
             
-            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/admin";
-            console.log("Redirecting admin:", destination);
-            router.push(destination);
-            return true;
-        }
+            // If identifier is not an email, try to find the email by username
+            if (!identifier.includes("@")) {
+                const { data: profile, error: profileErr } = await supabase
+                    .from('profiles')
+                    .select('email')
+                    .ilike('username', identifier)
+                    .single();
+                
+                if (profile?.email) {
+                    email = profile.email;
+                } else {
+                    throw new Error("Invalid username or email.");
+                }
+            }
 
-        // Public User (passed from signin page after convex check)
-        if (role === "user" && userData) {
-            const authUser = { identifier, role: "user", name: userData.fullName || userData.name, id: userData._id };
-            localStorage.setItem("user", JSON.stringify(authUser));
-            setUser(authUser);
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) {
+                // Provide a clearer message for the most common failure modes.
+                if (error.message?.toLowerCase().includes('email not confirmed')) {
+                    throw new Error("Your email address has not been confirmed. Please complete signup first.");
+                }
+                if (error.message?.toLowerCase().includes('invalid login credentials')) {
+                    throw new Error("Invalid email or password. Please check your credentials and try again.");
+                }
+                throw error;
+            }
+
+            const userData = await fetchAndSetUser(data.user);
             
-            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/";
-            console.log("Redirecting user:", destination);
-            router.push(destination);
-            return true;
-        }
-
-        // Validate Organiser against Convex Database
-        console.log("AuthContext login called:", { identifier, role, hasUserData: !!userData, redirectPath });
-        if (role === "organiser") {
-            // If userData is already provided (from signin page), use it immediately
             if (userData) {
-                const topCategory = (userData.category || "").toLowerCase();
-                const kycCategory = (userData.kycDetails?.category || "").toLowerCase();
+                // Determine redirect: prioritize explicit redirectPath if valid
+                let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
+                const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
+
+                let destination = isInvalidRedirect ? "/" : decodedRedirect;
+
+                // Apply role-based defaults ONLY if no valid redirect was provided
+                if (isInvalidRedirect) {
+                    if (userData.role === "admin") destination = "/admin";
+                    else if (userData.role === "organiser") {
+                        const isProfessionalService = isServiceProvider(userData.category);
+                        destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
+                    }
+                }
                 
-                const isProfessionalService = isServiceProvider(topCategory) || isServiceProvider(kycCategory);
-                
-                const authUser = { 
-                    identifier, 
-                    role: "organiser", 
-                    name: userData.name, 
-                    id: userData._id,
-                    category: topCategory || kycCategory,
-                    forcePasswordChange: userData.forcePasswordChange || false
-                };
-                localStorage.setItem("user", JSON.stringify(authUser));
-                setUser(authUser);
-                
-                // Prioritize redirectPath if provided, but fallback to dashboard
-                const dashboard = isProfessionalService ? "/vendor/dashboard" : "/organiser";
-                const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : dashboard;
-                console.log("Redirecting organiser (data):", destination);
+                console.log("AuthContext: Redirecting to", destination);
                 router.push(destination);
-                return true;
+                return { success: true, user: userData };
             }
-
-            try {
-                const result = await convex.query(api.organisers.verifyCredentials, {
-                    identifier,
-                    password: password // Now expects hashed password
-                });
-
-                if (result.success) {
-                    const org = result.organiser;
-                    const topCategory = (org.category || "").toLowerCase();
-                    const kycCategory = (org.kycDetails?.category || "").toLowerCase();
-                    
-                    const isProfessionalService = isServiceProvider(topCategory) || isServiceProvider(kycCategory);
-
-                    const authUser = { 
-                        identifier, 
-                        role: "organiser", 
-                        name: org.name, 
-                        id: org._id,
-                        category: topCategory || kycCategory
-                    };
-                    localStorage.setItem("user", JSON.stringify(authUser));
-                    setUser(authUser);
-                    
-                    // Prioritize redirectPath if provided, but fallback to dashboard
-                    const dashboard = isProfessionalService ? "/vendor/dashboard" : "/organiser";
-                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : dashboard;
-                    console.log("Redirecting organiser (query):", destination);
-                    router.push(destination);
-                    return true;
-                }
-
-                // Fallback for default demo organiser
-                if (identifier === "hello@bookmyticket.net" && (password === "organiser123" || password === "985a539a667140f6b3cfc2398a69e900995c58a5da359740a12e52b2b115eb3d")) {
-                    const mockUser = { identifier, role: "organiser", name: "Event Organiser (Demo)" };
-                    localStorage.setItem("user", JSON.stringify(mockUser));
-                    setUser(mockUser);
-                    
-                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/organiser";
-                    console.log("Redirecting demo organiser:", destination);
-                    router.push(destination);
-                    return true;
-                }
-            } catch (err) {
-                console.error("Organiser login error:", err);
-            }
+            return { success: false, error: "Profile not found" };
+        } catch (err) {
+            console.error("Login error:", err);
+            return { success: false, error: err.message };
+        } finally {
+            setLoading(false);
         }
-
-        // Validate Staff against Convex Database
-        if (role === "staff") {
-            try {
-                const result = await convex.query(api.staff.verifyCredentials, {
-                    email: identifier, // Still named 'email' in the mutation, but we pass our generic 'identifier'
-                    password: password // Now expects hashed password
-                });
-
-                if (result.success) {
-                    const staff = result.staff;
-                    const authUser = { identifier, role: "staff", name: staff.name, id: staff._id, organiserId: staff.organiserId };
-                    localStorage.setItem("user", JSON.stringify(authUser));
-                    setUser(authUser);
-                    
-                    const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/organiser?tab=pwa_scanner";
-                    console.log("Redirecting staff:", destination);
-                    router.push(destination);
-                    return true;
-                }
-            } catch (err) {
-                console.error("Staff login error:", err);
-            }
-        }
-
-
-        // Validate Branding Partner against Convex Database
-        if (role === "branding_partner" && userData) {
-            const authUser = { 
-                identifier, 
-                role: "branding_partner", 
-                id: userData._id, 
-                name: userData.fullName || userData.name 
-            };
-            localStorage.setItem("user", JSON.stringify(authUser));
-            setUser(authUser);
-            
-            const destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/branding/dashboard";
-            console.log("Redirecting branding partner:", destination);
-            router.push(destination);
-            return true;
-        }
-
-        return false;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        // Clear local state immediately to avoid race conditions with redirect guards
         localStorage.removeItem("user");
         setUser(null);
-        router.push("/signin");
+        
+        try {
+            await supabase.auth.signOut();
+        } catch (err) {
+            console.error("Supabase signOut error:", err);
+        }
+        
+        router.replace("/signin");
     };
 
     return (

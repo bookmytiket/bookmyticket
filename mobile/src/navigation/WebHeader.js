@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Linking, Alert } from 'react-native';
 
 export default function WebHeader() {
@@ -13,7 +12,7 @@ export default function WebHeader() {
   const [menuVisible, setMenuVisible] = useState(false);
   const navigation = useNavigation();
 
-  const userBookings = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip") || [];
+  const { data: userBookings } = useSupabaseQuery('bookings', (q) => q.eq('userIdentifier', user?.identifier), [user?.identifier]);
   const activeMeeting = userBookings.find(b => (b.virtual || b.eventType === "Online" || b.meetingUrl) && b.status !== 'Cancelled');
 
   const isStaff = user?.role === 'staff';

@@ -13,8 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Colors } from '../theme/Theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -61,7 +60,7 @@ async function shouldShowPopup(popupId, showEveryMinutes) {
 }
 
 export default function CustomerAdPopup() {
-  const activePopups = useQuery(api.adPopups?.getActiveAdPopups) || [];
+  const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.eq('status', 'Active'));
   const [currentPopup, setCurrentPopup] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);

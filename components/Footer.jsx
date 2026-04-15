@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const QUICK_LINKS = ["About Us", "Our Blogs", "Event Listing", "Pricing Plan", "Contact Us"];
 const GALLERY_IMGS = [];
@@ -32,8 +31,10 @@ const DEFAULT_COPYRIGHT = {
 };
 
 export default function Footer() {
-    const rawCopyright = useQuery(api.systemConfig.getConfig, { key: "admin_footer_copyright" });
-    const dynamicPages = useQuery(api.pages.getPublished) || [];
+    const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
+    const rawCopyright = allConfig?.find(c => c.key === "admin_footer_copyright")?.value;
+    const { data: dynamicPagesRaw, error: pagesError } = useSupabaseQuery('pages', (q) => q.eq('show_in_footer', true).order('sort_order'), []);
+    const dynamicPages = dynamicPagesRaw || [];
     const [isMobile, setIsMobile] = React.useState(false);
 
     React.useEffect(() => {

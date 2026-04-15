@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, Building2, MapPin, FileText, CreditCard, Send, AlertCircle, Clock, CheckCircle2, Lock, LayoutDashboard, Ticket, Store, BarChart3, FileCheck, Settings, HelpCircle, QrCode, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
 
 const C = {
   bg: '#f4f5f7',
@@ -83,16 +82,23 @@ const StepRow = ({ num, label, status }) => {
 export default function BrandingKYC() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
-  const updateKYC = useMutation(api.branding.updateKYC);
+  const [kycData, setKycData] = useState(null);
   const [formData, setFormData] = useState({ orgName: '', address: '', city: '', state: '', zip: '', gstNumber: '', panNumber: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => { if (!user) router.push('/branding/signin'); }, [user]);
+
   useEffect(() => {
-    if (kycData) setFormData({ orgName: kycData.orgName || '', address: kycData.address || '', city: kycData.city || '', state: kycData.state || '', zip: kycData.zip || '', gstNumber: kycData.gstNumber || '', panNumber: kycData.panNumber || '' });
-  }, [kycData]);
+    if (!user?.id) return;
+    supabase.from('brand_kyc').select('*').eq('brand_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setKycData(data);
+          setFormData({ orgName: data.org_name || '', address: data.address || '', city: data.city || '', state: data.state || '', zip: data.zip || '', gstNumber: data.gst_number || '', panNumber: data.pan_number || '' });
+        }
+      });
+  }, [user?.id]);
 
   const kycStatus = kycData?.status || 'Verification Pending';
   const isSubmitted = kycStatus === 'Pending Review' || kycStatus === 'Verified';
@@ -108,7 +114,18 @@ export default function BrandingKYC() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await updateKYC({ ...formData, brandId: user?.id });
+      const { error: upsertError } = await supabase.from('brand_kyc').upsert({
+        brand_id: user?.id,
+        org_name: formData.orgName,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip,
+        gst_number: formData.gstNumber,
+        pan_number: formData.panNumber,
+        status: 'Pending Review',
+      }, { onConflict: 'brand_id' });
+      if (upsertError) throw upsertError;
       router.push('/branding/dashboard');
     } catch (err) {
       setError('Failed to submit KYC. Please check your details and try again.');

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode, Audio } from 'expo-av';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
 export default function SequentialVideoBanner() {
-    const banners = useQuery(api.mobileBanners.getActive);
-    const allConfig = useQuery(api.systemConfig.getAllConfig);
+    const { data: banners } = useSupabaseQuery('mobile_banners', (q) => q.eq('is_active', true));
+    const { data: configRows } = useSupabaseQuery('system_config');
+    const allConfig = configRows?.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {}) || {};
     
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isMuted, setIsMuted] = useState(true);

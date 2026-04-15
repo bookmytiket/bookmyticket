@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import Link from "next/link";
 import { FileCheck2, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { isServiceProvider } from "@/app/data/serviceCategories";
 import { Country, State, City } from 'country-state-city';
@@ -15,6 +15,8 @@ import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/i
 import PromoteModal from "@/components/PromoteModal";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
+import { motion, AnimatePresence } from "framer-motion";
+
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
     static getDerivedStateFromError(error) { return { error }; }
@@ -411,8 +413,7 @@ function OrganiserPanel() {
     const dropdownRef = React.useRef(null);
     const handleLogout = () => {
         setProfileDropdownOpen(false);
-        router.push("/signin");
-        setTimeout(() => logout(), 100);
+        logout();
     };
 
     useEffect(() => {
@@ -511,15 +512,21 @@ function OrganiserPanel() {
         transactions: []
     });
 
-    const organiserData = useQuery(api.organisers.get, { userId: effectiveEmail });
-    const submitKycMutation = useMutation(api.organisers.submitKyc);
+    // Supabase Queries
+    const { data: organiserData } = useSupabaseQuery(
+        "organiser_details",
+        (q) => q.eq("id", user?.id).single(),
+        [user?.id]
+    );
+
+    const [submitKycMutation] = useSupabaseMutation("organiser_details", "update", (q) => q.eq("id", user?.id));
 
     const isProfessionalService = useMemo(() => {
         return isProfService(
-            organiserData?.category || organiserData?.kycDetails?.category || user?.category,
+            organiserData?.category || organiserData?.kyc_details?.category || user?.category,
             organiserData?.type || user?.type
         );
-    }, [organiserData?.category, organiserData?.kycDetails?.category, user?.category, organiserData?.type, user?.type]);
+    }, [organiserData?.category, organiserData?.kyc_details?.category, user?.category, organiserData?.type, user?.type]);
 
     const handleIfscChange = async (ifsc) => {
         setKycFormData(prev => ({ ...prev, ifscCode: ifsc.toUpperCase() }));
@@ -550,22 +557,22 @@ function OrganiserPanel() {
         if (organiserData) {
             setWallet(prev => ({
                 ...prev,
-                balance: organiserData.walletBalance || 0,
+                balance: organiserData.wallet_balance || 0,
             }));
-            const mappedStatus = (organiserData.kycStatus === "Active") ? "KYC Approved" : (organiserData.kycStatus || "Pending");
+            const mappedStatus = (organiserData.kyc_status === "Active") ? "KYC Approved" : (organiserData.kyc_status || "Pending");
             setProfile(prev => ({
                 ...prev,
                 kycStatus: mappedStatus,
-                email: organiserData.userId,
-                firstName: organiserData.name.split(' ')[0] || "John",
-                lastName: organiserData.name.split(' ')[1] || "Doe",
+                email: organiserData.id, // Supabase id (UUID)
+                firstName: (organiserData.business_name || "").split(' ')[0] || "Organiser",
+                lastName: (organiserData.business_name || "").split(' ')[1] || "",
             }));
 
-            if (organiserData.kycDetails) {
-                const kd = organiserData.kycDetails;
+            if (organiserData.kyc_details) {
+                const kd = organiserData.kyc_details;
                 setKycFormData({
                     category: kd.category || "Individual",
-                    name: organiserData.name || "",
+                    name: organiserData.business_name || "",
                     panCard: kd.panNumber || "",
                     website: kd.websiteLink || "",
                     socialLink: kd.socialMediaLink || "",
@@ -597,11 +604,11 @@ function OrganiserPanel() {
                 setCurrentStage("approved");
                 router.push("/vendor/dashboard");
                 return;
-            } else if (!organiserData.kycStatus || organiserData.kycStatus === "Pending" || organiserData.kycStatus === "KYC Pending") {
+            } else if (!organiserData.kyc_status || organiserData.kyc_status === "Pending" || organiserData.kyc_status === "KYC Pending") {
                 setCurrentStage("kyc_start");
-            } else if (organiserData.kycStatus === "Submitted" || organiserData.kycStatus === "Under Review") {
+            } else if (organiserData.kyc_status === "Submitted" || organiserData.kyc_status === "Under Review") {
                 setCurrentStage("pending");
-            } else if (organiserData.kycStatus === "Active" || organiserData.kycStatus === "KYC Verified" || organiserData.kycStatus === "KYC Completed") {
+            } else if (organiserData.kyc_status === "Active" || organiserData.kyc_status === "KYC Verified" || organiserData.kyc_status === "KYC Completed") {
                 setCurrentStage("approved");
             } else {
                 setCurrentStage("kyc_start");
@@ -609,48 +616,62 @@ function OrganiserPanel() {
         }
     }, [organiserData, isProfessionalService, router]);
 
-    const convexSupportTickets = useQuery(api.supportTickets.list) || EMPTY_ARRAY;
-    const createTicketMutation = useMutation(api.supportTickets.create);
-    const updateTicketMutation = useMutation(api.supportTickets.updateStatus);
+    const { data: convexSupportTickets = [] } = useSupabaseQuery("support_tickets");
+    const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
+    const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
 
     useEffect(() => {
         if (convexSupportTickets.length >= 0) {
-            const filtered = convexSupportTickets.filter(t => equaliser(t.userId, effectiveEmail));
+            const filtered = convexSupportTickets.filter(t => t.user_id === user?.id);
             setSupportTicketsList(filtered.map(t => ({
-                id: t._id,
-                ticketId: t._id.slice(-6),
-                email: t.userId,
-                subject: t.issue.split('\n')[0],
-                description: t.issue,
+                id: t.id,
+                ticketId: t.id.slice(-6),
+                email: t.user_id, // Mapping user_id back to email for legacy UI consistency if needed
+                subject: t.subject || "No Subject",
+                description: t.message,
                 status: t.status,
-                createdAt: t._creationTime,
-                updatedAt: t.updatedAt || t._creationTime,
-                adminNotes: t.adminNotes || "",
+                createdAt: t.created_at,
+                updatedAt: t.updated_at || t.created_at,
+                adminNotes: t.admin_notes || "",
                 replies: []
             })));
         }
-    }, [convexSupportTickets, effectiveEmail]);
+    }, [convexSupportTickets, user?.id]);
 
-    const convexEvents = useQuery(api.events.getOrganiserEvents, { organiserId: effectiveEmail });
-    const createEventMutation = useMutation(api.events.createEvent);
-    const updateEventMutation = useMutation(api.events.updateEvent);
-    const createMeetingForEvent = useMutation(api.meetings.createForEvent);
-    const deleteEventMutation = useMutation(api.events.deleteEvent);
+    const { data: convexEvents = [] } = useSupabaseQuery(
+        "events",
+        (q) => q.eq("organiser_id", user?.id),
+        [user?.id]
+    );
+    const [createEventMutation] = useSupabaseMutation("events", "insert");
+    const [updateEventMutation] = useSupabaseMutation("events", "update", (q, p) => q.eq("id", p.id));
+    const [createMeetingForEvent] = useSupabaseMutation("meetings", "insert");
+    const [deleteEventMutation] = useSupabaseMutation("events", "delete", (q, p) => q.eq("id", p.id));
 
-    const convexBookings = useQuery(api.bookings.getBookings) || EMPTY_ARRAY;
-    const updateBookingMutation = useMutation(api.bookings.updateBooking);
-    const createStaffMutation = useMutation(api.staff.createStaff);
-    const updateStaffMutation = useMutation(api.staff.updateStaff);
-    const deleteStaffMutation = useMutation(api.staff.deleteStaff);
-    const staffAccounts = useQuery(api.staff.list, { organiserId: effectiveEmail }) || EMPTY_ARRAY;
-    const rawInternalMeetingPortalEnabled = useQuery(api.systemConfig.getConfig, { key: "internal_meeting_portal_enabled" });
-    const internalMeetingPortalEnabled = rawInternalMeetingPortalEnabled !== undefined ? (typeof rawInternalMeetingPortalEnabled === "string" ? JSON.parse(rawInternalMeetingPortalEnabled) : rawInternalMeetingPortalEnabled) : true;
-    const validateAndLogScanMutation = useMutation(api.pwaScans.validateAndLogScan);
+    const { data: convexBookings = [] } = useSupabaseQuery("bookings"); // Filtering will be handled in useMemo for legacy compatibility
+    const [updateBookingMutation] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
+    const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
+    const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
+    const [deleteStaffMutation] = useSupabaseMutation("profiles", "delete", (q, p) => q.eq("id", p.id));
+    
+    const { data: staffAccounts = [] } = useSupabaseQuery(
+        "staff_details",
+        (q) => q.eq("organiser_id", user?.id),
+        [user?.id]
+    );
+
+    const { data: systemConfigs = [] } = useSupabaseQuery("system_config", q => q, [], { realtime: false });
+    const internalMeetingPortalEnabled = useMemo(() => {
+        const cfg = systemConfigs.find(c => c.key === "internal_meeting_portal_enabled");
+        return cfg ? (typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value) : true;
+    }, [systemConfigs]);
+
+    const [validateAndLogScanMutation] = useSupabaseMutation("pwa_scans", "insert");
 
     const [events, setEvents] = useState([]);
     useEffect(() => {
         if (convexEvents) {
-            setEvents(convexEvents.map(e => ({ ...e, id: e._id })));
+            setEvents(convexEvents.map(e => ({ ...e, id: e.id })));
         }
     }, [convexEvents]);
 
@@ -745,9 +766,9 @@ function OrganiserPanel() {
 
         // Use the centralized robust validation mutation
         const result = await validateAndLogScanMutation({
-            bookingId: rawId,
-            eventId: "manual_or_scan", // Will be validated by ID if present
-            organiserId: effectiveEmail
+            booking_id: rawId,
+            event_id: "manual_or_scan", 
+            venue_id: user?.id
         });
 
         if (result.success) {
@@ -925,12 +946,12 @@ function OrganiserPanel() {
     const mockBookedSeats = useMemo(() => {
         const booked = {};
         events.forEach(ev => {
-            booked[ev._id] = new Set();
+            booked[ev.id] = new Set();
             const count = Math.floor(Math.random() * 30) + 10;
             for (let i = 0; i < count; i++) {
                 const r = String.fromCharCode(65 + Math.floor(Math.random() * 6));
                 const c = Math.floor(Math.random() * 10) + 1;
-                booked[ev._id].add(`${r}${c}`);
+                booked[ev.id].add(`${r}${c}`);
             }
         });
         return booked;
@@ -1041,16 +1062,16 @@ function OrganiserPanel() {
         }
 
         const payload = {
-            organiserId: effectiveEmail,
+            organiser_id: user?.id,
             title: (postEvent.title || "Untitled Event").trim(),
             category: postEvent.category || undefined,
             type: postEvent.type || undefined,
             date: firstSlot.date || today,
             time: firstSlot.time || "TBA",
             img: imgUrl,
-            bannerPreview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
-            seatingEnabled: isSeating,
-            totalSeats,
+            banner_preview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
+            seating_enabled: isSeating,
+            total_seats: totalSeats,
             price: finalPrice,
             location: postEvent.location || undefined,
             venue: isOnline ? "Online / Virtual" : (postEvent.venue || undefined),
@@ -1060,27 +1081,27 @@ function OrganiserPanel() {
             district: !isOnline ? postEvent.district : undefined,
             city: !isOnline ? postEvent.city : undefined,
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
-            meetingUrl: isOnline ? (postEvent.meetingUrl || (editingEvent?.meetingUrl || undefined)) : undefined,
+            meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
             status: postEvent.eventStatus || "Active",
-            meetingType: postEvent.meetingType || "internal",
-            externalMeetingUrl: postEvent.externalMeetingUrl || undefined,
+            meeting_type: postEvent.meetingType || "internal",
+            external_meeting_url: postEvent.externalMeetingUrl || undefined,
             description: postEvent.description || undefined,
             rows: isSeating ? categories.reduce((sum, c) => sum + (Number(c.rows) || 0), 0) : undefined,
             cols: isSeating ? (Number(postEvent.cols) || 10) : undefined,
-            normalTicketCapacity: !isSeating && !isOnline ? (Number(postEvent.normalTicketCapacity) || undefined) : undefined,
-            normalTicketPrice: !isSeating && !isOnline ? (Number(postEvent.normalTicketPrice) || undefined) : undefined,
+            normal_ticket_capacity: !isSeating && !isOnline ? (Number(postEvent.normalTicketCapacity) || undefined) : undefined,
+            normal_ticket_price: !isSeating && !isOnline ? (Number(postEvent.normalTicketPrice) || undefined) : undefined,
             virtual: isOnline ? true : false,
-            seatCategories: isSeating && categories.length > 0 ? categories.map(c => ({
+            seat_categories: isSeating && categories.length > 0 ? categories.map(c => ({
                 name: c.name || "General",
                 price: Number(c.price) || 0,
                 rows: Number(c.rows) || 0,
                 isFree: !!c.isFree
             })) : undefined,
-            dateSlots: isMultiple && effectiveSlots.length > 0 ? effectiveSlots.map(s => ({ date: s.date, time: s.time || "" })) : undefined,
-            layoutType: isSeating ? (postEvent.layoutType || "stage") : undefined,
-            seatMapBackgroundUrl: postEvent.layoutType === "block" ? postEvent.seatMapBackgroundUrl : undefined,
+            date_slots: isMultiple && effectiveSlots.length > 0 ? effectiveSlots.map(s => ({ date: s.date, time: s.time || "" })) : undefined,
+            layout_type: isSeating ? (postEvent.layoutType || "stage") : undefined,
+            seat_map_background_url: postEvent.layoutType === "block" ? postEvent.seatMapBackgroundUrl : undefined,
             blocks: postEvent.layoutType === "block" ? postEvent.blocks?.map(b => ({
                 id: b.id, name: b.name, x: Number(b.x), y: Number(b.y), width: Number(b.width), height: Number(b.height), rows: Number(b.rows), cols: Number(b.cols), category: String(b.category), color: String(b.color),
                 rowNaming: b.rowNaming || 'alphabetic',
@@ -1089,14 +1110,11 @@ function OrganiserPanel() {
             })) : undefined,
         };
 
-        // Remove undefined keys (Convex may reject them in some versions)
+        // Remove undefined keys
         Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
         if (editingEvent) {
-            // `events.updateEvent` does not accept organiserId (it shouldn't be mutated).
-            // Remove it from the update payload to satisfy Convex validation.
-            // eslint-disable-next-line no-unused-vars
-            const { organiserId, ...updatePayload } = payload;
+            const { organiser_id, ...updatePayload } = payload;
             updateEventMutation({ id: editingEvent.id, ...updatePayload })
                 .then(() => {
                     setPostEvent(getInitialPostEvent());
@@ -1104,6 +1122,7 @@ function OrganiserPanel() {
                     setAddEventStep("select_type");
                     try { localStorage.removeItem("organiser_draft"); } catch (_) { }
                     setActiveTab("manage_events");
+                    showToast("Event updated successfully", "success");
                 })
                 .catch(err => {
                     console.error("Error updating event:", err);
@@ -1111,13 +1130,14 @@ function OrganiserPanel() {
                 });
         } else {
             createEventMutation(payload)
-                .then(async (eventId) => {
+                .then(async (result) => {
+                    const eventId = result.data?.[0]?.id || result.id;
                     if (isOnline) {
                         try {
                             await createMeetingForEvent({
-                                eventId,
+                                event_id: eventId,
                                 title: payload.title,
-                                creatorId: effectiveEmail,
+                                creator_id: user?.id,
                                 description: payload.description
                             });
                         } catch (meetErr) {
@@ -1128,6 +1148,7 @@ function OrganiserPanel() {
                     setAddEventStep("select_type");
                     try { localStorage.removeItem("organiser_draft"); } catch (_) { }
                     setActiveTab("manage_events");
+                    showToast("Event published successfully", "success");
                 })
                 .catch(err => {
                     console.error("Error publishing event:", err);
@@ -1798,14 +1819,16 @@ function OrganiserPanel() {
                         onClick={() => {
                             if (kycStep === 3) {
                                 if (!agreedToVendor) { showToast("Please agree to terms", "error"); return; }
-                                if (organiserData?._id) {
+                                if (organiserData?.id) {
                                     const kycPayload = {
-                                        id: organiserData._id,
-                                        kycDetails: { ...kycFormData, agreementAccepted: agreedToVendor }
+                                        id: organiserData.id,
+                                        kyc_status: "Submitted",
+                                        kyc_details: { ...kycFormData, agreementAccepted: agreedToVendor }
                                     };
                                     submitKycMutation(kycPayload).then(() => {
                                         setCurrentStage("pending");
-                                        setProfile(prev => ({ ...prev, kycStatus: "KYC Pending" }));
+                                        setProfile(prev => ({ ...prev, kycStatus: "Submitted" }));
+                                        showToast("KYC submitted for review", "success");
                                     });
                                 }
                             } else {
@@ -1916,9 +1939,10 @@ function OrganiserPanel() {
 
     // Meetings Tab Component
     const MeetingsTab = ({ t, effectiveEmail, router }) => {
-        const meetings = useQuery(api.meetings.listByCreator, { creatorId: effectiveEmail });
-        const createMeeting = useMutation(api.meetings.create);
-        const deleteMeeting = useMutation(api.meetings.deleteMeeting);
+        const { data: meetings, loading } = useSupabaseQuery('meetings', (q) => q.eq('creatorId', effectiveEmail).order('created_at', { ascending: false }), [effectiveEmail]);
+        const { mutate: createMeetingMutate } = useSupabaseMutation(async (supabase, data) => await supabase.from('meetings').insert(data));
+        const { mutate: deleteMeetingMutate } = useSupabaseMutation(async (supabase, { meetingId }) => await supabase.from('meetings').delete().eq('id', meetingId));
+        
         const [isCreating, setIsCreating] = useState(false);
         const [newMeeting, setNewMeeting] = useState({ title: "", description: "" });
 
@@ -1926,7 +1950,7 @@ function OrganiserPanel() {
             e.preventDefault();
             if (!newMeeting.title.trim()) return;
             try {
-                await createMeeting({
+                await createMeetingMutate({
                     creatorId: effectiveEmail,
                     title: newMeeting.title,
                     description: newMeeting.description,
@@ -1936,7 +1960,9 @@ function OrganiserPanel() {
                         videoOffOnJoin: false,
                         chatEnabled: true,
                         screenShareEnabled: true,
-                    }
+                    },
+                    status: 'scheduled',
+                    meetingLink: Math.random().toString(36).substring(2, 10), // mock virtual room code
                 });
                 setIsCreating(false);
                 setNewMeeting({ title: "", description: "" });
@@ -2011,7 +2037,7 @@ function OrganiserPanel() {
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2">Start by creating your first virtual event</p>
                         </div>
                     ) : meetings?.map(meeting => (
-                        <div key={meeting._id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
+                        <div key={meeting.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
                             <div className="flex justify-between items-start mb-6">
                                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
                                     meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' : 
@@ -2024,7 +2050,7 @@ function OrganiserPanel() {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (confirm("Are you sure you want to delete this meeting? All history will be lost.")) {
-                                                deleteMeeting({ meetingId: meeting._id })
+                                                deleteMeetingMutate({ meetingId: meeting.id })
                                                     .catch(err => alert("Failed to delete: " + err.message));
                                             }
                                         }}
@@ -2398,7 +2424,7 @@ function OrganiserPanel() {
                                             {events.length === 0 ? (
                                                 <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No events found. Start by posting your first event.</td></tr>
                                             ) : events.map(ev => (
-                                                <tr key={ev._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                                             <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : "#f97316") + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2423,14 +2449,14 @@ function OrganiserPanel() {
                                                         <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time}</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        {ev.totalSeats ? (
+                                                        {(ev.total_seats || ev.totalSeats) ? (
                                                             <div style={{ minWidth: "140px" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>{ev.totalSeats - (ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>Available</span></span>
-                                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#3b82f6" }}>{Math.round(((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%</span>
+                                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>{(ev.total_seats || ev.totalSeats) - (ev.booked_seats || ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>Available</span></span>
+                                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#3b82f6" }}>{Math.round(((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%</span>
                                                                 </div>
                                                                 <div style={{ height: 6, borderRadius: 10, background: t.border, overflow: "hidden" }}>
-                                                                    <div style={{ height: "100%", width: `${Math.min(100, ((ev.bookedSeats || 0) / ev.totalSeats) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)", borderRadius: 10 }} />
+                                                                    <div style={{ height: "100%", width: `${Math.min(100, ((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)", borderRadius: 10 }} />
                                                                 </div>
                                                             </div>
                                                         ) : <span style={{ color: t.textSub, fontSize: 13 }}>Standard Admission</span>}
@@ -2459,12 +2485,12 @@ function OrganiserPanel() {
                                                             }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                 <Settings size={16} />
                                                             </button>
-                                                            {ev.seatingEnabled !== false && (
+                                                            {(ev.seating_enabled !== false && ev.seatingEnabled !== false) && (
                                                                 <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
                                                                     <Grid size={14} /> Map
                                                                 </button>
                                                             )}
-                                                            <button onClick={() => deleteEventMutation({ id: ev._id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                            <button onClick={() => deleteEventMutation({ id: ev.id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                 <Trash2 size={16} />
                                                             </button>
                                                             <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
@@ -3000,7 +3026,7 @@ function OrganiserPanel() {
                                             {venueEvents.length === 0 ? (
                                                 <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No venue events found. Choose &quot;Venue Event&quot; when posting.</td></tr>
                                             ) : venueEvents.map(ev => (
-                                                <tr key={ev._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                                             <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "#f9731620", display: "flex", alignItems: "center", justifyContent: "center" }}><MapPin size={24} color="#f97316" /></div>
@@ -3023,10 +3049,10 @@ function OrganiserPanel() {
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
-                                                            {ev.seatingEnabled !== false && (
+                                                            {ev.seating_enabled !== false && (
                                                                 <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Seat Map</button>
                                                             )}
-                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev._id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -3076,7 +3102,7 @@ function OrganiserPanel() {
                                             {onlineEvents.length === 0 ? (
                                                 <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No online events found. Select &quot;Online Event&quot; when posting.</td></tr>
                                             ) : onlineEvents.map(ev => (
-                                                <tr key={ev._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                                             <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><CloudUpload size={24} color="#22c55e" /></div>
@@ -3100,7 +3126,7 @@ function OrganiserPanel() {
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
                                                             <button style={{ border: "none", background: "#3b82f620", color: "#3b82f6", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Manage Link</button>
-                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev._id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -3124,8 +3150,8 @@ function OrganiserPanel() {
                                 activeTab === "rejected_bookings" ? "Cancelled" :
                                     "all";
 
-                    const myEventIds = new Set(events.map(e => String(e._id)));
-                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.event_id)));
                     const filtered = (statusFilter === "all" || activeTab === "all_bookings" || activeTab === "event_bookings") ? myBookings : myBookings.filter(b => b.status === statusFilter);
 
                     const viewTitle =
@@ -3185,15 +3211,15 @@ function OrganiserPanel() {
                                                 {filtered.length === 0 ? (
                                                     <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No {statusFilter.toLowerCase()} bookings found.</td></tr>
                                                 ) : filtered.map(b => (
-                                                    <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                                                        <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800 }}>#{b._id.slice(-8).toUpperCase()}</td>
-                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600 }}>{b.eventName || "—"}</td>
+                                                    <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                        <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800 }}>#{b.id.slice(-8).toUpperCase()}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
                                                         <td style={{ padding: "20px 16px" }}>
-                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.userName || "Guest User"}</div>
-                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.userId}</div>
+                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || "Guest User"}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.user_id || b.userId}</div>
                                                         </td>
-                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticketCount}</td>
-                                                        <td style={{ padding: "20px 16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>₹{b.totalPrice.toLocaleString()}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticket_count || b.ticketCount}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>₹{(b.total_price || b.totalPrice || 0).toLocaleString()}</td>
                                                         <td style={{ padding: "20px 16px", borderRadius: "0 12px 12px 0" }}>
                                                             <span style={{
                                                                 padding: "6px 14px",
@@ -3203,7 +3229,7 @@ function OrganiserPanel() {
                                                                 backgroundColor: b.status === "Confirmed" ? "#22c55e20" : b.status === "Scanned" ? "#22c55e20" : b.status === "Pending" ? "#f59e0b20" : "#ef444420",
                                                                 color: b.status === "Confirmed" ? "#22c55e" : b.status === "Scanned" ? "#22c55e" : b.status === "Pending" ? "#f59e0b" : "#ef4444"
                                                             }}>
-                                                                {b.status === "Scanned" ? "CHECKED IN" : b.status.toUpperCase()}
+                                                                {b.status === "Scanned" ? "CHECKED IN" : (b.status ? b.status.toUpperCase() : "UNKNOWN")}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -3266,8 +3292,8 @@ function OrganiserPanel() {
                     );
                 }
                 case "transactions": {
-                    const myEventIds = new Set(events.map(e => String(e._id)));
-                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.event_id)));
                     const Breadcrumb = ({ title }) => (
                         <div className="breadcrumb" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "14px", color: t.textSub }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -3308,18 +3334,18 @@ function OrganiserPanel() {
                                         <tbody>
                                             {myBookings.length === 0 ? (
                                                 <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No transactions yet.</td></tr>
-                                            ) : myBookings.sort((a, b) => b._creationTime - a._creationTime).map(b => (
-                                                <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b._id.slice(-8).toUpperCase()}</td>
-                                                    <td style={{ padding: "16px", fontSize: "14px" }}>{new Date(b._creationTime).toLocaleDateString()}</td>
+                                             ) : myBookings.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).reverse().map(b => (
+                                                <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px" }}>{new Date(b.created_at).toLocaleDateString()}</td>
                                                     <td style={{ padding: "16px" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                                             <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><Ticket size={14} color="#22c55e" /></div>
                                                             <span style={{ fontSize: "14px", fontWeight: 600 }}>Ticket Sale</span>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: "16px", fontSize: "14px", color: t.textMain, fontWeight: 600 }}>{b.eventName || "Event Ticket"} <span style={{ color: t.textSub, fontWeight: 400 }}>(x{b.ticketCount})</span></td>
-                                                    <td style={{ padding: "16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>+₹{b.totalPrice.toLocaleString()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px", color: t.textMain, fontWeight: 600 }}>{(b.event_name || b.eventName || "—")} <span style={{ color: t.textSub, fontWeight: 400 }}>(x{b.ticket_count || b.ticketCount})</span></td>
+                                                    <td style={{ padding: "16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>+₹{(b.total_price || b.totalPrice || 0).toLocaleString()}</td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>COMPLETED</span>
                                                     </td>
@@ -3344,9 +3370,9 @@ function OrganiserPanel() {
                         </div>
                     );
 
-                    const myEventIds = new Set(events.map(e => String(e._id)));
-                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.eventId)));
-                    const recentScans = myBookings.filter(b => b.scanned).sort((a, b) => new Date(b.scannedAt || b._creationTime).getTime() - new Date(a.scannedAt || a._creationTime).getTime()).reverse();
+                    const myEventIds = new Set(events.map(e => String(e.id)));
+                    const myBookings = convexBookings.filter(b => myEventIds.has(String(b.event_id)));
+                    const recentScans = myBookings.filter(b => b.checked_in).sort((a, b) => new Date(b.scanned_at || b.created_at).getTime() - new Date(a.scanned_at || a.created_at).getTime()).reverse();
 
                     return (
                         <div>
@@ -3415,9 +3441,9 @@ function OrganiserPanel() {
                                                 </div>
                                                 {pwaScanResult.booking && (
                                                     <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.eventName}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.userId}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.ticketCount} Ticket(s)</div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.event_name || pwaScanResult.booking.eventName}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.user_id || pwaScanResult.booking.userId}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.ticket_count || pwaScanResult.booking.ticketCount} Ticket(s)</div>
                                                     </div>
                                                 )}
                                             </div>
@@ -3464,15 +3490,15 @@ function OrganiserPanel() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {recentScans.length === 0 ? (
+                                             {recentScans.length === 0 ? (
                                                 <tr><td colSpan={4} style={{ textAlign: "center", padding: "48px", color: t.textSub }}>No tickets scanned yet.</td></tr>
-                                            ) : recentScans.map(b => (
-                                                <tr key={b._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b._id.slice(-8).toUpperCase()}</td>
-                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.eventName || "—"}</td>
+                                             ) : recentScans.map(b => (
+                                                <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.userName || "Guest User"}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customerEmail || b.userId}</div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || "Guest User"}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_email || b.user_id || b.userId}</div>
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
@@ -3480,26 +3506,26 @@ function OrganiserPanel() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
 
                                 <div className="scan-cards-mobile" style={{ display: "none" }}>
-                                    {recentScans.length === 0 ? (
+                                     {recentScans.length === 0 ? (
                                         <div style={{ textAlign: "center", padding: "32px", color: t.textSub }}>No scans yet</div>
                                     ) : (
                                         recentScans.map(b => (
-                                            <div key={b._id} style={{ backgroundColor: t.bg, padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                            <div key={b.id} style={{ backgroundColor: t.bg, padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                                                    <span style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, backgroundColor: t.cardBg, padding: "4px 8px", borderRadius: "6px" }}>#{b._id.slice(-8).toUpperCase()}</span>
+                                                    <span style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, backgroundColor: t.cardBg, padding: "4px 8px", borderRadius: "6px" }}>#{b.id.slice(-8).toUpperCase()}</span>
                                                     <div style={{ color: "#22c55e", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "4px" }}>
                                                         <CheckCircle size={14} /> Valid
                                                     </div>
                                                 </div>
-                                                <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.eventName || "—"}</div>
-                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.userName || "Guest User"}</div>
-                                                <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scannedAt || b._creationTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                                <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.event_name || b.eventName || "—"}</div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.user_name || b.userName || "Guest User"}</div>
+                                                <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scanned_at || b.created_at || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                             </div>
                                         ))
                                     )}
@@ -3512,12 +3538,12 @@ function OrganiserPanel() {
             case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
-                    const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t._id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
+                    const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
                     const toggleTicketSelect = (id) => setSelectedTicketIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                    const toggleSelectAll = () => { if (selectedTicketIds.length >= filteredTickets.length) setSelectedTicketIds([]); else setSelectedTicketIds(filteredTickets.map(t => t._id)); };
-                    const viewedTicket = supportTicketDetailId ? supportTicketsList.find(t => t._id === supportTicketDetailId) : null;
+                    const toggleSelectAll = () => { if (selectedTicketIds.length >= filteredTickets.length) setSelectedTicketIds([]); else setSelectedTicketIds(filteredTickets.map(t => t.id)); };
+                    const viewedTicket = supportTicketDetailId ? supportTicketsList.find(t => t.id === supportTicketDetailId) : null;
                     const addReplyToTicket = (ticketId, message) => {
-                        const list = supportTicketsList.map(t => t._id !== ticketId ? t : { ...t, replies: [...(Array.isArray(t.replies) ? t.replies : []), { from: "organiser", message: (message || "").trim(), at: new Date().toISOString() }], updatedAt: new Date().toISOString() });
+                        const list = supportTicketsList.map(t => t.id !== ticketId ? t : { ...t, replies: [...(Array.isArray(t.replies) ? t.replies : []), { from: "organiser", message: (message || "").trim(), at: new Date().toISOString() }], updatedAt: new Date().toISOString() });
                         setSupportTicketsList(list);
                         setSupportTicketReplyMessage("");
                     };
@@ -3577,8 +3603,9 @@ function OrganiserPanel() {
                                                         return;
                                                     }
                                                     await createTicketMutation({
-                                                        userId: effectiveEmail,
-                                                        issue: sub + (desc ? "\n" + desc : ""),
+                                                        user_id: user?.id,
+                                                        subject: sub,
+                                                        message: desc,
                                                         status: "Open"
                                                     });
                                                     setSupportTicketForm({ email: "", subject: "", description: "", attachmentFileName: "" });
@@ -3607,9 +3634,9 @@ function OrganiserPanel() {
                                                     <div style={{ backgroundColor: t.bg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                                                         <h4 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "20px" }}>Ticket Info</h4>
                                                         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>TICKET ID</span><div style={{ fontSize: "15px", fontWeight: 700 }}>#{viewedTicket.ticketId || viewedTicket._id.slice(-6).toUpperCase()}</div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>TICKET ID</span><div style={{ fontSize: "15px", fontWeight: 700 }}>#{viewedTicket.ticketId || viewedTicket.id.slice(-6).toUpperCase()}</div></div>
                                                             <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>SUBJECT</span><div style={{ fontSize: "15px", fontWeight: 700 }}>{viewedTicket.subject}</div></div>
-                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>STATUS</span><div><span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{viewedTicket.status.toUpperCase()}</span></div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>STATUS</span><div><span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{(viewedTicket.status || "Open").toUpperCase()}</span></div></div>
                                                             <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>CREATED AT</span><div style={{ fontSize: "14px", fontWeight: 600 }}>{new Date(viewedTicket.createdAt).toLocaleString()}</div></div>
                                                         </div>
                                                     </div>
@@ -3636,7 +3663,7 @@ function OrganiserPanel() {
                                                     <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: "24px" }}>
                                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Add New Reply</label>
                                                         <textarea value={supportTicketReplyMessage} onChange={(e) => setSupportTicketReplyMessage(e.target.value)} placeholder="Type your message here..." rows={4} style={{ width: "100%", padding: "16px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "14px", outline: "none", marginBottom: "16px" }} />
-                                                        <button onClick={() => { if (!supportTicketReplyMessage.trim()) return; addReplyToTicket(viewedTicket._id, supportTicketReplyMessage); }} style={{ padding: "12px 28px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Send Reply</button>
+                                                        <button onClick={() => { if (!supportTicketReplyMessage.trim()) return; addReplyToTicket(viewedTicket.id, supportTicketReplyMessage); }} style={{ padding: "12px 28px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Send Reply</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -3662,11 +3689,11 @@ function OrganiserPanel() {
                                                         </thead>
                                                         <tbody>
                                                             {filteredTickets.map((ticket) => (
-                                                                <tr key={ticket._id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                                <tr key={ticket.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
-                                                                        <input type="checkbox" checked={selectedTicketIds.includes(ticket._id)} onChange={() => toggleTicketSelect(ticket._id)} />
+                                                                        <input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} onChange={() => toggleTicketSelect(ticket.id)} />
                                                                     </td>
-                                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 700 }}>#{ticket.ticketId || ticket._id.slice(-6).toUpperCase()}</td>
+                                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 700 }}>#{ticket.ticketId || ticket.id.slice(-6).toUpperCase()}</td>
                                                                     <td style={{ padding: "16px", fontSize: "14px", color: t.textSub }}>{ticket.email || "—"}</td>
                                                                     <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{ticket.subject}</td>
                                                                     <td style={{ padding: "16px" }}>
@@ -3675,8 +3702,8 @@ function OrganiserPanel() {
                                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                                         <select
                                                                             onChange={(e) => {
-                                                                                if (e.target.value === "view") setSupportTicketDetailId(ticket._id);
-                                                                                if (e.target.value === "reply") { setSupportTicketDetailId(ticket._id); setSupportTicketReplyMessage(""); }
+                                                                                if (e.target.value === "view") setSupportTicketDetailId(ticket.id);
+                                                                                if (e.target.value === "reply") { setSupportTicketDetailId(ticket.id); setSupportTicketReplyMessage(""); }
                                                                                 e.target.value = "select";
                                                                             }}
                                                                             style={{ padding: "6px 12px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.cardBg, color: t.textMain, fontSize: "12px", outline: "none", cursor: "pointer" }}
@@ -3962,20 +3989,20 @@ function OrganiserPanel() {
                                             </thead>
                                             <tbody>
                                                 {staffAccounts.map((s) => (
-                                                    <tr key={s._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <tr key={s.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                         <td style={{ padding: "16px" }}>
                                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#3b82f620", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{s.name.charAt(0)}</div>
+                                                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#3b82f620", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{(s.name || "S").charAt(0)}</div>
                                                                 <span style={{ fontWeight: 700, color: t.textMain }}>{s.name}</span>
                                                             </div>
                                                         </td>
                                                         <td style={{ padding: "16px", color: t.textMain, fontWeight: 600 }}>{s.email}</td>
                                                         <td style={{ padding: "16px", color: t.textMain, fontFamily: "monospace" }}>{s.password}</td>
-                                                        <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.createdAt).toLocaleDateString()}</td>
+                                                        <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.created_at || s.createdAt).toLocaleDateString()}</td>
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
                                                                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
                                                                         <button
-                                                                            onClick={() => { setEditingStaffId(s._id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
+                                                                            onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
                                                                             style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                             title="Edit Staff"
                                                                         >
@@ -3985,7 +4012,7 @@ function OrganiserPanel() {
                                                                             onClick={(e) => { 
                                                                                 e.preventDefault();
                                                                                 e.stopPropagation();
-                                                                                setDeletingStaffId(s._id);
+                                                                                setDeletingStaffId(s.id);
                                                                             }}
                                                                             style={{ border: "none", background: "#ef444415", color: "#ef4444", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                             title="Delete Staff"
@@ -4126,7 +4153,7 @@ function OrganiserPanel() {
                                             if (!newEvent.title.trim()) { alert("Please enter event title."); return; }
                                             const firstSlot = newEvent.slots[0];
                                             await createEventMutation({
-                                                organiserId: effectiveEmail,
+                                                organiser_id: effectiveEmail,
                                                 title: newEvent.title,
                                                 type: newEvent.type,
                                                 venue: newEvent.venue,
@@ -4205,7 +4232,7 @@ function OrganiserPanel() {
                                                 if (editingStaffId) {
                                                     await updateStaffMutation({ id: editingStaffId, ...staffFormData, password: hashedPassword });
                                                 } else {
-                                                    await createStaffMutation({ ...staffFormData, password: hashedPassword, organiserId: effectiveEmail });
+                                                    await createStaffMutation({ ...staffFormData, password: hashedPassword, organiser_id: effectiveEmail });
                                                 }
                                                 setShowStaffModal(false);
                                                 setStaffFormData({ name: "", email: "", password: "" });
@@ -4249,7 +4276,7 @@ function OrganiserPanel() {
                     imageUrl={promoteEventModal?.img || promoteEventModal?.bannerPreview || ""}
                     date={promoteEventModal?.date || "TBA"}
                     location={promoteEventModal?.venue || "Online"}
-                    bookingUrl={typeof window !== "undefined" && promoteEventModal ? `${window.location.origin}/events/detail?id=${promoteEventModal._id}` : ""}
+                    bookingUrl={typeof window !== "undefined" && promoteEventModal ? `${window.location.origin}/events/detail?id=${promoteEventModal.id}` : ""}
                     type="Event"
                 />
 

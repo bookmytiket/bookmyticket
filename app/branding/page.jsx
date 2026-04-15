@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+
 import Footer from '@/components/Footer';
 
 /* ─── Inline SVG Icons ─── */
@@ -219,7 +218,7 @@ export default function BrandingPage() {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const partners = useQuery(api.branding.getMarqueeLogos) || [];
+
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);

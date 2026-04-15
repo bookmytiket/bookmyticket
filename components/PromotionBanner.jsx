@@ -1,11 +1,11 @@
 "use client";
 import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Tag, Zap, Gift } from "lucide-react";
 
 export default function PromotionBanner() {
-    const promotions = useQuery(api.promotions.list) || [];
+    const { data: promotionsRaw } = useSupabaseQuery('promotions', (q) => q, []);
+    const promotions = promotionsRaw || [];
     const activePromos = promotions.filter(p => p.active);
 
     return (

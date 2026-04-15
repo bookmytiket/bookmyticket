@@ -11,8 +11,8 @@ import TicketTemplate from '@/components/TicketTemplate';
 import DigitalTicket from '@/components/DigitalTicket';
 import CheckoutFooterBar from '@/components/CheckoutFooterBar';
 import { DEFAULT_TICKET_TERMS } from '@/app/utils/ticketTerms';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
@@ -37,28 +37,30 @@ function getEventById(id, convexEvents) {
 export default function CheckoutClient({ id }) {
     const { user } = useAuth();
     const searchParams = useSearchParams();
-    const convexEvents = useQuery(api.events.getActiveEvents) || [];
-    const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: "admin_fee_settings" });
-    const rawTicketSettings = useQuery(api.systemConfig.getConfig, { key: "admin_ticket_settings" });
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+    const { data: rawFeeSettings } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings').single(), []);
+    const { data: rawTicketSettings } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_ticket_settings').single(), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
     const [bookingDone, setBookingDone] = useState(false);
     const [lastBooking, setLastBooking] = useState(null);
     const [ticketSettings, setTicketSettings] = useState({});
-    const createBookingMutation = useMutation(api.bookings.createBooking);
     const router = useRouter();
     const bookingIdFromUrl = searchParams.get('bookingId');
     const isSuccess = searchParams.get('success') === 'true';
-    const existingBooking = useQuery(api.bookings.getBookingById, bookingIdFromUrl ? { id: bookingIdFromUrl } : "skip");
+    const { data: existingBooking } = useSupabaseQuery('bookings', (q) => 
+        bookingIdFromUrl ? q.eq('id', bookingIdFromUrl).single() : q.eq('id', 'none'),
+        [bookingIdFromUrl]
+    );
 
     useEffect(() => {
         if (rawFeeSettings !== undefined && rawTicketSettings !== undefined) {
             try {
-                const parsedFees = typeof rawFeeSettings === "string" ? JSON.parse(rawFeeSettings) : rawFeeSettings;
+                const parsedFees = typeof rawFeeSettings?.value === "string" ? JSON.parse(rawFeeSettings.value) : rawFeeSettings?.value;
                 if (parsedFees) setFeeSettings(prev => ({ ...prev, ...parsedFees }));
             } catch (_) { }
             try {
-                const parsedTicket = typeof rawTicketSettings === "string" ? JSON.parse(rawTicketSettings) : rawTicketSettings;
+                const parsedTicket = typeof rawTicketSettings?.value === "string" ? JSON.parse(rawTicketSettings.value) : rawTicketSettings?.value;
                 if (parsedTicket) setTicketSettings(parsedTicket);
             } catch (_) { }
             setStorageLoaded(true);
@@ -72,20 +74,20 @@ export default function CheckoutClient({ id }) {
     useEffect(() => {
         if (isSuccess && existingBooking && existingBooking.status === "Confirmed") {
             setLastBooking({
-                id: existingBooking._id,
-                eventId: existingBooking.eventId,
-                eventName: existingBooking.eventName,
-                amount: existingBooking.totalPrice,
-                baseAmount: existingBooking.totalPrice,
+                id: existingBooking.id,
+                eventId: existingBooking.event_id,
+                eventName: existingBooking.event_name,
+                amount: existingBooking.total_price,
+                baseAmount: existingBooking.total_price,
                 convenienceFee: 0,
                 gst: 0,
-                tickets: existingBooking.ticketCount,
+                tickets: existingBooking.ticket_count,
                 status: 'Confirmed',
-                date: new Date(existingBooking._creationTime).toISOString().split('T')[0],
+                date: new Date(existingBooking.created_at).toISOString().split('T')[0],
                 ticketType: 'General Admission',
                 paymentMethod: 'Online',
                 location: existingBooking.location || event?.location,
-                meetingUrl: existingBooking.meetingUrl || event?.meetingUrl,
+                meetingUrl: existingBooking.customer_details?.meeting_url || event?.meetingUrl,
             });
             setBookingDone(true);
         }
@@ -100,24 +102,30 @@ export default function CheckoutClient({ id }) {
         if (!event || !user) return;
         try {
             const isFree = total === 0;
-            const bookingId = await createBookingMutation({
-                eventId: String(event._id || event.id),
-                userId: user.identifier || user.email,
-                ticketCount: qty,
-                totalPrice: total,
-                status: isFree ? 'Confirmed' : 'Pending',
-                scanned: false,
-                customerDetails: {
-                    name: user.name || "Guest User",
-                    email: user.identifier || user.email || "",
-                    phone: user.phone || ""
-                }
-            });
+            const { data: booking, error } = await supabase
+                .from('bookings')
+                .insert([{
+                    event_id: String(event.id),
+                    user_id: user.id,
+                    ticket_count: qty,
+                    total_price: total,
+                    status: isFree ? 'Confirmed' : 'Pending',
+                    scanned: false,
+                    customer_details: {
+                        name: user.name || "Guest User",
+                        email: user.identifier || user.email || "",
+                        phone: user.phone || ""
+                    }
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
 
             if (isFree) {
                 setLastBooking({
-                    id: bookingId,
-                    eventId: String(event._id || event.id),
+                    id: booking.id,
+                    eventId: String(event.id),
                     eventName: event.title,
                     amount: 0,
                     baseAmount: 0,
@@ -133,13 +141,13 @@ export default function CheckoutClient({ id }) {
                 });
                 setBookingDone(true);
             } else {
-                router.push(`/events/book/payment?bookingId=${bookingId}&id=${id}`);
+                router.push(`/events/book/payment?bookingId=${booking.id}&id=${id}`);
             }
         } catch (error) {
             console.error("Booking failed:", error);
             alert("Unexpected error. Please try again.");
         }
-    }, [id, event, user, total, qty, createBookingMutation, router]);
+    }, [id, event, user, total, qty, router]);
 
     const [redirectCountdown, setRedirectCountdown] = useState(3);
     useEffect(() => {

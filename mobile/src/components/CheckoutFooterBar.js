@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Linking, SafeAreaView } from 'react-native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Feather } from '@expo/vector-icons';
 
 export default function CheckoutFooterBar() {
-  const footers = useQuery(api.checkoutFooters.listActive);
+  const { data: footers } = useSupabaseQuery('checkout_footers', (q) => q.eq('is_active', true));
   const [modalItem, setModalItem] = useState(null);
 
   if (!footers || footers.length === 0) return null;

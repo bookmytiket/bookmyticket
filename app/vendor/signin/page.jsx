@@ -4,14 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Briefcase, Sparkles, ArrowRight } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
-import { useConvex } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/hooks/useSupabase";
 import { hashPassword } from "@/app/utils/hashPassword";
 
 export default function VendorSignInPage() {
     const { login, loading: authLoading, user } = useAuth();
     const router = useRouter();
-    const convex = useConvex();
 
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
@@ -39,17 +37,19 @@ export default function VendorSignInPage() {
             const id = identifier.trim().toLowerCase();
             const hashed = await hashPassword(password);
 
-            // Use the dedicated vendor verification query
-            const res = await convex.query(api.organisers.verifyVendorCredentials, {
-                identifier: id,
-                password: hashed
-            });
+            // Query Supabase for the vendor
+            const { data: vendor, error: supabaseError } = await supabase
+                .from('service_providers')
+                .select('*')
+                .eq('organiser_id', id)
+                .eq('password', hashed)
+                .single();
 
-            if (res.success) {
+            if (vendor && !supabaseError) {
                 // Use AuthContext to establish session
-                await login(id, hashed, "organiser", res.organiser, "/vendor/dashboard");
+                await login(id, hashed, "organiser", vendor, "/vendor/dashboard");
             } else {
-                setError(res.error || "Invalid credentials or access restricted.");
+                setError("Invalid credentials or access restricted.");
             }
         } catch (err) {
             console.error("Vendor login error:", err);
@@ -91,13 +91,13 @@ export default function VendorSignInPage() {
 
                     <form onSubmit={handleLogin} className="space-y-6 relative z-10">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Email / Identifier</label>
                             <input
-                                type="email"
+                                type="text"
                                 required
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}
-                                placeholder="you@vendor.com"
+                                placeholder="Vendor ID"
                                 className="w-full px-6 py-4 rounded-[1.2rem] bg-white border border-slate-100 text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all font-medium"
                             />
                         </div>

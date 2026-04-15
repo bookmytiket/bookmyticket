@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -20,25 +19,18 @@ import {
     MessageCircle
 } from "lucide-react";
 
-// Use the local helper if needed, but getVendorAccountKey should be consistent
-const getVendorKey = (user) => {
-    if (!user) return null;
-    return user.id || user.userId || user.organiserId || user.email; // Fallback logic
-};
-
 export default function ReviewsPage() {
     const { user } = useAuth();
-    // Use the actual helper from the project
-    const vendorId = user?.organiserId || user?.userId || (user?.email ? user.email.replace(/[@.]/g, '_') : null);
+    const vendorId = getVendorAccountKey(user);
     
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState("");
 
-    const reviews = useQuery(
-        api.vendorReviews.getVendorReviews,
-        vendorId ? { vendorId } : "skip"
-    ) || [];
-    const respondToReview = useMutation(api.vendorReviews.respondToReview);
+    const { data: reviews = [] } = useSupabaseQuery('service_reviews', (q) => 
+        q.eq('vendor_id', vendorId).order('created_at', { ascending: false })
+    , [vendorId]);
+
+    const [respondToReview] = useSupabaseMutation('service_reviews', 'update', (q, p) => q.eq('id', p.id));
 
     const stats = {
         avg: reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : 0,
@@ -152,16 +144,16 @@ export default function ReviewsPage() {
                     <div className="space-y-10">
                         {reviews.length > 0 ? reviews.map((review, i) => (
                             <div 
-                                key={review._id} 
+                                key={review.id} 
                                 className="bg-white rounded-[2.5rem] border border-slate-100 p-10 space-y-8 animate-in slide-in-from-right-10 duration-500 shadow-xl shadow-slate-200/40"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center space-x-6">
                                         <div className="w-16 h-16 rounded-[1.5rem] bg-slate-50 text-slate-900 border border-slate-100 flex items-center justify-center font-black text-2xl shadow-inner italic">
-                                            {review.userId.charAt(0).toUpperCase()}
+                                            {review.user_id?.charAt(0).toUpperCase() || "U"}
                                         </div>
                                         <div>
-                                            <h4 className="text-lg font-black text-slate-900 tracking-tight italic uppercase">{review.userId}</h4>
+                                            <h4 className="text-lg font-black text-slate-900 tracking-tight italic uppercase">{review.user_id}</h4>
                                             <div className="flex items-center space-x-4 mt-2">
                                                 <div className="flex items-center space-x-0.5">
                                                     {[1, 2, 3, 4, 5].map(s => (
@@ -171,7 +163,7 @@ export default function ReviewsPage() {
                                                 <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
                                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center space-x-1.5">
                                                     <Calendar size={12} />
-                                                    <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                                                    <span>{new Date(review.created_at).toLocaleDateString()}</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -200,7 +192,7 @@ export default function ReviewsPage() {
                                     </div>
                                 ) : (
                                     <div className="pt-4">
-                                        {replyingTo === review._id ? (
+                                        {replyingTo === review.id ? (
                                             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400">
                                                 <div className="relative">
                                                     <textarea 
@@ -225,7 +217,7 @@ export default function ReviewsPage() {
                                                         Cancel
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleReply(review._id)}
+                                                        onClick={() => handleReply(review.id)}
                                                         className="bg-gradient-to-r from-orange-500 to-yellow-400 px-10 py-3.5 rounded-2xl text-white font-black text-[10px] flex items-center space-x-3 shadow-2xl shadow-orange-500/30 hover:scale-[1.05] transition-all uppercase tracking-[0.2em]"
                                                     >
                                                         <Send size={16} />
@@ -235,7 +227,7 @@ export default function ReviewsPage() {
                                             </div>
                                         ) : (
                                             <button 
-                                                onClick={() => setReplyingTo(review._id)}
+                                                onClick={() => setReplyingTo(review.id)}
                                                 className="flex items-center space-x-4 text-orange-500 hover:text-orange-600 transition-all group"
                                             >
                                                 <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all shadow-sm border border-orange-100">

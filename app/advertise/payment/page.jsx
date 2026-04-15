@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
 import { CreditCard, ShieldCheck, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -15,11 +14,19 @@ function PaymentContent() {
     const [isPaying, setIsPaying] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState('idle'); // idle, processing, success
 
-    const allBanners = useQuery(api.banners.getAllBanners);
-    const finalizePayment = useMutation(api.banners.finalizePayment);
+    const [banner, setBanner] = useState(null);
+    const [pkg, setPkg] = useState(null);
 
-    const banner = allBanners?.find(b => b._id === bannerId);
-    const pkg = useQuery(api.banners.getPackages)?.find(p => p._id === banner?.packageId);
+    useEffect(() => {
+        if (!bannerId) return;
+        supabase.from('advertise_banners').select('*, advertise_packages(*)').eq('id', bannerId).maybeSingle()
+            .then(({ data }) => {
+                if (data) {
+                    setBanner(data);
+                    setPkg(data.advertise_packages || null);
+                }
+            });
+    }, [bannerId]);
 
     const handlePayNow = async () => {
         if (!bannerId) return;
@@ -30,7 +37,8 @@ function PaymentContent() {
         await new Promise(resolve => setTimeout(resolve, 2500));
 
         try {
-            await finalizePayment({ id: bannerId });
+            const { error } = await supabase.from('advertise_banners').update({ status: 'paid' }).eq('id', bannerId);
+            if (error) throw error;
             setPaymentStatus('success');
 
             // Redirect back to advertise page after a short delay showing success

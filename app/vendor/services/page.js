@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -31,12 +30,13 @@ export default function ServicesPage() {
     const vendorId = getVendorAccountKey(user);
     
     // Get full profile to know category
-    const profile = useQuery(
-        api.vendors.getByOrganiserId,
-        vendorId ? { organiserId: vendorId } : "skip"
-    );
+    const { data: profileArr = [] } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
 
-    const isTurfVendor = user?.category?.toLowerCase().includes("turf");
+    const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
+
+    const isTurfVendor = user?.role === "turf_organiser" || profile?.category?.toLowerCase().includes("turf");
 
     if (isTurfVendor) {
         return <TurfServiceManagement user={user} vendorId={vendorId} profile={profile} />;
@@ -46,9 +46,13 @@ export default function ServicesPage() {
 }
 
 function TurfServiceManagement({ user, vendorId, profile }) {
-    const turfs = useQuery(api.turfs.getByOrganiserId, { organiserId: vendorId || "" });
-    const saveTurf = useMutation(api.turfs.saveTurf);
-    const deleteTurf = useMutation(api.turfs.deleteTurf);
+    const { data: turfs = [] } = useSupabaseQuery('turfs', (q) => 
+        q.eq('organiser_id', vendorId)
+    , [vendorId]);
+
+    const [createTurf] = useSupabaseMutation('turfs', 'insert');
+    const [updateTurf] = useSupabaseMutation('turfs', 'update', (q, p) => q.eq('id', p.id));
+    const [deleteTurf] = useSupabaseMutation('turfs', 'delete', (q, p) => q.eq('id', p.id));
     
     const [selectedTurf, setSelectedTurf] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -59,14 +63,14 @@ function TurfServiceManagement({ user, vendorId, profile }) {
         description: "",
         location: "",
         address: "",
-        pricePerHour: 1000,
-        advanceAmount: 200,
+        price_per_hour: 1000,
+        advance_amount: 200,
         
         // New Pricing Fields
-        pricingType: "flat", // "flat", "per_person", "tiered"
-        maxCapacity: 20,
-        pricePerPerson: 0,
-        pricingTiers: [
+        pricing_type: "flat", // "flat", "per_person", "tiered"
+        max_capacity: 20,
+        price_per_person: 0,
+        pricing_tiers: [
             { min: 1, max: 5, price: 1000 },
             { min: 6, max: 10, price: 1800 }
         ],
@@ -86,12 +90,18 @@ function TurfServiceManagement({ user, vendorId, profile }) {
     const handleSave = async (e) => {
         e.preventDefault();
         try {
-            await saveTurf({
+            const data = {
                 ...formData,
                 images: formData.images.filter(img => img.trim() !== ""),
-                organiserId: vendorId,
-                id: selectedTurf?._id
-            });
+                organiser_id: vendorId,
+            };
+
+            if (selectedTurf?.id) {
+                await updateTurf({ ...data, id: selectedTurf.id });
+            } else {
+                await createTurf(data);
+            }
+
             setShowAddModal(false);
             setFormData(initialForm);
             setSelectedTurf(null);
@@ -113,14 +123,14 @@ function TurfServiceManagement({ user, vendorId, profile }) {
             description: turf.description || "",
             location: turf.location || "",
             address: turf.address || "",
-            pricePerHour: turf.pricePerHour,
-            advanceAmount: turf.advanceAmount || 0,
+            price_per_hour: turf.price_per_hour,
+            advance_amount: turf.advance_amount || 0,
             
             // New Pricing Fields
-            pricingType: turf.pricingType || "flat",
-            maxCapacity: turf.maxCapacity || 20,
-            pricePerPerson: turf.pricePerPerson || 0,
-            pricingTiers: turf.pricingTiers || [],
+            pricing_type: turf.pricing_type || "flat",
+            max_capacity: turf.max_capacity || 20,
+            price_per_person: turf.price_per_person || 0,
+            pricing_tiers: turf.pricing_tiers || [],
 
             images: turf.images?.length > 0 ? [...turf.images] : [""],
             amenities: turf.amenities || [],
@@ -156,20 +166,20 @@ function TurfServiceManagement({ user, vendorId, profile }) {
     const addTier = () => {
         setFormData({
             ...formData,
-            pricingTiers: [...(formData.pricingTiers || []), { min: 1, max: 10, price: 1000 }]
+            pricing_tiers: [...(formData.pricing_tiers || []), { min: 1, max: 10, price: 1000 }]
         });
     };
 
     const updateTier = (index, field, value) => {
-        const newTiers = [...formData.pricingTiers];
+        const newTiers = [...formData.pricing_tiers];
         newTiers[index] = { ...newTiers[index], [field]: value };
-        setFormData({ ...formData, pricingTiers: newTiers });
+        setFormData({ ...formData, pricing_tiers: newTiers });
     };
 
     const removeTier = (index) => {
         setFormData({
             ...formData,
-            pricingTiers: formData.pricingTiers.filter((_, i) => i !== index)
+            pricing_tiers: formData.pricing_tiers.filter((_, i) => i !== index)
         });
     };
 
@@ -204,7 +214,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10">
                 {turfs?.map((turf) => (
                     <div 
-                        key={turf._id}
+                        key={turf.id}
                         className="bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden group hover:border-blue-500/20 transition-all flex flex-col"
                     >
                         <div className="h-56 bg-slate-50 relative overflow-hidden">
@@ -230,7 +240,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                     </p>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                         <Users size={12} className="text-purple-500" />
-                                        Capacity: {turf.maxCapacity || "N/A"}
+                                        Capacity: {turf.max_capacity || "N/A"}
                                     </p>
                                 </div>
                             </div>
@@ -239,12 +249,12 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                 <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 text-center space-y-1">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pricing Model</p>
                                     <p className="text-xs font-black text-slate-900 tracking-tighter uppercase italic text-blue-600">
-                                        {turf.pricingType || "Flat Rate"}
+                                        {turf.pricing_type || "Flat Rate"}
                                     </p>
                                 </div>
                                 <div className="p-5 bg-blue-50 rounded-[2rem] border border-blue-100 text-center space-y-1">
                                     <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Base Rate</p>
-                                    <p className="text-xl font-black text-blue-600 tracking-tighter">₹{turf.pricePerHour}</p>
+                                    <p className="text-xl font-black text-blue-600 tracking-tighter">₹{turf.price_per_hour}</p>
                                 </div>
                             </div>
 
@@ -257,7 +267,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                     Edit Core
                                 </button>
                                 <Link 
-                                    href={`/vendor/services/slots?turfId=${turf._id}`}
+                                    href={`/vendor/services/slots?turfId=${turf.id}`}
                                     className="flex-1 px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl shadow-pink-500/20 hover:scale-[1.02] active:scale-95 whitespace-nowrap"
                                 >
                                     <Clock size={16} className="text-white shrink-0" />
@@ -271,7 +281,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                     <Share size={16} />
                                 </button>
                                 <button 
-                                    onClick={() => handleDelete(turf._id)}
+                                    onClick={() => handleDelete(turf.id)}
                                     className="p-4 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-100/50"
                                     title="Delete Facility"
                                 >
@@ -399,17 +409,17 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Rate (₹)</label>
-                                                    <input required type="number" value={formData.pricePerHour} onChange={(e) => setFormData({...formData, pricePerHour: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
+                                                    <input required type="number" value={formData.price_per_hour} onChange={(e) => setFormData({...formData, price_per_hour: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advance (₹)</label>
-                                                    <input required type="number" value={formData.advanceAmount} onChange={(e) => setFormData({...formData, advanceAmount: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
+                                                    <input required type="number" value={formData.advance_amount} onChange={(e) => setFormData({...formData, advance_amount: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing Type</label>
-                                                <select value={formData.pricingType} onChange={(e) => setFormData({...formData, pricingType: e.target.value})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                <select value={formData.pricing_type} onChange={(e) => setFormData({...formData, pricing_type: e.target.value})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none">
                                                     <option value="flat">Standard Flat Rate</option>
                                                     <option value="per_person">Per User Pricing</option>
                                                     <option value="tiered">Tiered Group Pricing</option>
@@ -418,25 +428,25 @@ function TurfServiceManagement({ user, vendorId, profile }) {
 
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facility Capacity</label>
-                                                <input type="number" value={formData.maxCapacity} onChange={(e) => setFormData({...formData, maxCapacity: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none" placeholder="Maximum participants" />
+                                                <input type="number" value={formData.max_capacity} onChange={(e) => setFormData({...formData, max_capacity: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none" placeholder="Maximum participants" />
                                             </div>
 
                                             {/* Conditional Pricing Fields */}
-                                            {formData.pricingType === "per_person" && (
+                                            {formData.pricing_type === "per_person" && (
                                                 <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-3 animate-in fade-in slide-in-from-top-2">
                                                     <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Rate Per Person (₹)</label>
-                                                    <input type="number" value={formData.pricePerPerson} onChange={(e) => setFormData({...formData, pricePerPerson: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-blue-200 rounded-xl text-xs font-black text-blue-600 outline-none" />
+                                                    <input type="number" value={formData.price_per_person} onChange={(e) => setFormData({...formData, price_per_person: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-blue-200 rounded-xl text-xs font-black text-blue-600 outline-none" />
                                                 </div>
                                             )}
 
-                                            {formData.pricingType === "tiered" && (
+                                            {formData.pricing_type === "tiered" && (
                                                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                                     <div className="flex items-center justify-between">
                                                         <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Groups/Tiers</label>
                                                         <button type="button" onClick={addTier} className="text-[9px] font-black text-purple-600 uppercase tracking-widest">+ New Tier</button>
                                                     </div>
                                                     <div className="space-y-3 h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                                        {(formData.pricingTiers || []).map((tier, idx) => (
+                                                        {(formData.pricing_tiers || []).map((tier, idx) => (
                                                             <div key={idx} className="p-4 bg-white rounded-2xl border border-purple-100 space-y-3 relative group">
                                                                 <button type="button" onClick={() => removeTier(idx)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
                                                                 <div className="grid grid-cols-2 gap-2">
@@ -481,13 +491,13 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                 title={promoteTurf?.name || ""}
                 imageUrl={promoteTurf?.images?.[0] || ""}
                 type="Turf Facility"
-                bookingUrl={typeof window !== "undefined" && promoteTurf ? `${window.location.origin}/turfs/${promoteTurf._id}` : ""}
+                bookingUrl={typeof window !== "undefined" && promoteTurf ? `${window.location.origin}/turfs/${promoteTurf.id}` : ""}
             />
         </div>
     );
 }
 function ArtistServiceManagement({ user, vendorId, profile }) {
-    const updateProfile = useMutation(api.vendors.updateProfile);
+    const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
 
     const [pricing, setPricing] = useState([]);
     const [advancedSettings, setAdvancedSettings] = useState({});
@@ -535,8 +545,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
         setIsSaving(true);
         try {
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Mehendi Artist",
+                id: profile.id,
                 pricing,
                 advancedSettings
             });

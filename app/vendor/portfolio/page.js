@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import {
@@ -23,7 +23,7 @@ import {
 
 // Helper component for individual portfolio items
 const DesignCard = ({ item, onDelete, onToggleBeforeAfter, onToggleTopDesign, onEditLabels }) => {
-    const imageUrl = item.url.startsWith("http") 
+    const imageUrl = item.url && (item.url.startsWith("http") || item.url.startsWith("/"))
         ? item.url 
         : `https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=1080&auto=format&fit=crop`;
 
@@ -102,7 +102,7 @@ const DesignCard = ({ item, onDelete, onToggleBeforeAfter, onToggleTopDesign, on
                 <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center space-x-3">
                         <div className="w-2 h-2 rounded-full bg-pink-500 shadow-sm shadow-pink-500/50"></div>
-                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest italic">{item.category} Mehendi</span>
+                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest italic">{item.category} Portfolio Item</span>
                     </div>
                     <button 
                         onClick={onEditLabels}
@@ -124,12 +124,12 @@ export default function PortfolioPage() {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
 
-    const profile = useQuery(
-        api.vendors.getByOrganiserId,
-        vendorId ? { organiserId: vendorId } : "skip"
-    );
-    const updateProfile = useMutation(api.vendors.updateProfile);
-    const generateUploadUrl = useMutation(api.images.generateUploadUrl);
+    const { data: profileArr = [] } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
+
+    const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
+    const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
 
     const portfolio = profile?.portfolio || [];
     const [filter, setFilter] = useState("All");
@@ -162,15 +162,21 @@ export default function PortfolioPage() {
         try {
             const newPhotos = [];
             for (const file of filesToUpload) {
-                const postUrl = await generateUploadUrl();
-                const result = await fetch(postUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": file.type },
-                    body: file,
-                });
-                const { storageId } = await result.json();
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${vendorId}/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+                
+                const { data, error } = await supabase.storage
+                    .from('vendor-portfolios')
+                    .upload(fileName, file);
+
+                if (error) throw error;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('vendor-portfolios')
+                    .getPublicUrl(fileName);
+
                 newPhotos.push({
-                    url: storageId,
+                    url: publicUrl,
                     type: file.type.startsWith("video") ? "video" : "image",
                     category: uploadConfig.category,
                     tags: uploadConfig.tags.split(",").map(t => t.trim()).filter(t => t),
@@ -179,13 +185,13 @@ export default function PortfolioPage() {
                 });
             }
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Unknown",
+                id: profile.id,
                 portfolio: [...portfolio, ...newPhotos]
             });
             setPendingFiles([]);
         } catch (error) {
             console.error("Upload failed:", error);
+            alert("Upload failed. Ensure the 'vendor-portfolios' bucket exists and is public.");
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = "";
@@ -206,8 +212,7 @@ export default function PortfolioPage() {
         const newPortfolio = portfolio.filter((_, i) => i !== index);
         try {
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Unknown",
+                id: profile.id,
                 portfolio: newPortfolio
             });
         } catch (error) {
@@ -220,8 +225,7 @@ export default function PortfolioPage() {
         newPortfolio[index].isTopDesign = !newPortfolio[index].isTopDesign;
         try {
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Unknown",
+                id: profile.id,
                 portfolio: newPortfolio
             });
         } catch (error) {
@@ -234,8 +238,7 @@ export default function PortfolioPage() {
         newPortfolio[index].beforeAfter = !newPortfolio[index].beforeAfter;
         try {
             await updateProfile({
-                organiserId: vendorId,
-                category: profile?.category || "Unknown",
+                id: profile.id,
                 portfolio: newPortfolio
             });
         } catch (error) {

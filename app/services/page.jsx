@@ -2,8 +2,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Star, ArrowLeft, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/app/data/serviceCategories";
 import BecomePartnerModal from "@/components/BecomePartnerModal";
@@ -17,19 +16,22 @@ export default function ServicesPage() {
   const [page, setPage] = useState(1);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
-  // Fetch all vendors for the category (uses listByCategory from Convex)
-  const vendors = useQuery(api.vendors.listByCategory, {
-    category: category === "All Services" ? "" : category,
-  });
+  // Fetch all vendors for the category
+  const { data: vendors = [], loading: vendorsLoading } = useSupabaseQuery('service_providers', (q) => {
+    if (category !== "All Services") {
+      return q.eq('category', category);
+    }
+    return q;
+  }, [category]);
 
   // Fetch all active turfs
-  const turfsRaw = useQuery(api.turfs.listActive);
+  const { data: turfsRaw = [], loading: turfsLoading } = useSupabaseQuery('turfs', (q) => q.eq('status', 'Active'), []);
 
   // Normalize and merge data
   const mergedItems = useMemo(() => {
     const vList = vendors || [];
     const tList = (turfsRaw || []).map(t => ({
-      id: t._id,
+      id: t.id,
       name: t.name,
       category: "Turf Booking",
       bio: t.description || "Premium sports facility with great amenities.",
@@ -230,7 +232,7 @@ export default function ServicesPage() {
           </h1>
 
           <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0, fontWeight: 500 }}>
-            {vendors === undefined || turfsRaw === undefined
+            {vendorsLoading || turfsLoading
               ? "Loading experts..."
               : `${totalItems} result${totalItems !== 1 ? "s" : ""} ready to serve you`}
           </p>
@@ -241,7 +243,7 @@ export default function ServicesPage() {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 24px 60px" }}>
 
         {/* Loading */}
-        {(vendors === undefined || turfsRaw === undefined) && (
+        {(vendorsLoading || turfsLoading) && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
             <div style={{
               width: 44, height: 44,
@@ -257,7 +259,7 @@ export default function ServicesPage() {
         )}
 
         {/* Empty State */}
-        {(vendors !== undefined && turfsRaw !== undefined) && totalItems === 0 && (
+        {(!vendorsLoading && !turfsLoading) && totalItems === 0 && (
           <div style={{
             textAlign: "center", padding: "80px 20px",
             background: "#fff", borderRadius: "28px",
@@ -286,7 +288,7 @@ export default function ServicesPage() {
         )}
 
         {/* 4-Column Grid */}
-        {(vendors !== undefined && turfsRaw !== undefined) && totalItems > 0 && (
+        {(!vendorsLoading && !turfsLoading) && totalItems > 0 && (
           <>
             <div style={{
               display: "grid",

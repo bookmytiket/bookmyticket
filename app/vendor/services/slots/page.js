@@ -1,8 +1,4 @@
-"use client";
-import React, { useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { 
     Plus, 
     Trash2, 
@@ -24,36 +20,45 @@ function SlotManager() {
     const searchParams = useSearchParams();
     const turfId = searchParams.get("turfId");
     
-    const turf = useQuery(api.turfs.getById, turfId ? { turfId } : "skip");
-    const slots = useQuery(api.turfs.getSlots, turfId ? { turfId } : "skip") || [];
-    const manualBlocks = useQuery(api.turfManualBlocks.listByTurf, turfId ? { turfId } : "skip") || [];
+    const { data: turfArr = [] } = useSupabaseQuery('turfs', (q) => 
+        q.eq('id', turfId).single()
+    , [turfId]);
+    const turf = turfArr && !Array.isArray(turfArr) ? turfArr : null;
+
+    const { data: slots = [] } = useSupabaseQuery('turf_slots', (q) => 
+        q.eq('turf_id', turfId)
+    , [turfId]);
+
+    const { data: manualBlocks = [] } = useSupabaseQuery('turf_manual_blocks', (q) => 
+        q.eq('turf_id', turfId).order('date', { ascending: true })
+    , [turfId]);
     
-    const saveSlot = useMutation(api.turfs.saveSlot);
-    const deleteSlot = useMutation(api.turfs.deleteSlot);
-    const createBlock = useMutation(api.turfManualBlocks.create);
-    const deleteBlock = useMutation(api.turfManualBlocks.remove);
+    const [createSlot] = useSupabaseMutation('turf_slots', 'insert');
+    const [deleteSlot] = useSupabaseMutation('turf_slots', 'delete', (q, p) => q.eq('id', p.id));
+    const [createBlock] = useSupabaseMutation('turf_manual_blocks', 'insert');
+    const [deleteBlock] = useSupabaseMutation('turf_manual_blocks', 'delete', (q, p) => q.eq('id', p.id));
 
     const [newSlot, setNewSlot] = useState({
-        dayOfWeek: 1,
-        startTime: "06:00",
-        endTime: "07:00",
-        priceOverride: undefined
+        day_of_week: 1,
+        start_time: "06:00",
+        end_time: "07:00",
+        price_override: null
     });
 
     const [blockForm, setBlockForm] = useState({
         date: new Date().toISOString().split("T")[0],
-        startTime: "06:00",
-        endTime: "07:00",
+        start_time: "06:00",
+        end_time: "07:00",
         reason: "Maintenance"
     });
 
     const handleAddSlot = async () => {
         if (!turfId) return;
         try {
-            await saveSlot({ ...newSlot, turfId: turfId, isActive: true });
-            const [h, m] = newSlot.endTime.split(":").map(Number);
+            await createSlot({ ...newSlot, turf_id: turfId, is_active: true });
+            const [h, m] = newSlot.end_time.split(":").map(Number);
             const nextH = String((h + 1) % 24).padStart(2, "0");
-            setNewSlot({ ...newSlot, startTime: newSlot.endTime, endTime: `${nextH}:${String(m).padStart(2, "0")}` });
+            setNewSlot({ ...newSlot, start_time: newSlot.end_time, end_time: `${nextH}:${String(m).padStart(2, "0")}` });
         } catch (err) {
             alert(err.message);
         }
@@ -62,7 +67,7 @@ function SlotManager() {
     const handleCreateBlock = async () => {
         if (!turfId) return;
         try {
-            await createBlock({ ...blockForm, turfId: turfId });
+            await createBlock({ ...blockForm, turf_id: turfId });
             alert("Slot blocked successfully for " + blockForm.date);
         } catch (err) {
             alert(err.message);
@@ -108,8 +113,8 @@ function SlotManager() {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Day of Week</label>
                                 <select 
                                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                    value={newSlot.dayOfWeek}
-                                    onChange={(e) => setNewSlot({...newSlot, dayOfWeek: parseInt(e.target.value)})}
+                                    value={newSlot.day_of_week}
+                                    onChange={(e) => setNewSlot({...newSlot, day_of_week: parseInt(e.target.value)})}
                                 >
                                     {DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}
                                 </select>
@@ -121,8 +126,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                        value={newSlot.startTime}
-                                        onChange={(e) => setNewSlot({...newSlot, startTime: e.target.value})}
+                                        value={newSlot.start_time}
+                                        onChange={(e) => setNewSlot({...newSlot, start_time: e.target.value})}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -130,8 +135,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                        value={newSlot.endTime}
-                                        onChange={(e) => setNewSlot({...newSlot, endTime: e.target.value})}
+                                        value={newSlot.end_time}
+                                        onChange={(e) => setNewSlot({...newSlot, end_time: e.target.value})}
                                     />
                                 </div>
                             </div>
@@ -172,8 +177,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-red-500/10 focus:outline-none transition-all"
-                                        value={blockForm.startTime}
-                                        onChange={(e) => setBlockForm({...blockForm, startTime: e.target.value})}
+                                        value={blockForm.start_time}
+                                        onChange={(e) => setBlockForm({...blockForm, start_time: e.target.value})}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -181,8 +186,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-red-500/10 focus:outline-none transition-all"
-                                        value={blockForm.endTime}
-                                        onChange={(e) => setBlockForm({...blockForm, endTime: e.target.value})}
+                                        value={blockForm.end_time}
+                                        onChange={(e) => setBlockForm({...blockForm, end_time: e.target.value})}
                                     />
                                 </div>
                             </div>
@@ -211,18 +216,18 @@ function SlotManager() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {manualBlocks.map(block => (
-                                    <div key={block._id} className="bg-red-50/50 p-6 rounded-3xl border border-red-100 flex items-center justify-between group">
+                                    <div key={block.id} className="bg-red-50/50 p-6 rounded-3xl border border-red-100 flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-2xl bg-white border border-red-100 flex items-center justify-center text-red-500">
                                                 <Calendar size={20} />
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">{block.date}</p>
-                                                <p className="text-sm font-black text-slate-900">{block.startTime} - {block.endTime}</p>
+                                                <p className="text-sm font-black text-slate-900">{block.start_time} - {block.end_time}</p>
                                             </div>
                                         </div>
                                         <button 
-                                            onClick={() => deleteBlock({ id: block._id })}
+                                            onClick={() => deleteBlock({ id: block.id })}
                                             className="p-3 bg-white text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
                                         >
                                             <Trash2 size={16} />
@@ -236,7 +241,7 @@ function SlotManager() {
                     {/* Recurring Pattern Display */}
                     <div className="space-y-8">
                         {DAYS.map((dayName, dayIndex) => {
-                            const daySlots = slots.filter(s => s.dayOfWeek === dayIndex).sort((a,b) => a.startTime.localeCompare(b.startTime));
+                            const daySlots = slots.filter(s => s.day_of_week === dayIndex).sort((a,b) => a.start_time.localeCompare(b.start_time));
                             return (
                                 <div key={dayName} className="space-y-4">
                                     <div className="flex items-center gap-4 px-2">
@@ -248,7 +253,7 @@ function SlotManager() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {daySlots.map((slot) => (
                                             <div 
-                                                key={slot._id}
+                                                key={slot.id}
                                                 className="group bg-white p-5 rounded-3xl border border-slate-100 hover:border-blue-500/20 transition-all flex items-center justify-between shadow-sm hover:shadow-xl"
                                             >
                                                 <div className="flex items-center gap-4">
@@ -256,14 +261,14 @@ function SlotManager() {
                                                         <Clock size={16} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black text-slate-900">{slot.startTime} - {slot.endTime}</p>
+                                                        <p className="text-xs font-black text-slate-900">{slot.start_time} - {slot.end_time}</p>
                                                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                                            {slot.priceOverride ? `₹${slot.priceOverride}` : `Base Yield`}
+                                                            {slot.price_override ? `₹${slot.price_override}` : `Base Yield`}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <button 
-                                                    onClick={() => deleteSlot({ id: slot._id })}
+                                                    onClick={() => deleteSlot({ id: slot.id })}
                                                     className="p-2.5 bg-red-50 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
                                                 >
                                                     <Trash2 size={14} />

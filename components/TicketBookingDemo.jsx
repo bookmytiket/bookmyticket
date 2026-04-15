@@ -13,8 +13,7 @@ import {
   Ticket,
   Video
 } from 'lucide-react';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from './AuthContext';
 
 const C = {
@@ -35,7 +34,8 @@ const DEFAULT_EVENTS = [
 
 export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
   const { selectedCity } = useAuth();
-  const convexEvents = useQuery(api.events.getActiveEvents);
+  const { data: convexEventsRaw } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+  const convexEvents = convexEventsRaw || [];
   
   const events = useMemo(() => {
     if (!convexEvents) return DEFAULT_EVENTS;
@@ -52,7 +52,7 @@ export default function TicketBookingDemo({ scale = 1, showFrame = true }) {
     if (filtered.length === 0) return DEFAULT_EVENTS;
 
     return filtered.slice(0, 2).map(ev => ({
-        id: ev._id,
+        id: ev.id,
         title: ev.title,
         date: ev.date,
         loc: ev.location || ev.venue || ev.city,

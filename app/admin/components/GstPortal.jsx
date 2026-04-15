@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { 
     Settings, 
     FileText, 
@@ -19,8 +18,10 @@ import {
 
 const GstPortal = ({ t, theme }) => {
     const [activeSubTab, setActiveSubTab] = useState("settings");
-    const settings = useQuery(api.gst.getSettings);
-    const updateSettings = useMutation(api.gst.updateSettings);
+    const { data: settingsRes, loading: loadingSettings } = useSupabaseQuery('gst_settings', (q) => q.limit(1));
+    const [upsertSettings] = useSupabaseMutation('gst_settings', 'upsert', (q, p) => q.eq('id', p.id));
+
+    const settings = settingsRes?.[0];
 
     const [formData, setFormData] = useState({
         businessName: "",
@@ -43,8 +44,15 @@ const GstPortal = ({ t, theme }) => {
     useEffect(() => {
         if (settings) {
             setFormData({
-                ...settings,
-                categoryRates: settings.categoryRates || formData.categoryRates
+                id: settings.id,
+                businessName: settings.business_name || "",
+                businessAddress: settings.business_address || "",
+                gstin: settings.gstin || "",
+                taxConfig: settings.tax_config || formData.taxConfig,
+                categoryRates: settings.category_rates || formData.categoryRates,
+                invoicePrefix: settings.invoice_prefix || "BMT-",
+                isEnabled: settings.is_enabled || false,
+                pricingType: settings.pricing_type || "inclusive",
             });
         }
     }, [settings]);
@@ -52,7 +60,18 @@ const GstPortal = ({ t, theme }) => {
     const handleSaveSettings = async () => {
         setIsSaving(true);
         try {
-            await updateSettings(formData);
+            const payload = {
+                id: formData.id || crypto.randomUUID(),
+                business_name: formData.businessName,
+                business_address: formData.businessAddress,
+                gstin: formData.gstin,
+                tax_config: formData.taxConfig,
+                category_rates: formData.categoryRates,
+                invoice_prefix: formData.invoicePrefix,
+                is_enabled: formData.isEnabled,
+                pricing_type: formData.pricingType,
+            };
+            await upsertSettings(payload);
             setSaveStatus("success");
             setTimeout(() => setSaveStatus(null), 3000);
         } catch (error) {
@@ -75,6 +94,8 @@ const GstPortal = ({ t, theme }) => {
             }
         }));
     };
+
+    if (loadingSettings) return <div style={{ padding: "20px", color: t.textMain }}>Loading GST Settings...</div>;
 
     return (
         <div style={{ color: t.textMain }}>
@@ -127,7 +148,7 @@ const GstPortal = ({ t, theme }) => {
                             boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)"
                         }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-                                <div style={{ p: "10px", borderRadius: "12px", background: "#3b82f615", color: "#3b82f6" }}>
+                                <div style={{ padding: "10px", borderRadius: "12px", background: "#3b82f615", color: "#3b82f6" }}>
                                     <Building2 size={24} />
                                 </div>
                                 <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Business Information</h3>
@@ -185,7 +206,7 @@ const GstPortal = ({ t, theme }) => {
                             border: `1px solid ${t.border}`
                         }}>
                              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-                                <div style={{ p: "10px", borderRadius: "12px", background: "#8b5cf615", color: "#8b5cf6" }}>
+                                <div style={{ padding: "10px", borderRadius: "12px", background: "#8b5cf615", color: "#8b5cf6" }}>
                                     <Briefcase size={24} />
                                 </div>
                                 <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Category Tax Rates</h3>
@@ -262,7 +283,7 @@ const GstPortal = ({ t, theme }) => {
                              <h4 style={{ margin: "0 0 20px 0", fontSize: "16px", fontWeight: 800 }}>Master Control</h4>
 
                              <div style={{ marginBottom: "24px" }}>
-                                <label style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", width: "100%", cursor: "pointer", padding: "12px", borderRadius: "12px", background: formData.isEnabled ? "#10b98110" : "#ef444410", transition: "all 0.3s" }}>
+                                <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", padding: "12px", borderRadius: "12px", background: formData.isEnabled ? "#10b98110" : "#ef444410", transition: "all 0.3s" }}>
                                     <div style={{ flex: 1 }}>
                                         <p style={{ margin: 0, fontSize: "13px", fontWeight: 700 }}>Enable GST System</p>
                                         <p style={{ margin: 0, fontSize: "11px", fontWeight: 500, color: t.textSub }}>{formData.isEnabled ? "System is active" : "GST is currently disabled"}</p>
@@ -332,57 +353,60 @@ const GstPortal = ({ t, theme }) => {
                              </button>
 
                              {saveStatus === "success" && (
-                                 <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "8px", color: "#10b981", fontSize: "13px", fontWeight: 600 }}>
-                                     <CheckCircle2 size={16} /> Configuration updated!
-                                 </div>
-                             )}
+                                  <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "8px", color: "#10b981", fontSize: "13px", fontWeight: 600 }}>
+                                      <CheckCircle2 size={16} /> Configuration updated!
+                                  </div>
+                              )}
                         </div>
                     </div>
                 </div>
             )}
 
             {activeSubTab === "reports" && (
-                <GstReports t={t} theme={theme} />
+                <GstReports t={t} theme={theme} settings={formData} />
             )}
 
             {activeSubTab === "invoices" && (
-                <GstInvoices t={t} theme={theme} />
+                <GstInvoices t={t} theme={theme} settings={formData} />
             )}
         </div>
     );
 };
 
-const GstReports = ({ t, theme }) => {
+const GstReports = ({ t, theme, settings }) => {
     const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime(),
-        end: Date.now()
+        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+        end: new Date().toISOString()
     });
 
-    const reportData = useQuery(api.gst.getGstReport, { 
-        startDate: dateRange.start, 
-        endDate: dateRange.end 
-    });
+    const { data: bookingsRes, loading } = useSupabaseQuery('bookings', (q) => 
+        q.select('*')
+         .gte('invoice_date', dateRange.start)
+         .lte('invoice_date', dateRange.end)
+         .order('invoice_date', { ascending: false })
+    );
+
+    const reportData = bookingsRes || [];
 
     const stats = useMemo(() => {
-        if (!reportData) return { totalTaxable: 0, totalGst: 0, totalAmount: 0, count: 0 };
         return reportData.reduce((acc, curr) => ({
-            totalTaxable: acc.totalTaxable + (curr.taxableAmount || 0),
-            totalGst: acc.totalGst + (curr.gstAmount || 0),
-            totalAmount: acc.totalAmount + (curr.totalAmount || 0),
+            totalTaxable: acc.totalTaxable + (curr.taxable_amount || 0),
+            totalGst: acc.totalGst + (curr.gst_amount || 0),
+            totalAmount: acc.totalAmount + (curr.total_price || 0),
             count: acc.count + 1
         }), { totalTaxable: 0, totalGst: 0, totalAmount: 0, count: 0 });
     }, [reportData]);
 
     const handleExportCsv = () => {
-        if (!reportData) return;
+        if (!reportData.length) return;
         const headers = ["Invoice Number", "Date", "Type", "Taxable Amount", "GST Amount", "Total Amount", "Status"];
         const rows = reportData.map(r => [
-            r.invoiceNumber,
-            new Date(r.date).toLocaleDateString(),
-            r.type,
-            r.taxableAmount,
-            r.gstAmount,
-            r.totalAmount,
+            r.invoice_number,
+            new Date(r.invoice_date).toLocaleDateString(),
+            r.customer_details?.category || "Booking",
+            r.taxable_amount,
+            r.gst_amount,
+            r.total_price,
             r.status
         ]);
         
@@ -413,18 +437,17 @@ const GstReports = ({ t, theme }) => {
                         <CalendarIcon size={18} color={t.textSub} />
                         <span style={{ fontSize: "13px", fontWeight: 700 }}>Date Range:</span>
                     </div>
-                    {/* Simplified Date Picker inputs for now */}
                     <input 
                         type="date"
                         defaultValue={new Date(dateRange.start).toISOString().split('T')[0]}
-                        onChange={(e) => setDateRange(prev => ({...prev, start: new Date(e.target.value).getTime()}))}
+                        onChange={(e) => setDateRange(prev => ({...prev, start: new Date(e.target.value).toISOString()}))}
                         style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
                     />
                     <span style={{ color: t.textSub }}>to</span>
                     <input 
                         type="date"
                         defaultValue={new Date(dateRange.end).toISOString().split('T')[0]}
-                        onChange={(e) => setDateRange(prev => ({...prev, end: new Date(e.target.value).getTime()}))}
+                        onChange={(e) => setDateRange(prev => ({...prev, end: new Date(e.target.value).toISOString()}))}
                         style={{ padding: "8px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: theme === 'dark' ? "#1e293b" : "#fff", color: t.textMain }}
                     />
                 </div>
@@ -492,14 +515,14 @@ const GstReports = ({ t, theme }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {!reportData ? (
+                        {loading ? (
                             <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading records...</td></tr>
                         ) : reportData.length === 0 ? (
                             <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No GST records found for this range.</td></tr>
                         ) : reportData.map((row) => (
                             <tr key={row.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                <td style={{ padding: "16px", fontWeight: 700, fontSize: "13px" }}>{row.invoiceNumber}</td>
-                                <td style={{ padding: "16px", fontSize: "13px", color: t.textSub }}>{new Date(row.date).toLocaleDateString()}</td>
+                                <td style={{ padding: "16px", fontWeight: 700, fontSize: "13px" }}>{row.invoice_number}</td>
+                                <td style={{ padding: "16px", fontSize: "13px", color: t.textSub }}>{new Date(row.invoice_date).toLocaleDateString()}</td>
                                 <td style={{ padding: "16px" }}>
                                     <span style={{ 
                                         padding: "4px 8px", 
@@ -509,11 +532,11 @@ const GstReports = ({ t, theme }) => {
                                         background: `${t.activeLink}15`,
                                         color: t.activeLink,
                                         textTransform: "uppercase"
-                                    }}>{row.type}</span>
+                                    }}>{row.customer_details?.category || "Booking"}</span>
                                 </td>
-                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 600 }}>₹{row.taxableAmount.toLocaleString()}</td>
-                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 600, color: "#10b981" }}>₹{row.gstAmount.toLocaleString()}</td>
-                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 800 }}>₹{row.totalAmount.toLocaleString()}</td>
+                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 600 }}>₹{(row.taxable_amount || 0).toLocaleString()}</td>
+                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 600, color: "#10b981" }}>₹{(row.gst_amount || 0).toLocaleString()}</td>
+                                <td style={{ padding: "16px", textAlign: "right", fontWeight: 800 }}>₹{(row.total_price || 0).toLocaleString()}</td>
                                 <td style={{ padding: "16px", textAlign: "center" }}>
                                     <span style={{ 
                                         padding: "4px 8px", 
@@ -533,18 +556,21 @@ const GstReports = ({ t, theme }) => {
     );
 };
 
-const GstInvoices = ({ t, theme }) => {
+const GstInvoices = ({ t, theme, settings }) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const reportData = useQuery(api.gst.getGstReport, { 
-        startDate: 0, 
-        endDate: Date.now() 
-    });
+    const { data: bookingsRes } = useSupabaseQuery('bookings', (q) => 
+        q.select('*')
+         .not('invoice_number', 'is', null)
+         .order('invoice_date', { ascending: false })
+         .limit(100)
+    );
+
+    const reportData = bookingsRes || [];
 
     const filteredInvoices = useMemo(() => {
-        if (!reportData) return [];
         return reportData.filter(r => 
-            r.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())
-        ).slice(0, 50); // Limit to last 50 for performance
+            r.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase())
+        ).slice(0, 50); 
     }, [reportData, searchQuery]);
 
     const downloadPdf = async (invoice) => {
@@ -569,9 +595,10 @@ const GstInvoices = ({ t, theme }) => {
 
             // Invoice Details
             doc.setTextColor(0, 0, 0);
-            doc.text(`Invoice No: ${invoice.invoiceNumber}`, 140, 35);
-            doc.text(`Date: ${new Date(invoice.date).toLocaleDateString()}`, 140, 40);
-            doc.text(`Category: ${invoice.type}`, 140, 45);
+            doc.text(`Invoice No: ${invoice.invoice_number}`, 140, 35);
+            doc.text(`Date: ${new Date(invoice.invoice_date).toLocaleDateString()}`, 140, 40);
+            const category = invoice.customer_details?.category || "Booking";
+            doc.text(`Category: ${category}`, 140, 45);
 
             // Line Items Table
             autoTable(doc, {
@@ -579,19 +606,19 @@ const GstInvoices = ({ t, theme }) => {
                 head: [["Description", "Amount (INR)", "Tax Rate", "Tax Amount", "Total"]],
                 body: [
                     [
-                        `${invoice.type} Booking Subscription`,
-                        `₹${invoice.taxableAmount.toLocaleString()}`,
-                        `${((invoice.gstAmount / invoice.taxableAmount) * 100).toFixed(1)}%`,
-                        `₹${invoice.gstAmount.toLocaleString()}`,
-                        `₹${invoice.totalAmount.toLocaleString()}`
+                        `${category} Booking Subscription`,
+                        `₹${(invoice.taxable_amount || 0).toLocaleString()}`,
+                        invoice.taxable_amount ? `${((invoice.gst_amount / invoice.taxable_amount) * 100).toFixed(1)}%` : "0%",
+                        `₹${(invoice.gst_amount || 0).toLocaleString()}`,
+                        `₹${(invoice.total_price || 0).toLocaleString()}`
                     ]
                 ],
                 theme: "striped",
-                headStyles: { fillBlue: accentColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+                headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold' },
                 foot: [
                     [
                         { content: "Total Amount Payable", colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
-                        { content: `₹${invoice.totalAmount.toLocaleString()}`, styles: { fontStyle: 'bold' } }
+                        { content: `₹${(invoice.total_price || 0).toLocaleString()}`, styles: { fontStyle: 'bold' } }
                     ]
                 ]
             });
@@ -603,7 +630,7 @@ const GstInvoices = ({ t, theme }) => {
             doc.text("This is a computer generated invoice and does not require a physical signature.", 105, finalY + 20, { align: "center" });
             doc.text("Thank you for using BookMyTicket!", 105, finalY + 25, { align: "center" });
             
-            doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);
+            doc.save(`Invoice_${invoice.invoice_number}.pdf`);
         } catch (error) {
             console.error("PDF Generation failed:", error);
             alert("Error generating PDF. Please check console.");
@@ -646,9 +673,9 @@ const GstInvoices = ({ t, theme }) => {
                         ":hover": { borderColor: t.activeLink }
                     }}>
                         <div>
-                            <p style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 800 }}>{invoice.invoiceNumber}</p>
-                            <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>{new Date(invoice.date).toLocaleDateString()} • {invoice.type}</p>
-                            <p style={{ margin: "8px 0 0 0", fontSize: "16px", fontWeight: 700 }}>₹{invoice.totalAmount.toLocaleString()}</p>
+                            <p style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 800 }}>{invoice.invoice_number}</p>
+                            <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>{new Date(invoice.invoice_date).toLocaleDateString()} • {invoice.customer_details?.category || "Booking"}</p>
+                            <p style={{ margin: "8px 0 0 0", fontSize: "16px", fontWeight: 700 }}>₹{(invoice.total_price || 0).toLocaleString()}</p>
                         </div>
                         <button
                             onClick={() => downloadPdf(invoice)}

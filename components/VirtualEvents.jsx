@@ -1,8 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Video, Calendar, ArrowRight, Heart, Zap } from "lucide-react";
 import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
 import JoinNowButton from "./JoinNowButton";
@@ -17,7 +16,7 @@ function VirtualCard({ event }) {
 
     return (
         <div
-            onClick={() => router.push(`/events/detail?id=${event._id}`)}
+            onClick={() => router.push(`/events/detail?id=${event.id}`)}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
         >
             <article
@@ -122,7 +121,7 @@ function VirtualCard({ event }) {
                         </div>
                         <div onClick={e => e.stopPropagation()}>
                             <JoinNowButton 
-                                eventId={event._id} 
+                                eventId={event.id} 
                                 className="!px-4 !py-2 !rounded-xl !text-[11px]" 
                             />
                         </div>
@@ -134,8 +133,9 @@ function VirtualCard({ event }) {
 }
 
 export default function VirtualEvents({ events }) {
-    // using meetings query to filter for virtual events if no prop provided
-    const convexVirtualEvents = useQuery(api.meetings.getVirtualEvents) || [];
+    // using events query to filter for virtual events if no prop provided
+    const { data: convexVirtualEventsRaw } = useSupabaseQuery('events', (q) => q.eq('virtual', true).eq('status', 'Active'), []);
+    const convexVirtualEvents = convexVirtualEventsRaw || [];
     
     // Determine the list of events to show
     const virtualEvents = events !== undefined
@@ -220,7 +220,7 @@ export default function VirtualEvents({ events }) {
                             padding: "4px 4px 30px" 
                         }}
                     >
-                        {virtualEvents.map(event => <VirtualCard key={event._id} event={event} />)}
+                        {virtualEvents.map(event => <VirtualCard key={event.id} event={event} />)}
                     </div>
                 </div>
 

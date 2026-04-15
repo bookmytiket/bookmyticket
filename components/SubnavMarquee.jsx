@@ -2,8 +2,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Marquee from "react-fast-marquee";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const FALLBACK_NAV_ITEMS = [
     { label: "Live Concerts", icon: "🎵" },
@@ -19,7 +18,7 @@ const FALLBACK_NAV_ITEMS = [
 
 export default function SubnavMarquee() {
     const router = useRouter();
-    const convexCategories = useQuery(api.homeSettings.getCategories);
+    const { data: convexCategories } = useSupabaseQuery('categories', (q) => q.order('sort_order'), []);
 
     const items = useMemo(() => {
         if (convexCategories && convexCategories.length > 0) {

@@ -1,24 +1,23 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '../utils/feeBreakdown';
 import CheckoutFooterBar from '../components/CheckoutFooterBar';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop';
 
-function getEventById(id, convexEvents) {
+function getEventById(id, supabaseEvents) {
   const sid = String(id);
-  const fromConvex = (convexEvents || []).find((e) => String(e._id) === sid || String(e.id) === sid);
-  if (!fromConvex) return null;
+  const fromSupabase = (supabaseEvents || []).find((e) => String(e.id) === sid);
+  if (!fromSupabase) return null;
   return {
-    ...fromConvex,
-    id: fromConvex._id || fromConvex.id,
-    title: fromConvex.title || 'Event',
-    date: fromConvex.date || 'TBA',
-    location: fromConvex.location || fromConvex.venue || fromConvex.address || 'Venue',
-    price: fromConvex.price ?? fromConvex.normalTicketPrice ?? 499,
+    ...fromSupabase,
+    id: fromSupabase.id,
+    title: fromSupabase.title || 'Event',
+    date: fromSupabase.date || 'TBA',
+    location: fromSupabase.location || fromSupabase.venue || fromSupabase.address || 'Venue',
+    price: fromSupabase.price ?? fromSupabase.normalTicketPrice ?? 499,
   };
 }
 
@@ -26,8 +25,10 @@ export default function CheckoutScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { eventId, event: routeEvent, selectedSeats = [] } = route.params || {};
-  const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
-  const rawFeeSettings = useQuery(api.systemConfig.getConfig, { key: 'admin_fee_settings' });
+
+  // Migrated to Supabase
+  const { data: supabaseEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'));
+  const { data: supabaseConfig } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings'));
 
   const isSeating = selectedSeats.length > 0;
   const [qty, setQty] = useState(isSeating ? selectedSeats.length : 1);
@@ -36,26 +37,34 @@ export default function CheckoutScreen() {
   const [phone, setPhone] = useState('');
   const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
 
-  React.useEffect(() => {
-    if (rawFeeSettings !== undefined && rawFeeSettings !== null) {
+  useEffect(() => {
+    if (supabaseConfig && supabaseConfig.length > 0) {
+      const rawFeeSettings = supabaseConfig[0].value;
       try {
         const parsed = typeof rawFeeSettings === 'string' ? JSON.parse(rawFeeSettings) : rawFeeSettings;
         if (parsed) setFeeSettings((p) => ({ ...p, ...parsed }));
       } catch (_) {}
     }
-  }, [rawFeeSettings]);
+  }, [supabaseConfig]);
 
   const event = useMemo(() => {
-    if (routeEvent) return { ...routeEvent, id: routeEvent._id || routeEvent.id };
-    return getEventById(eventId, convexEvents);
-  }, [eventId, routeEvent, convexEvents]);
+    if (routeEvent) return { ...routeEvent, id: routeEvent.id };
+    return getEventById(eventId, supabaseEvents);
+  }, [eventId, routeEvent, supabaseEvents]);
 
   const totalSeatPrice = selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : seat.price), 0);
   const ticketPrice = event?.price ?? 499;
   const baseAmount = isSeating ? totalSeatPrice : ticketPrice * Math.max(1, qty);
   const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, feeSettings), [baseAmount, feeSettings]);
 
-  const createBooking = useMutation(api.bookings.createBooking);
+  // Mutation using Edge Function
+  const { mutate: callCreateBooking } = useSupabaseMutation(async (supabase, data) => {
+    const { data: result, error } = await supabase.functions.invoke('booking-handler', {
+      body: { action: 'create-booking', data }
+    });
+    if (error) throw error;
+    return result;
+  });
 
   const handleConfirm = useCallback(async () => {
     if (!event) return;
@@ -65,7 +74,7 @@ export default function CheckoutScreen() {
     }
     try {
       const bookingData = {
-        eventId: String(event._id || event.id),
+        eventId: String(event.id),
         userId: email.trim().toLowerCase(),
         ticketCount: isSeating ? selectedSeats.length : qty,
         totalPrice: total,
@@ -82,19 +91,20 @@ export default function CheckoutScreen() {
         bookingData.selectedSeats = selectedSeats;
       }
 
-      const bookingId = await createBooking(bookingData);
+      const bookingResult = await callCreateBooking(bookingData);
+      const bookingId = bookingResult.id;
       
       if (total === 0) {
         // Free booking confirmed immediately
-        navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event, success: true });
+        navigation.navigate('Payment', { bookingId: String(bookingId), eventId: String(event.id), total, event, success: true });
       } else {
-        navigation.navigate('Payment', { bookingId, eventId: String(event.id), total, event });
+        navigation.navigate('Payment', { bookingId: String(bookingId), eventId: String(event.id), total, event });
       }
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Could not create booking. Please try again.');
     }
-  }, [event, qty, total, name, email, phone, createBooking, navigation, isSeating, selectedSeats]);
+  }, [event, qty, total, name, email, phone, callCreateBooking, navigation, isSeating, selectedSeats]);
 
   if (!event) {
     return (

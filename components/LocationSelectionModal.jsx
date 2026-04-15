@@ -263,7 +263,7 @@ export default function LocationSelectionModal({
                 }}>
                     <img src="/logo.png" alt="BookMyTicket Logo" style={{ height: '40px', width: 'auto', opacity: 0.8 }} />
                 </div>
-                <svg viewBox="0 0 800 120" width="100%" height="auto" style={{ fill: '#f1f5f9', opacity: 0.6, zIndex: 1 }}>
+                <svg viewBox="0 0 800 120" width="100%" height="120" style={{ fill: '#f1f5f9', opacity: 0.6, zIndex: 1 }}>
                     <path d="M0 120h800v-20h-40l-5-15h-30l-5 15h-60l-10-40h-40l-10 40h-80l-15-60h-50l-15 60h-100l-20-80h-60l-20 80h-100l-15-50h-40l-15 50H0v20z" />
                     <rect x="150" y="40" width="40" height="60" />
                     <rect x="220" y="20" width="30" height="80" />

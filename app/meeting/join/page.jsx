@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { 
     Video, 
@@ -26,18 +25,24 @@ export default function JoinMeetingPage() {
     const [error, setError] = useState("");
 
     // Fetch user's bookings to find virtual events they've booked
-    const allBookings = useQuery(
-        api.bookings.getBookings,
-        user ? {} : "skip"
+    const { data: allBookings, loading: bookingsLoading } = useSupabaseQuery(
+        "bookings",
+        (q) => q.eq("user_id", user?.id),
+        [user?.id]
     );
-    const allEvents = useQuery(api.events.getActiveEvents);
+
+    const { data: allEvents, loading: eventsLoading } = useSupabaseQuery(
+        "events",
+        (q) => q.eq("status", "Active"),
+        []
+    );
 
     const virtualBookings = useMemo(() => {
         if (!allBookings || !allEvents || !user) return [];
         return allBookings
-            .filter((b) => b.userId === user?.identifier && (b.status === "Confirmed" || b.status === "Paid" || b.status === "Scanned"))
+            .filter((b) => (b.status === "Confirmed" || b.status === "Paid" || b.status === "Scanned"))
             .map((b) => {
-                const event = allEvents.find((e) => String(e._id) === String(b.eventId));
+                const event = allEvents.find((e) => String(e.id) === String(b.event_id));
                 return event?.virtual ? { booking: b, event } : null;
             })
             .filter(Boolean);
@@ -151,7 +156,7 @@ export default function JoinMeetingPage() {
                                             </button>
                                         </Link>
                                     </div>
-                                ) : allBookings === undefined ? (
+                                ) : bookingsLoading ? (
                                     <div className="h-full flex flex-col items-center justify-center py-4">
                                         <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                                     </div>
@@ -164,8 +169,8 @@ export default function JoinMeetingPage() {
                                     <div className="space-y-3">
                                         {virtualBookings.slice(0, 2).map(({ booking, event }) => (
                                             <Link 
-                                                key={booking._id} 
-                                                href={`/meeting/join/${event._id}`}
+                                                key={booking.id} 
+                                                href={`/meeting/join/${event.id}`}
                                                 className="group/item block p-3.5 rounded-xl bg-white border border-slate-100 hover:border-indigo-500/30 hover:bg-indigo-50 shadow-sm transition-all"
                                             >
                                                 <div className="flex items-center justify-between">
@@ -173,7 +178,7 @@ export default function JoinMeetingPage() {
                                                         <h3 className="text-[11px] font-black text-slate-900 group-hover/item:text-indigo-600 transition-colors truncate">{event.title}</h3>
                                                         <div className="flex items-center gap-2 mt-0.5 opacity-60">
                                                             <Calendar size={8} className="text-slate-400" />
-                                                            <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(event.startDate).toLocaleDateString()}</span>
+                                                            <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(event.date).toLocaleDateString()}</span>
                                                         </div>
                                                     </div>
                                                     <ArrowRight className="w-3 h-3 text-slate-300" />

@@ -19,8 +19,8 @@ import {
     Heart
 } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Video, Lock, ExternalLink, Play, CheckCircle2 } from 'lucide-react';
@@ -38,16 +38,19 @@ const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed
 export default function EventDetailClient({ id }) {
     const { user } = useAuth();
     const router = useRouter();
-    const convexEvents = useQuery(api.events.getActiveEvents);
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
 
     // Fetch user bookings to check if they've already booked this event
-    const userBookings = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+    const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
+        user?.id ? q.eq('user_id', user.id) : q.eq('user_id', 'none'),
+        [user?.id]
+    );
     
     // Check if this specific event is already booked by the user
     const existingBooking = useMemo(() => {
         if (!userBookings || !id) return null;
-        return userBookings.find(b => String(b.eventId) === String(id));
+        return userBookings.find(b => String(b.event_id) === String(id));
     }, [userBookings, id]);
 
     useEffect(() => {
@@ -56,9 +59,8 @@ export default function EventDetailClient({ id }) {
 
     const event = useMemo(() => {
         if (!convexEvents) return null;
-        const sid = String(id);
         const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-        const fromConvex = convexEvents.find(e => String(e._id) === sid || String(e.id) === sid);
+        const fromConvex = convexEvents.find(e => String(e.id) === sid);
         const raw = fromHome || fromConvex;
         if (!raw) return null;
         const location = raw.location || raw.venue || raw.address || 'Venue';

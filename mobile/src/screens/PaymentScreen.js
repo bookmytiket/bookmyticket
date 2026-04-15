@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,21 +14,36 @@ export default function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(success || false);
 
-  const booking = useQuery(api.bookings.getBookingById, bookingId ? { id: bookingId } : 'skip');
-  const confirmBooking = useMutation(api.bookings.confirmBooking);
+  // Migrated to Supabase with Join
+  const { data: supabaseBooking } = useSupabaseQuery('bookings', (q) => 
+    q.select('*, events(*)').eq('id', bookingId).maybeSingle(), 
+    [bookingId]
+  );
+  
+  const booking = supabaseBooking;
+
+  // Mutation using Edge Function
+  const { mutate: callConfirmBooking } = useSupabaseMutation(async (supabase, bId) => {
+    const { data: result, error } = await supabase.functions.invoke('booking-handler', {
+      body: { action: 'confirm-booking', data: { bookingId: bId } }
+    });
+    if (error) throw error;
+    return result;
+  });
 
   const isConfirmed = booking?.status === 'Confirmed' || paymentSuccess;
-  const displayTotal = total || booking?.totalPrice || 0;
-  const displayEvent = event || { title: booking?.eventName || 'Event' };
+  const displayTotal = total || booking?.total_price || 0;
+  const displayEvent = event || { title: booking?.events?.title || 'Event', date: booking?.events?.date, location: booking?.events?.location };
 
   const handlePayNow = async () => {
     if (!bookingId) return;
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 1800));
     try {
-      await confirmBooking({ id: bookingId });
+      await callConfirmBooking(bookingId);
       setPaymentSuccess(true);
     } catch (err) {
+      console.error(err);
       Alert.alert('Payment Failed', 'Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
@@ -78,7 +92,7 @@ export default function PaymentScreen() {
               </View>
               <View style={styles.ticketColRight}>
                 <Text style={styles.ticketMetaLabel}>TICKETS</Text>
-                <Text style={styles.ticketMetaValue}>{booking?.ticketCount || 1}</Text>
+                <Text style={styles.ticketMetaValue}>{booking?.ticket_count || 1}</Text>
               </View>
             </View>
             <View style={styles.ticketRow}>

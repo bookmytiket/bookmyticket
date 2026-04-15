@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, CheckCircle } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
@@ -16,7 +16,7 @@ const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 function getEventById(id, convexEvents) {
     const sid = String(id);
     const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-    const fromConvex = (Array.isArray(convexEvents) ? convexEvents : []).find(e => String(e._id) === sid || String(e.id) === sid);
+    const fromConvex = (Array.isArray(convexEvents) ? convexEvents : []).find(e => String(e.id) === sid);
     const raw = fromHome || fromConvex;
     if (!raw) return null;
     return {
@@ -56,7 +56,7 @@ function getCatColor(name) {
 export default function EventBookClient({ id }) {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const convexEvents = useQuery(api.events.getActiveEvents) || [];
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [quantity, setQuantity] = useState(1);
 
@@ -70,9 +70,20 @@ export default function EventBookClient({ id }) {
         }
     }, [user, authLoading, id, router]);
 
-    const feeSettings = useQuery(api.feeSettings.get) || DEFAULT_FEE_SETTINGS;
+    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
+    const feeSettings = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
     const [selectedSeats, setSelectedSeats] = useState([]);
-    const bookedSeats = useQuery(api.bookings.getBookedSeatsByEvent, { eventId: String(id) }) || [];
+    
+    const { data: bookingList } = useSupabaseQuery('bookings', (q) => q.eq('event_id', String(id)), [id]);
+    
+    const bookedSeats = useMemo(() => {
+        if (!bookingList) return [];
+        const validStatuses = ["Confirmed", "Pending", "Scanned"];
+        return bookingList
+            .filter(b => validStatuses.includes(b.status))
+            .flatMap(b => b.selected_seats || [])
+            .map(s => s.id);
+    }, [bookingList]);
 
     const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
 

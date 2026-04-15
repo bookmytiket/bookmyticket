@@ -2,13 +2,12 @@
 import React from "react";
 import dynamic from "next/dynamic";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const CircularGallery = dynamic(() => import("./CircularGallery"), { ssr: false });
 
 export default function RecentMemories({ memories: propMemories = [] }) {
-    const convexMemories = useQuery(api.memories.getMemories);
+    const { data: convexMemories } = useSupabaseQuery('memories', (q) => q, []);
 
     // Prioritize memories from Convex, fallback to props (static data)
     const displayMemories = (convexMemories && convexMemories.length > 0)

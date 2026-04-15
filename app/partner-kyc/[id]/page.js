@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { Upload, CheckCircle, ShieldCheck, FileText, Banknote, Building2, User, ArrowRight, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 
@@ -10,9 +10,7 @@ export default function PartnerKycPage() {
     const params = useParams();
     const requestId = params.id;
 
-    const request = useQuery(api.partnerRequests.getById, { id: requestId });
-    const submitKyc = useMutation(api.partnerRequests.submitKycForRequest);
-    const generateUploadUrl = useMutation(api.images.generateUploadUrl);
+    const { data: request } = useSupabaseQuery('partner_requests', (q) => q.eq('id', requestId).single(), [requestId]);
 
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -54,14 +52,19 @@ export default function PartnerKycPage() {
 
     const uploadFile = async (file) => {
         if (!file) return null;
-        const uploadUrl = await generateUploadUrl();
-        const response = await fetch(uploadUrl, {
-            method: "POST",
-            headers: { "Content-Type": file.type },
-            body: file,
-        });
-        const { storageId } = await response.json();
-        return storageId;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${requestId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data, error } = await supabase.storage
+            .from('kyc-docs')
+            .upload(fileName, file);
+
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('kyc-docs')
+            .getPublicUrl(data.path);
+            
+        return publicUrl;
     };
 
     const handleSubmit = async (e) => {
@@ -85,16 +88,21 @@ export default function PartnerKycPage() {
 
             setUploadedFileIds({ panFile: panStorageId, aadharFile: aadharStorageId, chequeFile: chequeStorageId });
 
-            await submitKyc({
-                id: requestId,
-                kycDetails: {
-                    ...form,
-                    panFile: panStorageId,
-                    aadharFile: aadharStorageId,
-                    chequeFile: chequeStorageId,
-                    agreementAccepted,
-                }
-            });
+            const { error: submitError } = await supabase
+                .from('partner_requests')
+                .update({
+                    status: "KYC Completed",
+                    kyc_details: {
+                        ...form,
+                        pan_file: panStorageId,
+                        aadhar_file: aadharStorageId,
+                        cheque_file: chequeStorageId,
+                        agreement_accepted: agreementAccepted,
+                    }
+                })
+                .eq('id', requestId);
+
+            if (submitError) throw submitError;
 
             setSuccess(true);
         } catch (error) {
@@ -148,7 +156,7 @@ export default function PartnerKycPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">KYC Submitted Successfully</h2>
                     <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                        Thank you, {request.firstName}! Your verification documents have been received and are currently under review by our admin team. You will be notified via email once approved.
+                        Thank you, {request.first_name}! Your verification documents have been received and are currently under review by our admin team. You will be notified via email once approved.
                     </p>
                     <div className="bg-gray-50 rounded-xl p-4 text-left border border-gray-100">
                         <div className="flex justify-between items-center mb-2">
@@ -170,7 +178,7 @@ export default function PartnerKycPage() {
                         <ShieldCheck size={32} className="text-white" />
                     </div>
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Partner Verification</h1>
-                    <p className="mt-2 text-gray-500">Please provide your business and banking details to complete the onboarding process for {request.firstName} {request.lastName}.</p>
+                    <p className="mt-2 text-gray-500">Please provide your business and banking details to complete the onboarding process for {request.first_name} {request.last_name}.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-white shadow-xl shadow-gray-200/40 rounded-3xl overflow-hidden border border-gray-100">

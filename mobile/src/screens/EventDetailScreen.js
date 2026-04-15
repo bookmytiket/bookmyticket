@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
+import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
@@ -11,18 +11,17 @@ const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df8
 
 function getEventById(id, convexEvents) {
   const sid = String(id);
-  const fromConvex = (convexEvents || []).find((e) => String(e._id) === sid || String(e.id) === sid);
+  const fromConvex = (convexEvents || []).find((e) => String(e.id) === sid);
   if (!fromConvex) return null;
   return {
     ...fromConvex,
-    id: fromConvex._id || fromConvex.id,
-    img: fromConvex.img || fromConvex.bannerPreview || DEFAULT_IMG,
+    img: fromConvex.img || fromConvex.banner_preview || DEFAULT_IMG,
     title: fromConvex.title || 'Event',
     date: fromConvex.date || 'TBA',
     time: fromConvex.time || '',
     location: fromConvex.location || fromConvex.venue || fromConvex.address || 'Venue',
     description: fromConvex.description || 'Join us for this event. Book your tickets now.',
-    price: fromConvex.price ?? fromConvex.normalTicketPrice ?? 499,
+    price: fromConvex.price ?? fromConvex.normal_ticket_price ?? 499,
     // Web Sync: Consistent flags
     featured: fromConvex.featured !== false,
     trending: fromConvex.trending !== false,
@@ -34,17 +33,19 @@ export default function EventDetailScreen() {
   const navigation = useNavigation();
   const { user, addToRecentlyViewed } = useAuth();
   const { eventId, event: routeEvent } = route.params || {};
-  const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
+  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
 
   const event = useMemo(() => {
-    if (routeEvent) return { ...routeEvent, id: routeEvent._id || routeEvent.id };
+    if (routeEvent) return { ...routeEvent, id: routeEvent.id };
     return getEventById(eventId, convexEvents);
   }, [eventId, routeEvent, convexEvents]);
 
-  const access = useQuery(api.events.getMeetingAccess, {
-    eventId: event?._id || event?.id,
-    userId: user?.email || undefined
-  });
+  const { data: access } = useSupabaseQuery('bookings', (q) => 
+    event?.id && user?.identifier 
+      ? q.eq('event_id', event.id).eq('email', user.identifier).eq('status', 'Confirmed').single()
+      : q.eq('id', 'none'),
+    [event?.id, user?.identifier]
+  );
 
   React.useEffect(() => {
     if (event) {
@@ -97,7 +98,7 @@ export default function EventDetailScreen() {
         <Text style={styles.price}>₹{Number(event.price)}</Text>
         <Text style={styles.desc}>{event.description}</Text>
         
-        {access?.status === "success" ? (
+        {access ? (
           <TouchableOpacity 
             style={[styles.bookBtn, { backgroundColor: '#3b82f6' }]} 
             onPress={() => navigation.navigate('MeetingWaitingRoom', { eventId: String(event.id) })}
@@ -105,18 +106,18 @@ export default function EventDetailScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="videocam" size={20} color="#fff" />
               <Text style={styles.bookBtnText}>
-                {access.meetingStatus === 'live' ? 'Join Meeting Now' : 'Enter Waiting Room'}
+                {event.meeting_status === 'live' ? 'Join Meeting Now' : 'Enter Waiting Room'}
               </Text>
             </View>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
-            style={[styles.bookBtn, access?.meetingStatus === 'expired' && styles.disabledBtn]} 
+            style={[styles.bookBtn, event.meeting_status === 'expired' && styles.disabledBtn]} 
             onPress={handleBookNow}
-            disabled={access?.meetingStatus === 'expired'}
+            disabled={event.meeting_status === 'expired'}
           >
             <Text style={styles.bookBtnText}>
-              {access?.meetingStatus === 'expired' ? 'Event Expired' : 'Book Now'}
+              {event.meeting_status === 'expired' ? 'Event Expired' : 'Book Now'}
             </Text>
           </TouchableOpacity>
         )}

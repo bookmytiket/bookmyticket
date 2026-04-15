@@ -5,9 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Mail, X, Check, Copy } from "lucide-react";
 import HeroBanner from "@/components/HeroBanner";
 import { useAuth } from "@/components/AuthContext";
-import { useQuery, useMutation, useConvex } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { hashPassword } from "@/app/utils/hashPassword";
+import { supabase } from "@/lib/supabase";
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
 import CouponModal from "@/components/CouponModal";
 import EmojiBackground from "@/components/EmojiBackground";
@@ -64,7 +62,6 @@ export default function SignInPage() {
     const searchParams = useSearchParams();
     const redirectPath = searchParams.get("redirect");
     const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
-    const convex = useConvex();
     const [dealIdx, setDealIdx] = useState(0);
     const [currentTime, setCurrentTime] = useState("");
     const [selectedCoupon, setSelectedCoupon] = useState(null);
@@ -86,39 +83,34 @@ export default function SignInPage() {
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
     useEffect(() => {
         if (!authLoading && user) {
-            console.log("SignInPage: already logged in as", user.role, ". Redirecting to:", redirectPath || "default");
-            // Determine destination: prioritize role-based dashboard for management roles, 
-            // but allow redirectPath for regular users and organisers (unless organiser is professional vendor)
-            let destination = (redirectPath && redirectPath !== "/signin" && redirectPath !== "/signup") ? redirectPath : "/";
+            // Determine redirect: prioritize explicit redirectPath if valid
+            let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
+            const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
 
-            if (user.role === "admin") {
-                destination = "/admin";
-            } else if (user.role === "staff") {
-                destination = "/organiser?tab=pwa_scanner";
-            } else if (user.role === "branding_partner") {
-                destination = "/branding/dashboard";
-            } else if (user.role === "organiser") {
-                // If it's a professional service vendor, always go to vendor dashboard
-                if (user.type === "professional_service" || (user.category && isServiceProvider(user.category))) {
-                    destination = "/vendor/dashboard";
-                } else if (redirectPath?.startsWith("/organiser")) {
-                    // Respect specific redirects to organiser sub-pages if they already point to the dashboard
-                    destination = redirectPath;
+            let destination = isInvalidRedirect ? "/" : decodedRedirect;
+
+            // Apply role-based defaults ONLY if no valid redirect was provided
+            if (isInvalidRedirect) {
+                if (user.role === "admin") {
+                    destination = "/admin";
+                } else if (user.role === "staff") {
+                    destination = "/organiser?tab=pwa_scanner";
+                } else if (user.role === "branding_partner") {
+                    destination = "/branding/dashboard";
+                } else if (user.role === "organiser") {
+                    // If it''s a professional service vendor, always go to vendor dashboard
+                    if (user.type === "professional_service" || (user.category && isServiceProvider(user.category))) {
+                        destination = "/vendor/dashboard";
+                    } else {
+                        destination = "/organiser";
+                    }
                 } else {
-                    // Default to organiser dashboard even if redirectPath requests /profile or /
-                    destination = "/organiser";
-                }
-            } else {
-                // IMPORTANT: For public users, never redirect to management/protected paths
-                // This prevents redirection loops if a user somehow has redirect=/organiser
-                const protectedPaths = ["/organiser", "/admin", "/vendor", "/branding", "/coupons", "/services/manage"];
-                if (protectedPaths.some(p => destination.startsWith(p))) {
-                    console.log("SignInPage: Public user blocked from protected path:", destination);
+                    // IMPORTANT: For public users, default to profile
                     destination = "/profile";
                 }
             }
 
-            console.log("SignInPage: final destination determined as:", destination);
+            console.log("SignInPage: Final destination determined as:", destination);
             router.replace(destination);
         }
     }, [user, authLoading, router, redirectPath]);
@@ -171,63 +163,23 @@ export default function SignInPage() {
     const [otpError, setOtpError] = useState("");
     const [pendingSignupData, setPendingSignupData] = useState(null);
 
-    const createUser = useMutation(api.users.create);
-    const sendOTPMutation = useMutation(api.auth.sendOTP);
-    const verifySignupOTP = useMutation(api.auth.verifyOTPAndCreateAccount);
-    const verifyLoginOTPMutation = useMutation(api.auth.verifyLoginOTP);
-    const loginMutation = useMutation(api.auth.login);
-    const forgotPassMutation = useMutation(api.auth.forgotPassword);
-    const verifyOTPOnlyMutation = useMutation(api.auth.verifyOTPOnly);
-
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
-    const convexSsoSettings = useQuery(api.ssoSettings.get);
-    useEffect(() => {
-        if (!convexSsoSettings) return;
-        const fb = convexSsoSettings.facebookEnabled || false;
-        const goog = convexSsoSettings.googleEnabled || false;
-        setSsoConfigs(prev => {
-            if (prev.facebook === fb && prev.google === goog) return prev;
-            return { facebook: fb, google: goog };
-        });
-    }, [convexSsoSettings]);
+    // SSO configurations - static for now or fetched from profiles/system_config
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: true, google: true });
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoginError("");
 
-        const rawId = identifier.trim();
-        const id = rawId.toLowerCase();
-        const hashed = await hashPassword(password);
-        // 1. Unified login check via auth.login mutation for all roles (User, Admin, Staff, Organiser)
+        const email = identifier.trim().toLowerCase();
+        
         try {
-            const res = await loginMutation({ 
-                identifier: id, 
-                password: hashed,
-                ip: userIp,
-                userAgent: typeof window !== "undefined" ? window.navigator.userAgent : "Unknown"
-            });
-            if (res.success) {
-                if (res.needsOtp) {
-                    setOtpEmail(res.email);
-                    setOtpPurpose("login");
-                    setMode("verify-otp");
-                    return;
-                }
-                // Handle all roles (Admin, Staff, Organiser) immediate login
-                await login(id, hashed, res.role, res.data, redirectPath);
-                
-                // If it's an organiser and needs to change password, redirect them immediately after login
-                if (res.role === "organiser" && res.data.forcePasswordChange) {
-                    console.log("Forcing password change for organiser");
-                    router.replace(`/reset-password?email=${encodeURIComponent(id)}&force=true`);
-                }
-                return;
-            } else {
-                setLoginError(res.error || "Invalid username / email or password.");
+            const result = await login(email, password, redirectPath);
+            if (!result.success) {
+                setLoginError(result.error || "Invalid email or password.");
             }
         } catch (err) {
             console.error("Login error:", err);
-            setLoginError(err.message || "An error occurred during login.");
+            setLoginError("An error occurred during login.");
         }
     };
 
@@ -238,13 +190,19 @@ export default function SignInPage() {
         const email = signupEmail.trim();
         setSignupOtpSending(true);
         try {
-            await sendOTPMutation({ email: email, purpose: "signup" });
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send', email, purpose: 'signup' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to send OTP.");
+            
             setSignupStep(2);
             setSignupOtpCode("");
-            setSignupError(""); // Clear any previous errors
         } catch (err) {
             console.error("Signup OTP error:", err);
-            setSignupError(err.message || "Could not send verification code. Please try again.");
+            setSignupError(err.message || "Could not send verification code.");
         } finally {
             setSignupOtpSending(false);
         }
@@ -256,18 +214,18 @@ export default function SignInPage() {
         if (signupOtpCode.length !== 6) { setSignupError("Please enter the 6-digit code."); return; }
         setSignupOtpVerifying(true);
         try {
-            // Strictly verify the OTP against the backend before proceeding
-            await verifyOTPOnlyMutation({
-                email: signupEmail,
-                code: signupOtpCode,
-                purpose: "signup"
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify', email: signupEmail.trim(), code: signupOtpCode, purpose: 'signup' })
             });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Invalid OTP.");
             
             setSignupOtpVerified(true);
             setSignupStep(3);
-            setSignupError("");
         } catch (err) {
-            setSignupError("Invalid or expired code. Please check and try again.");
+            setSignupError(err.message || "Invalid code.");
         } finally {
             setSignupOtpVerifying(false);
         }
@@ -278,25 +236,33 @@ export default function SignInPage() {
         setSignupError("");
         if (signupPass !== signupConfirm) { setSignupError("Passwords do not match."); return; }
         if (signupPass.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
+        if (!signupName.trim()) { setSignupError("Please enter your full name."); return; }
 
         try {
-            const hashed = await hashPassword(signupPass);
-            // verifyOTPAndCreateAccount does final OTP validation + account creation
-            await verifySignupOTP({
-                fullName: signupName,
-                email: signupEmail.trim(),
-                password: hashed,
-                username: signupEmail.split("@")[0] + Math.floor(Math.random() * 1000),
-                code: signupOtpCode,
+            // Use the server-side admin API route so that:
+            // 1. email_confirm=true → user is immediately active (we already verified email via OTP)
+            // 2. The DB trigger auto-creates the profiles row
+            // 3. No client-side supabase.auth.signUp() → no Supabase confirmation email conflict
+            const res = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: signupEmail.trim().toLowerCase(),
+                    password: signupPass,
+                    full_name: signupName.trim(),
+                }),
             });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || "Signup failed. Please try again.");
+            }
+
             setSignupSuccess(true);
         } catch (err) {
-            setSignupError(err.message?.includes("OTP") ? "Invalid or expired code." : "Could not create account. Please try again.");
-            // If OTP expired, go back to step 2
-            if (err.message?.includes("OTP") || err.message?.includes("expired")) {
-                setSignupStep(2);
-                setSignupOtpCode("");
-            }
+            console.error("Signup error:", err);
+            setSignupError(err.message || "Could not create account. Please try again.");
         }
     };
 
@@ -307,65 +273,71 @@ export default function SignInPage() {
         if (otpCode.length !== 6) { setOtpError("Please enter a valid 6-digit code."); return; }
 
         try {
-            if (otpPurpose === "signup") {
-                const userId = await verifySignupOTP({
-                    ...pendingSignupData,
-                    code: otpCode,
-                });
-                if (userId) {
-                    setSignupSuccess(true);
-                    setMode("signup");
-                }
-            } else {
-                const res = await verifyLoginOTPMutation({ email: otpEmail, code: otpCode });
-                if (res.success) {
-                    await login(otpEmail, "", res.role || "user", res.data, redirectPath);
-                }
-            }
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify', email: otpEmail, code: otpCode, purpose: otpPurpose || 'login' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Invalid OTP.");
+            
+            // Note: Since this is passwordless login via custom OTP, we need a custom token 
+            // for the user session, or we rely exclusively on passwords via conventional login.
+            // If they are just logging in here, they need a session.
+            window.location.reload();
         } catch (err) {
-            setOtpError("Invalid or expired code. Please check and try again.");
+            setOtpError(err.message || "Invalid or expired code. Please check and try again.");
         }
     };
 
     const handleForgotPassword = async (e) => {
         e.preventDefault();
         setForgotError("");
+        setLoading(true);
         try {
-            const ok = await forgotPassMutation({ email: forgotEmail.trim().toLowerCase() });
-            if (ok) {
-                setForgotSuccess(true);
+            const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send', email: forgotEmail.trim().toLowerCase() })
+            });
+            
+            let data;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await res.json();
             } else {
-                setForgotError("Email not found. Please check and try again.");
+                const text = await res.text();
+                // If it's HTML or some other junk, provide a readable fallback
+                throw new Error(text.includes("<!DOCTYPE") ? "Server error: link is temporarily unavailable." : text);
             }
+
+            if (!data.success) throw new Error(data.error || "Failed to send reset link.");
+            
+            setForgotSuccess(true);
         } catch (err) {
-            setForgotError("An error occurred. Please try again later.");
+            console.error("Forgot pass error:", err);
+            setForgotError(err.message || "An unexpected error occurred.");
+        } finally {
+            setLoading(false);
         }
     };
+
     
     // ── SSO Login Handler (Mock) ──
     const handleSSOLogin = async (provider) => {
         setLoading(true);
         setLoginError("");
         try {
-            // For demo purposes, we use a mock email
-            const mockEmail = `${provider}.demo@bookmyticket.net`;
-            const userData = await convex.query(api.users.getByIdentifier, { identifier: mockEmail });
-            
-            if (userData) {
-                // If demo user exists, perform login
-                await login(mockEmail, "", "user", userData, redirectPath);
-            } else {
-                // Experience: auto-fill signup for demo
-                setSignupEmail(mockEmail);
-                setMode("signup");
-                setSignupStep(3);
-                setSignupName(`${provider.charAt(0).toUpperCase() + provider.slice(1)} Demo User`);
-                // Move to top to show user the change
-                window.scrollTo({ top: 0, behavior: "smooth" });
-            }
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: `${window.location.origin}${redirectPath || '/'}`
+                }
+            });
+            if (error) throw error;
         } catch (err) {
             console.error(`${provider} login error:`, err);
-            setLoginError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is currently unavailable.`);
+            setLoginError(`${provider} login is currently unavailable.`);
         } finally {
             setLoading(false);
         }

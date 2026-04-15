@@ -6,8 +6,7 @@ import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as
 import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 
 const SUBNAV_LINKS = [
   { href: "/#explore-popular-events", label: "Events" },
@@ -170,17 +169,41 @@ export default function Navbar() {
   }, [selectedCity]);
 
 
-  const convexCategories = useQuery(api.systemConfig.getConfig, { key: "admin_categories" });
-  const userBookings = useQuery(api.bookings.getByUser, (mounted && user) ? { userId: user.identifier } : "skip");
-
-  const nextMeeting = (userBookings || []).find(b => b.status !== "Cancelled" && b.meetingUrl);
+  const [userBookings, setUserBookings] = useState([]);
+  const [nextMeeting, setNextMeeting] = useState(null);
 
   useEffect(() => {
-    if (convexCategories && Array.isArray(convexCategories)) {
-      const names = convexCategories.map((c) => (c && c.name) ? String(c.name).trim() : "").filter(Boolean);
-      if (names.length > 0) setNavCategories(names);
-    }
-  }, [convexCategories]);
+    const fetchNavbarData = async () => {
+      // 1. Fetch Categories
+      const { data: catData } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'admin_categories')
+        .maybeSingle();
+      
+      if (catData?.value && Array.isArray(catData.value)) {
+        const names = catData.value.map(c => c?.name ? String(c.name).trim() : "").filter(Boolean);
+        if (names.length > 0) setNavCategories(names);
+      }
+
+      // 2. Fetch User Bookings (if logged in and valid ID)
+      if (mounted && user?.id && user.id !== "none") {
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (bookings) {
+          setUserBookings(bookings);
+          const meeting = bookings.find(b => b.status !== "Cancelled" && b.customer_details?.meeting_url);
+          setNextMeeting(meeting);
+        }
+      }
+    };
+
+    if (mounted) fetchNavbarData();
+  }, [mounted, user]);
 
   const setActiveCat = (cat) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -225,7 +248,6 @@ export default function Navbar() {
 
 
 
-  const createPartnerRequest = useMutation(api.partnerRequests.submitRequest);
   const [orgLoading, setOrgLoading] = useState(false);
 
   const handleOrgSubmit = async (e) => {
@@ -237,7 +259,12 @@ export default function Navbar() {
     setOrgLoading(true);
     try {
       const type = isServiceProvider(orgForm.category) ? "professional_service" : "event_organiser";
-      await createPartnerRequest({ ...orgForm, type });
+      const { error } = await supabase
+        .from('partner_requests')
+        .insert([{ ...orgForm, type }]);
+      
+      if (error) throw error;
+      
       setOrgSent(true);
       setTimeout(() => {
         setOrgSent(false);
@@ -390,9 +417,9 @@ export default function Navbar() {
                 <button
                     onClick={() => {
                         if (nextMeeting) {
-                            const url = nextMeeting.meetingUrl;
-                            const target = url.startsWith("http") ? url : `/${url}`;
-                            window.open(target, '_blank', 'noopener,noreferrer');
+                        const url = nextMeeting.customer_details?.meeting_url;
+                        const target = url.startsWith("http") ? url : `/${url}`;
+                        window.open(target, '_blank', 'noopener,noreferrer');
                         } else {
                             router.push('/meeting/join');
                         }

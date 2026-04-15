@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
 import * as LucideIcons from "lucide-react";
 
 export default function CheckoutFooterBar() {
-    const footers = useQuery(api.checkoutFooters.listActive);
+    const { data: footersRaw } = useSupabaseQuery('checkout_footers', (q) => q.eq('status', 'Active'), []);
+    const footers = footersRaw || [];
     const router = useRouter();
     
     const [modalData, setModalData] = useState(null);
@@ -51,7 +51,7 @@ export default function CheckoutFooterBar() {
                         const Icon = LucideIcons[item.iconName] || LucideIcons.Info;
                         return (
                             <div 
-                                key={item._id}
+                                key={item.id}
                                 onClick={() => handleItemClick(item)}
                                 style={{
                                     display: "flex",

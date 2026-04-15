@@ -13,8 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseMutation } from '../hooks/useSupabase';
 import { Colors } from '../theme/Theme';
 
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
@@ -23,7 +22,23 @@ const CATEGORIES = SERVICE_CATEGORIES.map(c => c.name);
 const ROLES = ["Organiser", "Individual", "Pvt Ltd", "Others"];
 
 export default function BecomePartnerScreen({ navigation }) {
-  const submitRequest = useMutation(api.partnerRequests.submitRequest);
+  // Migrated to Supabase
+  const { mutate: submitRequest } = useSupabaseMutation(async (supabase, data) => {
+    const { error } = await supabase.from('partner_requests').insert({
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      category: data.category,
+      role: data.role,
+      remarks: data.remarks,
+      type: data.type,
+      status: 'Pending',
+      kyc_status: 'Not Started'
+    });
+    if (error) throw error;
+  });
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showCatPicker, setShowCatPicker] = useState(false);

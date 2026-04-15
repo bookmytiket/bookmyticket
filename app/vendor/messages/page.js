@@ -1,7 +1,4 @@
-"use client";
-import React, { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -29,17 +26,18 @@ export default function MessagesPage() {
     const [messageText, setMessageText] = useState("");
     const messagesEndRef = useRef(null);
 
-    const rooms = useQuery(
-        api.vendorCommunications.getRooms,
-        vendorId ? { userId: vendorId } : "skip"
-    ) || [];
-    const messages = useQuery(
-        api.vendorCommunications.getMessages,
-        selectedRoomId ? { roomId: selectedRoomId } : "skip"
-    ) || [];
-    const sendMessage = useMutation(api.vendorCommunications.sendMessage);
+    const { data: rooms = [] } = useSupabaseQuery('vendor_chat_rooms', (q) => 
+        q.contains('participants', [vendorId]).order('last_message_at', { ascending: false })
+    , [vendorId]);
 
-    const selectedRoom = rooms.find(r => r._id === selectedRoomId);
+    const { data: messages = [] } = useSupabaseQuery('vendor_chat_messages', (q) => 
+        q.eq('room_id', selectedRoomId).order('created_at', { ascending: true })
+    , [selectedRoomId]);
+
+    const [sendMessage] = useSupabaseMutation('vendor_chat_messages', 'insert');
+    const [updateRoom] = useSupabaseMutation('vendor_chat_rooms', 'update', (q, p) => q.eq('id', p.id));
+
+    const selectedRoom = (rooms || []).find(r => r.id === selectedRoomId);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,10 +53,18 @@ export default function MessagesPage() {
 
         try {
             await sendMessage({
-                roomId: selectedRoomId,
-                senderId: vendorId,
+                room_id: selectedRoomId,
+                sender_id: vendorId,
                 text: messageText,
             });
+            
+            // Update last message in room
+            await updateRoom({
+                id: selectedRoomId,
+                last_message: messageText,
+                last_message_at: new Date().toISOString()
+            });
+
             setMessageText("");
         } catch (error) {
             console.error("Failed to send message:", error);
@@ -66,6 +72,7 @@ export default function MessagesPage() {
     };
 
     const formatTime = (ts) => {
+        if (!ts) return "";
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
@@ -87,12 +94,12 @@ export default function MessagesPage() {
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
                     {rooms.length > 0 ? rooms.map((room) => {
-                        const otherParticipant = room.participants.find(p => p !== vendorId);
-                        const isActive = selectedRoomId === room._id;
+                        const otherParticipant = room.participants?.find(p => p !== vendorId);
+                        const isActive = selectedRoomId === room.id;
                         return (
                             <button 
-                                key={room._id}
-                                onClick={() => setSelectedRoomId(room._id)}
+                                key={room.id}
+                                onClick={() => setSelectedRoomId(room.id)}
                                 className={`w-full p-5 rounded-[2rem] flex items-center space-x-5 transition-all group relative ${isActive ? 'bg-pink-50 border border-pink-100 shadow-inner' : 'hover:bg-slate-50 border border-transparent'}`}
                             >
                                 <div className="relative">
@@ -104,9 +111,9 @@ export default function MessagesPage() {
                                 <div className="flex-1 text-left min-w-0">
                                     <div className="flex items-center justify-between">
                                         <p className={`text-sm font-black uppercase tracking-tight italic ${isActive ? 'text-pink-600' : 'text-slate-900'}`}>{otherParticipant}</p>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{formatTime(room.lastMessageAt)}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{formatTime(room.last_message_at)}</span>
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate mt-1 font-medium italic">"{room.lastMessage || "Start a conversation..."}"</p>
+                                    <p className="text-xs text-slate-500 truncate mt-1 font-medium italic">"{room.last_message || "Start a conversation..."}"</p>
                                 </div>
                                 {isActive && (
                                     <div className="absolute right-5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-pink-500 rounded-full animate-pulse"></div>
@@ -135,10 +142,10 @@ export default function MessagesPage() {
                                     <ChevronLeft size={24} />
                                 </button>
                                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-50 to-pink-100 text-pink-500 border border-pink-200 flex items-center justify-center font-black shadow-inner">
-                                    {selectedRoom?.participants.find(p => p !== vendorId).charAt(0).toUpperCase()}
+                                    {selectedRoom?.participants?.find(p => p !== vendorId)?.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <p className="text-lg font-black text-slate-900 italic tracking-tighter uppercase">{selectedRoom?.participants.find(p => p !== vendorId)}</p>
+                                    <p className="text-lg font-black text-slate-900 italic tracking-tighter uppercase">{selectedRoom?.participants?.find(p => p !== vendorId)}</p>
                                     <div className="flex items-center space-x-2">
                                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                                         <span className="text-[10px] text-green-600 font-black uppercase tracking-[0.2em]">Active Now</span>
@@ -161,9 +168,9 @@ export default function MessagesPage() {
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8 bg-slate-50/20">
                             {messages.map((msg, i) => {
-                                const isMe = msg.senderId === vendorId;
+                                const isMe = msg.sender_id === vendorId;
                                 return (
-                                    <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-${isMe ? 'right' : 'left'}-6 duration-400`}>
+                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-${isMe ? 'right' : 'left'}-6 duration-400`}>
                                         <div className={`max-w-[70%] space-y-2 ${isMe ? 'items-end' : 'items-start'}`}>
                                             <div className={`px-6 py-4 rounded-[1.8rem] text-sm font-bold shadow-xl shadow-slate-200/20 ${
                                                 isMe 
@@ -173,7 +180,7 @@ export default function MessagesPage() {
                                                 {msg.text}
                                             </div>
                                             <div className="px-3 flex items-center space-x-2">
-                                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{formatTime(msg.timestamp)}</span>
+                                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{formatTime(msg.created_at)}</span>
                                                 {isMe && <CheckCheck size={14} className="text-pink-500" />}
                                             </div>
                                         </div>

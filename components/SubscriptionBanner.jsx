@@ -1,26 +1,31 @@
 "use client";
 import React, { useState } from "react";
-import { Check, X } from "lucide-react";
-import { useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { Check } from "lucide-react";
 
 export default function SubscriptionBanner() {
     const [email, setEmail] = useState("");
     const [showModal, setShowModal] = useState(false);
-
-    const addSubscriber = useMutation(api.subscribers.add);
+    const [loading, setLoading] = useState(false);
 
     const handleSubscribe = async (e) => {
         e.preventDefault();
-        if (email) {
-            try {
-                await addSubscriber({ email });
-                setShowModal(true);
-                setEmail("");
-            } catch (err) {
-                console.error("Subscription error:", err);
-                alert("An error occurred. Please try again later.");
-            }
+        if (!email) return;
+        setLoading(true);
+        try {
+            const res = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Subscription failed.');
+            setShowModal(true);
+            setEmail("");
+        } catch (err) {
+            console.error("Subscription error:", err);
+            alert(err.message || "An error occurred. Please try again later.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -187,29 +192,29 @@ export default function SubscriptionBanner() {
                     />
                     <button
                         type="submit"
+                        disabled={loading}
                         style={{
-                            background: "#ffcc00",
+                            background: loading ? "#cca800" : "#ffcc00",
                             color: "#000",
                             border: "none",
                             borderRadius: "100px",
                             padding: "12px 36px",
                             fontSize: "15px",
                             fontWeight: 700,
-                            cursor: "pointer",
+                            cursor: loading ? "not-allowed" : "pointer",
                             transition: "all 0.3s ease",
                             textTransform: "uppercase",
                             letterSpacing: "0.05em",
+                            opacity: loading ? 0.7 : 1,
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#e6b800";
-                            e.currentTarget.style.transform = "scale(1.02)";
+                            if (!loading) { e.currentTarget.style.background = "#e6b800"; e.currentTarget.style.transform = "scale(1.02)"; }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "#ffcc00";
-                            e.currentTarget.style.transform = "scale(1)";
+                            if (!loading) { e.currentTarget.style.background = "#ffcc00"; e.currentTarget.style.transform = "scale(1)"; }
                         }}
                     >
-                        Subscribe
+                        {loading ? "Subscribing..." : "Subscribe"}
                     </button>
                 </form>
             </div>

@@ -1,30 +1,53 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, ScrollView, Modal, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
-import { ScrollView, Modal, Image, Alert } from 'react-native';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation();
   const [selectedTicket, setSelectedTicket] = React.useState(null);
 
-  const eventBookingsList = useQuery(api.bookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
-  const vendorBookingsList = useQuery(api.vendorBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
-  const turfBookingsList = useQuery(api.turfBookings.getByUser, user?.identifier ? { userId: user.identifier } : "skip");
+  // Migrated to Supabase
+  const { data: eventBookingsList } = useSupabaseQuery('bookings', (q) => 
+    q.select('*, events(*)').eq('user_id', user?.identifier), 
+    [user?.identifier]
+  );
+  
+  const { data: vendorBookingsList } = useSupabaseQuery('vendor_bookings', (q) => 
+    q.select('*').eq('user_id', user?.identifier), 
+    [user?.identifier]
+  );
+
+  const { data: turfBookingsList } = useSupabaseQuery('turf_bookings', (q) => 
+    q.select('*, turfs(*)').eq('user_id', user?.identifier), 
+    [user?.identifier]
+  );
 
   const userBookings = [
-    ...(eventBookingsList || []).map(b => ({ ...b, bookingType: 'event' })),
-    ...(vendorBookingsList || []).map(b => ({ ...b, bookingType: 'vendor' })),
-    ...(turfBookingsList || []).map(b => ({ ...b, bookingType: 'turf', eventName: b.turfName || 'Turf Booking', ticketCount: b.participantCount || 1 })),
+    ...(eventBookingsList || []).map(b => ({ 
+      ...b, 
+      bookingType: 'event', 
+      eventName: b.events?.title || 'Event' 
+    })),
+    ...(vendorBookingsList || []).map(b => ({ 
+      ...b, 
+      bookingType: 'vendor', 
+      eventName: b.service_type || 'Service' 
+    })),
+    ...(turfBookingsList || []).map(b => ({ 
+      ...b, 
+      bookingType: 'turf', 
+      eventName: b.turfs?.name || 'Turf', 
+      ticketCount: b.participant_count || 1 
+    })),
   ].sort((a, b) => {
-    const dateA = a.bookingDate || a._creationTime;
-    const dateB = b.bookingDate || b._creationTime;
+    const dateA = a.created_at;
+    const dateB = b.created_at;
     return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 
@@ -136,18 +159,18 @@ export default function ProfileScreen() {
                   <Text style={styles.eventName}>{booking.eventName}</Text>
                   <Text style={styles.bookingDetails}>
                     {booking.bookingType === 'turf'
-                      ? `${booking.slotTime || booking.date || 'Slot booked'}`
+                      ? `${booking.slot_time || booking.date || 'Slot booked'}`
                       : booking.bookingType === 'vendor'
                       ? 'Service Session'
-                      : `${booking.ticketCount} Seat${booking.ticketCount !== 1 ? 's' : ''}`
-                    } • ₹{booking.totalPrice || booking.amount || 0}
+                      : `${booking.ticket_count || booking.ticketCount} Seat${(booking.ticket_count || booking.ticketCount) !== 1 ? 's' : ''}`
+                    } • ₹{booking.total_price || booking.totalPrice || booking.amount || 0}
                   </Text>
                   
-                  {(booking.meetingUrl || booking.eventType === "Online" || booking.virtual) && (
+                  {(booking.meeting_url || booking.meetingUrl || booking.event_type === "Online" || (booking.events && booking.events.virtual)) && (
                     <TouchableOpacity 
                       style={styles.inlineJoinBtn} 
                       onPress={() => {
-                        const url = booking.meetingUrl;
+                        const url = booking.meeting_url || booking.meetingUrl;
                         // Identify if the URL is exclusively for organisers/admin/vendors
                         const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
                         
@@ -156,8 +179,7 @@ export default function ProfileScreen() {
                           return;
                         }
                         
-                        const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.net';
-                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
+                        const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `https://bookmyticket.net/${url}`;
                         Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                       }}
                     >
@@ -207,7 +229,7 @@ export default function ProfileScreen() {
               {selectedTicket && (
                 <View style={{ opacity: selectedTicket.scanned ? 0.3 : 1 }}>
                   <Image
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${selectedTicket._id}` }}
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${selectedTicket.id}` }}
                     style={styles.qrCode}
                   />
                   {selectedTicket.scanned && (
@@ -221,15 +243,24 @@ export default function ProfileScreen() {
             </View>
 
             <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
-            {selectedTicket?.date && <Text style={styles.modalBookingMeta}>📅 {selectedTicket.date}{selectedTicket.slotTime ? ` • ${selectedTicket.slotTime}` : ''}</Text>}
-            {selectedTicket?.ticketCount > 0 && <Text style={styles.modalBookingMeta}>🎫 {selectedTicket.ticketCount} Ticket{selectedTicket.ticketCount !== 1 ? 's' : ''}</Text>}
-            <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?._id}</Text>
+            {(selectedTicket?.date || (selectedTicket?.events && selectedTicket?.events.date)) && (
+              <Text style={styles.modalBookingMeta}>
+                📅 {selectedTicket.date || selectedTicket.events.date}
+                {selectedTicket.slot_time ? ` • ${selectedTicket.slot_time}` : ''}
+              </Text>
+            )}
+            {(selectedTicket?.ticket_count || selectedTicket?.ticketCount) > 0 && (
+              <Text style={styles.modalBookingMeta}>
+                🎫 {selectedTicket.ticket_count || selectedTicket.ticketCount} Ticket{(selectedTicket.ticket_count || selectedTicket.ticketCount) !== 1 ? 's' : ''}
+              </Text>
+            )}
+            <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?.id}</Text>
             
-            {(selectedTicket?.meetingUrl || selectedTicket?.eventType === "Online" || selectedTicket?.virtual) && (
+            {(selectedTicket?.meeting_url || selectedTicket?.meetingUrl || selectedTicket?.event_type === "Online" || (selectedTicket?.events && selectedTicket?.events.virtual)) && (
               <TouchableOpacity 
                 style={[styles.joinBtn, { marginTop: 20 }]} 
                 onPress={() => {
-                  const url = selectedTicket.meetingUrl;
+                  const url = selectedTicket.meeting_url || selectedTicket.meetingUrl;
                   const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
                   
                   if (!url || isInternal) {
@@ -237,8 +268,7 @@ export default function ProfileScreen() {
                     return;
                   }
                   
-                  const baseUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL || 'https://bookmyticket.net';
-                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `${baseUrl}/${url}`;
+                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `https://bookmyticket.net/${url}`;
                   Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
                 }}
               >
@@ -407,17 +437,6 @@ const styles = StyleSheet.create({
   modalEventName: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 6, textAlign: 'center' },
   modalBookingMeta: { fontSize: 13, color: Colors.textMuted, marginBottom: 4, textAlign: 'center' },
   modalBookingId: { fontSize: 12, color: Colors.textMuted, marginBottom: 24, marginTop: 4 },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    backgroundColor: '#f1f5f9',
-    padding: 16,
-    borderRadius: 16,
-  },
-  modalInfoLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 4 },
-  modalInfoValue: { fontSize: 14, fontWeight: '800', color: Colors.text },
-  title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
   btn: { padding: 18, borderRadius: 14, width: '100%', alignItems: 'center' },
   btnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
   joinBtn: {
@@ -455,5 +474,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
+  title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
 });
-

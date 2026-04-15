@@ -1,7 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { 
     CheckCircle, 
@@ -25,8 +24,18 @@ export default function TurfBookings() {
     const { user } = useAuth();
     const vendorId = user?.userId || user?.identifier;
 
-    const bookings = useQuery(api.turfBookings.listByVendor, { organiserId: vendorId || "" }) || [];
-    const confirmPayment = useMutation(api.turfBookings.confirmPayment);
+    const [bookings, setBookings] = useState([]);
+
+    useEffect(() => {
+        if (!vendorId) return;
+        supabase.from('turf_bookings').select('*').eq('organiser_id', vendorId)
+            .then(({ data }) => setBookings(data || []));
+    }, [vendorId]);
+
+    const handleConfirmPayment = async (id) => {
+        await supabase.from('turf_bookings').update({ booking_status: 'confirmed', payment_status: 'fully_paid' }).eq('id', id);
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, booking_status: 'confirmed', payment_status: 'fully_paid' } : b));
+    };
 
     const [filter, setFilter] = useState("all");
     const [search, setSearch] = useState("");

@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
@@ -69,16 +68,17 @@ export default function PartnerStatusScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
 
-  const requests = useQuery(
-    api.partnerRequests.getByEmail,
-    user?.identifier ? { email: user.identifier } : 'skip'
+  // Migrated to Supabase
+  const { data: requests, loading: isLoading } = useSupabaseQuery('partner_requests', (q) => 
+    q.select('*').eq('email', user?.identifier).order('created_at', { ascending: false }), 
+    [user?.identifier]
   );
 
   const latest = requests?.[0];
   const status = latest?.status?.toLowerCase() || 'pending';
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
-  if (requests === undefined) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.secondary} />
@@ -143,7 +143,7 @@ export default function PartnerStatusScreen() {
 
           <View style={styles.detailRow}>
             <Text style={styles.detailKey}>Name</Text>
-            <Text style={styles.detailValue}>{latest.firstName} {latest.lastName}</Text>
+            <Text style={styles.detailValue}>{latest.first_name || latest.firstName} {latest.last_name || latest.lastName}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailKey}>Category</Text>
@@ -156,8 +156,8 @@ export default function PartnerStatusScreen() {
           <View style={styles.detailRow}>
             <Text style={styles.detailKey}>Submitted</Text>
             <Text style={styles.detailValue}>
-              {latest._creationTime
-                ? new Date(latest._creationTime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+              {latest.created_at
+                ? new Date(latest.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                 : 'N/A'}
             </Text>
           </View>

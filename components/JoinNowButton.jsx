@@ -1,7 +1,6 @@
 "use client";
 import React from 'react';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { Video, Lock, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { useAuth } from './AuthContext';
 import { useRouter } from 'next/navigation';
@@ -16,12 +15,40 @@ export default function JoinNowButton({ eventId, className = "" }) {
     const { user } = useAuth();
     const router = useRouter();
     const userId = user?.identifier || user?.email;
-
-    const access = useQuery(api.events.getMeetingAccess, { 
-        eventId, 
-        userId: userId || undefined 
-    });
-
+ 
+    const { data: event, loading: loadingEvent } = useSupabaseQuery('events', (q) => q.eq('id', eventId).single(), [eventId]);
+    const { data: booking, loading: loadingBooking } = useSupabaseQuery('bookings', 
+        (q) => userId ? q.eq('user_id', userId).eq('event_id', eventId).in('status', ['Confirmed', 'Paid', 'Scanned']).single() : q.eq('id', '00000000-0000-0000-0000-000000000000'), 
+        [eventId, userId]
+    );
+ 
+    const loading = loadingEvent || (userId && loadingBooking);
+ 
+    const access = React.useMemo(() => {
+        if (loading) return undefined;
+        if (!event) return { status: "not_found" };
+ 
+        const isVirtual = event.virtual || 
+                         event.type?.toLowerCase() === "online" || 
+                         event.location?.toLowerCase().includes("online") ||
+                         event.title?.toLowerCase().includes("online meeting");
+ 
+        if (!isVirtual) return { status: "not_virtual" };
+ 
+        const now = Date.now();
+        const endTs = event.endDateTime || (event.date && event.time ? new Date(`${event.date} ${event.time}`).getTime() + (2 * 60 * 60 * 1000) : 0);
+        
+        if (endTs && now > endTs) {
+            return { status: "expired" };
+        }
+ 
+        const isBooked = !!booking;
+        return { 
+            status: isBooked ? "success" : "not_booked",
+            type: event.meetingType || "internal"
+        };
+    }, [event, booking, loading]);
+ 
     if (access === undefined) {
         return (
             <button 

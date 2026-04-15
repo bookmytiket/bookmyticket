@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -48,10 +47,11 @@ export default function DashboardPage() {
     const isTurfVendor = user?.category?.toLowerCase().includes("turf");
 
     // Common Profile Query
-    const profile = useQuery(
-        api.vendors.getByOrganiserId,
-        vendorId ? { organiserId: vendorId } : "skip"
-    );
+    const { data: profileArr = [], loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
+        q.eq('organiser_id', vendorId).single()
+    , [vendorId]);
+
+    const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
 
     if (!mounted) return null;
 
@@ -63,10 +63,9 @@ export default function DashboardPage() {
 }
 
 function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteProfileModal }) {
-    const turfs = useQuery(api.turfs.getByOrganiserId, { organiserId: vendorId || "" });
-    const bookings = useQuery(api.turfBookings.listByVendor, { organiserId: vendorId || "" }) || [];
-    const slots = useQuery(api.turfManualBlocks.listByVendor, { organiserId: vendorId || "" }) || []; // Reuse for identifying vendor scale
-
+    const { data: turfs = [] } = useSupabaseQuery('turfs', (q) => q.eq('organiser_id', vendorId || ""), [vendorId]);
+    const { data: bookings = [] } = useSupabaseQuery('turf_bookings', (q) => q.eq('organiser_id', vendorId || ""), [vendorId]);
+    
     const now = new Date();
     const currentMonth = now.toISOString().split("-").slice(0, 2).join("-"); // YYYY-MM
 
@@ -74,12 +73,12 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
         totalTurfs: turfs?.length || 0,
         totalBookings: bookings.length,
         totalEarnings: bookings
-            .filter(b => b.bookingStatus === "confirmed" || b.bookingStatus === "completed")
-            .reduce((acc, b) => acc + b.totalAmount, 0),
-        pendingBookings: bookings.filter(b => b.bookingStatus === "pending").length,
+            .filter(b => b.booking_status === "confirmed" || b.booking_status === "completed")
+            .reduce((acc, b) => acc + b.total_amount, 0),
+        pendingBookings: bookings.filter(b => b.booking_status === "pending").length,
         mtdEarnings: bookings
             .filter(b => b.date.startsWith(currentMonth))
-            .reduce((acc, b) => acc + b.totalAmount, 0),
+            .reduce((acc, b) => acc + b.total_amount, 0),
         occupancyRate: Math.min(100, Math.round((bookings.length / ((turfs?.length || 1) * 30 || 1)) * 100)) // Heuristic: 1 booking per day per turf
     };
 
@@ -168,17 +167,17 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                     <div className="space-y-3">
                         {bookings.length > 0 ? bookings.slice(0, 5).map((booking) => (
                             <div 
-                                key={booking._id}
+                                key={booking.id}
                                 className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-blue-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-slate-50 text-blue-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
-                                        {booking.customerDetails?.name?.charAt(0) || "U"}
+                                        {booking.customer_details?.name?.charAt(0) || "U"}
                                     </div>
                                     
                                     <div className="space-y-0.5">
                                         <h4 className="text-lg font-black text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors truncate">
-                                            {booking.customerDetails?.name || "Player Cluster"}
+                                            {booking.customer_details?.name || "Player Cluster"}
                                         </h4>
                                         <div className="flex items-center gap-3">
                                             <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
@@ -187,7 +186,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                                             </span>
                                             <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                                 <Clock size={10} className="text-emerald-500" />
-                                                {booking.startTime} - {booking.endTime}
+                                                {booking.start_time} - {booking.end_time}
                                             </span>
                                         </div>
                                     </div>
@@ -195,7 +194,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
 
                                 <div className="flex items-center gap-4 mt-4 md:mt-0">
                                     <div className="text-right mr-2 text-slate-900 italic font-black text-base tracking-tighter shrink-0">
-                                        ₹{booking.totalAmount}
+                                        ₹{booking.total_amount}
                                     </div>
                                     <Link 
                                         href="/vendor/bookings"
@@ -287,25 +286,33 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
 }
 
 function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, setPromoteProfileModal }) {
-    const stats = useQuery(
-        api.vendors.getStats,
-        vendorId ? { vendorId } : "skip"
-    ) || {
-        totalBookings: 0,
-        totalEarnings: 0,
-        upcomingJobs: 0,
-        avgRating: 0
-    };
+    const { data: bookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+        q.eq('vendor_id', vendorId).eq('status', 'Pending')
+    , [vendorId]);
 
-    const bookings = useQuery(
-        api.vendorBookings.list,
-        vendorId ? { vendorId, status: "pending" } : "skip"
-    ) || [];
+    const { data: allBookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+        q.eq('vendor_id', vendorId)
+    , [vendorId]);
 
-    const upcoming = useQuery(
-        api.vendorBookings.getUpcoming,
-        vendorId ? { vendorId } : "skip"
-    ) || [];
+    const { data: reviews = [] } = useSupabaseQuery('service_reviews', (q) => 
+        q.eq('vendor_id', vendorId)
+    , [vendorId]);
+
+    const stats = React.useMemo(() => {
+        const confirmed = allBookings.filter(b => b.status === 'Confirmed' || b.status === 'Completed');
+        return {
+            totalBookings: allBookings.length,
+            totalEarnings: confirmed.reduce((acc, b) => acc + (b.total_amount || 0), 0),
+            upcomingJobs: confirmed.filter(b => new Date(b.booking_date) >= new Date()).length,
+            avgRating: reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 0
+        };
+    }, [allBookings, reviews]);
+
+    const upcoming = React.useMemo(() => {
+        return allBookings
+            .filter(b => b.status === 'Confirmed' && new Date(b.booking_date) >= new Date())
+            .sort((a, b) => new Date(a.booking_date) - new Date(b.booking_date));
+    }, [allBookings]);
 
     const portfolioCount = profile?.portfolio?.length || 0;
 
@@ -404,26 +411,26 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                     <div className="space-y-3">
                         {bookings.length > 0 ? bookings.map((booking) => (
                             <div 
-                                key={booking._id}
+                                key={booking.id}
                                 className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-pink-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-slate-50 text-pink-500 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
-                                        {booking.customerDetails?.name?.charAt(0) || "U"}
+                                        {booking.customer_details?.name?.charAt(0) || "U"}
                                     </div>
                                     
                                     <div className="space-y-0.5">
                                         <h4 className="text-lg font-black text-slate-900 tracking-tight group-hover:text-pink-600 transition-colors truncate">
-                                            {booking.customerDetails?.name || "Premium Client"}
+                                            {booking.customer_details?.name || "Premium Client"}
                                         </h4>
                                         <div className="flex items-center gap-3">
                                             <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                                 <CalendarIcon size={10} className="text-yellow-500" />
-                                                {booking.bookingDate}
+                                                {booking.booking_date}
                                             </span>
                                             <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                                 <Clock size={10} className="text-pink-500" />
-                                                {booking.bookingTime || "Flexi"}
+                                                {booking.booking_time || "Flexi"}
                                             </span>
                                         </div>
                                     </div>
@@ -499,12 +506,12 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                                 <Briefcase size={16} strokeWidth={2.5} />
                                             </div>
                                             <div className="space-y-0">
-                                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight italic">{job.customerDetails?.name || "Client"}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{job.bookingDate}</p>
+                                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight italic">{job.customer_details?.name || "Client"}</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{job.booking_date}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[9px] font-black text-emerald-600 tracking-tight italic">₹{job.totalAmount}</p>
+                                            <p className="text-[9px] font-black text-emerald-600 tracking-tight italic">₹{job.total_amount}</p>
                                         </div>
                                     </div>
                                 ))}

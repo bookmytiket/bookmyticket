@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { supabase } from '@/lib/supabase';
 
 /* ── Light theme tokens ── */
 const C = {
@@ -58,9 +57,18 @@ export default function DashboardLayout({ children }) {
   
   const tab = searchParams?.get('tab') || 'dashboard';
 
-  const kycData = useQuery(api.branding.getKYC, { brandId: user?.id || '' });
-  const kycStatus = kycData?.status || 'Verification Pending';
+  const [kycStatus, setKycStatus] = useState('Verification Pending');
   const isVerified = kycStatus === 'Verified';
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('brand_kyc')
+      .select('status')
+      .eq('brand_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data?.status) setKycStatus(data.status); });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user || user.role !== 'branding_partner') {

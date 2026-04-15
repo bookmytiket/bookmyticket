@@ -12,8 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMutation } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseMutation } from '../hooks/useSupabase';
 import { Colors } from '../theme/Theme';
 
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
@@ -23,7 +22,14 @@ const CATEGORIES = [...SERVICE_CATEGORIES.map(c => c.name), "Other"];
 const ROLES = ["Organiser", "Individual", "Pvt Ltd", "Others"];
 
 export default function BecomeOrganiserScreen({ navigation }) {
-  const submitPartnerRequest = useMutation(api.partnerRequests.submitRequest);
+  const { mutate: submitPartnerRequest } = useSupabaseMutation(async (supabase, data) => await supabase.from('organiser_details').insert([{
+    business_name: `${data.firstName} ${data.lastName}`,
+    category: data.category,
+    type: data.type,
+    kyc_status: 'Pending',
+    kyc_details: { email: data.email, phone: data.phone, remarks: data.remarks, role: data.role },
+    is_approved: false
+  }]));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 

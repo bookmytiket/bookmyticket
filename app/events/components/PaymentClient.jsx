@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { useSupabaseQuery } from '@/hooks/useSupabase';
+import { supabase } from '@/lib/supabase';
 import { CreditCard, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
@@ -16,13 +16,15 @@ export default function PaymentClient({ eventId }) {
     const [paymentStatus, setPaymentStatus] = useState('idle'); // idle, processing, success, fail
     const [paypalClientId, setPaypalClientId] = useState("");
 
-    const booking = useQuery(api.bookings.getBookingById, bookingId ? { id: bookingId } : "skip");
-    const confirmBooking = useMutation(api.bookings.confirmBooking);
-    const gateways = useQuery(api.paymentGateways.list);
+    const { data: booking } = useSupabaseQuery('bookings', (q) => 
+        bookingId ? q.eq('id', bookingId).single() : q.eq('id', 'none'),
+        [bookingId]
+    );
+    const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 
     useEffect(() => {
         if (gateways) {
-            const paypalConfig = gateways.find(g => g.name === "PayPal" && g.isEnabled);
+            const paypalConfig = gateways.find(g => g.name === "PayPal" && g.is_enabled);
             if (paypalConfig && paypalConfig.config && paypalConfig.config.apiKey) {
                 setPaypalClientId(paypalConfig.config.apiKey);
             }
@@ -37,7 +39,13 @@ export default function PaymentClient({ eventId }) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         try {
-            await confirmBooking({ id: bookingId });
+            const { error } = await supabase
+                .from('bookings')
+                .update({ status: 'Confirmed' })
+                .eq('id', bookingId);
+            
+            if (error) throw error;
+
             setPaymentStatus('success');
             setTimeout(() => {
                 router.push(`/events/${eventId}/book/checkout?bookingId=${bookingId}&success=true`);
@@ -86,12 +94,12 @@ export default function PaymentClient({ eventId }) {
                         <div style={{ marginBottom: '24px' }}>
                             <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Payment Summary</h2>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span style={{ color: '#475569', fontSize: '15px' }}>{booking.eventName} (x{booking.ticketCount})</span>
-                                <span style={{ fontWeight: 700, color: '#111827' }}>₹{booking.totalPrice.toFixed(2)}</span>
+                                <span style={{ color: '#475569', fontSize: '15px' }}>{booking.event_name || 'Event'} (x{booking.ticket_count})</span>
+                                <span style={{ fontWeight: 700, color: '#111827' }}>₹{(booking.total_price || 0).toFixed(2)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
                                 <span style={{ fontWeight: 800, color: '#111827', fontSize: '18px' }}>Total Amount</span>
-                                <span style={{ fontWeight: 900, color: '#111827', fontSize: '20px' }}>₹{booking.totalPrice.toFixed(2)}</span>
+                                <span style={{ fontWeight: 900, color: '#111827', fontSize: '20px' }}>₹{(booking.total_price || 0).toFixed(2)}</span>
                             </div>
                         </div>
 
@@ -125,7 +133,12 @@ export default function PaymentClient({ eventId }) {
                                             try {
                                                 const details = await actions.order.capture();
                                                 if (details.status === "COMPLETED") {
-                                                    await confirmBooking({ id: bookingId });
+                                                    const { error } = await supabase
+                                                        .from('bookings')
+                                                        .update({ status: 'Confirmed' })
+                                                        .eq('id', bookingId);
+                                                    if (error) throw error;
+
                                                     setPaymentStatus('success');
                                                     setTimeout(() => router.push(`/events/${eventId}/book/checkout?bookingId=${bookingId}&success=true`), 1500);
                                                 } else {

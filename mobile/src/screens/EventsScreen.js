@@ -1,29 +1,31 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/EventCard';
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import { parseEventDate } from '../utils/eventUtils';
 
-const CATEGORIES = ["All", "Concert", "Sports", "Comedy", "Theatre", "Music", "Workshop"];
-
 export default function EventsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { selectedCity } = useAuth();
-  const convexEvents = useQuery(api.events.getActiveEvents) ?? [];
-  const convexMeetings = useQuery(api.meetings.listAll) ?? [];
-  const convexCategories = useQuery(api.homeSettings.getCategories) ?? [];
+  
+  // Migrated from Convex useQuery to Supabase useSupabaseQuery
+  const { data: supabaseEvents } = useSupabaseQuery('events', (q) => 
+    q.or('status.eq.Active,status.is.null').order('createdAt', { ascending: false })
+  );
+  const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.order('createdAt', { ascending: false }));
+  const { data: supabaseCategories } = useSupabaseQuery('categories');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(route.params?.category || 'All');
 
   const displayCategories = useMemo(() => {
-    return ["All", ...convexCategories.map(c => c.name)];
-  }, [convexCategories]);
+    return ["All", ...(supabaseCategories || []).map(c => c.name)];
+  }, [supabaseCategories]);
 
   useEffect(() => {
     if (route.params?.category) {
@@ -33,8 +35,8 @@ export default function EventsScreen() {
 
   const events = useMemo(() => {
     const combined = [
-      ...(convexEvents || []),
-      ...(convexMeetings || []).map(m => ({
+      ...(supabaseEvents || []),
+      ...(supabaseMeetings || []).map(m => ({
         ...m,
         type: "Meeting",
         virtual: true,
@@ -45,7 +47,7 @@ export default function EventsScreen() {
     const now = new Date();
 
     // 1. Normalization Sync with HomeScreen
-    const fromConvex = combined.filter(Boolean).map((ev, idx) => {
+    const fromSupabase = combined.filter(Boolean).map((ev, idx) => {
       const loc = ev?.location || ev?.venue || ev?.address || "Venue";
       const isMeeting = ev?.type === "Meeting";
 
@@ -72,7 +74,7 @@ export default function EventsScreen() {
 
       return {
         ...ev,
-        id: ev?._id || ev?.id || `convex-list-${idx}`,
+        id: ev?.id || `supabase-list-${idx}`,
         title: ev?.title || "Event",
         img: ev?.img || ev?.bannerPreview || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop',
         rawDate: dateStr,
@@ -85,15 +87,15 @@ export default function EventsScreen() {
     });
 
     // 2. Expiration & De-duplication Logic
-    const eventIds = new Set(fromConvex.filter(e => !e.isMeeting).map(e => String(e._id || e.id)));
+    const eventIds = new Set(fromSupabase.filter(e => !e.isMeeting).map(e => String(e.id)));
 
-    const active = fromConvex.filter(ev => {
+    const active = fromSupabase.filter(ev => {
       if (!ev) return false;
 
       // Duplicate Check
       if (ev.isMeeting && ev.eventId && eventIds.has(String(ev.eventId))) return false;
 
-      // 1. Precise expiration check using Convex endDateTime
+      // 1. Precise expiration check using endDateTime
       if (ev.endDateTime && now.getTime() > ev.endDateTime) return false;
 
       // 24-hour expiration for standalone meetings
@@ -165,10 +167,10 @@ export default function EventsScreen() {
     }
 
     return filteredResults;
-  }, [convexEvents, convexMeetings, selectedCity, searchQuery, selectedCategory]);
+  }, [supabaseEvents, supabaseMeetings, selectedCity, searchQuery, selectedCategory]);
 
   const handleEventPress = (event) => {
-    navigation.navigate('EventDetail', { eventId: String(event._id || event.id), event });
+    navigation.navigate('EventDetail', { eventId: String(event.id), event });
   };
 
   const clearFilters = () => {

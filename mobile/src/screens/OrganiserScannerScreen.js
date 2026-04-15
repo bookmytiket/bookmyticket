@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useMutation, useConvex, useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseMutation } from '../hooks/useSupabase';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
@@ -15,8 +15,15 @@ export default function OrganiserScannerScreen() {
   const [showModal, setShowModal] = useState(false);
   
   const { user } = useAuth();
-  const convex = useConvex();
-  const validateAndLogScan = useMutation(api.pwaScans.validateAndLogScan);
+
+  // Migrated to Supabase Edge Function
+  const { mutate: validateScan } = useSupabaseMutation(async (supabase, data) => {
+    const { data: res, error } = await supabase.functions.invoke('booking-handler', {
+      body: { action: 'validate-scan', data }
+    });
+    if (error) throw error;
+    return res;
+  });
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -28,11 +35,20 @@ export default function OrganiserScannerScreen() {
     setLoading(true);
 
     try {
-      // 1. Fetch booking details first
-      const booking = await convex.query(api.bookings.getBookingById, { id: data });
+      // Migrated to direct Supabase query with join
+      const { data: booking, error } = await supabase
+        .from('bookings')
+        .select('*, events(title)')
+        .eq('id', data)
+        .maybeSingle();
       
+      if (error) throw error;
+
       if (booking) {
-        setScannedBooking(booking);
+        setScannedBooking({
+          ...booking,
+          eventName: booking.events?.title || 'Unknown Event'
+        });
         setShowModal(true);
       } else {
         Alert.alert('Error', 'Invalid Ticket QR Code');
@@ -52,10 +68,10 @@ export default function OrganiserScannerScreen() {
     setLoading(true);
 
     try {
-      const res = await validateAndLogScan({
-        bookingId: scannedBooking._id,
+      const res = await validateScan({
+        bookingId: scannedBooking.id,
         eventId: 'manual_or_scan',
-        organiserId: user?.organiserId || user?.identifier || user?.id,
+        organiserId: user?.identifier || user?.id,
       });
 
       if (res.success) {
@@ -127,8 +143,8 @@ export default function OrganiserScannerScreen() {
               <View style={styles.details}>
                 <View style={styles.item}>
                   <Text style={styles.label}>Customer</Text>
-                  <Text style={styles.value}>{scannedBooking.userName || scannedBooking.customerDetails?.name || 'Guest User'}</Text>
-                  <Text style={styles.subValue}>{scannedBooking.userId || scannedBooking.customerDetails?.email}</Text>
+                  <Text style={styles.value}>{scannedBooking.customer_details?.name || 'Guest User'}</Text>
+                  <Text style={styles.subValue}>{scannedBooking.user_id || scannedBooking.customer_details?.email}</Text>
                 </View>
 
                 <View style={styles.item}>
@@ -139,11 +155,11 @@ export default function OrganiserScannerScreen() {
                 <View style={[styles.item, styles.row]}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Quantity</Text>
-                    <Text style={styles.value}>{scannedBooking.ticketCount} Tickets</Text>
+                    <Text style={styles.value}>{scannedBooking.ticket_count} Tickets</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Booking ID</Text>
-                    <Text style={styles.value}>#{scannedBooking._id.slice(-6).toUpperCase()}</Text>
+                    <Text style={styles.value}>#{scannedBooking.id.slice(-6).toUpperCase()}</Text>
                   </View>
                 </View>
 

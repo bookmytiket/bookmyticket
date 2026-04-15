@@ -6,14 +6,14 @@ import {
   SafeAreaView, 
   TouchableOpacity, 
   Image, 
-  ActivityIndicator,
-  ScrollView,
-  Linking,
-  Alert
+  ActivityIndicator, 
+  ScrollView, 
+  Linking, 
+  Alert 
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
+import { useSupabaseQuery } from '../hooks/useSupabase';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,33 +24,43 @@ export default function MeetingWaitingRoomScreen() {
   const { user } = useAuth();
   const { meetingCode, eventId: initialEventId } = route.params || {};
 
-  // If we only have a code, we need to find the event first
-  const meetingRecord = useQuery(api.meetings.getByLink, { meetingLink: meetingCode || "" });
-  const eventId = initialEventId || meetingRecord?.eventId;
+  // Migrated to Supabase: Find meeting record by link code
+  const { data: meetingRecord, loading: loadingMeeting } = useSupabaseQuery('meetings', (q) => 
+    q.select('*, events(*)').eq('meeting_link', meetingCode || "").single(),
+    [meetingCode]
+  );
 
-  const access = useQuery(api.events.getMeetingAccess, { 
-    eventId: eventId || undefined, 
-    userId: user?.email || undefined 
-  });
+  const eventId = initialEventId || meetingRecord?.event_id;
+
+  // Migrated to Supabase: Check meeting access (booking check)
+  const { data: booking, loading: loadingBooking } = useSupabaseQuery('bookings', (q) => 
+    q.select('*')
+     .eq('event_id', eventId || "")
+     .eq('user_id', user?.id || "")
+     .eq('status', 'Confirmed')
+     .single(),
+    [eventId, user?.id]
+  );
 
   const handleJoin = () => {
-    if (access?.status === "success" && access.url) {
-      const url = access.url.startsWith('http') ? access.url : `https://${access.url}`;
+    if (booking && meetingRecord?.events?.external_meeting_url) {
+      const url = meetingRecord.events.external_meeting_url;
+      const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
       
-      if (access.type === 'external') {
-        Linking.openURL(url).catch(() => {
+      if (meetingRecord.events.meeting_type === 'external') {
+        Linking.openURL(formattedUrl).catch(() => {
           Alert.alert("Error", "Could not open meeting link. Make sure you have the required app installed.");
         });
       } else {
-        // Internal strategy: for now, open in browser until a native room is built
-        // We can point specifically to the web portal's meeting page
-        const webPortalUrl = `https://bookmyticket.net/${access.url}`;
+        const webPortalUrl = `https://bookmyticket.net/meeting/${meetingCode}`;
         Linking.openURL(webPortalUrl);
       }
     }
   };
 
-  if (!access || (meetingCode && meetingRecord === undefined)) {
+  const loading = loadingMeeting || loadingBooking;
+
+  if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
         <LinearGradient colors={['#0a0f1e', '#1a233a']} style={StyleSheet.absoluteFill} />
@@ -60,7 +70,7 @@ export default function MeetingWaitingRoomScreen() {
     );
   }
 
-  if (access.status === "not_found" || (meetingCode && !meetingRecord)) {
+  if (!meetingRecord) {
     return (
       <View style={[styles.container, styles.center]}>
         <LinearGradient colors={['#0a0f1e', '#1a233a']} style={StyleSheet.absoluteFill} />
@@ -74,7 +84,9 @@ export default function MeetingWaitingRoomScreen() {
     );
   }
 
-  const { eventDetails, meetingStatus, status, url, type } = access;
+  const eventDetails = meetingRecord.events;
+  const meetingStatus = meetingRecord.status;
+  const hasAccess = !!booking;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,7 +107,7 @@ export default function MeetingWaitingRoomScreen() {
         {/* Video Preview Block */}
         <View style={styles.previewCard}>
           <Image 
-            source={{ uri: eventDetails?.img || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87' }} 
+            source={{ uri: eventDetails?.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87' }} 
             style={styles.previewImage}
             blurRadius={10}
           />
@@ -130,7 +142,7 @@ export default function MeetingWaitingRoomScreen() {
 
         {/* Action Area */}
         <View style={styles.actionSection}>
-          {status === "success" && meetingStatus === "live" ? (
+          {hasAccess && meetingStatus === "live" ? (
             <>
               <TouchableOpacity style={styles.joinButton} onPress={handleJoin}>
                 <Text style={styles.joinButtonText}>Enter Meeting Room</Text>
@@ -138,14 +150,14 @@ export default function MeetingWaitingRoomScreen() {
               </TouchableOpacity>
               <Text style={styles.verifiedText}>Verified Ticket Holder Access</Text>
             </>
-          ) : status === "not_booked" ? (
+          ) : !hasAccess ? (
             <View style={styles.lockedBox}>
               <Ionicons name="lock-closed" size={32} color="#f59e0b" />
               <Text style={styles.lockedTitle}>Ticket Required</Text>
               <Text style={styles.lockedSubtitle}>You need a valid booking for this event to join the session.</Text>
               <TouchableOpacity 
                 style={styles.bookButton} 
-                onPress={() => navigation.navigate('EventDetail', { eventId: String(eventId) })}
+                onPress={() => navigation.navigate('EventDetail', { eventIdBySlug: eventDetails?.slug })}
               >
                 <Text style={styles.bookButtonText}>Book Ticket Now</Text>
               </TouchableOpacity>
