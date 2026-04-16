@@ -48,16 +48,17 @@ export default function ChangePasswordPage() {
             // 2. Clear Force Flag in Profile
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ force_password_change: false })
+                .update({ 
+                    is_temporary_password: false,
+                    force_password_change: false 
+                })
                 .eq('id', user.id);
 
-            if (profileError) {
-                 // Try vendors table too just in case
-                 await supabase
-                    .from('vendors')
-                    .update({ force_password_change: false })
-                    .eq('id', user.id);
-            }
+            // Try all relevant tables to ensure flags are cleared everywhere
+            await Promise.allSettled([
+                supabase.from('vendors').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id),
+                supabase.from('organisers').update({ is_temporary_password: false, force_password_change: false }).eq('id', user.id)
+            ]);
 
             setSuccess(true);
             setTimeout(() => {

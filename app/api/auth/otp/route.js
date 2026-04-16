@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // Helper: Microsoft 365 Graph API Email Dispatch
-const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content, supabaseAdmin) => {
+const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
   const client_id = m365Config.client_id || m365Config.clientId;
   const tenant_id = m365Config.tenant_id || m365Config.tenantId;
   const client_secret = m365Config.client_secret || m365Config.clientSecret;

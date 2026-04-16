@@ -26,9 +26,9 @@ export function AuthProvider({ children }) {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
                     const userData = await fetchAndSetUser(session.user);
-                    if (userData?.force_password_change && !window.location.pathname.includes("/auth/change-password")) {
+                    if ((userData?.is_temporary_password || userData?.force_password_change) && !window.location.pathname.includes("/change-password")) {
                         console.log("AuthContext: Enforcing password security on session load.");
-                        router.push("/auth/change-password");
+                        router.push("/change-password");
                     }
                 }
             } catch (err) {
@@ -142,6 +142,7 @@ export function AuthProvider({ children }) {
                       supabaseUser.email?.split('@')[0],
                 ...(profile || {}),
                 ...specializedData, // Merge role-specific fields (e.g., business_name, kyc_status)
+                is_temporary_password: profile?.is_temporary_password || specializedData?.is_temporary_password || false,
                 role: role, // Final normalized role
             };
 
@@ -231,9 +232,9 @@ export function AuthProvider({ children }) {
                 let destination = isInvalidRedirect ? "/" : decodedRedirect;
 
                 // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
-                if (userData.force_password_change) {
+                if (userData.is_temporary_password || userData.force_password_change) {
                     console.log("AuthContext: Force password change detected. Redirecting to security portal.");
-                    router.push("/auth/change-password");
+                    router.push("/change-password");
                     return { success: true, user: userData };
                 }
 

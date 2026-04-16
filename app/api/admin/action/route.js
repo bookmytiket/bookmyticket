@@ -153,6 +153,7 @@ export async function POST(request) {
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
           phone: partnerReq.phone,
+          is_temporary_password: true,
           force_password_change: true // Force reset on first login
         })
         .eq("id", newUserId);
@@ -165,6 +166,7 @@ export async function POST(request) {
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
           phone: partnerReq.phone,
+          is_temporary_password: true,
           force_password_change: true
         });
       }
@@ -179,6 +181,7 @@ export async function POST(request) {
           type: partnerReq.type,
           is_approved: true,
           kyc_status: initialKycStatus,
+          is_temporary_password: true,
           force_password_change: true
         });
       if (vendorError) throw vendorError;
@@ -205,36 +208,48 @@ export async function POST(request) {
 
       const subject = "Your Partner Account has been Approved - BookMyTicket";
       const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signin`;
-      const emailContent = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px; background: #fff;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 50px;">
-          </div>
-          <h2 style="color: #8b5cf6; text-align: center;">Welcome to the Partner Network!</h2>
-          <p>Hi ${partnerReq.first_name},</p>
-          <p>We are excited to inform you that your request to become a partner has been <strong>approved</strong>.</p>
-          
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Access Portals:</strong> ${isProfessional ? 'Vendor Dashboard' : 'Organiser Panel'}</p>
-            <p style="margin: 0 0 10px 0;"><strong>Login Email:</strong> ${partnerReq.email}</p>
-            <p style="margin: 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${tempPassword}</code></p>
-          </div>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" style="background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%); color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Login & Secure Your Account</a>
-          </div>
-
-          <p style="font-size: 13px; color: #6b7280; line-height: 1.6;">
-            <strong>Security Notice:</strong> For your protection, you will be required to change this temporary password upon your first login.
-            ${!isProfessional ? '<br><br><strong>Next Step:</strong> Please complete your KYC verification in the Organiser Panel to begin listing events.' : ''}
-          </p>
-          
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
-          <p style="text-align: center; font-size: 12px; color: #9ca3af;">
-            © ${new Date().getFullYear()} BookMyTicket. All rights reserved.
-          </p>
-        </div>
-      `;
+208:       const emailContent = `
+209:         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; padding: 40px; border-radius: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+210:           <div style="text-align: center; margin-bottom: 30px;">
+211:             <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 60px;">
+212:           </div>
+213:           <h1 style="color: #0f172a; text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Welcome to the Network!</h1>
+214:           <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved and is ready for use.</p>
+215:           
+216:           <div style="background: #f8fafc; padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+217:             <h3 style="margin: 0 0 20px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;">Your Login Credentials</h3>
+218:             <table style="width: 100%; border-collapse: collapse;">
+219:               <tr>
+220:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Login Email:</td>
+221:                 <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${partnerReq.email}</td>
+222:               </tr>
+223:               <tr>
+224:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
+225:                 <td style="padding: 10px 0;"><code style="background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace;">${tempPassword}</code></td>
+226:               </tr>
+227:               <tr>
+228:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Platform URL:</td>
+229:                 <td style="padding: 10px 0; color: #3b82f6; font-size: 14px; font-weight: 600;"><a href="https://bookmyticket.net" style="color: #3b82f6; text-decoration: none;">https://bookmyticket.net</a></td>
+230:               </tr>
+231:             </table>
+232:           </div>
+233: 
+234:           <div style="text-align: center; margin-bottom: 30px;">
+235:             <a href="${loginUrl}" style="background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.2);">Secure Your Account Now</a>
+236:           </div>
+237: 
+238:           <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fde68a;">
+239:             <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.5;">
+240:               <strong>Important Security Notice:</strong> This is a temporary password. For your protection, you will be required to change it immediately upon your first login.
+241:             </p>
+242:           </div>
+243:           
+244:           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;">
+245:           <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0;">
+246:             © ${new Date().getFullYear()} BookMyTicket. Empowering experiences.
+247:           </p>
+248:         </div>
+249:       `;
 
       if (m365Config) {
         try {

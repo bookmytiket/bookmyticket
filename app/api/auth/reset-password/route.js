@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // Helper: Microsoft 365 Graph API Email Dispatch
-const sendM365Email = async (supabaseAdmin, m365Config, fromEmail, toEmail, subject, content) => {
+const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
   const client_id = m365Config.client_id || m365Config.clientId;
   const tenant_id = m365Config.tenant_id || m365Config.tenantId;
   const client_secret = m365Config.client_secret || m365Config.clientSecret;
@@ -64,7 +64,7 @@ export async function POST(request) {
     if (action === 'send') {
       // 1. Generate Token
       const token = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
 
       // 2. Store Token in existing 'otps' table
       const { error } = await supabaseAdmin.from('otps').insert({
@@ -171,8 +171,25 @@ export async function POST(request) {
 
       // 3. Clear force_password_change flag in the unified vendors table
       if (authData?.user?.id) {
+        await supabaseAdmin.from('profiles')
+          .update({ 
+            is_temporary_password: false,
+            force_password_change: false 
+          })
+          .eq('id', authData.user.id);
+
         await supabaseAdmin.from('vendors')
-          .update({ force_password_change: false })
+          .update({ 
+            is_temporary_password: false,
+            force_password_change: false 
+          })
+          .eq('id', authData.user.id);
+          
+        await supabaseAdmin.from('organisers')
+          .update({ 
+            is_temporary_password: false,
+            force_password_change: false 
+          })
           .eq('id', authData.user.id);
       }
 

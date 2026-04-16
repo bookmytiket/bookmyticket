@@ -75,6 +75,7 @@ function ResetPasswordForm() {
                 const parsed = JSON.parse(storedUser);
                 if (parsed.identifier === email) {
                     parsed.forcePasswordChange = false;
+                    parsed.is_temporary_password = false;
                     localStorage.setItem("user", JSON.stringify(parsed));
                 }
             }
