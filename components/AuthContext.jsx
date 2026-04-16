@@ -25,7 +25,11 @@ export function AuthProvider({ children }) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
-                    await fetchAndSetUser(session.user);
+                    const userData = await fetchAndSetUser(session.user);
+                    if (userData?.force_password_change && !window.location.pathname.includes("/auth/change-password")) {
+                        console.log("AuthContext: Enforcing password security on session load.");
+                        router.push("/auth/change-password");
+                    }
                 }
             } catch (err) {
                 console.error("AuthContext: Error getting session:", err);
@@ -98,6 +102,36 @@ export function AuthProvider({ children }) {
                 }
             }
 
+            // Enhanced role detection: Fetch specific metadata from role-specific tables
+            let specializedData = {};
+            
+            try {
+                if (role === 'admin' || role === 'super_admin') {
+                    const { data } = await supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (data) specializedData = data;
+                } else if (role === 'staff') {
+                    const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (data) specializedData = data;
+                } else if (role === 'branding_partner') {
+                    const { data } = await supabase.from('branding_partners').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (data) specializedData = data;
+                } else if (role === 'organiser') {
+                    // Fetch from unified vendors table (consolidated organisers + services)
+                    const { data: vendorData } = await supabase.from('vendors').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (vendorData) {
+                        specializedData = vendorData;
+                        // For professional services, we might still want to call them 'vendor' in code logic if needed, 
+                        // but keeping 'organiser' role is safe as long as data is consistent.
+                        if (vendorData.type === 'professional_service') role = 'vendor';
+                    }
+                } else if (role === 'user') {
+                    const { data } = await supabase.from('public_users').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (data) specializedData = data;
+                }
+            } catch (err) {
+                console.error("AuthContext: Error fetching specialized role data:", err);
+            }
+
             // Construct unified user data
             const userData = {
                 id: supabaseUser.id,
@@ -107,11 +141,11 @@ export function AuthProvider({ children }) {
                       supabaseUser.user_metadata?.full_name ||
                       supabaseUser.email?.split('@')[0],
                 ...(profile || {}),
-                role: role, // Ensure final role property is normalized and fallback-aware
+                ...specializedData, // Merge role-specific fields (e.g., business_name, kyc_status)
+                role: role, // Final normalized role
             };
 
             if (error && error.code !== 'PGRST116') {
-                // PGRST116 = "no rows returned" — acceptable for brand-new users
                 console.warn("Profile fetch warning:", error.message);
             }
 
@@ -196,8 +230,27 @@ export function AuthProvider({ children }) {
 
                 let destination = isInvalidRedirect ? "/" : decodedRedirect;
 
-                // Apply role-based defaults ONLY if no valid redirect was provided
-                if (isInvalidRedirect) {
+                // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
+                if (userData.force_password_change) {
+                    console.log("AuthContext: Force password change detected. Redirecting to security portal.");
+                    router.push("/auth/change-password");
+                    return { success: true, user: userData };
+                }
+
+                // Security: Validate authorization for the target destination
+                const isAdminPath = destination?.startsWith("/admin");
+                const isBrandingPath = destination?.startsWith("/branding");
+                const isOrganiserPath = destination?.startsWith("/organiser");
+                const isVendorPath = destination?.startsWith("/vendor");
+
+                const isAuthorized = 
+                    (!isAdminPath || userData.role === "admin" || userData.role === "super_admin") &&
+                    (!isBrandingPath || userData.role === "branding_partner" || userData.role === "admin" || userData.role === "super_admin") &&
+                    (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(userData.role)) &&
+                    (!isVendorPath || ["organiser", "admin", "super_admin"].includes(userData.role));
+
+                // Apply role-based defaults if no valid redirect OR not authorized for target
+                if (isInvalidRedirect || !isAuthorized) {
                     if (userData.role === "admin" || userData.role === "super_admin") {
                         destination = "/admin";
                     } else if (userData.role === "staff") {

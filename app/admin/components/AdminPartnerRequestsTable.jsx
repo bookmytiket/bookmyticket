@@ -48,6 +48,35 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showKycModal, setShowKycModal] = useState(false);
+    const [kycData, setKycData] = useState(null);
+    const [loadingKyc, setLoadingKyc] = useState(false);
+
+    const handleViewKyc = async (req) => {
+        setSelectedRequest(req); // Store the original request for approval later
+        const requestId = req.id;
+        setLoadingKyc(true);
+        setShowKycModal(true);
+        
+        // Determine correct table based on request type
+        const table = (req.type === 'professional_service') ? 'service_providers' : 'vendors';
+        
+        try {
+            const { data, error } = await supabase
+                .from(table)
+                .select('*')
+                .eq('id', requestId)
+                .limit(1); // Use limit(1) instead of .single() to avoid coercion errors
+            
+            if (error) throw error;
+            setKycData(data?.[0] || null);
+        } catch (err) {
+            showToast("Error fetching KYC: " + err.message, "error");
+            setShowKycModal(false);
+        } finally {
+            setLoadingKyc(false);
+        }
+    };
 
     const handleUpdate = async (id, status) => {
         try {
@@ -81,10 +110,14 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
         setIsSubmitting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             // Call local API instead of Edge Function for stability
             const res = await fetch('/api/admin/action', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
                 body: JSON.stringify({
                     action: 'approve-partner',
                     data: {
@@ -107,7 +140,6 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("Are you sure you want to delete this request?")) return;
         try {
             await removeRequest({ id });
             showToast("Request deleted successfully", "info");
@@ -231,9 +263,9 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                         </thead>
                         <tbody>
                             {filteredRequests.map((req) => {
-                                const hasRequestId = Boolean(req?._id);
+                                const hasRequestId = Boolean(req?.id);
                                 return (
-                                <tr key={req._id || req.email} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
+                                <tr key={req.id || req.email} style={{ borderBottom: `1px solid ${t.border}`, transition: "0.2s" }} className="hover-row">
                                     <td style={{ padding: "16px" }}>
                                         <div style={{ fontWeight: 700, color: t.textMain, fontSize: "14px" }}>{req.first_name || req.firstName} {req.last_name || req.lastName}</div>
                                         <div style={{ fontSize: "12px", color: t.textSub }}>{req.role}</div>
@@ -278,11 +310,21 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             {/* Logic for Organisers */}
                                             {hasRequestId && activeTab === "event_organiser" && req.status === "Pending" && (
                                                 <button 
-                                                    onClick={() => handleInitiateKyc(req._id)} 
+                                                    onClick={() => handleInitiateKyc(req.id)} 
                                                     title="Initiate KYC Process"
                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#8000ff15", color: "#8000ff", cursor: "pointer" }}
                                                 >
                                                     <Send size={16} />
+                                                </button>
+                                            )}
+
+                                            {hasRequestId && (req.status === "KYC Completed" || req.status === "KYC Pending") && (
+                                                <button 
+                                                    onClick={() => handleViewKyc(req)} 
+                                                    title="View KYC Documents"
+                                                    style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#3b82f615", color: "#3b82f6", cursor: "pointer" }}
+                                                >
+                                                    <FileText size={18} />
                                                 </button>
                                             )}
 
@@ -300,7 +342,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
                                             {hasRequestId && req.status !== "Approved" && req.status !== "Access Granted" && req.status !== "Rejected" && (
                                                 <button 
-                                                    onClick={() => handleUpdate(req._id, "Rejected")} 
+                                                    onClick={() => handleUpdate(req.id, "Rejected")} 
                                                     title="Reject Request"
                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#ef444415", color: "#ef4444", cursor: "pointer" }}
                                                 >
@@ -310,7 +352,7 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                             
                                             {hasRequestId ? (
                                                 <button 
-                                                    onClick={() => handleDelete(req._id)} 
+                                                    onClick={() => handleDelete(req.id)} 
                                                     title="Delete Log"
                                                     style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: theme === 'dark' ? '#1e293b' : '#f1f5f9', color: t.textSub, cursor: "pointer" }}
                                                 >
@@ -411,6 +453,83 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                     {isSubmitting ? "Processing..." : "Complete Approval & Grant Access"}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* KYC Details Modal */}
+            {showKycModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999999, padding: "20px" }}>
+                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "600px", borderRadius: "20px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+                        <div style={{ background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <FileText size={20} color="#fff" />
+                                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: 0 }}>KYC Documentation</h2>
+                            </div>
+                            <button onClick={() => setShowKycModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", cursor: "pointer", width: "28px", height: "28px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={16} /></button>
+                        </div>
+                        
+                        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+                            {loadingKyc ? (
+                                <div style={{ textAlign: "center", padding: "40px", color: t.textSub }}>Loading details...</div>
+                            ) : kycData && kycData.kyc_details ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "12px", borderBottom: `1px solid ${t.border}`, paddingBottom: "8px" }}>Business Profile</h3>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                            <div>
+                                                <p style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase" }}>Organization Name</p>
+                                                <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{kycData.kyc_details.orgName || "N/A"}</p>
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase" }}>GST Number</p>
+                                                <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{kycData.kyc_details.gstNumber || "Not Provided"}</p>
+                                            </div>
+                                            <div style={{ gridColumn: "span 2" }}>
+                                                <p style={{ fontSize: "11px", fontWeight: 700, color: t.textSub, margin: "0 0 4px", textTransform: "uppercase" }}>Business Address</p>
+                                                <p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{kycData.kyc_details.address || "N/A"}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "12px", borderBottom: `1px solid ${t.border}`, paddingBottom: "8px" }}>Uploaded Documents</h3>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                            {['pan', 'aadhar', 'cheque'].map(doc => (
+                                                <div key={doc} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', borderRadius: "10px", border: `1px solid ${t.border}` }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                        <FileText size={16} color="#3b82f6" />
+                                                        <span style={{ fontSize: "13px", fontWeight: 700, color: t.textMain, textTransform: "capitalize" }}>{doc.toUpperCase()} Document</span>
+                                                    </div>
+                                                    <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: 600 }}>{kycData.kyc_details[doc] || "No file"}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ padding: "16px", background: "#f0fdf4", borderRadius: "12px", border: "1px solid #bbf7d0" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#166534" }}>
+                                            <CheckCircle size={16} />
+                                            <span style={{ fontSize: "13px", fontWeight: 700 }}>Agreement Accepted</span>
+                                        </div>
+                                        <p style={{ fontSize: "12px", color: "#166534", margin: "4px 0 0", opacity: 0.8 }}>The partner has accepted the terms and conditions on {kycData.updated_at ? new Date(kycData.updated_at).toLocaleDateString() : "date of submission"}.</p>
+                                    </div>
+
+                                    {kycData.kyc_status === 'Submitted' && (
+                                        <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+                                            <button 
+                                                onClick={() => { setShowKycModal(false); handleApprove(selectedRequest); }}
+                                                style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "linear-gradient(135deg, #FF3D6E 0%, #A855F7 100%)", color: "#fff", border: "none", fontWeight: 800, cursor: "pointer" }}
+                                            >
+                                                Proceed to Approval
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: "center", padding: "40px", color: t.textSub }}>No KYC details found for this partner.</div>
+                            )}
                         </div>
                     </div>
                 </div>

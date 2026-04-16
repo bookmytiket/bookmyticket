@@ -169,9 +169,9 @@ export async function POST(request) {
       }
 
 
-      // 3. Clear force_password_change flag if it exists for this user
+      // 3. Clear force_password_change flag in the unified vendors table
       if (authData?.user?.id) {
-        await supabaseAdmin.from('organiser_details')
+        await supabaseAdmin.from('vendors')
           .update({ force_password_change: false })
           .eq('id', authData.user.id);
       }

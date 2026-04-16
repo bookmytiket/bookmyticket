@@ -4,13 +4,18 @@ import { X, Loader2, ArrowRight, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
-const SERVICE_CATEGORIES = [
-    "Event Organiser",
-    "Professional Service"
+const PARTNER_TYPES = [
+    { value: "event_organiser", label: "Event Organiser" },
+    { value: "professional_service", label: "Professional Service" }
 ];
 
+const CATEGORIES_BY_TYPE = {
+    event_organiser: ["Sports", "Comedy", "Music", "Festival", "Corporate Events", "Workshops"],
+    professional_service: ["Mehendi Artist", "Photographer", "Makeup Artist", "Turf Partner", "Decorator", "Catering Service"]
+};
 
-const GlassDropdown = ({ label, value, options, onChange, name }) => {
+
+const GlassDropdown = ({ label, value, options, onChange, name, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -22,25 +27,31 @@ const GlassDropdown = ({ label, value, options, onChange, name }) => {
         return () => window.removeEventListener("mousedown", handler);
     }, []);
 
+    const toggleDropdown = () => {
+        if (!disabled) setIsOpen(!isOpen);
+    };
+
     return (
-        <div ref={dropdownRef} style={{ position: "relative", width: "100%" }}>
+        <div ref={dropdownRef} style={{ position: "relative", width: "100%", opacity: disabled ? 0.6 : 1 }}>
             <label className="partner-label">{label} <span style={{color:"#f84464"}}>*</span></label>
             <div 
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleDropdown}
                 className="partner-input"
                 style={{ 
-                    cursor: "pointer", 
+                    cursor: disabled ? "not-allowed" : "pointer", 
                     display: "flex", 
                     alignItems: "center", 
                     justifyContent: "space-between",
-                    background: isOpen ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.05)"
+                    background: isOpen ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                    border: disabled ? "1.5px solid rgba(255, 255, 255, 0.1)" : "1.5px solid rgba(15, 23, 42, 0.08)"
                 }}
             >
                 <span style={{ color: value ? "#fff" : "rgba(255, 255, 255, 0.4)" }}>
                     {options.find(o => (typeof o === 'string' ? o : o.value) === value)?.label || 
-                     (typeof options[0] === 'string' ? value : options.find(o => o.value === value)?.label) || value}
+                     (typeof options[0] === 'string' ? value : options.find(o => o.value === value)?.label) || 
+                     (disabled ? "Select type first" : `Select ${label}`)}
                 </span>
-                <ChevronDown size={16} style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.3s" }} />
+                {!disabled && <ChevronDown size={16} style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.3s" }} />}
             </div>
 
             <AnimatePresence>
@@ -106,8 +117,8 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
         lastName: "",
         email: "",
         phone: "",
-        category: "Turf Booking",
-        type: "professional_service",
+        type: "",
+        category: "",
         role: "Individual",
         remarks: ""
     });
@@ -119,15 +130,13 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        let newForm = { ...form, [name]: value };
-
-        // Automatically set type based on category Selection
-        if (name === "category") {
-            const isProfessional = value !== "General Event";
-            newForm.type = isProfessional ? "professional_service" : "event_organiser";
+        
+        if (name === "type") {
+            // Reset category when type changes
+            setForm(prev => ({ ...prev, type: value, category: "" }));
+        } else {
+            setForm(prev => ({ ...prev, [name]: value }));
         }
-
-        setForm(newForm);
     };
 
     const handleSubmit = async (e) => {
@@ -153,7 +162,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
             setTimeout(() => {
                 setSuccess(false);
                 onClose();
-                setForm({ firstName: "", lastName: "", email: "", phone: "", category: "Turf Booking", type: "event_organiser", role: "Individual", remarks: "" });
+                setForm({ firstName: "", lastName: "", email: "", phone: "", category: "", type: "", role: "Individual", remarks: "" });
             }, 3000);
         } catch (err) {
             setErrorMsg(err.message || "Something went wrong. Please try again.");
@@ -313,20 +322,21 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: "12px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                            <GlassDropdown 
+                                label="Type"
+                                value={form.type}
+                                options={PARTNER_TYPES}
+                                name="type"
+                                onChange={handleChange}
+                            />
                             <GlassDropdown 
                                 label="Category"
                                 value={form.category}
-                                options={SERVICE_CATEGORIES}
+                                options={form.type ? CATEGORIES_BY_TYPE[form.type] : []}
                                 name="category"
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setForm({
-                                        ...form,
-                                        category: val,
-                                        type: val === "Professional Service" ? "professional_service" : "event_organiser"
-                                    });
-                                }}
+                                onChange={handleChange}
+                                disabled={!form.type}
                             />
                         </div>
 

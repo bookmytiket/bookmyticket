@@ -31,11 +31,11 @@ export default function SettingsPage() {
     const vendorId = getVendorAccountKey(user);
     
     const { data: profileArr = [], mutate: refreshProfile } = useSupabaseQuery('service_providers', (q) => 
-        q.eq('organiser_id', vendorId).single()
+        q.eq('id', vendorId).single()
     , [vendorId]);
     const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
 
-    const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('organiser_id', vendorId));
+    const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', vendorId));
 
     const [formData, setFormData] = useState({
         name: "",

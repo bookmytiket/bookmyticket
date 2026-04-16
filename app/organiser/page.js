@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef, useCallback, Component } from "react";
 import Link from "next/link";
-import { FileCheck2, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
@@ -44,7 +44,7 @@ import {
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2
 } from "lucide-react";
 
 const ACCENT_BLUE = "#3b82f6";
@@ -404,8 +404,17 @@ function OrganiserPanel() {
         }
     }, [user, loading, router, mounted]);
 
+    // Loading State UI Component
+    const renderLoadingView = () => (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
+            <div className="w-16 h-16 border-4 border-slate-200 border-t-pink-500 rounded-full animate-spin mb-6" />
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Initializing Portal</h2>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Connecting to Secure Gateway...</p>
+        </div>
+    );
+
     // Stages: mfa, kyc_docs, kyc_form, pending, approved
-    const [currentStage, setCurrentStage] = useState("approved");
+    const [currentStage, setCurrentStage] = useState("loading");
     const [activeTab, setActiveTab] = useState("dashboard");
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -513,13 +522,13 @@ function OrganiserPanel() {
     });
 
     // Supabase Queries
-    const { data: organiserData } = useSupabaseQuery(
-        "organiser_details",
+    const { data: organiserData, loading: isOrgLoading, refresh: refreshOrganiserData } = useSupabaseQuery(
+        "vendors",
         (q) => q.eq("id", user?.id).maybeSingle(),
         [user?.id]
     );
 
-    const [submitKycMutation] = useSupabaseMutation("organiser_details", "update", (q) => q.eq("id", user?.id));
+    const [submitKycMutation] = useSupabaseMutation("vendors", "update", (q) => q.eq("id", user?.id));
 
     const isProfessionalService = useMemo(() => {
         return isProfService(
@@ -604,17 +613,20 @@ function OrganiserPanel() {
                 setCurrentStage("approved");
                 router.push("/vendor/dashboard");
                 return;
-            } else if (!organiserData.kyc_status || organiserData.kyc_status === "Pending" || organiserData.kyc_status === "KYC Pending") {
+            } else if (!organiserData) {
+                // No organiser record found yet, start with KYC
+                setCurrentStage("kyc_start");
+            } else if (organiserData.kyc_status === "Pending" || organiserData.kyc_status === "KYC Pending") {
                 setCurrentStage("kyc_start");
             } else if (organiserData.kyc_status === "Submitted" || organiserData.kyc_status === "Under Review") {
                 setCurrentStage("pending");
-            } else if (organiserData.kyc_status === "Active" || organiserData.kyc_status === "KYC Verified" || organiserData.kyc_status === "KYC Completed") {
+            } else if (["Active", "KYC Verified", "KYC Completed", "Approved"].includes(organiserData.kyc_status)) {
                 setCurrentStage("approved");
             } else {
                 setCurrentStage("kyc_start");
             }
         }
-    }, [organiserData, isProfessionalService, router]);
+    }, [organiserData, isProfessionalService, router, loading]);
 
     const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
     const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
@@ -1804,7 +1816,7 @@ function OrganiserPanel() {
                 {kycStep === 3 && (
                     <div style={{ padding: "60px", textAlign: "center" }}>
                         <div style={{ width: "80px", height: "80px", borderRadius: "20px", backgroundColor: "#ec489910", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", color: "#ec4899" }}>
-                            <FileCheck size={40} />
+                            <FileCheck2 size={40} />
                         </div>
                         <h3 style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "12px" }}>Final Consensus</h3>
                         <p style={{ color: "#64748b", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
@@ -1835,10 +1847,21 @@ function OrganiserPanel() {
                                         kyc_status: "Submitted",
                                         kyc_details: { ...kycFormData, agreementAccepted: agreedToVendor }
                                     };
-                                    submitKycMutation(kycPayload).then(() => {
-                                        setCurrentStage("pending");
-                                        setProfile(prev => ({ ...prev, kycStatus: "Submitted" }));
-                                        showToast("KYC submitted for review", "success");
+                                    submitKycMutation(kycPayload).then(async (res) => {
+                                        if (res.success) {
+                                            // Sync with partner_requests table
+                                            await supabase.from('partner_requests')
+                                                .update({ status: 'KYC Completed' })
+                                                .eq('id', organiserData.id);
+
+                                            refreshOrganiserData().then(() => {
+                                                setCurrentStage("pending");
+                                                setProfile(prev => ({ ...prev, kycStatus: "Submitted" }));
+                                                showToast("KYC submitted for review", "success");
+                                            });
+                                        } else {
+                                            showToast("Failed to submit verification: " + (res.error?.message || "Unknown error"), "error");
+                                        }
                                     });
                                 }
                             } else {
@@ -4894,14 +4917,21 @@ function OrganiserPanel() {
         </>
     );
 
+    // GUARD: If global auth or local organiser data is loading, show loading UI
+    if (loading || isOrgLoading) return renderLoadingView();
+
+    // GUARD: If unauthorized role trying to access (should be caught by useEffect, but this prevents blank screen)
+    if (user && user.role !== 'organiser' && user.role !== 'admin' && user.role !== 'staff') {
+        return renderLoadingView(); // Will redirect soon
+    }
+
     // Professional Services should never see the Organiser KYC/Onboarding screens.
-    // We also hide the UI while organiserData is loading to prevent flashing the KYC screen
-    // for users who are about to be identified as Professional Services and redirected.
-    // ADMIN BYPASS: Allow admins and staff even if organiserData is missing (they won't have an organiser record).
-    if (isProfessionalService || (!organiserData && user?.role !== 'admin' && user?.role !== 'staff')) return null;
+    if (isProfessionalService) return null;
 
     // Main Stage Dispatcher
     switch (currentStage) {
+        case "loading":
+            return renderLoadingView();
         case "kyc_start":
             return (
                 <>

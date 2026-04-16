@@ -125,7 +125,7 @@ export default function PortfolioPage() {
     const fileInputRef = useRef(null);
 
     const { data: profileArr = [] } = useSupabaseQuery('service_providers', (q) => 
-        q.eq('organiser_id', vendorId).single()
+        q.eq('id', vendorId).single()
     , [vendorId]);
 
     const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;

@@ -37,11 +37,11 @@ export default function ArtistProfilePage() {
 
     // Fetch full profile from Supabase
     const { data: profileArr = [], loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
-        q.select('*, organiser_details(*)').eq('id', vendorId).single()
+        q.select('*, vendors(*)').eq('id', vendorId).single()
     , [vendorId]);
     
     const fullProfile = profileArr && !Array.isArray(profileArr) ? { 
-        organiser: profileArr.organiser_details, 
+        organiser: profileArr.vendors, 
         vendorProfile: profileArr 
     } : null;
 

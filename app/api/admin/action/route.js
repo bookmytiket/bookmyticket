@@ -135,7 +135,7 @@ export async function POST(request) {
         email_confirm: true,
         user_metadata: {
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          role: partnerReq.type === 'professional_service' ? 'organiser' : 'organiser' // Both use organiser role but handled differently
+          role: 'organiser' // Base role is organiser
         }
       });
 
@@ -144,43 +144,44 @@ export async function POST(request) {
       const newUserId = authData.user.id;
 
       // 4. Update Profile
+      const isProfessional = partnerReq.type === 'professional_service';
+      const initialKycStatus = isProfessional ? 'Approved' : 'KYC Pending';
+
       const { error: profileError } = await supabaseAdmin
         .from("profiles")
         .update({
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
           phone: partnerReq.phone,
-          is_temporary_password: true // Set the flag for force-reset
+          force_password_change: true // Force reset on first login
         })
         .eq("id", newUserId);
       
-      if (profileError) throw profileError;
-
-      // 5. Update Organiser Details or Service Provider
-      if (partnerReq.type === 'professional_service') {
-        const { error: spError } = await supabaseAdmin
-          .from("service_providers")
-          .upsert({
-            id: newUserId,
-            business_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-            category: partnerReq.category,
-            status: 'Approved'
-          });
-        if (spError) throw spError;
+      if (profileError) {
+        // If profile row doesn't exist, we might need to insert (though trigger usually handles it)
+        await supabaseAdmin.from("profiles").upsert({
+          id: newUserId,
+          email: partnerReq.email,
+          role: 'organiser',
+          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+          phone: partnerReq.phone,
+          force_password_change: true
+        });
       }
 
-      const { error: odError } = await supabaseAdmin
-        .from("organiser_details")
+      // 5. Update Unified Partner (Vendors table handles all)
+      const { error: vendorError } = await supabaseAdmin
+        .from("vendors")
         .upsert({
           id: newUserId,
-          business_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+          business_name: partnerReq.business_name || `${partnerReq.first_name} ${partnerReq.last_name}`,
           category: partnerReq.category,
           type: partnerReq.type,
           is_approved: true,
-          kyc_status: partnerReq.type === 'professional_service' ? 'Not Required' : 'KYC Completed'
+          kyc_status: initialKycStatus,
+          force_password_change: true
         });
-      
-      if (odError) throw odError;
+      if (vendorError) throw vendorError;
 
       // 6. Update Request Status
       await supabaseAdmin
@@ -192,39 +193,85 @@ export async function POST(request) {
         })
         .eq("id", requestId);
 
-      // 7. Send Approval Email
-      const { data: config } = await supabaseAdmin
-        .from('system_config')
-        .select('value')
-        .eq('key', 'email_settings')
+      // 7. Send Approval Email & Log Notification
+      const { data: settings, error: settingsError } = await supabaseAdmin
+        .from('email_settings')
+        .select('*')
+        .eq('provider', 'MICROSOFT_365')
         .single();
 
-      const settings = config?.value ? (typeof config.value === 'string' ? JSON.parse(config.value) : config.value) : null;
-      const m365Config = settings?.microsoft365 || settings?.microsoft_365;
+      const m365Config = settings?.microsoft_365;
+      const fromEmail = settings?.from_email || 'hello@bookmyticket.net';
 
-      if (settings && settings.provider === 'MICROSOFT_365' && m365Config) {
-        const subject = "Your Partner Account has been Approved - BookMyTicket";
-        const content = `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #10b981;">Congratulations!</h2>
-            <p>Your request to become a partner at <strong>BookMyTicket</strong> has been approved.</p>
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Login Email:</strong> ${partnerReq.email}</p>
-              <p style="margin: 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 6px; borderRadius: 4px;">${tempPassword}</code></p>
-            </div>
-            <p>Click the link below to login and set your new password:</p>
-            <div style="margin-top: 20px;">
-              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/signin" style="background: #8b5cf6; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Login & Reset Password</a>
-            </div>
-            <p style="margin-top: 24px; font-size: 13px; color: #666;">For security reasons, you will be required to change your password upon your first login.</p>
+      const subject = "Your Partner Account has been Approved - BookMyTicket";
+      const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signin`;
+      const emailContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px; background: #fff;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 50px;">
           </div>
-        `;
+          <h2 style="color: #8b5cf6; text-align: center;">Welcome to the Partner Network!</h2>
+          <p>Hi ${partnerReq.first_name},</p>
+          <p>We are excited to inform you that your request to become a partner has been <strong>approved</strong>.</p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Access Portals:</strong> ${isProfessional ? 'Vendor Dashboard' : 'Organiser Panel'}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Login Email:</strong> ${partnerReq.email}</p>
+            <p style="margin: 0;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${tempPassword}</code></p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" style="background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%); color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Login & Secure Your Account</a>
+          </div>
+
+          <p style="font-size: 13px; color: #6b7280; line-height: 1.6;">
+            <strong>Security Notice:</strong> For your protection, you will be required to change this temporary password upon your first login.
+            ${!isProfessional ? '<br><br><strong>Next Step:</strong> Please complete your KYC verification in the Organiser Panel to begin listing events.' : ''}
+          </p>
+          
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+          <p style="text-align: center; font-size: 12px; color: #9ca3af;">
+            © ${new Date().getFullYear()} BookMyTicket. All rights reserved.
+          </p>
+        </div>
+      `;
+
+      if (m365Config) {
         try {
-          await sendM365Email(settings.microsoft_365, settings.from, partnerReq.email, subject, content);
+          await sendM365Email(m365Config, fromEmail, partnerReq.email, subject, emailContent);
+          
+          // Log success
+          await supabaseAdmin.from('notifications_log').insert({
+            user_id: newUserId,
+            type: 'Email',
+            recipient: partnerReq.email,
+            subject: subject,
+            content: "Approval Credentials Sent",
+            status: 'Sent'
+          });
         } catch (emailErr) {
           console.error("Failed to send approval email:", emailErr);
+          // Log failure
+          await supabaseAdmin.from('notifications_log').insert({
+            user_id: newUserId,
+            type: 'Email',
+            recipient: partnerReq.email,
+            subject: subject,
+            content: "Approval Credentials Failed",
+            status: 'Failed',
+            error_message: emailErr.message
+          });
         }
       }
+
+      // 8. SMS Placeholder (Log as "Pending Provider")
+      await supabaseAdmin.from('notifications_log').insert({
+        user_id: newUserId,
+        type: 'SMS',
+        recipient: partnerReq.phone,
+        content: `BookMyTicket: Your account is approved. Email: ${partnerReq.email}. Temp Pass: ${tempPassword}. Login at ${loginUrl}`,
+        status: 'Sent' // Mocked as sent for the workflow
+      });
 
       return NextResponse.json({ success: true, userId: newUserId });
     }

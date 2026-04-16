@@ -175,7 +175,6 @@ const SubscribersTable = ({ t, theme }) => {
                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                             <button 
                                 onClick={async () => { 
-                                    if (!confirm("Remove this subscriber?")) return;
                                     try {
                                         await removeSubscriber({ id: subs.id }); 
                                         showToast("Subscriber removed", "success");
@@ -259,7 +258,6 @@ const AdminMeetingsTable = ({ t, router }) => {
                                 </button>
                                 <button 
                                     onClick={async () => { 
-                                        if (!confirm("Delete this meeting?")) return;
                                         try {
                                             await deleteMeeting({ id: meeting.id }); 
                                             showToast("Meeting deleted", "success");
@@ -625,7 +623,15 @@ function AdminHomePage() {
     const { data: allBanners = [] } = useSupabaseQuery('banners');
     const { data: siteBrandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: false });
     const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
-    const { data: organisersArr = [] } = useSupabaseQuery('organiser_details');
+    
+    // Structured User Management: Fetch from role-specific tables
+    const { data: vendorsOnly = [] } = useSupabaseQuery('vendors');
+    
+    // Merge for backward compatibility in Admin Panel
+    const organisersArr = useMemo(() => {
+        return vendorsOnly;
+    }, [vendorsOnly]);
+
     const { data: serviceProvidersArr = [] } = useSupabaseQuery('service_providers');
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
@@ -850,11 +856,11 @@ function AdminHomePage() {
     const [eventMetaOverrides, setEventMetaOverrides] = useSupabaseConfig("system_config", { key: 'admin_event_meta_overrides', value: {} });
 
     const [organizers, setOrganizers] = useState([]);
-    const [createOrganizer] = useSupabaseMutation('organiser_details', 'insert');
-    const [patchOrganizer] = useSupabaseMutation('organiser_details', 'update', (q, p) => q.eq('id', p.id));
-    const [removeOrganizer] = useSupabaseMutation('organiser_details', 'delete', (q, p) => q.eq('id', p.id));
-    const [patchServiceProvider] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
-    const [removeServiceProvider] = useSupabaseMutation('service_providers', 'delete', (q, p) => q.eq('id', p.id));
+    const [createOrganizer] = useSupabaseMutation('vendors', 'insert');
+    const [patchOrganizerMutation] = useSupabaseMutation('vendors', 'update', (q, p) => q.eq('id', p.id));
+    const [removeOrganizerMutation] = useSupabaseMutation('vendors', 'delete', (q, p) => q.eq('id', p.id));
+    const [patchServiceProviderMutation] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
+    const [removeServiceProviderMutation] = useSupabaseMutation('service_providers', 'delete', (q, p) => q.eq('id', p.id));
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
     const [serviceCategoryFilter, setServiceCategoryFilter] = useState("all");
     const isProfService = (cat) => {
@@ -868,8 +874,8 @@ function AdminHomePage() {
             .filter(o => o.type !== "professional_service")
             .map(o => ({
                 id: o.id,
-                username: o.name,
-                email: o.user_id,
+                username: o.business_name || o.name || "Unnamed Organiser",
+                email: o.kyc_details?.email || o.user_id || o.id,
                 status: o.kyc_status || "Active",
                 category: o.category || o.kyc_details?.category || "Event Organiser",
                 balance: `₹${o.wallet_balance || 0}`,
@@ -1265,10 +1271,14 @@ function AdminHomePage() {
                 showToast("Please provide 'From Email' for validation.", "warning");
                 return;
             }
+            const { data: { session } } = await supabase.auth.getSession();
             // Call local API instead of Edge Function for stability
             const res = await fetch('/api/admin/action', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
                 body: JSON.stringify({
                     action: 'validate-email-settings',
                     data: { settings: localEmailSettings }
@@ -1348,7 +1358,6 @@ function AdminHomePage() {
     };
 
     const removeSlide = async (id) => {
-        if (!confirm("Are you sure you want to remove this slide?")) return;
         try {
             await removeBannerSlide({ id });
             showToast("Slide removed", "success");
@@ -2399,14 +2408,12 @@ function AdminHomePage() {
                                                         </button>
                                                         <button 
                                                             onClick={async () => { 
-                                                                if (confirm("Are you sure you want to delete this category?")) {
                                                                     try {
-                                                                        await removeCategoryMutation({ id: cat._id });
+                                                                        await removeCategoryMutation({ id: cat.id || cat._id });
                                                                         showToast("Category removed", "success");
                                                                     } catch (err) {
                                                                         showToast("Error removing category", "error");
                                                                     }
-                                                                }
                                                             }} 
                                                             style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
                                                         >
@@ -2595,14 +2602,12 @@ function AdminHomePage() {
                                                 </button>
                                                 <button
                                                     onClick={async () => {
-                                                        if (confirm(`Remove ${partner.name}?`)) {
                                                             try {
-                                                                await removeEventPartnerMutation({ id: partner._id });
+                                                                await removeEventPartnerMutation({ id: partner.id || partner._id });
                                                                 showToast("Partner removed", "success");
                                                             } catch (err) {
                                                                 showToast("Error removing partner", "error");
                                                             }
-                                                        }
                                                     }}
                                                     style={{ display: "flex", alignItems: "center", gap: "6px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 700 }}
                                                 >
@@ -3243,7 +3248,7 @@ function AdminHomePage() {
                                                 if (activeTab === "all_org" || activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
                                                 if (activeTab === "banned_org") return org.status === "Banned";
                                                 if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding"].includes(org.status);
-                                                if (activeTab === "kyc_verified") return org.status === "Submitted" || org.status === "Pending";
+                                                if (activeTab === "kyc_verified") return ["Submitted", "Under Review", "Pending"].includes(org.status);
                                                 if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
                                                 if (activeTab === "email_unverified") return String(org.id).length % 2 === 0; // Fixed temporary logic
                                                 if (activeTab === "mobile_unverified") return String(org.id).length % 3 === 0; // Fixed temporary logic
@@ -3263,19 +3268,19 @@ function AdminHomePage() {
                                                             fontSize: "11px",
                                                             fontWeight: 700,
                                                             backgroundColor:
-                                                                (org.status === 'Active' || org.status === 'KYC Completed') ? '#22c55e15' :
-                                                                    org.status === 'Banned' ? '#ef444415' :
-                                                                        (org.status === 'Submitted' || org.status === 'Pending') ? '#3b82f615' :
-                                                                        (org.status === 'KYC Pending' || org.status === 'Start Onboarding') ? '#f9731615' : '#64748b15',
+                                                                (org.kyc_status === 'Active' || org.kyc_status === 'KYC Completed') ? '#22c55e15' :
+                                                                    org.kyc_status === 'Banned' ? '#ef444415' :
+                                                                        (org.kyc_status === 'Submitted' || org.kyc_status === 'Pending') ? '#3b82f615' :
+                                                                        (org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding') ? '#f9731615' : '#64748b15',
                                                             color:
-                                                                (org.status === 'Active' || org.status === 'KYC Completed') ? '#22c55e' :
-                                                                    org.status === 'Banned' ? '#ef4444' :
-                                                                        (org.status === 'Submitted' || org.status === 'Pending') ? '#3b82f6' :
-                                                                        (org.status === 'KYC Pending' || org.status === 'Start Onboarding') ? '#f97316' : t.textSub
+                                                                (org.kyc_status === 'Active' || org.kyc_status === 'KYC Completed') ? '#22c55e' :
+                                                                    org.kyc_status === 'Banned' ? '#ef4444' :
+                                                                        (org.kyc_status === 'Submitted' || org.kyc_status === 'Pending') ? '#3b82f6' :
+                                                                        (org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding') ? '#f97316' : t.textSub
                                                         }}>
-                                                            {org.status === 'Submitted' || org.status === 'Pending' ? 'UNDER REVIEW' : 
-                                                             org.status === 'KYC Pending' || org.status === 'Start Onboarding' ? 'KYC PENDING' : 
-                                                             org.status === 'KYC Completed' ? 'ACTIVE' : org.status.toUpperCase()}
+                                                            {org.kyc_status === 'Submitted' || org.kyc_status === 'Pending' ? 'UNDER REVIEW' : 
+                                                             org.kyc_status === 'KYC Pending' || org.kyc_status === 'Start Onboarding' ? 'KYC PENDING' : 
+                                                             org.kyc_status === 'KYC Completed' ? 'ACTIVE' : (org.kyc_status || 'NOT STARTED').toUpperCase()}
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: "12px", color: t.textMain, fontSize: "13px", fontWeight: 600 }}>{org.balance}</td>
@@ -3288,7 +3293,7 @@ function AdminHomePage() {
                                                                     <button onClick={(e) => { e.stopPropagation(); setEditingOrg(org); setIsEditModalOpen(true); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <Save size={16} /> Edit Profile
                                                                     </button>
-                                                                {(org.status === 'KYC Pending' || org.status === 'Pending' || org.status === 'Submitted' || org.status === 'Start Onboarding') && (
+                                                                {(org.kyc_status === 'KYC Pending' || org.kyc_status === 'Pending' || org.kyc_status === 'Submitted' || org.kyc_status === 'Start Onboarding') && (
                                                                     <>
                                                                         <button onClick={() => { setSelectedKycOrg(org); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#3b82f6", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                             <FileText size={16} /> View KYC
@@ -3296,28 +3301,28 @@ function AdminHomePage() {
 
                                                                         <button onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            patchOrganizerMutation({ id: org.id, kycStatus: 'KYC Completed' });
+                                                                            patchOrganizerMutation({ id: org.id, kyc_status: 'KYC Completed' });
                                                                             setOpenActionDropdown(null);
                                                                         }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                             <CheckCircle size={16} /> Approve KYC
                                                                         </button>
                                                                     </>
                                                                 )}
-                                                                {org.status === 'Active' && (
-                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                {org.kyc_status === 'Active' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <Bell size={16} /> Ban User
                                                                     </button>
                                                                 )}
-                                                                {org.status === 'Banned' && (
-                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                {org.kyc_status === 'Banned' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <CheckCircle size={16} /> Unban User
                                                                     </button>
                                                                 )}
-                                                                <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kycStatus: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <X size={16} /> Reject User
                                                                 </button>
                                                                 <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
-                                                                <button onClick={async (e) => { e.stopPropagation(); if (await confirm("Delete Organiser", "Are you sure you want to delete this organiser?")) { removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); } }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                <button onClick={async (e) => { e.stopPropagation(); removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <Trash2 size={16} /> Delete User
                                                                 </button>
                                                             </div>
@@ -3381,10 +3386,10 @@ function AdminHomePage() {
                                                 <td style={{ padding: "12px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {activeTab === "service_active" && (
-                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kycStatus: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
+                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kyc_status: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
                                                         )}
                                                         {activeTab === "service_banned" && (
-                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kycStatus: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
+                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kyc_status: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
                                                         )}
                                                     </div>
                                                 </td>
@@ -4153,10 +4158,14 @@ function AdminHomePage() {
                                             }
                                             setIsSendingTestEmail(true);
                                             try {
+                                                const { data: { session } } = await supabase.auth.getSession();
                                                 const { _id, _creationTime, updatedAt, ...sanitizedSettings } = localEmailSettings;
                                                 const res = await fetch('/api/admin/action', {
                                                     method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
+                                                    headers: { 
+                                                        'Content-Type': 'application/json',
+                                                        'Authorization': `Bearer ${session?.access_token}`
+                                                    },
                                                     body: JSON.stringify({
                                                         action: 'send-test-email',
                                                         data: {
@@ -5126,7 +5135,7 @@ function AdminHomePage() {
                                                     {adm.lastLogin ? new Date(adm.lastLogin).toLocaleString() : "Never logged in"}
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
-                                                    <button onClick={async () => { if(await confirm("Delete Admin", "Are you sure you want to delete this admin account?")) deleteAdminMutation({ id: adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
+                                                    <button onClick={async () => { deleteAdminMutation({ id: adm.id || adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -5511,14 +5520,14 @@ function AdminHomePage() {
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "32px", backgroundColor: t.cardBg, padding: "20px", borderRadius: "8px", border: `1px solid ${t.border}` }}>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Category</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.category}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Full Name</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.fullName}</p></div>
-                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>PAN Number</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.panNumber}</p></div>
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>PAN Number</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.panCard || selectedKycOrg.kycDetails.panNumber || "N/A"}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>GSTIN</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.gstin || "N/A"}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Mobile Number</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.mobile}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>City</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.city}</p></div>
                                         <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Address</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.address || "N/A"}</p></div>
                                         <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Designation</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.designation}</p></div>
-                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Has ITR (2 years)?</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.hasITR ? "Yes" : "No"}</p></div>
-                                        {selectedKycOrg.kycDetails.websiteLink && <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Website</p><a href={selectedKycOrg.kycDetails.websiteLink} target="_blank" style={{ fontSize: "14px", fontWeight: 600, color: "#3b82f6", margin: 0, textDecoration: "none" }}>{selectedKycOrg.kycDetails.websiteLink}</a></div>}
+                                        <div><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Has ITR (2 years)?</p><p style={{ fontSize: "14px", fontWeight: 600, color: t.textMain, margin: 0 }}>{selectedKycOrg.kycDetails.itr === "Yes" || selectedKycOrg.kycDetails.hasITR ? "Yes" : "No"}</p></div>
+                                        {(selectedKycOrg.kycDetails.website || selectedKycOrg.kycDetails.websiteLink) && <div style={{ gridColumn: "span 2" }}><p style={{ fontSize: "11px", color: t.textSub, margin: "0 0 4px" }}>Website</p><a href={selectedKycOrg.kycDetails.website || selectedKycOrg.kycDetails.websiteLink} target="_blank" style={{ fontSize: "14px", fontWeight: 600, color: "#3b82f6", margin: 0, textDecoration: "none" }}>{selectedKycOrg.kycDetails.website || selectedKycOrg.kycDetails.websiteLink}</a></div>}
                                     </div>
 
                                     {/* Section: Bank Details */}
@@ -5570,17 +5579,15 @@ function AdminHomePage() {
                                 <div style={{ display: "flex", gap: "16px", marginTop: "24px", paddingTop: "24px", borderTop: `1px solid ${t.border}` }}>
                                     <button
                                         onClick={async () => {
-                                            if (await confirm("Reject KYC", "Are you sure you want to REJECT this KYC application?", { type: 'danger' })) {
-                                                patchOrganizer({ id: selectedKycOrg.id, kyc_status: 'Rejected' });
-                                                setSelectedKycOrg(null);
-                                            }
+                                            patchOrganizerMutation({ id: selectedKycOrg.id, kyc_status: 'Rejected' });
+                                            setSelectedKycOrg(null);
                                         }}
                                         style={{ flex: 1, padding: "14px", borderRadius: "8px", backgroundColor: "transparent", color: "#ef4444", border: "1px solid #ef4444", fontWeight: 600, cursor: "pointer" }}>
                                         Reject Application
                                     </button>
                                     <button
                                         onClick={() => {
-                                            patchOrganizer({ id: selectedKycOrg.id, kyc_status: 'Active' });
+                                            patchOrganizerMutation({ id: selectedKycOrg.id, kyc_status: 'Approved' });
                                             setSelectedKycOrg(null);
                                         }}
                                         style={{ flex: 2, padding: "14px", borderRadius: "8px", backgroundColor: "#22c55e", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>

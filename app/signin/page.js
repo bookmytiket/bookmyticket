@@ -89,8 +89,20 @@ export default function SignInPage() {
 
             let destination = isInvalidRedirect ? "/" : decodedRedirect;
 
-            // Apply role-based defaults ONLY if no valid redirect was provided
-            if (isInvalidRedirect) {
+            // Security: Validate authorization for the target destination
+            const isAdminPath = destination?.startsWith("/admin");
+            const isBrandingPath = destination?.startsWith("/branding");
+            const isOrganiserPath = destination?.startsWith("/organiser");
+            const isVendorPath = destination?.startsWith("/vendor");
+
+            const isAuthorized = 
+                (!isAdminPath || user.role === "admin" || user.role === "super_admin") &&
+                (!isBrandingPath || user.role === "branding_partner" || user.role === "admin" || user.role === "super_admin") &&
+                (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(user.role)) &&
+                (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(user.role));
+
+            // Apply role-based defaults if no valid redirect OR not authorized for target
+            if (isInvalidRedirect || !isAuthorized) {
                 if (user.role === "admin" || user.role === "super_admin") {
                     destination = "/admin";
                 } else if (user.role === "staff") {
