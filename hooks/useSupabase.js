@@ -24,6 +24,15 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
   const fetchData = async (isRetry = false) => {
     if (!table || !isMounted.current) return;
     
+    if (!supabase) {
+      if (!isRetry) {
+        console.error("Supabase client is not initialized. Please check your environment variables.");
+        setError(new Error("Supabase internal error: Client not initialized"));
+        setLoading(false);
+      }
+      return;
+    }
+
     // Simple debounce to prevent frequent re-fetches (e.g. from rapid Realtime updates)
     const now = Date.now();
     if (!isRetry && now - lastFetchRef.current < 500) {
@@ -86,7 +95,7 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
     }, jitter);
 
     let subscription = null;
-    if (realtime && table) {
+    if (realtime && table && supabase) {
       const channelId = Math.random().toString(36).substring(2, 11);
       subscription = supabase
         .channel(`${table}_changes_${channelId}`)
@@ -104,7 +113,7 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
       isMounted.current = false;
       clearTimeout(initialFetchTimeout);
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-      if (subscription) {
+      if (subscription && supabase) {
         supabase.removeChannel(subscription);
       }
     };
@@ -127,6 +136,14 @@ export function useSupabaseMutation(table, type = 'insert', queryFn = (q) => q) 
   const mutate = async (payload, options = {}) => {
     setLoading(true);
     setError(null);
+
+    if (!supabase) {
+      const err = new Error("Supabase client not initialized");
+      setError(err);
+      setLoading(false);
+      return { success: false, error: err };
+    }
+
     try {
       let query;
       switch (type) {

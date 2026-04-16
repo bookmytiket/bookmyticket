@@ -16,9 +16,19 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         // Initial session load
         const initializeAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                await fetchAndSetUser(session.user);
+            if (!supabase) {
+                console.warn("AuthContext: Supabase client not initialized. Skipping session check.");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    await fetchAndSetUser(session.user);
+                }
+            } catch (err) {
+                console.error("AuthContext: Error getting session:", err);
             }
 
             const storedCity = localStorage.getItem("selectedCity");
@@ -37,20 +47,25 @@ export function AuthProvider({ children }) {
         initializeAuth();
 
         // Auth state listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Supabase Auth Event:", event);
-            if (session) {
-                await fetchAndSetUser(session.user);
-            } else {
-                setUser(null);
-                localStorage.removeItem("user");
-            }
-        });
+        let subscription = null;
+        if (supabase) {
+            const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log("Supabase Auth Event:", event);
+                if (session) {
+                    await fetchAndSetUser(session.user);
+                } else {
+                    setUser(null);
+                    localStorage.removeItem("user");
+                }
+            });
+            subscription = sub;
+        }
 
-        return () => subscription.unsubscribe();
+        return () => subscription?.unsubscribe();
     }, [router]);
 
     const fetchAndSetUser = async (supabaseUser) => {
+        if (!supabase) return null;
         try {
             const { data: profile, error } = await supabase
                 .from('profiles')
@@ -58,7 +73,7 @@ export function AuthProvider({ children }) {
                 .eq('id', supabaseUser.id)
                 .single();
 
-            let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase();
+            let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
 
             // Fallback: Check admins table if the profile role is not already 'admin'
             if (role !== 'admin') {
@@ -74,8 +89,9 @@ export function AuthProvider({ children }) {
                     }
 
                     if (adminRecord) {
-                        console.log("AuthContext: Admin record found, upgrading role. Admin role in DB:", adminRecord.role);
-                        role = 'admin';
+                        const adminRole = adminRecord.role?.toLowerCase() || 'admin';
+                        console.log("AuthContext: Admin record found, upgrading role. Admin role in DB:", adminRole);
+                        role = adminRole.replace(/\s+/g, '_');
                     }
                 } catch (err) {
                     console.error("AuthContext: Unexpected error checking admins table:", err);
@@ -117,7 +133,7 @@ export function AuthProvider({ children }) {
         }
 
         // Sync to backend if user is logged in
-        if (user?.id) {
+        if (user?.id && supabase) {
             try {
                 await supabase
                     .from('profiles')
@@ -133,6 +149,9 @@ export function AuthProvider({ children }) {
     };
 
     const login = async (identifier, password, redirectPath = null) => {
+        if (!supabase) {
+            return { success: false, error: "Authentication system not initialized. Please check configuration." };
+        }
         setLoading(true);
         try {
             let email = identifier;
@@ -179,7 +198,7 @@ export function AuthProvider({ children }) {
 
                 // Apply role-based defaults ONLY if no valid redirect was provided
                 if (isInvalidRedirect) {
-                    if (userData.role === "admin") {
+                    if (userData.role === "admin" || userData.role === "super_admin") {
                         destination = "/admin";
                     } else if (userData.role === "staff") {
                         destination = "/organiser?tab=pwa_scanner";
@@ -211,10 +230,12 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("user");
         setUser(null);
         
-        try {
-            await supabase.auth.signOut();
-        } catch (err) {
-            console.error("Supabase signOut error:", err);
+        if (supabase) {
+            try {
+                await supabase.auth.signOut();
+            } catch (err) {
+                console.error("Supabase signOut error:", err);
+            }
         }
         
         router.replace("/signin");

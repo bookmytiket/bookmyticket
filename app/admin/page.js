@@ -442,7 +442,7 @@ function AdminHomePage() {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && (!user || user.role !== "admin")) {
+        if (!loading && (!user || (user.role !== "admin" && user.role !== "super_admin"))) {
             router.push("/signin?redirect=/admin");
         }
     }, [user, loading, router]);

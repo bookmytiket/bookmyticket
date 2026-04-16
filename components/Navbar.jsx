@@ -127,6 +127,7 @@ const EVENT_CATEGORIES = [...SERVICE_CATEGORIES, "Other"];
 
 import { useAuth } from "./AuthContext";
 import LocationSelectionModal from "./LocationSelectionModal";
+import BecomePartnerModal from "./BecomePartnerModal";
 
 const ALL_CITIES_BY_COUNTRY = {
   "India": ["Coimbatore", "Chennai", "Salem", "Madurai", "Trichy", "Tirupur", "Erode", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Kolkata", "Delhi", "Gurgaon", "Noida", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kochi", "Thiruvananthapuram", "Chandigarh", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Ludhiana", "Agra", "Nashik", "Rajkot", "Varanasi", "Srinagar", "Amritsar", "Aurangabad", "Solapur"],
@@ -220,11 +221,6 @@ export default function Navbar() {
 
   /* Organiser modal */
   const [orgOpen, setOrgOpen] = useState(false);
-  const [orgSent, setOrgSent] = useState(false);
-  const [orgForm, setOrgForm] = useState({
-    firstName: "", lastName: "", email: "", phone: "",
-    category: "", role: "Organiser", remarks: "",
-  });
 
   /* scroll detection */
   useEffect(() => {
@@ -249,43 +245,6 @@ export default function Navbar() {
 
 
   const [orgLoading, setOrgLoading] = useState(false);
-
-  const handleOrgSubmit = async (e) => {
-    e.preventDefault();
-    if (!orgForm.firstName || !orgForm.lastName || !orgForm.email || !orgForm.phone || !orgForm.category || !orgForm.role) {
-      alert("Please fill all required fields");
-      return;
-    }
-    setOrgLoading(true);
-    try {
-      const type = isServiceProvider(orgForm.category) ? "professional_service" : "event_organiser";
-      const res = await fetch("/api/partner/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...orgForm, type })
-      });
-      
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Submission failed");
-      
-      setOrgSent(true);
-      setTimeout(() => {
-        setOrgSent(false);
-        setOrgOpen(false);
-        setOrgForm({ firstName: "", lastName: "", email: "", phone: "", category: "", role: "Organiser", remarks: "" });
-      }, 2600);
-    } catch (err) {
-      alert(err.message || "Failed to send request. Please try again later.");
-      console.error(err);
-    } finally {
-      setOrgLoading(false);
-    }
-  };
-
-  const field = (key) => ({
-    value: orgForm[key],
-    onChange: (e) => setOrgForm({ ...orgForm, [key]: e.target.value }),
-  });
 
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -846,80 +805,10 @@ export default function Navbar() {
         allowClose={!!selectedCity}
       />
 
-      {
-        orgOpen && (
-          <div className="modal-backdrop" onClick={() => setOrgOpen(false)}>
-            <div className="org-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close-btn" onClick={() => setOrgOpen(false)}>✕</button>
-
-              {orgSent ? (
-                <div className="org-success">
-                  <div className="org-success-icon">✅</div>
-                  <h3>Request Submitted!</h3>
-                  <p>Our team will get in touch with you shortly.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="org-modal-head">
-                    <h2 className="org-modal-title">Request to Become a Partner</h2>
-                    <p className="org-modal-sub">Fill in your details — our team will reach out to you within 24 hours.</p>
-                  </div>
-
-                  <form className="org-form" onSubmit={handleOrgSubmit} noValidate>
-                    <div className="org-row">
-                      <div className="org-field">
-                        <label htmlFor="fn">FIRST NAME <span>*</span></label>
-                        <input id="fn" required placeholder="John" {...field("firstName")} />
-                      </div>
-                      <div className="org-field">
-                        <label htmlFor="ln">LAST NAME <span>*</span></label>
-                        <input id="ln" required placeholder="Doe" {...field("lastName")} />
-                      </div>
-                    </div>
-
-                    <div className="org-row">
-                      <div className="org-field">
-                        <label htmlFor="em">EMAIL ID <span>*</span></label>
-                        <input id="em" required type="email" placeholder="john@example.com" {...field("email")} />
-                      </div>
-                      <div className="org-field">
-                        <label htmlFor="ph">CONTACT NUMBER <span>*</span></label>
-                        <input id="ph" required type="tel" placeholder="+91 98765 43210" {...field("phone")} />
-                      </div>
-                    </div>
-
-                    <div className="org-row">
-                      <div className="org-field">
-                        <label htmlFor="cat">CATEGORY <span>*</span></label>
-                        <select id="cat" required {...field("category")}>
-                          <option value="">Select a category</option>
-                          {EVENT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      <div className="org-field">
-                        <label htmlFor="role">ROLE <span>*</span></label>
-                        <select id="role" required {...field("role")}>
-                          <option>Organiser</option>
-                          <option>Individual</option>
-                          <option>Pvt Ltd</option>
-                          <option>Others</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="org-field org-field-full">
-                      <label htmlFor="rem">REMARKS</label>
-                      <textarea id="rem" rows={3} placeholder="Tell us about your events..." {...field("remarks")} />
-                    </div>
-
-                    <button type="submit" className="org-submit-btn">Send Request →</button>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        )
-      }
+      <BecomePartnerModal 
+        isOpen={orgOpen} 
+        onClose={() => setOrgOpen(false)} 
+      />
     </>
   );
 }

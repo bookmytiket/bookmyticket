@@ -91,7 +91,7 @@ export default function SignInPage() {
 
             // Apply role-based defaults ONLY if no valid redirect was provided
             if (isInvalidRedirect) {
-                if (user.role === "admin") {
+                if (user.role === "admin" || user.role === "super_admin") {
                     destination = "/admin";
                 } else if (user.role === "staff") {
                     destination = "/organiser?tab=pwa_scanner";
