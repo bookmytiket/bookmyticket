@@ -148,16 +148,16 @@ export function useSupabaseMutation(table, type = 'insert', queryFn = (q) => q) 
       let query;
       switch (type) {
         case 'insert':
-          query = supabase.from(table).insert(payload);
+          query = supabase.from(table).insert(payload).select();
           break;
         case 'update':
-          query = supabase.from(table).update(payload);
+          query = supabase.from(table).update(payload).select();
           break;
         case 'delete':
-          query = supabase.from(table).delete();
+          query = supabase.from(table).delete().select();
           break;
         case 'upsert':
-          query = supabase.from(table).upsert(payload, options);
+          query = supabase.from(table).upsert(payload, options).select();
           break;
         default:
           throw new Error(`Unsupported mutation type: ${type}`);
@@ -169,8 +169,9 @@ export function useSupabaseMutation(table, type = 'insert', queryFn = (q) => q) 
       if (err) throw err;
       return { success: true, data };
     } catch (err) {
+      console.error(`Mutation error on ${table}:`, err);
       setError(err);
-      return { success: false, error: err };
+      throw err; // Re-throw to allow component-level try/catch
     } finally {
       setLoading(false);
     }

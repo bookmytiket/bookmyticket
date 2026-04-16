@@ -28,7 +28,8 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     // Approval and KYC via Edge Function usually, but for status updates we can use mutation
     const handleInitiateKyc = async (id) => {
         try {
-            await updateStatus({ id, status: 'KYC Pending' });
+            const { id: _, ...payload } = { id, status: 'KYC Pending' };
+            await updateStatus(payload);
             showToast("KYC process initiated. Invitation sent to partner.", "success");
         } catch (err) {
             showToast("Error initiating KYC: " + err.message, "error");
@@ -80,7 +81,8 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const handleUpdate = async (id, status) => {
         try {
-            await updateStatus({ id, status });
+            const { id: _, ...payload } = { id, status };
+            await updateStatus(payload);
             showToast(`Request ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
             showToast("Error updating status: " + err.message, 'error');
