@@ -568,7 +568,7 @@ function AdminHomePage() {
     const [updateSeoSettings] = useSupabaseMutation('seo_settings', 'update', (q, p) => q.eq('id', p.id));
 
     const { data: emailTemplates = [] } = useSupabaseQuery('email_templates', q => q, [], { realtime: false });
-    const [addEmailTemplate] = useSupabaseMutation('email_templates', 'insert');
+    const [addEmailTemplate] = useSupabaseMutation('email_templates', 'upsert');
     const [patchEmailTemplate] = useSupabaseMutation('email_templates', 'update', (q, p) => q.eq('id', p.id));
     const [removeEmailTemplate] = useSupabaseMutation('email_templates', 'delete', (q, p) => q.eq('id', p.id));
 
@@ -581,7 +581,7 @@ function AdminHomePage() {
                 { identifier: "registration", name: "User Registration", subject: "Welcome to BookMyTicket!", body: "Welcome to BookMyTicket!\n\nYour account has been successfully created.\n\nStart exploring events here: {{site_url}}", auto_send: true },
                 { identifier: "otp", name: "OTP Verification", subject: "{{otp}} is your verification code", body: "Your verification code is: {{otp}}\n\nDo not share this code with anyone.", auto_send: true },
             ];
-            defaults.forEach(d => addEmailTemplate(d));
+            defaults.forEach(d => addEmailTemplate(d, { onConflict: 'identifier' }));
         }
     }, [emailTemplates]);
 
@@ -4742,7 +4742,7 @@ function AdminHomePage() {
                                     <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Generate and manage API keys for external application integration</p>
                                 </div>
                                 <button
-                                    onClick={() => createApiKey({ label: "New App Key", key: `ak_${Math.random().toString(36).substr(2, 9)}...` })}
+                                    onClick={() => createApiKey({ name: "New App Key", key_value: `ak_${Math.random().toString(36).substr(2, 9)}...` })}
                                     style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
                                 >
                                     + Generate New Key

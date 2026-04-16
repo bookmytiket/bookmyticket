@@ -208,48 +208,48 @@ export async function POST(request) {
 
       const subject = "Your Partner Account has been Approved - BookMyTicket";
       const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signin`;
-208:       const emailContent = `
-209:         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; padding: 40px; border-radius: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-210:           <div style="text-align: center; margin-bottom: 30px;">
-211:             <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 60px;">
-212:           </div>
-213:           <h1 style="color: #0f172a; text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Welcome to the Network!</h1>
-214:           <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved and is ready for use.</p>
-215:           
-216:           <div style="background: #f8fafc; padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
-217:             <h3 style="margin: 0 0 20px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;">Your Login Credentials</h3>
-218:             <table style="width: 100%; border-collapse: collapse;">
-219:               <tr>
-220:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Login Email:</td>
-221:                 <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${partnerReq.email}</td>
-222:               </tr>
-223:               <tr>
-224:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
-225:                 <td style="padding: 10px 0;"><code style="background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace;">${tempPassword}</code></td>
-226:               </tr>
-227:               <tr>
-228:                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Platform URL:</td>
-229:                 <td style="padding: 10px 0; color: #3b82f6; font-size: 14px; font-weight: 600;"><a href="https://bookmyticket.net" style="color: #3b82f6; text-decoration: none;">https://bookmyticket.net</a></td>
-230:               </tr>
-231:             </table>
-232:           </div>
-233: 
-234:           <div style="text-align: center; margin-bottom: 30px;">
-235:             <a href="${loginUrl}" style="background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.2);">Secure Your Account Now</a>
-236:           </div>
-237: 
-238:           <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fde68a;">
-239:             <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.5;">
-240:               <strong>Important Security Notice:</strong> This is a temporary password. For your protection, you will be required to change it immediately upon your first login.
-241:             </p>
-242:           </div>
-243:           
-244:           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;">
-245:           <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0;">
-246:             © ${new Date().getFullYear()} BookMyTicket. Empowering experiences.
-247:           </p>
-248:         </div>
-249:       `;
+      const emailContent = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; padding: 40px; border-radius: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 60px;">
+          </div>
+          <h1 style="color: #0f172a; text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Welcome to the Network!</h1>
+          <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved and is ready for use.</p>
+          
+          <div style="background: #f8fafc; padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+            <h3 style="margin: 0 0 20px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;">Your Login Credentials</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Login Email:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${partnerReq.email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
+                <td style="padding: 10px 0;"><code style="background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace;">${tempPassword}</code></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Platform URL:</td>
+                <td style="padding: 10px 0; color: #3b82f6; font-size: 14px; font-weight: 600;"><a href="https://bookmyticket.net" style="color: #3b82f6; text-decoration: none;">https://bookmyticket.net</a></td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 30px;">
+            <a href="${loginUrl}" style="background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.2);">Secure Your Account Now</a>
+          </div>
+
+          <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fde68a;">
+            <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.5;">
+              <strong>Important Security Notice:</strong> This is a temporary password. For your protection, you will be required to change it immediately upon your first login.
+            </p>
+          </div>
+          
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;">
+          <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0;">
+            © ${new Date().getFullYear()} BookMyTicket. Empowering experiences.
+          </p>
+        </div>
+      `;
 
       if (m365Config) {
         try {
