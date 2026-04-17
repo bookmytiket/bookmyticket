@@ -139,7 +139,7 @@ export default function Home() {
     }
   }, [metaSettings]);
 
-  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+  const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
   const supabaseEvents = useMemo(() => supabaseEventsRaw || [], [supabaseEventsRaw]);
 
   const parseEventDate = (dateStr, timeStr) => {
@@ -175,20 +175,19 @@ export default function Home() {
     const now = new Date();
     return (Array.isArray(newOrgEvents) ? newOrgEvents : [])
       .filter(ev => {
-        if (ev.status === "Inactive" || ev.status === "Expired") return false;
+        // permissive status check during migration
+        const s = String(ev.status || '').toLowerCase();
+        if (s === "inactive" || s === "expired" || s === "draft") return false;
         
-        const now = new Date();
-        const eventDate = parseEventDate(ev.date, ev.time);
-        
+        const eventDate = parseEventDate(ev.date || ev.rawDate, ev.time || ev.rawTime);
         if (!eventDate) return true; // Keep if we can't parse it
         
         // Use a 2-hour buffer for "end time" if not explicitly provided
-        const endTs = ev.endDateTime || (eventDate.getTime() + (2 * 60 * 60 * 1000));
-        
+        const endTs = ev.end_date_time || ev.endDateTime || (eventDate.getTime() + (2 * 60 * 60 * 1000));
         return endTs > now.getTime();
       })
       .map((ev, idx) => {
-        const loc = ev.location || ev.venue || ev.address || "Venue";
+        const loc = String(ev.location || ev.venue || ev.address || "Venue").trim();
         const isVirtual = ev.virtual === true || 
                  String(ev.type || '').toLowerCase() === "online" || 
                  String(ev.type || '').toLowerCase() === "virtual" ||
@@ -196,15 +195,15 @@ export default function Home() {
                  loc.toLowerCase().includes("virtual");
         return {
           ...ev,
-          id: ev._id || ev.id || `${ev.title?.slice(0, 8)}-${idx}`,
+          id: ev.id || ev._id || `org-${idx}-${Date.now()}`,
           title: ev.title || "Event",
-          img: ev.img || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
+          img: ev.img || ev.banner_preview || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
           rawDate: ev.date,
           rawTime: ev.time,
           date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
           location: loc,
           featured: ev.featured !== false,
-          trending: ev.trending !== false,
+          trending: ev.trending === true,
           spotlight: ev.spotlight === true,
           exclusive: ev.exclusive === true,
           virtual: isVirtual,
@@ -213,8 +212,8 @@ export default function Home() {
   }, [newOrgEvents]);
 
   const allEventsForFilter = useMemo(() => [
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.map(h => ({ ...h, rawDate: h.date, rawTime: h.time })) : []),
-    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
+    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : []),
+    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.map(h => ({ ...h, rawDate: h.date, rawTime: h.time })) : [])
   ], [normalizedOrgEvents]);
 
   const { selectedCity } = useAuth();
@@ -234,6 +233,7 @@ export default function Home() {
         'mumbai': ['bombay', 'mumbai'],
         'chennai': ['madras', 'chennai'],
         'kochi': ['cochin', 'kochi'],
+        'coimbatore': ['coimbatore', 'pollachi'],
       };
       
       const targetCities = cityVariations[cityLower] || [cityLower];
@@ -241,10 +241,10 @@ export default function Home() {
       results = results.filter(ev => {
         if (ev.virtual === true) return true;
         
-        const evCity = (ev.city || '').toLowerCase();
-        const evLoc = (ev.location || '').toLowerCase();
-        const evVenue = (ev.venue || '').toLowerCase();
-        const evDistrict = (ev.district || '').toLowerCase();
+        const evCity = String(ev.city || '').toLowerCase().trim();
+        const evLoc = String(ev.location || '').toLowerCase().trim();
+        const evVenue = String(ev.venue || '').toLowerCase().trim();
+        const evDistrict = String(ev.district || '').toLowerCase().trim();
 
         return targetCities.some(tc => 
           evCity.includes(tc) || 

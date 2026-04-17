@@ -38,7 +38,7 @@ const DEFAULT_REFUND = ['Organizer-Managed Cancellations', 'No Refund for Missed
 export default function EventDetailClient({ id }) {
     const { user } = useAuth();
     const router = useRouter();
-    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.or('status.eq.published,status.eq.Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
 
     // Fetch user bookings to check if they've already booked this event
@@ -59,8 +59,8 @@ export default function EventDetailClient({ id }) {
 
     const event = useMemo(() => {
         if (!convexEvents) return null;
-        const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === sid);
-        const fromConvex = convexEvents.find(e => String(e.id) === sid);
+        const fromHome = (Array.isArray(HOME_EVENTS) ? HOME_EVENTS : []).find(e => String(e.id) === id);
+        const fromConvex = (Array.isArray(convexEvents) ? convexEvents : []).find(e => String(e.id) === id);
         const raw = fromHome || fromConvex;
         if (!raw) return null;
         const location = raw.location || raw.venue || raw.address || 'Venue';

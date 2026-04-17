@@ -73,9 +73,14 @@ export default function PromoteModal({
                 <h2 className="text-white font-bold text-lg leading-tight line-clamp-2 mb-2">{title}</h2>
                 {date && <p className="text-gray-400 text-xs mb-1">{date}</p>}
                 {location && <p className="text-gray-400 text-xs line-clamp-1">{location}</p>}
-                <div className="mt-3 inline-block bg-[#ff4a00] text-white text-[10px] font-bold px-3 py-1.5 rounded-md tracking-wide">
+                <a 
+                  href={bookingUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="mt-3 inline-block bg-[#ff4a00] hover:bg-[#e04000] transition-colors text-white text-[10px] font-bold px-3 py-1.5 rounded-md tracking-wide cursor-pointer"
+                >
                   BOOK NOW
-                </div>
+                </a>
               </div>
 
               {/* QR Code */}

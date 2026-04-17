@@ -37,7 +37,7 @@ function getEventById(id, convexEvents) {
 export default function CheckoutClient({ id }) {
     const { user } = useAuth();
     const searchParams = useSearchParams();
-    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.or('status.eq.published,status.eq.Active'), []);
     const { data: rawFeeSettings } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings').single(), []);
     const { data: rawTicketSettings } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_ticket_settings').single(), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
@@ -149,25 +149,22 @@ export default function CheckoutClient({ id }) {
         }
     }, [id, event, user, total, qty, router]);
 
-    const [redirectCountdown, setRedirectCountdown] = useState(3);
+    const [redirectCountdown, setRedirectCountdown] = useState(5);
     useEffect(() => {
-        if (bookingDone && (event?.virtual || lastBooking?.meetingUrl)) {
+        if (bookingDone) {
             const timer = setInterval(() => {
                 setRedirectCountdown(prev => {
                     if (prev <= 1) {
                         clearInterval(timer);
-                        const url = (lastBooking?.meetingUrl || event?.meetingUrl);
-                        if (url) {
-                            const target = url.startsWith("http") ? url : `/${url}`;
-                            window.location.href = target;
-                        }
+                        // Mandatory redirect to Home Page (/)
+                        router.push('/');
                     }
                     return prev - 1;
                 });
             }, 1000);
             return () => clearInterval(timer);
         }
-    }, [bookingDone, event, lastBooking, router]);
+    }, [bookingDone, router]);
 
     const handleSendEmail = useCallback(() => {
         if (!event) return;
@@ -195,11 +192,9 @@ export default function CheckoutClient({ id }) {
                         <div style={{ fontSize: '48px', marginBottom: '8px' }}>✓</div>
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px', color: '#111827' }}>Booking confirmed</h1>
                         <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>{event.title} — {qty} ticket{qty !== 1 ? 's' : ''}.</p>
-                        {(event.virtual || lastBooking?.meetingUrl) && (
-                            <p style={{ fontSize: '13px', color: '#059669', marginTop: '12px', fontWeight: 700 }}>
-                                Redirecting to your virtual meeting in {redirectCountdown} seconds...
-                            </p>
-                        )}
+                        <p style={{ fontSize: '14px', color: '#059669', marginTop: '12px', fontWeight: 700, borderRadius: '8px', background: '#ecfdf5', padding: '10px', display: 'inline-block' }}>
+                            Redirecting to Home Page in <span style={{ fontSize: '18px', color: '#10b981' }}>{redirectCountdown}</span> seconds...
+                        </p>
                     </div>
 
                     <div style={{ marginBottom: '24px', position: 'relative' }}>
@@ -247,9 +242,11 @@ export default function CheckoutClient({ id }) {
                                 <Video size={18} /> Join Meeting Now
                             </button>
                         )}
+                        <Link href="/" style={{ padding: '14px 28px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '15px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(244, 63, 94, 0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                            Go to Home Now
+                        </Link>
                         <button type="button" onClick={handleSendEmail} style={{ padding: '12px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send ticket to Email</button>
                         <button type="button" onClick={handleSendSms} style={{ padding: '12px 20px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>Send SMS</button>
-                        <Link href="/" style={{ padding: '12px 24px', background: '#f1f5f9', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '14px', textDecoration: 'none' }}>Back to Home</Link>
                     </div>
 
                 </div>

@@ -56,7 +56,7 @@ function getCatColor(name) {
 export default function EventBookClient({ id }) {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+    const { data: convexEvents } = useSupabaseQuery('events', (q) => q.or('status.eq.published,status.eq.Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [quantity, setQuantity] = useState(1);
 
@@ -66,7 +66,7 @@ export default function EventBookClient({ id }) {
 
     useEffect(() => {
         if (!authLoading && !user) {
-            router.push(`/signin?redirect=/events/${id}/book`);
+            router.push(`/signin?redirect=${encodeURIComponent('/events/book?id=' + id)}`);
         }
     }, [user, authLoading, id, router]);
 

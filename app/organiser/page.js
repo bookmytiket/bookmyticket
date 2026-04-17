@@ -10,6 +10,7 @@ import { Country, State, City } from 'country-state-city';
 import { Html5Qrcode } from "html5-qrcode";
 import BlockMapDesigner from "./components/BlockMapDesigner";
 import CalendarPicker from "./components/CalendarPicker";
+import TimePicker from "./components/TimePicker";
 import CustomSelect from "./components/CustomSelect";
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 import PromoteModal from "@/components/PromoteModal";
@@ -659,10 +660,10 @@ function OrganiserPanel() {
         });
     }, [supportTicketsData, user?.id]);
 
-    const { data: eventsData = [] } = useSupabaseQuery(
+    const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
         "events",
-        (q) => q.eq("organiser_id", user?.id),
-        [user?.id]
+        (q) => q.eq("organiser_id", organiserData?.id || user?.id),
+        [organiserData?.id, user?.id]
     );
     const [createEventMutation] = useSupabaseMutation("events", "insert");
     const [updateEventMutation] = useSupabaseMutation("events", "update", (q, p) => q.eq("id", p.id));
@@ -874,7 +875,7 @@ function OrganiserPanel() {
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
-        eventStatus: "Active", isFeature: "Yes", isExclusive: "No",
+        eventStatus: "published", isFeature: "Yes", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
         meetingUrl: "",
@@ -1106,7 +1107,7 @@ function OrganiserPanel() {
             meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
-            status: postEvent.eventStatus || "Active",
+            status: postEvent.eventStatus || "published",
             meeting_type: postEvent.meetingType || "internal",
             external_meeting_url: postEvent.externalMeetingUrl || undefined,
             description: postEvent.description || undefined,
@@ -2267,19 +2268,20 @@ function OrganiserPanel() {
                                 onChange={(val) => setPostEvent(prev => ({ ...prev, [field]: val }))}
                                 placeholder={placeholder || "dd/mm/yyyy"}
                             />
+                        ) : type === "time" ? (
+                            <TimePicker 
+                                value={postEvent[field] || ""} 
+                                onChange={(val) => setPostEvent(prev => ({ ...prev, [field]: val }))}
+                                placeholder={placeholder || "--:--"}
+                            />
                         ) : (
-                            <>
-                                <input
-                                    type={type}
-                                    value={postEvent[field] || ""}
-                                    onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
-                                    placeholder={placeholder}
-                                    className={`w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-inner ${
-                                        type === "time" ? "pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:z-10" : ""
-                                    }`}
-                                />
-                                {type === "time" && <Clock size={16} className="absolute right-4 text-slate-600 pointer-events-none" />}
-                            </>
+                            <input
+                                type={type}
+                                value={postEvent[field] || ""}
+                                onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
+                                placeholder={placeholder}
+                                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-inner"
+                            />
                         )}
                     </div>
                 </div>
@@ -2442,99 +2444,129 @@ function OrganiserPanel() {
                                         <Plus size={18} /> Post New Event
                                     </button>
                                 </div>
-                                <div style={{ overflowX: "auto" }}>
-                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
-                                        <thead>
-                                            <tr style={{ textAlign: "left" }}>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event Details</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date & Time</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Tickets Analytics</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {events.length === 0 ? (
-                                                <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No events found. Start by posting your first event.</td></tr>
-                                            ) : events.map(ev => (
-                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : "#f97316") + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                                {ev.type === "Online" ? <CloudUpload size={24} color="#22c55e" /> : <MapPin size={24} color="#f97316" />}
-                                                            </div>
-                                                            <div>
-                                                                <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
-                                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
-                                                                    <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>{ev.venue || "Online"}</p>
-                                                                    {ev.type === "Online" && ev.meetingUrl && (
-                                                                        <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
-                                                                            <span style={{ fontSize: "9px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Code:</span>
-                                                                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace" }}>{ev.meetingUrl}</span>
+                                <div>
+                                    {['Active Events', 'Expired Events'].map((sectionTitle) => {
+                                        const isExpiredSection = sectionTitle === 'Expired Events';
+                                        const filteredMappableEvents = events.filter(ev => isExpiredSection ? ev.status === 'expired' : ev.status !== 'expired');
+                                        
+                                        if (filteredMappableEvents.length === 0 && isExpiredSection) return null; // Don't show empty expired section
+
+                                        return (
+                                            <div key={sectionTitle} style={{ marginBottom: isExpiredSection ? 0 : '48px' }}>
+                                                {isExpiredSection && (
+                                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: '0 0 24px 0', paddingTop: '24px', borderTop: `1px solid ${t.border}` }}>
+                                                        {sectionTitle}
+                                                    </h3>
+                                                )}
+                                                <div style={{ overflowX: "auto" }}>
+                                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                                        <thead>
+                                                            <tr style={{ textAlign: "left" }}>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event Details</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date & Time</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Tickets Analytics</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {filteredMappableEvents.length === 0 ? (
+                                                                <tr><td colSpan={5} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No events found. Start by posting your first event.</td></tr>
+                                                            ) : filteredMappableEvents.map(ev => (
+                                                                <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)", opacity: isExpiredSection ? 0.7 : 1 }}>
+                                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : "#f97316") + (isExpiredSection ? "10" : "20"), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                                                {ev.type === "Online" ? <CloudUpload size={24} color="#22c55e" /> : <MapPin size={24} color="#f97316" />}
+                                                                            </div>
+                                                                            <div>
+                                                                                <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
+                                                                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                                                                                    <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>{ev.venue || "Online"}</p>
+                                                                                    {ev.type === "Online" && ev.meetingUrl && (
+                                                                                        <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                                                                                            <span style={{ fontSize: "9px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Code:</span>
+                                                                                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace" }}>{ev.meetingUrl}</span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time}</div>
-                                                    </td>
-                                                    <td style={{ padding: "16px" }}>
-                                                        {(ev.total_seats || ev.totalSeats) ? (
-                                                            <div style={{ minWidth: "140px" }}>
-                                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>{(ev.total_seats || ev.totalSeats) - (ev.booked_seats || ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>Available</span></span>
-                                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#3b82f6" }}>{Math.round(((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%</span>
-                                                                </div>
-                                                                <div style={{ height: 6, borderRadius: 10, background: t.border, overflow: "hidden" }}>
-                                                                    <div style={{ height: "100%", width: `${Math.min(100, ((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)", borderRadius: 10 }} />
-                                                                </div>
-                                                            </div>
-                                                        ) : <span style={{ color: t.textSub, fontSize: 13 }}>Standard Admission</span>}
-                                                    </td>
-                                                    <td style={{ padding: "16px" }}>
-                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>ACTIVE</span>
-                                                    </td>
-                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
-                                                        <div style={{ display: "flex", gap: "8px" }}>
-                                                            <button onClick={() => {
-                                                                setEditingEvent(ev);
-                                                                setPostEvent({
-                                                                    ...getInitialPostEvent(),
-                                                                    ...ev,
-                                                                    isFeature: ev.featured ? "Yes" : "No",
-                                                                    isExclusive: ev.exclusive ? "Yes" : "No",
-                                                                    eventStatus: ev.status || "Active",
-                                                                    dateType: ev.dateSlots ? "multiple" : "single",
-                                                                    startDate: ev.date,
-                                                                    startTime: ev.time,
-                                                                    bannerPreview: ev.bannerPreview || ev.img,
-                                                                    categories: ev.seatCategories || getInitialPostEvent().categories,
-                                                                });
-                                                                setAddEventStep("form");
-                                                                setActiveTab("post_event");
-                                                            }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
-                                                                <Settings size={16} />
-                                                            </button>
-                                                            {(ev.seating_enabled !== false && ev.seatingEnabled !== false) && (
-                                                                <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                                    <Grid size={14} /> Map
-                                                                </button>
-                                                            )}
-                                                            <button onClick={() => deleteEventMutation({ id: ev.id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                            <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
-                                                                <Share size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                                    </td>
+                                                                    <td style={{ padding: "16px" }}>
+                                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date}</div>
+                                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time}</div>
+                                                                    </td>
+                                                                    <td style={{ padding: "16px" }}>
+                                                                        {(ev.total_seats || ev.totalSeats) ? (
+                                                                            <div style={{ minWidth: "140px" }}>
+                                                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                                                                    <span style={{ fontSize: "12px", fontWeight: 700, color: t.textMain }}>{(ev.total_seats || ev.totalSeats) - (ev.booked_seats || ev.bookedSeats || 0)} <span style={{ color: t.textSub, fontWeight: 400 }}>Available</span></span>
+                                                                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#3b82f6" }}>{Math.round(((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%</span>
+                                                                                </div>
+                                                                                <div style={{ height: 6, borderRadius: 10, background: t.border, overflow: "hidden" }}>
+                                                                                    <div style={{ height: "100%", width: `${Math.min(100, ((ev.booked_seats || ev.bookedSeats || 0) / (ev.total_seats || ev.totalSeats)) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)", borderRadius: 10 }} />
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : <span style={{ color: t.textSub, fontSize: 13 }}>Standard Admission</span>}
+                                                                    </td>
+                                                                    <td style={{ padding: "16px" }}>
+                                                                        <span style={{ 
+                                                                            padding: "6px 14px", 
+                                                                            borderRadius: "100px", 
+                                                                            fontSize: "11px", 
+                                                                            fontWeight: 800, 
+                                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                                            color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
+                                                                            textTransform: "uppercase"
+                                                                        }}>
+                                                                            {ev.status || 'draft'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                                            <button onClick={() => {
+                                                                                setEditingEvent(ev);
+                                                                                setPostEvent({
+                                                                                    ...getInitialPostEvent(),
+                                                                                    ...ev,
+                                                                                    isFeature: ev.featured ? "Yes" : "No",
+                                                                                    isExclusive: ev.exclusive ? "Yes" : "No",
+                                                                                    eventStatus: ev.status || "published",
+                                                                                    dateType: ev.dateSlots ? "multiple" : "single",
+                                                                                    startDate: ev.date,
+                                                                                    startTime: ev.time,
+                                                                                    bannerPreview: ev.bannerPreview || ev.img,
+                                                                                    categories: ev.seatCategories || getInitialPostEvent().categories,
+                                                                                });
+                                                                                setAddEventStep("form");
+                                                                                setActiveTab("post_event");
+                                                                            }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                                <Settings size={16} />
+                                                                            </button>
+                                                                            {(ev.seating_enabled !== false && ev.seatingEnabled !== false) && (
+                                                                                <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                                    <Grid size={14} /> Map
+                                                                                </button>
+                                                                            )}
+                                                                            <button onClick={() => deleteEventMutation({ id: ev.id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                            {!isExpiredSection && (
+                                                                            <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                                <Share size={16} />
+                                                                            </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -2633,7 +2665,7 @@ function OrganiserPanel() {
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
                                     {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                                     {renderToggle("Countdown*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
-                                    {renderSelect("Status*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                    {renderSelect("Status*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
                                     {renderSelect("Is Feature*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                     {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                 </div>
@@ -2741,7 +2773,7 @@ function OrganiserPanel() {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                                         {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
-                                        {renderSelect("Visibility*", "eventStatus", [{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }])}
+                                        {renderSelect("Visibility*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
                                         {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                     </div>
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>

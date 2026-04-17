@@ -78,9 +78,17 @@ serve(async (req) => {
     const payload = await req.json();
     const { table, record, type } = payload;
 
-    // Only process inserts
+    // Support both INSERT and UPDATE for pushing live 'events'
     if (type !== 'INSERT' && !payload.force_test) {
-      return new Response("Not an INSERT event, skipping", { status: 200 });
+      // Allow UPDATE for events strictly when status changes to 'published'
+      if (table === 'events' && type === 'UPDATE') {
+        const { record: newRecord, old_record: oldRecord } = payload;
+        if (newRecord.status !== 'published' || oldRecord?.status === 'published') {
+          return new Response("Event update does not trigger notification", { status: 200 });
+        }
+      } else {
+        return new Response("Not a translatable event, skipping", { status: 200 });
+      }
     }
 
     // --- PRE-REQUISITE: FETCH CONFIG ---
@@ -128,7 +136,11 @@ serve(async (req) => {
     } 
     else if (table === 'events') {
       // BULK EMAIL OPTIMIZATION for New Events
-      const { title, date, location } = record;
+      const { title, date, location, status } = record;
+
+      if (status !== 'published') {
+        return new Response("Event is not published, skipping email notification.", { status: 200 });
+      }
       
       if (emailConfig.provider === 'MICROSOFT_365') {
         backgroundTask = (async () => {

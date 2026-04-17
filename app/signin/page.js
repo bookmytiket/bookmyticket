@@ -83,6 +83,13 @@ export default function SignInPage() {
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
     useEffect(() => {
         if (!authLoading && user) {
+            // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
+            if (user.is_temporary_password || user.force_password_change) {
+                console.log("SignInPage: Force password change detected. Redirecting to security portal.");
+                router.replace("/change-password");
+                return;
+            }
+
             // Determine redirect: prioritize explicit redirectPath if valid
             let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
             const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
@@ -109,8 +116,8 @@ export default function SignInPage() {
                     destination = "/organiser?tab=pwa_scanner";
                 } else if (user.role === "branding_partner") {
                     destination = "/branding/dashboard";
-                } else if (user.role === "organiser") {
-                    const isProfessional = user.type === "professional_service" || (user.category && isServiceProvider(user.category));
+                } else if (user.role === "organiser" || user.role === "vendor") {
+                    const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
                     destination = isProfessional ? "/vendor/dashboard" : "/organiser";
                 } else {
                     destination = "/profile";

@@ -230,49 +230,6 @@ export function AuthProvider({ children }) {
             const userData = await fetchAndSetUser(data.user);
             
             if (userData) {
-                // Determine redirect: prioritize explicit redirectPath if valid
-                let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
-                const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
-
-                let destination = isInvalidRedirect ? "/" : decodedRedirect;
-
-                // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
-                if (userData.is_temporary_password || userData.force_password_change) {
-                    console.log("AuthContext: Force password change detected. Redirecting to security portal.");
-                    router.push("/change-password");
-                    return { success: true, user: userData };
-                }
-
-                // Security: Validate authorization for the target destination
-                const isAdminPath = destination?.startsWith("/admin");
-                const isBrandingPath = destination?.startsWith("/branding");
-                const isOrganiserPath = destination?.startsWith("/organiser");
-                const isVendorPath = destination?.startsWith("/vendor");
-
-                const isAuthorized = 
-                    (!isAdminPath || userData.role === "admin" || userData.role === "super_admin") &&
-                    (!isBrandingPath || userData.role === "branding_partner" || userData.role === "admin" || userData.role === "super_admin") &&
-                    (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(userData.role)) &&
-                    (!isVendorPath || ["organiser", "admin", "super_admin"].includes(userData.role));
-
-                // Apply role-based defaults if no valid redirect OR not authorized for target
-                if (isInvalidRedirect || !isAuthorized) {
-                    if (userData.role === "admin" || userData.role === "super_admin") {
-                        destination = "/admin";
-                    } else if (userData.role === "staff") {
-                        destination = "/organiser?tab=pwa_scanner";
-                    } else if (userData.role === "branding_partner") {
-                        destination = "/branding/dashboard";
-                    } else if (userData.role === "organiser") {
-                        const isProfessionalService = isServiceProvider(userData.category) || userData.type === "professional_service";
-                        destination = isProfessionalService ? "/vendor/dashboard" : "/organiser";
-                    } else {
-                        destination = "/profile";
-                    }
-                }
-                
-                console.log("AuthContext: Redirecting to", destination);
-                router.push(destination);
                 return { success: true, user: userData };
             }
             return { success: false, error: "Profile not found" };
