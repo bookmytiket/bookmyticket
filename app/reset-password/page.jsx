@@ -7,7 +7,102 @@ import Link from "next/link";
 
 import { hashPassword } from "@/app/utils/hashPassword";
 
+// ── Request Reset Link Form (shown when no token in URL) ──────────────────
+function RequestResetForm() {
+    const [reqEmail, setReqEmail]   = useState("");
+    const [sending, setSending]     = useState(false);
+    const [sent, setSent]           = useState(false);
+    const [reqError, setReqError]   = useState("");
+
+    const handleRequest = async (e) => {
+        e.preventDefault();
+        setReqError("");
+        setSending(true);
+        try {
+            const res = await fetch("/api/auth/reset-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "send", email: reqEmail.trim().toLowerCase() }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to send reset link.");
+            setSent(true);
+        } catch (err) {
+            setReqError(err.message || "Something went wrong. Please try again.");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    if (sent) {
+        return (
+            <div style={cardStyle}>
+                <div style={{ fontSize: "52px", marginBottom: "16px" }}>📬</div>
+                <h2 style={titleStyle}>Check Your Inbox</h2>
+                <p style={subStyle}>
+                    A password reset link has been sent to <strong>{reqEmail}</strong>.
+                    Please check your email (and spam folder) and click the link to reset your password.
+                </p>
+                <Link href="/signin" style={buttonStyle}>Back to Sign In</Link>
+            </div>
+        );
+    }
+
+    return (
+        <div style={cardStyle}>
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                <div style={{
+                    width: "64px", height: "64px", borderRadius: "50%",
+                    background: "linear-gradient(135deg,#f84464 0%,#a855f7 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 16px", fontSize: "28px",
+                    boxShadow: "0 8px 20px rgba(168,85,247,0.3)"
+                }}>🔒</div>
+                <h2 style={titleStyle}>Reset Your Password</h2>
+                <p style={subStyle}>
+                    Enter the email address linked to your account and we'll send you a reset link.
+                </p>
+            </div>
+
+            <form onSubmit={handleRequest} style={{ width: "100%" }}>
+                <label style={labelStyle}>Email Address</label>
+                <input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={reqEmail}
+                    onChange={(e) => setReqEmail(e.target.value)}
+                    style={{ ...inputStyle, marginBottom: "8px" }}
+                />
+
+                {reqError && (
+                    <p style={{ color: "#ef4444", fontSize: "13px", marginBottom: "16px" }}>
+                        ⚠ {reqError}
+                    </p>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={sending}
+                    style={{ ...buttonStyle, marginTop: "12px", opacity: sending ? 0.7 : 1 }}
+                >
+                    {sending ? "Sending…" : "Send Reset Link →"}
+                </button>
+            </form>
+
+            <p style={{ marginTop: "20px", fontSize: "13px", color: "#94a3b8" }}>
+                Remembered your password?{" "}
+                <Link href="/signin" style={{ color: "#a855f7", fontWeight: 700, textDecoration: "none" }}>
+                    Sign In
+                </Link>
+            </p>
+        </div>
+    );
+}
+
 function ResetPasswordForm() {
+
     const searchParams = useSearchParams();
     const router = useRouter();
     const token = searchParams.get("token");
@@ -85,16 +180,11 @@ function ResetPasswordForm() {
         }
     };
 
+    // ── No token: show a "Request reset link" form ──────────────────────────
     if (!isForced && (!token || !email)) {
-        return (
-            <div style={cardStyle}>
-                <AlertCircle size={48} color="#ef4444" style={{ marginBottom: "16px" }} />
-                <h2 style={titleStyle}>Invalid Link</h2>
-                <p style={subStyle}>This password reset link is invalid or incomplete.</p>
-                <Link href="/signin" style={buttonStyle}>Go to Sign In</Link>
-            </div>
-        );
+        return <RequestResetForm />;
     }
+
 
     if (status === "success") {
         return (
