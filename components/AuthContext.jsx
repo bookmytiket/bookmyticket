@@ -183,7 +183,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const login = async (identifier, password, redirectPath = null) => {
+    const login = async (identifier, password, redirectPath = null, meta = {}) => {
         if (!supabase) {
             return { success: false, error: "Authentication system not initialized. Please check configuration." };
         }
@@ -202,6 +202,17 @@ export function AuthProvider({ children }) {
                 if (profile?.email) {
                     email = profile.email;
                 } else {
+                    // Fire alert for username-not-found attempts too
+                    fetch('/api/auth/security-alert', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: identifier.trim().toLowerCase(),
+                            ip: meta.ip || 'Unknown',
+                            userAgent: meta.userAgent || navigator.userAgent,
+                            timestamp: new Date().toISOString(),
+                        }),
+                    }).catch(() => {}); // fire and forget
                     throw new Error("Invalid username or email.");
                 }
             }
@@ -212,6 +223,18 @@ export function AuthProvider({ children }) {
             });
 
             if (error) {
+                // Fire security alert for any credential failure (fire and forget)
+                fetch('/api/auth/security-alert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email.trim().toLowerCase(),
+                        ip: meta.ip || 'Unknown',
+                        userAgent: meta.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'),
+                        timestamp: new Date().toISOString(),
+                    }),
+                }).catch(() => {}); // fire and forget — never block the UI
+
                 // Provide a clearer message for the most common failure modes.
                 if (error.message?.toLowerCase().includes('email not confirmed')) {
                     throw new Error("Your email address has not been confirmed. Please complete signup first.");

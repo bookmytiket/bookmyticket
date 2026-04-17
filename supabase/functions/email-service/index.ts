@@ -155,6 +155,181 @@ serve(async (req) => {
           }
         })();
       }
+    } else if (table === 'failed_login_attempts') {
+      // ── Security Alert Email ────────────────────────────────────────────
+      const { identifier, ip, user_agent, created_at } = record;
+      const recipientEmail = identifier;
+
+      if (!recipientEmail) {
+        return new Response("No identifier (email) in failed_login_attempts record.", { status: 200 });
+      }
+
+      // Try to get the user's display name for personalisation
+      let displayName = recipientEmail;
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name')
+          .eq('email', recipientEmail)
+          .maybeSingle();
+        if (profile?.full_name) displayName = profile.full_name;
+      } catch (_) { /* graceful — proceed without name */ }
+
+      // Parse timestamp to IST
+      const attemptDate = created_at ? new Date(created_at) : new Date();
+      const istFormatter = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+      const formattedTime = istFormatter.format(attemptDate);
+
+      // Parse browser name from user-agent for readability
+      const ua = user_agent || 'Unknown device';
+      let browser = 'Unknown Browser';
+      if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Google Chrome';
+      else if (ua.includes('Firefox')) browser = 'Mozilla Firefox';
+      else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Apple Safari';
+      else if (ua.includes('Edg')) browser = 'Microsoft Edge';
+      else if (ua.includes('OPR') || ua.includes('Opera')) browser = 'Opera';
+      else if (ua !== 'Unknown device') browser = ua.substring(0, 60);
+
+      const subject = `⚠️ Security Alert: Failed Login Attempt on Your BookMyTicket Account`;
+
+      const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Alert</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- RED ALERT BANNER -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:32px 40px;text-align:center;">
+              <div style="font-size:48px;margin-bottom:12px;">🚨</div>
+              <h1 style="color:#ffffff;font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-0.02em;">Security Alert</h1>
+              <p style="color:rgba(255,255,255,0.85);font-size:14px;margin:0;">An unrecognized login attempt was detected on your account</p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="font-size:16px;color:#1e293b;margin:0 0 8px;">Hi <strong>${displayName}</strong>,</p>
+              <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
+                We detected a <strong>failed login attempt</strong> on your BookMyTicket account. 
+                Someone entered the wrong password for <strong>${recipientEmail}</strong>.
+                If this was <em>you</em>, no action is needed. If not, secure your account immediately.
+              </p>
+
+              <!-- DETAILS CARD -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.05em;">Attempt Details</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
+                          <span style="font-size:13px;color:#64748b;font-weight:600;">🕐 Time</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
+                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${formattedTime} IST</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
+                          <span style="font-size:13px;color:#64748b;font-weight:600;">🌐 IP Address</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
+                          <span style="font-size:13px;color:#1e293b;font-weight:700;font-family:monospace;">${ip || 'Unknown'}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
+                          <span style="font-size:13px;color:#64748b;font-weight:600;">💻 Browser / Device</span>
+                        </td>
+                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
+                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${browser}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;">
+                          <span style="font-size:13px;color:#64748b;font-weight:600;">📧 Target Account</span>
+                        </td>
+                        <td style="padding:8px 0;text-align:right;">
+                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${recipientEmail}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA BUTTON -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://bookmyticket.net/reset-password"
+                       style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.02em;">
+                      🔒 Secure My Account
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- TIPS -->
+              <div style="background:#f8fafc;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
+                <p style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 12px;">💡 Recommended Security Actions</p>
+                <ul style="margin:0;padding-left:18px;color:#475569;font-size:13px;line-height:2;">
+                  <li>Change your password immediately if you didn't attempt this login</li>
+                  <li>Choose a strong password with letters, numbers &amp; symbols</li>
+                  <li>Never share your credentials with anyone</li>
+                  <li>Enable a unique password for BookMyTicket</li>
+                </ul>
+              </div>
+
+              <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0;">
+                If you made this login attempt and simply forgot your password, you can safely 
+                <a href="https://bookmyticket.net/reset-password" style="color:#f43f5e;">reset it here</a>. 
+                This is an automated security notification — please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                © ${new Date().getFullYear()} BookMyTicket · 
+                <a href="https://bookmyticket.net" style="color:#f43f5e;text-decoration:none;">bookmyticket.net</a>
+              </p>
+              <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1;">This email was sent because a login attempt was made on your account.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+      if (emailConfig.provider === 'MICROSOFT_365') {
+        backgroundTask = sendM365Email(
+          emailConfig.microsoft_365,
+          fromEmail,
+          recipientEmail,
+          subject,
+          html
+        );
+      }
     } else {
        return new Response(`Table [${table}] processing not defined.`, { status: 200 });
     }

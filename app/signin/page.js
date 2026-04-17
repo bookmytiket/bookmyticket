@@ -180,7 +180,10 @@ export default function SignInPage() {
         const email = identifier.trim().toLowerCase();
         
         try {
-            const result = await login(email, password, redirectPath);
+            const result = await login(email, password, redirectPath, {
+                ip: userIp,
+                userAgent: navigator.userAgent,
+            });
             if (!result.success) {
                 setLoginError(result.error || "Invalid email or password.");
             }
