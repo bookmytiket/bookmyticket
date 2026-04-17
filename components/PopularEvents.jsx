@@ -1,10 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { HOME_EVENTS } from "@/app/data/homeEvents";
 import { isFreeEvent } from "@/app/utils/eventUtils";
-
-const DEFAULT_POPULAR = HOME_EVENTS;
 
 function PopularCard({ event }) {
     return (
@@ -67,7 +64,7 @@ function PopularCard({ event }) {
 }
 
 export default function PopularEvents({ events }) {
-    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_POPULAR), [events]);
+    const list = useMemo(() => (Array.isArray(events) ? events : []), [events]);
     return (
         <section style={{ width: "100%", backgroundColor: "#fafafa", padding: "36px 0 40px" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>

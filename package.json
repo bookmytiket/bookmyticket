@@ -37,6 +37,7 @@
     "react-dom": "19.2.3",
     "react-fast-marquee": "^1.6.5",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.8.1",
     "swiper": "^12.1.2",
     "three": "^0.183.1"
   },

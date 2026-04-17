@@ -523,6 +523,14 @@ export default function SignInPage() {
                 
                 {/* WhatsApp Emoji Animation Background for the form area */}
                 <EmojiBackground />
+
+                {/* Connection Diagnostic Warning */}
+                {!supabase && (
+                    <div style={{ position: "absolute", top: "20px", left: "50%", transform: "translateX(-50%)", width: "90%", maxWidth: "400px", backgroundColor: "#fef2f2", border: "1px solid #fee2e2", padding: "12px", borderRadius: "12px", color: "#b91c1c", fontSize: "13px", fontWeight: 700, textAlign: "center", zIndex: 1000, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
+                        ⚠️ Error: Authentication System Offline. <br/>
+                        <span style={{ fontWeight: 400, fontSize: "11px" }}>Please configure Supabase environment variables in Vercel.</span>
+                    </div>
+                )}
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div style={{ 
@@ -603,7 +611,9 @@ export default function SignInPage() {
                                     </div>
 
                                     {loginError && (
-                                        <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "12px", marginTop: "-8px" }}>⚠ {loginError}</p>
+                                        <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", marginBottom: "16px", color: "#b91c1c", fontSize: "13px", fontWeight: 600 }}>
+                                            ⚠ {loginError}
+                                        </div>
                                     )}
 
                                     <button
@@ -631,7 +641,23 @@ export default function SignInPage() {
                                             </>
                                         ) : "Log in"}
                                     </button>
-                                    <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
+                                    
+                                    {loading && (
+                                        <div style={{ textAlign: "center", animation: "fadeIn 2s" }}>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => window.location.reload()} 
+                                                style={{ background: "none", border: "none", fontSize: "11px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}
+                                            >
+                                                Taking too long? Click here to reload
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <style dangerouslySetInnerHTML={{ __html: `
+                                        @keyframes spin { to { transform: rotate(360deg); } }
+                                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                                    ` }} />
                                     <div style={{ textAlign: "center", marginBottom: "12px" }}>
                                         <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
                                     </div>

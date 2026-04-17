@@ -3,13 +3,10 @@ import React, { useRef, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Video } from "lucide-react";
 import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
-import { HOME_EVENTS } from "@/app/data/homeEvents";
-
-const DEFAULT_FEATURED = HOME_EVENTS.filter((e) => e.featured);
 
 export default function FeaturedEvents({ events }) {
     const [isMobile, setIsMobile] = useState(false);
-    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_FEATURED), [events]);
+    const list = useMemo(() => (Array.isArray(events) ? events : []), [events]);
     const scrollRef = useRef(null);
 
     useEffect(() => {

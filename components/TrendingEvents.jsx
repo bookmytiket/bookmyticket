@@ -1,10 +1,7 @@
 "use client";
 import { useRef, useState, useMemo } from "react";
 import Link from "next/link";
-import { HOME_EVENTS } from "@/app/data/homeEvents";
 import { isFreeEvent } from "@/app/utils/eventUtils";
-
-const DEFAULT_TRENDING = HOME_EVENTS.filter((e) => e.trending);
 
 function EventCard({ event }) {
     return (
@@ -66,7 +63,7 @@ function EventCard({ event }) {
     );
 }
 
-export default function TrendingEvents({ events = DEFAULT_TRENDING }) {
+export default function TrendingEvents({ events = [] }) {
     const scrollRef = useRef(null);
 
     const scroll = (dir) => {

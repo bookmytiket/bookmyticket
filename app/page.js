@@ -20,7 +20,7 @@ import Sponsors from '@/components/Sponsors';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
-import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, HOME_EVENTS, BRAND_COUPONS } from './data/homeEvents';
+import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, BRAND_COUPONS } from './data/homeEvents';
 import { eventMatchesCategory } from './utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
@@ -212,8 +212,7 @@ export default function Home() {
   }, [newOrgEvents]);
 
   const allEventsForFilter = useMemo(() => [
-    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : []),
-    ...(Array.isArray(HOME_EVENTS) ? HOME_EVENTS.map(h => ({ ...h, rawDate: h.date, rawTime: h.time })) : [])
+    ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
   ], [normalizedOrgEvents]);
 
   const { selectedCity } = useAuth();
@@ -239,7 +238,7 @@ export default function Home() {
       const targetCities = cityVariations[cityLower] || [cityLower];
 
       results = results.filter(ev => {
-        if (ev.virtual === true) return true;
+        if (ev.virtual === true || ev.featured === true || ev.spotlight === true) return true;
         
         const evCity = String(ev.city || '').toLowerCase().trim();
         const evLoc = String(ev.location || '').toLowerCase().trim();
@@ -393,6 +392,16 @@ export default function Home() {
     <>
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
         
+        {/* Connection Diagnostic Warning */}
+        {typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <div style={{ width: '100%', backgroundColor: '#fef2f2', borderBottom: '1px solid #fee2e2', padding: '12px 0', zIndex: 1000 }}>
+            <div className="container mx-auto px-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#b91c1c' }}>⚠️ Connection Notice:</span>
+              <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: 500 }}>The booking system is currently in offline mode. Please verify environment variables in Vercel.</span>
+            </div>
+          </div>
+        )}
+
         {/* Active Ticket Banner Surface */}
         {activeBooking && (
           <div style={{ 

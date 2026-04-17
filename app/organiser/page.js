@@ -12,6 +12,7 @@ import BlockMapDesigner from "./components/BlockMapDesigner";
 import CalendarPicker from "./components/CalendarPicker";
 import TimePicker from "./components/TimePicker";
 import CustomSelect from "./components/CustomSelect";
+import BookingAnalytics from "./components/BookingAnalytics";
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 import PromoteModal from "@/components/PromoteModal";
 import { useToast } from "@/context/ToastContext";
@@ -607,27 +608,59 @@ function OrganiserPanel() {
                     cheque: kd.chequeFile || null,
                     aadhar: kd.aadharFile || null
                 });
-                setAgreedToVendor(kd.agreementAccepted || false);
-            }
-
-            if (isProfessionalService) {
-                setCurrentStage("approved");
-                router.push("/vendor/dashboard");
-                return;
-            } else if (!organiserData) {
-                // No organiser record found yet, start with KYC
-                setCurrentStage("kyc_start");
-            } else if (organiserData.kyc_status === "Pending" || organiserData.kyc_status === "KYC Pending") {
-                setCurrentStage("kyc_start");
-            } else if (organiserData.kyc_status === "Submitted" || organiserData.kyc_status === "Under Review") {
-                setCurrentStage("pending");
-            } else if (["Active", "KYC Verified", "KYC Completed", "Approved"].includes(organiserData.kyc_status)) {
-                setCurrentStage("approved");
-            } else {
-                setCurrentStage("kyc_start");
             }
         }
-    }, [organiserData, isProfessionalService, router, loading]);
+    }, [organiserData, user]);
+
+    useEffect(() => {
+        let timeoutId;
+
+        const evaluateState = () => {
+            // Priority 1: Auth or Profile still physically loading from network
+            if (loading || isOrgLoading) {
+                setCurrentStage("loading");
+                
+                // Safety: if stuck in loading for > 3s, force a fallback
+                if (!timeoutId) {
+                    timeoutId = setTimeout(() => {
+                        console.warn("OrganiserPanel: Session loading timeout. Forcing fallback evaluation.");
+                        evaluateStateImpl(true);
+                    }, 3000);
+                }
+                return;
+            }
+
+            evaluateStateImpl(false);
+        };
+
+        const evaluateStateImpl = (isFallback) => {
+            if (timeoutId) clearTimeout(timeoutId);
+
+            if (isStaff) {
+                setCurrentStage("approved");
+            } else if (!organiserData) {
+                // No record yet, start KYC
+                console.log("OrganiserPanel: No organiser record found.");
+                setCurrentStage("kyc_start");
+            } else if (isProfessionalService) {
+                // Already approved as a pro-service
+                setCurrentStage("approved");
+                router.replace("/vendor/dashboard");
+            } else {
+                const status = (organiserData.kyc_status || "").toLowerCase();
+                if (status === "active" || status === "approved" || status === "kyc verified") {
+                    setCurrentStage("approved");
+                } else if (status === "submitted" || status === "under review" || status === "pending") {
+                    setCurrentStage("pending");
+                } else {
+                    setCurrentStage("kyc_start");
+                }
+            }
+        };
+
+        evaluateState();
+        return () => { if (timeoutId) clearTimeout(timeoutId); };
+    }, [organiserData, isOrgLoading, isStaff, loading, isProfessionalService, router]);
 
     const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
     const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
@@ -670,7 +703,14 @@ function OrganiserPanel() {
     const [createMeetingForEvent] = useSupabaseMutation("meetings", "insert");
     const [deleteEventMutation] = useSupabaseMutation("events", "delete", (q, p) => q.eq("id", p.id));
 
-    const { data: bookingsData = [] } = useSupabaseQuery("bookings"); // Filtering will be handled in useMemo for legacy compatibility
+    const { data: bookingsData = [] } = useSupabaseQuery(
+        "bookings",
+        (q) => {
+            if (!eventsData || eventsData.length === 0) return q.eq("id", "none");
+            return q.in("event_id", eventsData.map(e => String(e.id)));
+        },
+        [eventsData]
+    );
     const convexBookings = useMemo(() => bookingsData || [], [bookingsData]);
     const [updateBookingMutation] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
@@ -3239,7 +3279,15 @@ function OrganiserPanel() {
 
                     return (
                         <div>
-                            <Breadcrumb title={viewTitle} />
+                            {/* Production Diagnostic: Show warning if Supabase is disconnected */}
+                    {!supabase && (
+                        <div style={{ margin: '20px auto', padding: '16px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', color: '#b91c1c', fontSize: '14px', fontWeight: 700, textAlign: 'center', maxWidth: '600px' }}>
+                            ⚠️ Warning: Authentication & Database System Disconnected. <br/>
+                            <span style={{ fontWeight: 400, fontSize: '12px' }}>Please ensure NEXT_PUBLIC_SUPABASE_URL and NON_ANON_KEY are set in Vercel.</span>
+                        </div>
+                    )}
+
+                    <Breadcrumb title={viewTitle} />
                             <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>{viewTitle}</h3>
@@ -3253,12 +3301,7 @@ function OrganiserPanel() {
                                 </div>
 
                                 {activeTab === "booking_report" ? (
-                                    <div style={{ padding: "64px 32px", textAlign: "center", backgroundColor: t.bg, borderRadius: "12px", border: `1px dashed ${t.border}` }}>
-                                        <BarChart3 size={64} style={{ marginBottom: "24px", color: "#3b82f6", opacity: 0.8 }} />
-                                        <h4 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "12px" }}>Detailed Booking Analytics</h4>
-                                        <p style={{ color: t.textSub, maxWidth: "400px", margin: "0 auto", lineHeight: 1.6 }}>Track your ticket sales performance, peak booking hours, and customer demographics with our advanced reporting tools.</p>
-                                        <button style={{ marginTop: "32px", padding: "12px 24px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Generate Full Report</button>
-                                    </div>
+                                    <BookingAnalytics events={eventsData} bookings={bookingsData} theme={theme} />
                                 ) : (
                                     <div style={{ overflowX: "auto" }}>
                                         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
@@ -4444,7 +4487,7 @@ function OrganiserPanel() {
                                     <div style={{ marginBottom: "8px" }}>
                                         <button onClick={() => setActiveTab("all_bookings")} className={`sidebar-dropdown-item ${activeTab === "all_bookings" ? "active" : ""}`}>All Bookings</button>
                                         <button onClick={() => setActiveTab("completed_bookings")} className={`sidebar-dropdown-item ${activeTab === "completed_bookings" ? "active" : ""}`}>Completed</button>
-                                        <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Report</button>
+                                        <button onClick={() => setActiveTab("booking_report")} className={`sidebar-dropdown-item ${activeTab === "booking_report" ? "active" : ""}`}>Analytics Dashboard</button>
                                     </div>
                                 )}
                             </>
@@ -4958,7 +5001,7 @@ function OrganiserPanel() {
     }
 
     // Professional Services should never see the Organiser KYC/Onboarding screens.
-    if (isProfessionalService) return null;
+    if (isProfessionalService) return renderLoadingView(); // Wait for redirect to /vendor/dashboard
 
     // Main Stage Dispatcher
     switch (currentStage) {

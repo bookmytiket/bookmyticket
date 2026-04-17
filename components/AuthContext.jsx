@@ -55,12 +55,21 @@ export function AuthProvider({ children }) {
         if (supabase) {
             const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
                 console.log("Supabase Auth Event:", event);
+                
+                // If it's a login event, we MUST show loading
+                if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+                    setLoading(true);
+                }
+
                 if (session) {
                     await fetchAndSetUser(session.user);
                 } else {
                     setUser(null);
                     localStorage.removeItem("user");
                 }
+                
+                // Always ensure loading is false after a session change is processed
+                setLoading(false);
             });
             subscription = sub;
         }
@@ -71,12 +80,33 @@ export function AuthProvider({ children }) {
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
         try {
-            // ── Run profile + admin + organiser checks IN PARALLEL ──────────────
-            const [profileResult, adminResult, organiserResult] = await Promise.all([
+            // ── Fail-safe: 5s timeout to prevent hung database queries from blocking the entire app ──
+            const fetchPromise = Promise.all([
                 supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(),
                 supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle(),
                 supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(),
             ]);
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Database timeout")), 5000)
+            );
+
+            let profileResult, adminResult, organiserResult;
+            try {
+                [profileResult, adminResult, organiserResult] = await Promise.race([fetchPromise, timeoutPromise]);
+            } catch (err) {
+                console.error("AuthContext: Profile fetch timed out or failed:", err);
+                // Return minimal user data so the app doesn't hang
+                const minimalUser = {
+                    id: supabaseUser.id,
+                    email: supabaseUser.email,
+                    role: 'user', // Default to base role on timeout
+                    name: supabaseUser.email?.split('@')[0],
+                    is_pwa_mode: true
+                };
+                setUser(minimalUser);
+                return minimalUser;
+            }
 
             const profile         = profileResult.data;
             const adminRecord     = adminResult.data;
@@ -134,7 +164,11 @@ export function AuthProvider({ children }) {
             localStorage.setItem("user", JSON.stringify(userData));
             return userData;
         } catch (err) {
-            console.error("Error fetching profile:", err);
+            console.error("AuthContext: Critical error in fetchAndSetUser:", err);
+            // In production, we need a way to know if this failed without a white screen
+            if (typeof window !== 'undefined') {
+                window.auth_error = err.message;
+            }
             return null;
         }
     };

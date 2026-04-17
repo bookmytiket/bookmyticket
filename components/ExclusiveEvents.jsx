@@ -1,10 +1,7 @@
 "use client";
 import { useRef, useState, useMemo } from "react";
 import Link from "next/link";
-import { HOME_EVENTS } from "@/app/data/homeEvents";
 import { isFreeEvent } from "@/app/utils/eventUtils";
-
-const DEFAULT_EXCLUSIVE = HOME_EVENTS.filter((e) => e.exclusive);
 
 function ExclusiveCard({ event }) {
     return (
@@ -68,7 +65,7 @@ function ExclusiveCard({ event }) {
 
 export default function ExclusiveEvents({ events }) {
     const scrollRef = useRef(null);
-    const list = useMemo(() => (Array.isArray(events) && events.length > 0 ? events : DEFAULT_EXCLUSIVE), [events]);
+    const list = useMemo(() => (Array.isArray(events) ? events : []), [events]);
     const scroll = dir =>
         scrollRef.current?.scrollBy({ left: dir === "left" ? -310 : 310, behavior: "smooth" });
 
