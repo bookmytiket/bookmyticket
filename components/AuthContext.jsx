@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isServiceProvider } from "@/app/data/serviceCategories";
@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [selectedCity, setSelectedCity] = useState("");
     const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "" });
+    const isProcessingRef = useRef(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -84,6 +85,12 @@ export function AuthProvider({ children }) {
 
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
+        if (isProcessingRef.current) {
+            console.log("AuthContext: Fetch already in progress, skipping redundant call.");
+            return user; // Return cached user if any
+        }
+        
+        isProcessingRef.current = true;
         try {
             // ── Fail-safe: 5s timeout to prevent hung database queries from blocking the entire app ──
             const fetchPromise = Promise.all([
@@ -175,6 +182,8 @@ export function AuthProvider({ children }) {
                 window.auth_error = err.message;
             }
             return null;
+        } finally {
+            isProcessingRef.current = false;
         }
     };
 

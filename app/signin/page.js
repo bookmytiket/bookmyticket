@@ -80,51 +80,55 @@ export default function SignInPage() {
         return () => { clearInterval(timer); clearInterval(dealTimer); };
     }, []);
     
+    const getRedirectDestination = (user, redirectPath) => {
+        if (!user) return "/";
+        
+        // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
+        if (user.is_temporary_password || user.force_password_change) {
+            return "/change-password";
+        }
+
+        // Determine redirect: prioritize explicit redirectPath if valid
+        let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
+        const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
+
+        let destination = isInvalidRedirect ? "/" : decodedRedirect;
+
+        // Security: Validate authorization for the target destination
+        const isAdminPath = destination?.startsWith("/admin");
+        const isBrandingPath = destination?.startsWith("/branding");
+        const isOrganiserPath = destination?.startsWith("/organiser");
+        const isVendorPath = destination?.startsWith("/vendor");
+
+        const isAuthorized = 
+            (!isAdminPath || user.role === "admin" || user.role === "super_admin") &&
+            (!isBrandingPath || user.role === "branding_partner" || user.role === "admin" || user.role === "super_admin") &&
+            (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(user.role)) &&
+            (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(user.role));
+
+        // Apply role-based defaults if no valid redirect OR not authorized for target
+        if (isInvalidRedirect || !isAuthorized) {
+            if (user.role === "admin" || user.role === "super_admin") {
+                destination = "/admin";
+            } else if (user.role === "staff") {
+                destination = "/organiser?tab=pwa_scanner";
+            } else if (user.role === "branding_partner") {
+                destination = "/branding/dashboard";
+            } else if (user.role === "organiser" || user.role === "vendor") {
+                const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
+                destination = isProfessional ? "/vendor/dashboard" : "/organiser";
+            } else {
+                destination = "/profile";
+            }
+        }
+        return destination;
+    };
+
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
     useEffect(() => {
         if (!authLoading && user) {
-            // CRITICAL SECURITY OVERRIDE: If password change is requested, force it immediately
-            if (user.is_temporary_password || user.force_password_change) {
-                console.log("SignInPage: Force password change detected. Redirecting to security portal.");
-                router.replace("/change-password");
-                return;
-            }
-
-            // Determine redirect: prioritize explicit redirectPath if valid
-            let decodedRedirect = redirectPath ? decodeURIComponent(redirectPath) : null;
-            const isInvalidRedirect = !decodedRedirect || decodedRedirect.includes("/signin") || decodedRedirect.includes("/signup");
-
-            let destination = isInvalidRedirect ? "/" : decodedRedirect;
-
-            // Security: Validate authorization for the target destination
-            const isAdminPath = destination?.startsWith("/admin");
-            const isBrandingPath = destination?.startsWith("/branding");
-            const isOrganiserPath = destination?.startsWith("/organiser");
-            const isVendorPath = destination?.startsWith("/vendor");
-
-            const isAuthorized = 
-                (!isAdminPath || user.role === "admin" || user.role === "super_admin") &&
-                (!isBrandingPath || user.role === "branding_partner" || user.role === "admin" || user.role === "super_admin") &&
-                (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(user.role)) &&
-                (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(user.role));
-
-            // Apply role-based defaults if no valid redirect OR not authorized for target
-            if (isInvalidRedirect || !isAuthorized) {
-                if (user.role === "admin" || user.role === "super_admin") {
-                    destination = "/admin";
-                } else if (user.role === "staff") {
-                    destination = "/organiser?tab=pwa_scanner";
-                } else if (user.role === "branding_partner") {
-                    destination = "/branding/dashboard";
-                } else if (user.role === "organiser" || user.role === "vendor") {
-                    const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
-                    destination = isProfessional ? "/vendor/dashboard" : "/organiser";
-                } else {
-                    destination = "/profile";
-                }
-            }
-
-            console.log("SignInPage: Final destination determined as:", destination);
+            const destination = getRedirectDestination(user, redirectPath);
+            console.log("SignInPage: Auto-redirect determined as:", destination);
             router.replace(destination);
         }
     }, [user, authLoading, router, redirectPath]);
@@ -197,6 +201,11 @@ export default function SignInPage() {
             });
             if (!result.success) {
                 setLoginError(result.error || "Invalid email or password.");
+            } else {
+                // Immediate redirect on success to bypass useEffect delays
+                const dest = getRedirectDestination(result.user, redirectPath);
+                console.log("SignInPage: Immediate login success redirect to:", dest);
+                router.replace(dest);
             }
         } catch (err) {
             console.error("Login error:", err);
