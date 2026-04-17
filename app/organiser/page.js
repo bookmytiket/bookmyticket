@@ -620,12 +620,12 @@ function OrganiserPanel() {
             if (loading || isOrgLoading) {
                 setCurrentStage("loading");
                 
-                // Safety: if stuck in loading for > 3s, force a fallback
+                // Safety: if stuck in loading for > 2s, force a fallback
                 if (!timeoutId) {
                     timeoutId = setTimeout(() => {
                         console.warn("OrganiserPanel: Session loading timeout. Forcing fallback evaluation.");
                         evaluateStateImpl(true);
-                    }, 3000);
+                    }, 2000);
                 }
                 return;
             }

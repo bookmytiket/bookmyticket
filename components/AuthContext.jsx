@@ -23,7 +23,12 @@ export function AuthProvider({ children }) {
             }
 
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                // Ensure initial getSession has a hard cap to avoid blocking the app
+                const sessionPromise = supabase.auth.getSession();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Session fetch timeout")), 8000));
+                
+                const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+                
                 if (session) {
                     const userData = await fetchAndSetUser(session.user);
                     if ((userData?.is_temporary_password || userData?.force_password_change) && !window.location.pathname.includes("/change-password")) {
@@ -32,7 +37,7 @@ export function AuthProvider({ children }) {
                     }
                 }
             } catch (err) {
-                console.error("AuthContext: Error getting session:", err);
+                console.error("AuthContext: Error getting initial session:", err.message);
             }
 
             const storedCity = localStorage.getItem("selectedCity");
