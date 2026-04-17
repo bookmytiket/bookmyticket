@@ -625,12 +625,13 @@ function AdminHomePage() {
     const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
     
     // Structured User Management: Fetch from role-specific tables
-    const { data: vendorsOnly = [] } = useSupabaseQuery('vendors');
+    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers');
     
     // Merge for backward compatibility in Admin Panel
     const organisersArr = useMemo(() => {
         return vendorsOnly;
     }, [vendorsOnly]);
+
 
     const { data: serviceProvidersArr = [] } = useSupabaseQuery('service_providers');
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
@@ -856,9 +857,9 @@ function AdminHomePage() {
     const [eventMetaOverrides, setEventMetaOverrides] = useSupabaseConfig("system_config", { key: 'admin_event_meta_overrides', value: {} });
 
     const [organizers, setOrganizers] = useState([]);
-    const [createOrganizer] = useSupabaseMutation('vendors', 'insert');
-    const [patchOrganizerMutation] = useSupabaseMutation('vendors', 'update', (q, p) => q.eq('id', p.id));
-    const [removeOrganizerMutation] = useSupabaseMutation('vendors', 'delete', (q, p) => q.eq('id', p.id));
+    const [createOrganizer] = useSupabaseMutation('organisers', 'insert');
+    const [patchOrganizerMutation] = useSupabaseMutation('organisers', 'update', (q, p) => q.eq('id', p.id));
+    const [removeOrganizerMutation] = useSupabaseMutation('organisers', 'delete', (q, p) => q.eq('id', p.id));
     const [patchServiceProviderMutation] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
     const [removeServiceProviderMutation] = useSupabaseMutation('service_providers', 'delete', (q, p) => q.eq('id', p.id));
     const [selectedKycOrg, setSelectedKycOrg] = useState(null);
@@ -876,10 +877,11 @@ function AdminHomePage() {
                 id: o.id,
                 username: o.business_name || o.name || "Unnamed Organiser",
                 email: o.kyc_details?.email || o.user_id || o.id,
-                status: o.kyc_status || "Active",
+                status: o.kyc_status || "NOT STARTED",
                 category: o.category || o.kyc_details?.category || "Event Organiser",
-                balance: `₹${o.wallet_balance || 0}`,
-                kycDetails: o.kyc_details
+                balance: `₹${(o.wallet_balance || 0).toFixed(2)}`,
+                kycDetails: o.kyc_details,
+                kyc_status: o.kyc_status || "NOT STARTED"
             }));
     }, [organisersArr]);
 
@@ -1693,9 +1695,10 @@ function AdminHomePage() {
                                     <div className="space-y-0.5">
                                         {[
                                             { label: "All Organizers", id: "all_org" },
-                                            { label: "KYC Pending", id: "kyc_pending" },
-                                            { label: "KYC Verified", id: "kyc_verified" },
-                                            { label: "Banned", id: "banned_org" },
+                                            { label: "Active", id: "active_org" },
+                                            { label: "Under Review", id: "kyc_verified" },
+                                            { label: "Pending Setup", id: "kyc_pending" },
+                                            { label: "Restricted", id: "banned_org" },
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
@@ -2271,19 +2274,22 @@ function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {usersArr.length > 0 ? usersArr.map((c) => (
-                                            <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{c.username}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{c.email}</td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{ padding: "2px 8px", borderRadius: "6px", backgroundColor: "#22c55e22", color: "#22c55e", fontSize: "11px", fontWeight: 700 }}>{c.role || "user"}</span>
-                                                </td>
-                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</td>
-                                                <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View history</button></td>
-                                            </tr>
-                                        )) : (
-                                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. Registered users will appear here.</td></tr>
-                                        )}
+                                        {(() => {
+                                            const customersOnly = usersArr.filter(c => !c.role || c.role === "user");
+                                            return customersOnly.length > 0 ? customersOnly.map((c) => (
+                                                <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                    <td style={{ padding: "12px", fontWeight: 600 }}>{c.username}</td>
+                                                    <td style={{ padding: "12px", fontSize: "13px" }}>{c.email}</td>
+                                                    <td style={{ padding: "12px" }}>
+                                                        <span style={{ padding: "2px 8px", borderRadius: "6px", backgroundColor: "#22c55e22", color: "#22c55e", fontSize: "11px", fontWeight: 700 }}>{c.role || "user"}</span>
+                                                    </td>
+                                                    <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</td>
+                                                    <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View history</button></td>
+                                                </tr>
+                                            )) : (
+                                                <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No customers yet. Registered users will appear here.</td></tr>
+                                            );
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
@@ -3245,9 +3251,10 @@ function AdminHomePage() {
                                         </thead>
                                         <tbody>
                                             {mappedOrganizers.filter(org => {
-                                                if (activeTab === "all_org" || activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
-                                                if (activeTab === "banned_org") return org.status === "Banned";
-                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding"].includes(org.status);
+                                                if (activeTab === "all_org") return true;
+                                                if (activeTab === "active_org") return ["Active", "KYC Completed", "KYC Verified"].includes(org.status);
+                                                if (activeTab === "banned_org") return ["Banned", "Rejected"].includes(org.status);
+                                                if (activeTab === "kyc_pending") return ["KYC Pending", "Start Onboarding", "NOT STARTED", "Not Started"].includes(org.status);
                                                 if (activeTab === "kyc_verified") return ["Submitted", "Under Review", "Pending"].includes(org.status);
                                                 if (activeTab === "with_balance") return parseFloat(String(org.balance).replace(/[^\d.-]/g, '')) > 0;
                                                 if (activeTab === "email_unverified") return String(org.id).length % 2 === 0; // Fixed temporary logic
@@ -3308,19 +3315,26 @@ function AdminHomePage() {
                                                                         </button>
                                                                     </>
                                                                 )}
-                                                                {org.kyc_status === 'Active' && (
-                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Banned' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                {org.kyc_status !== 'Active' && (
+                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Active' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <CheckCircle size={16} /> Mark as Active
+                                                                    </button>
+                                                                )}
+                                                                {org.kyc_status !== 'Inactive' && (
+                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Inactive' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#f97316", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <AlertCircle size={16} /> Mark as Inactive
+                                                                    </button>
+                                                                )}
+                                                                {org.kyc_status !== 'Banned' && (
+                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Banned' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                         <Bell size={16} /> Ban User
                                                                     </button>
                                                                 )}
-                                                                {org.kyc_status === 'Banned' && (
-                                                                    <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Active' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#22c55e", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <CheckCircle size={16} /> Unban User
+                                                                {org.kyc_status !== 'Rejected' && (
+                                                                    <button onClick={async (e) => { e.stopPropagation(); await patchOrganizerMutation({ id: org.id, kyc_status: 'Rejected' }); refreshVendors(); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                                                                        <X size={16} /> Reject User
                                                                     </button>
                                                                 )}
-                                                                <button onClick={(e) => { e.stopPropagation(); patchOrganizerMutation({ id: org.id, kyc_status: 'Rejected' }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                    <X size={16} /> Reject User
-                                                                </button>
                                                                 <div style={{ borderTop: `1px solid ${t.border}`, margin: "4px 0" }}></div>
                                                                 <button onClick={async (e) => { e.stopPropagation(); removeOrganizerMutation({ id: org.id }); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: "#ef4444", fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                                                                     <Trash2 size={16} /> Delete User
@@ -5634,16 +5648,33 @@ function AdminHomePage() {
                                             style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                         />
                                     </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Status (Active/Inactive)</label>
+                                        <select
+                                            value={editingOrg.status}
+                                            onChange={(e) => setEditingOrg({ ...editingOrg, status: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
+                                        >
+                                            <option value="Active">Active</option>
+                                            <option value="Inactive">Inactive</option>
+                                            <option value="Banned">Banned</option>
+                                            <option value="Rejected">Rejected</option>
+                                            <option value="KYC Completed">KYC Completed</option>
+                                            <option value="Submitted">Submitted (Under Review)</option>
+                                            <option value="KYC Pending">KYC Pending</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
                                     <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
                                     <button
                                         onClick={async () => {
                                             const balance = parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''));
-                                            await patchOrganizer({
+                                            await patchOrganizerMutation({
                                                 id: editingOrg.id,
-                                                name: editingOrg.username,
-                                                wallet_balance: isNaN(balance) ? 0 : balance
+                                                business_name: editingOrg.username,
+                                                wallet_balance: isNaN(balance) ? 0 : balance,
+                                                kyc_status: editingOrg.status
                                             });
                                             setIsEditModalOpen(false);
                                         }}

@@ -523,12 +523,12 @@ function OrganiserPanel() {
 
     // Supabase Queries
     const { data: organiserData, loading: isOrgLoading, refresh: refreshOrganiserData } = useSupabaseQuery(
-        "vendors",
+        "organisers",
         (q) => q.eq("id", user?.id).maybeSingle(),
         [user?.id]
     );
 
-    const [submitKycMutation] = useSupabaseMutation("vendors", "update", (q) => q.eq("id", user?.id));
+    const [submitKycMutation] = useSupabaseMutation("organisers", "update", (q) => q.eq("id", user?.id));
 
     const isProfessionalService = useMemo(() => {
         return isProfService(
@@ -572,7 +572,7 @@ function OrganiserPanel() {
             setProfile(prev => ({
                 ...prev,
                 kycStatus: mappedStatus,
-                email: organiserData.id, // Supabase id (UUID)
+                email: organiserData.kyc_details?.email || user?.email || "No Email",
                 firstName: (organiserData.business_name || "").split(' ')[0] || "Organiser",
                 lastName: (organiserData.business_name || "").split(' ')[1] || "",
             }));
@@ -2315,7 +2315,7 @@ function OrganiserPanel() {
                         <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
                         <CustomSelect 
                             value={postEvent[field] || ""}
-                            options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.name || opt.label || String(opt) }))}
+                            options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.value || opt.name || opt.label || String(opt) }))}
                             onChange={handleSelectChange}
                             placeholder={`Select ${label}...`}
                             isLoading={isLocationField && field !== "country" && !options.length && (field !== "city" || postEvent.country === "India")}

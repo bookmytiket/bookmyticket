@@ -46,18 +46,22 @@ async function updateSuperAdmin() {
         }
 
         // 2. Provision in profiles table
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-                id: userId,
-                email: NEW_EMAIL,
-                username: NEW_USERNAME,
-                role: 'staff',
-                full_name: 'Super Admin',
-                status: 'Active'
-            });
-        if (profileError) throw profileError;
-        console.log('✅ Profile record synchronized.');
+        try {
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: userId,
+                    email: NEW_EMAIL,
+                    username: NEW_USERNAME,
+                    role: 'staff',
+                    full_name: 'Super Admin',
+                    status: 'Active'
+                });
+            if (profileError) throw profileError;
+            console.log('✅ Profile record synchronized.');
+        } catch (perr) {
+            console.warn('⚠️ Profile upsert failed (likely trigger related), skipping to Admin provision...', perr.message);
+        }
 
         // 3. Provision in admins table
         const { error: adminError } = await supabase

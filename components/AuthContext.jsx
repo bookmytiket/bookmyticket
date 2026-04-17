@@ -71,84 +71,64 @@ export function AuthProvider({ children }) {
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
         try {
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', supabaseUser.id)
-                .single();
+            // ── Run profile + admin + organiser checks IN PARALLEL ──────────────
+            const [profileResult, adminResult, organiserResult] = await Promise.all([
+                supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(),
+                supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle(),
+                supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(),
+            ]);
 
-            let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
+            const profile         = profileResult.data;
+            const adminRecord     = adminResult.data;
+            const organiserRecord = organiserResult.data;
 
-            // Fallback: Check admins table if the profile role is not already 'admin'
-            if (role !== 'admin') {
-                try {
-                    const { data: adminRecord, error: adminErr } = await supabase
-                        .from('admins')
-                        .select('role')
-                        .eq('id', supabaseUser.id)
-                        .maybeSingle();
-
-                    if (adminErr) {
-                        console.error("AuthContext: Admins table lookup error:", adminErr.message);
-                    }
-
-                    if (adminRecord) {
-                        const adminRole = adminRecord.role?.toLowerCase() || 'admin';
-                        console.log("AuthContext: Admin record found, upgrading role. Admin role in DB:", adminRole);
-                        role = adminRole.replace(/\s+/g, '_');
-                    }
-                } catch (err) {
-                    console.error("AuthContext: Unexpected error checking admins table:", err);
-                }
+            if (profileResult.error && profileResult.error.code !== 'PGRST116') {
+                console.warn("Profile fetch warning:", profileResult.error.message);
             }
 
-            // Enhanced role detection: Fetch specific metadata from role-specific tables
+            // Role priority: admin table → organisers table → profiles.role → user_metadata → 'user'
+            let role = (
+                profile?.role ||
+                supabaseUser.user_metadata?.role ||
+                'user'
+            ).toLowerCase().replace(/\s+/g, '_');
+
             let specializedData = {};
-            
-            try {
-                if (role === 'admin' || role === 'super_admin') {
-                    const { data } = await supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle();
-                    if (data) specializedData = data;
-                } else if (role === 'staff') {
-                    const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
-                    if (data) specializedData = data;
-                } else if (role === 'branding_partner') {
-                    const { data } = await supabase.from('branding_partners').select('*').eq('id', supabaseUser.id).maybeSingle();
-                    if (data) specializedData = data;
-                } else if (role === 'organiser') {
-                    // Fetch from unified vendors table (consolidated organisers + services)
-                    const { data: vendorData } = await supabase.from('vendors').select('*').eq('id', supabaseUser.id).maybeSingle();
-                    if (vendorData) {
-                        specializedData = vendorData;
-                        // For professional services, we might still want to call them 'vendor' in code logic if needed, 
-                        // but keeping 'organiser' role is safe as long as data is consistent.
-                        if (vendorData.type === 'professional_service') role = 'vendor';
-                    }
-                } else if (role === 'user') {
-                    const { data } = await supabase.from('public_users').select('*').eq('id', supabaseUser.id).maybeSingle();
-                    if (data) specializedData = data;
-                }
-            } catch (err) {
-                console.error("AuthContext: Error fetching specialized role data:", err);
-            }
 
-            // Construct unified user data
+            if (adminRecord) {
+                // Admin: reuse already-fetched record — no extra query needed
+                role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
+                specializedData = adminRecord;
+                console.log("AuthContext: Admin record found, role:", role);
+
+            } else if (organiserRecord) {
+                // Organiser/Vendor: use organisers table (real table name in this schema)
+                role = organiserRecord.type === 'professional_service' ? 'vendor' : 'organiser';
+                specializedData = organiserRecord;
+                console.log("AuthContext: Organiser record found, role:", role);
+
+            } else if (role === 'staff') {
+                try {
+                    const { data } = await supabase
+                        .from('staff_details').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    if (data) specializedData = data;
+                } catch (_) { /* graceful */ }
+            }
+            // Note: 'user' role doesn't need specialised table queries
+
             const userData = {
                 id: supabaseUser.id,
                 identifier: supabaseUser.email,
                 email: supabaseUser.email,
-                name: profile?.full_name || profile?.username ||
+                name: profile?.full_name ||
+                      organiserRecord?.business_name ||
                       supabaseUser.user_metadata?.full_name ||
                       supabaseUser.email?.split('@')[0],
                 ...(profile || {}),
-                ...specializedData, // Merge role-specific fields (e.g., business_name, kyc_status)
+                ...specializedData,
                 is_temporary_password: profile?.is_temporary_password || specializedData?.is_temporary_password || false,
-                role: role, // Final normalized role
+                role,
             };
-
-            if (error && error.code !== 'PGRST116') {
-                console.warn("Profile fetch warning:", error.message);
-            }
 
             setUser(userData);
             localStorage.setItem("user", JSON.stringify(userData));
@@ -158,6 +138,8 @@ export function AuthProvider({ children }) {
             return null;
         }
     };
+
+
 
     const updateCity = async (city, hierarchy = null) => {
         setSelectedCity(city);

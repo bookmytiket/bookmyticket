@@ -171,9 +171,9 @@ export async function POST(request) {
         });
       }
 
-      // 5. Update Unified Partner (Vendors table handles all)
-      const { error: vendorError } = await supabaseAdmin
-        .from("vendors")
+      // 5. Update Unified Partner (Organisers table)
+      const { error: organiserError } = await supabaseAdmin
+        .from("organisers")
         .upsert({
           id: newUserId,
           business_name: partnerReq.business_name || `${partnerReq.first_name} ${partnerReq.last_name}`,
@@ -184,7 +184,7 @@ export async function POST(request) {
           is_temporary_password: true,
           force_password_change: true
         });
-      if (vendorError) throw vendorError;
+      if (organiserError) throw organiserError;
 
       // 6. Update Request Status
       await supabaseAdmin
@@ -196,22 +196,26 @@ export async function POST(request) {
         })
         .eq("id", requestId);
 
-      // 7. Send Approval Email & Log Notification
+      // 7. Send Approval Email with Credentials
       const { data: settings, error: settingsError } = await supabaseAdmin
         .from('email_settings')
         .select('*')
-        .eq('provider', 'MICROSOFT_365')
+        .limit(1)
         .single();
+
+      if (settingsError) {
+        console.error("[approve-partner] Could not load email_settings:", settingsError.message);
+      }
 
       const m365Config = settings?.microsoft_365;
       const fromEmail = settings?.from_email || 'hello@bookmyticket.net';
 
       const subject = "Your Partner Account has been Approved - BookMyTicket";
-      const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/signin`;
+      const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net'}/signin`;
       const emailContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; padding: 40px; border-radius: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
           <div style="text-align: center; margin-bottom: 30px;">
-            <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="BookMyTicket" style="height: 60px;">
+            <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net'}/logo.png" alt="BookMyTicket" style="height: 60px;">
           </div>
           <h1 style="color: #0f172a; text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Welcome to the Network!</h1>
           <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved and is ready for use.</p>
@@ -225,22 +229,22 @@ export async function POST(request) {
               </tr>
               <tr>
                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
-                <td style="padding: 10px 0;"><code style="background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace;">${tempPassword}</code></td>
+                <td style="padding: 10px 0;"><code style="background: #fdf4ff; color: #a855f7; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace; font-size: 15px;">${tempPassword}</code></td>
               </tr>
               <tr>
                 <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Platform URL:</td>
-                <td style="padding: 10px 0; color: #3b82f6; font-size: 14px; font-weight: 600;"><a href="https://bookmyticket.net" style="color: #3b82f6; text-decoration: none;">https://bookmyticket.net</a></td>
+                <td style="padding: 10px 0;"><a href="https://bookmyticket.net" style="color: #a855f7; text-decoration: none; font-weight: 600;">bookmyticket.net</a></td>
               </tr>
             </table>
           </div>
 
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${loginUrl}" style="background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.2);">Secure Your Account Now</a>
+            <a href="${loginUrl}" style="background: linear-gradient(135deg, #f84464 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(168,85,247,0.25);">Login &amp; Secure Your Account →</a>
           </div>
 
           <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fde68a;">
             <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.5;">
-              <strong>Important Security Notice:</strong> This is a temporary password. For your protection, you will be required to change it immediately upon your first login.
+              <strong>Important Security Notice:</strong> This is a temporary password. You will be required to change it immediately upon your first login.
             </p>
           </div>
           
@@ -251,42 +255,44 @@ export async function POST(request) {
         </div>
       `;
 
-      if (m365Config) {
+      if (settings?.provider === 'MICROSOFT_365' && m365Config) {
         try {
+          console.log(`[approve-partner] Sending credentials email to ${partnerReq.email} via M365...`);
           await sendM365Email(m365Config, fromEmail, partnerReq.email, subject, emailContent);
-          
-          // Log success
-          await supabaseAdmin.from('notifications_log').insert({
-            user_id: newUserId,
-            type: 'Email',
-            recipient: partnerReq.email,
-            subject: subject,
-            content: "Approval Credentials Sent",
-            status: 'Sent'
-          });
+          console.log(`[approve-partner] ✅ Credentials email sent to ${partnerReq.email}`);
+
+          // Log success (graceful — table may not exist)
+          try {
+            await supabaseAdmin.from('notifications_log').insert({
+              user_id: newUserId, type: 'Email', recipient: partnerReq.email,
+              subject, content: "Approval Credentials Sent", status: 'Sent'
+            });
+          } catch (_) { /* notifications_log table optional */ }
         } catch (emailErr) {
-          console.error("Failed to send approval email:", emailErr);
-          // Log failure
-          await supabaseAdmin.from('notifications_log').insert({
-            user_id: newUserId,
-            type: 'Email',
-            recipient: partnerReq.email,
-            subject: subject,
-            content: "Approval Credentials Failed",
-            status: 'Failed',
-            error_message: emailErr.message
-          });
+          console.error("[approve-partner] ❌ Failed to send credentials email:", emailErr.message);
+          // Log failure gracefully
+          try {
+            await supabaseAdmin.from('notifications_log').insert({
+              user_id: newUserId, type: 'Email', recipient: partnerReq.email,
+              subject, content: "Approval Credentials Failed",
+              status: 'Failed', error_message: emailErr.message
+            });
+          } catch (_) { /* notifications_log table optional */ }
         }
+      } else {
+        console.error(`[approve-partner] ❌ Email NOT sent — provider: ${settings?.provider}, m365Config present: ${!!m365Config}`);
       }
 
       // 8. SMS Placeholder (Log as "Pending Provider")
-      await supabaseAdmin.from('notifications_log').insert({
-        user_id: newUserId,
-        type: 'SMS',
-        recipient: partnerReq.phone,
-        content: `BookMyTicket: Your account is approved. Email: ${partnerReq.email}. Temp Pass: ${tempPassword}. Login at ${loginUrl}`,
-        status: 'Sent' // Mocked as sent for the workflow
-      });
+      try {
+        await supabaseAdmin.from('notifications_log').insert({
+          user_id: newUserId,
+          type: 'SMS',
+          recipient: partnerReq.phone,
+          content: `BookMyTicket: Your account is approved. Email: ${partnerReq.email}. Temp Pass: ${tempPassword}. Login at ${loginUrl}`,
+          status: 'Sent'
+        });
+      } catch (_) { /* notifications_log table optional */ }
 
       return NextResponse.json({ success: true, userId: newUserId });
     }
@@ -298,3 +304,4 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

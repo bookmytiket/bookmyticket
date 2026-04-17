@@ -28,8 +28,11 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     // Approval and KYC via Edge Function usually, but for status updates we can use mutation
     const handleInitiateKyc = async (id) => {
         try {
-            const { id: _, ...payload } = { id, status: 'KYC Pending' };
-            await updateStatus(payload);
+            const { error } = await supabase
+                .from('partner_requests')
+                .update({ status: 'KYC Pending' })
+                .eq('id', id);
+            if (error) throw error;
             showToast("KYC process initiated. Invitation sent to partner.", "success");
         } catch (err) {
             showToast("Error initiating KYC: " + err.message, "error");
@@ -81,8 +84,11 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
     const handleUpdate = async (id, status) => {
         try {
-            const { id: _, ...payload } = { id, status };
-            await updateStatus(payload);
+            const { error } = await supabase
+                .from('partner_requests')
+                .update({ status })
+                .eq('id', id);
+            if (error) throw error;
             showToast(`Request ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
             showToast("Error updating status: " + err.message, 'error');
@@ -142,8 +148,13 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     };
 
     const handleDelete = async (id) => {
+        if (!window.confirm("Delete this request? This cannot be undone.")) return;
         try {
-            await removeRequest({ id });
+            const { error } = await supabase
+                .from('partner_requests')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
             showToast("Request deleted successfully", "info");
         } catch (err) {
             showToast("Error deleting request: " + err.message, "error");

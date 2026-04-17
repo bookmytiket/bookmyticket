@@ -176,8 +176,12 @@ export default function SignInPage() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoginError("");
+        setLoading(true);
 
         const email = identifier.trim().toLowerCase();
+
+        // Safety net: auto-reset loading after 10s to prevent permanent spinner
+        const safetyTimer = setTimeout(() => setLoading(false), 10000);
         
         try {
             const result = await login(email, password, redirectPath, {
@@ -190,8 +194,12 @@ export default function SignInPage() {
         } catch (err) {
             console.error("Login error:", err);
             setLoginError("An error occurred during login.");
+        } finally {
+            clearTimeout(safetyTimer);
+            setLoading(false);
         }
     };
+
 
     const handleSignupSendOTP = async (e) => {
         e.preventDefault();
@@ -591,9 +599,32 @@ export default function SignInPage() {
                                         <p style={{ fontSize: "12px", color: "#ef4444", marginBottom: "12px", marginTop: "-8px" }}>⚠ {loginError}</p>
                                     )}
 
-                                    <button type="submit" style={{ ...submitBtn, marginBottom: "12px" }}>
-                                        Log in
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        style={{
+                                            ...submitBtn,
+                                            marginBottom: "12px",
+                                            opacity: loading ? 0.85 : 1,
+                                            cursor: loading ? "not-allowed" : "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "8px",
+                                        }}
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                    style={{ animation: "spin 0.8s linear infinite" }}>
+                                                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.35)" strokeWidth="3"/>
+                                                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
+                                                </svg>
+                                                Signing in…
+                                            </>
+                                        ) : "Log in"}
                                     </button>
+                                    <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
                                     <div style={{ textAlign: "center", marginBottom: "12px" }}>
                                         <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
                                     </div>
