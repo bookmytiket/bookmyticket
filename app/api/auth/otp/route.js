@@ -1,56 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-
-// Helper: Microsoft 365 Graph API Email Dispatch
-const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
-  const client_id = m365Config.client_id || m365Config.clientId;
-  const tenant_id = m365Config.tenant_id || m365Config.tenantId;
-  const client_secret = m365Config.client_secret || m365Config.clientSecret;
-  
-  if (!client_id || !tenant_id || !client_secret) {
-    throw new Error("Incomplete M365 configuration (missing client_id, tenant_id, or client_secret).");
-  }
-
-  const tokenRes = await fetch(`https://login.microsoftonline.com/${tenant_id}/oauth2/v2.0/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id,
-      client_secret,
-      scope: "https://graph.microsoft.com/.default",
-    }),
-  });
-
-  const tokenData = await tokenRes.json();
-  if (!tokenRes.ok) {
-    throw new Error(tokenData.error_description || "Authentication with Microsoft 365 failed.");
-  }
-
-  const access_token = tokenData.access_token;
-
-  const sendRes = await fetch(`https://graph.microsoft.com/v1.0/users/${fromEmail}/sendMail`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message: {
-        subject,
-        body: { contentType: "HTML", content },
-        toRecipients: [{ emailAddress: { address: toEmail } }],
-      },
-    }),
-  });
-
-  if (!sendRes.ok) {
-    const errData = await sendRes.json();
-    throw new Error(errData.error?.message || "Failed to send email via Microsoft Graph API.");
-  }
-
-  return true;
-};
+import { sendEmail } from '@/lib/emailService';
 
 export async function POST(request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -81,54 +31,24 @@ export async function POST(request) {
 
       // 3. Send Email Dispatch Selection
       try {
-        const { data: settings } = await supabaseAdmin.from('email_settings').select('*').single();
-        if (!settings) throw new Error("No mail dispatcher configuration found.");
-
         const subject = 'Your BookMyTicket Verification Code';
         const html = `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center;">
-            <h2>Welcome to BookMyTicket!</h2>
-            <p>Your verification code is:</p>
-            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; color: #4F46E5;">
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #f1f5f9; border-radius: 24px; background: #fff;">
+            <div style="margin-bottom: 30px;">
+              <h1 style="color: #1e293b; font-size: 24px; font-weight: 800; margin: 0;">BookMyTicket</h1>
+            </div>
+            <h2 style="color: #334155; font-size: 20px; font-weight: 700;">Verify Your Account</h2>
+            <p style="color: #64748b; font-size: 14px; line-height: 1.5;">Welcome! Please use the following code to complete your verification.</p>
+            <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; margin: 30px 0; color: #f43f5e; background: #fff1f2; padding: 20px; border-radius: 16px;">
               ${newCode}
             </div>
-            <p>This code will expire in 10 minutes.</p>
+            <p style="color: #94a3b8; font-size: 12px;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
           </div>
         `;
 
-        if (settings.provider === 'SMTP' && settings.host) {
-          const nodemailer = require('nodemailer');
-          console.log(`Attempting to send OTP via SMTP: ${settings.host}:${settings.port} for ${email}`);
-          const transporter = nodemailer.createTransport({
-            host: settings.host,
-            port: settings.port || 587,
-            secure: settings.encryption === 'SSL' || settings.port == 465,
-            auth: {
-              user: settings.user_name,
-              pass: settings.pass
-            }
-          });
-
-          await transporter.sendMail({
-            from: `"${settings.from_name || 'BookMyTicket'}" <${settings.from_email || settings.user_name}>`,
-            to: email,
-            subject,
-            html
-          });
-          console.log(`OTP locally sent to ${email} via SMTP.`);
-        } 
-        else if (settings.provider === 'MICROSOFT_365' && settings.microsoft_365) {
-          console.log(`Attempting to send OTP via Microsoft Graph API for ${email}`);
-          const fromEmail = settings.from_email || "hello@bookmyticket.net";
-          await sendM365Email(settings.microsoft_365, fromEmail, email, subject, html);
-          console.log(`OTP locally sent to ${email} via Microsoft Graph API.`);
-        }
-        else {
-            console.log(`No active provider config matches (SMTP or M365). Relying on background webhook fallback.`);
-        }
+        await sendEmail({ to: email, subject, html });
       } catch (mailErr) {
         console.error("Local email dispatch error:", mailErr);
-        // We do not throw because the Webhook might still be configured to catch it.
       }
 
       return NextResponse.json({ success: true, message: 'OTP sent' });

@@ -1,0 +1,20 @@
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+async function checkConfig() {
+  const { data, error } = await supabase.from('email_settings').select('*').single();
+  if (error) {
+    console.error('Config Fetch Error:', error);
+  } else {
+    console.log('Active Provider:', data.provider);
+    console.log('From Email:', data.from_email);
+    console.log('Host:', data.host);
+  }
+}
+
+checkConfig();
