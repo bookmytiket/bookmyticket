@@ -128,6 +128,7 @@ export function AuthProvider({ children }) {
                 console.warn("Profile fetch warning:", profileResult.error.message);
             }
 
+            // ── ROLE DETERMINATION ──
             // Role priority: admin table → organisers table → profiles.role → user_metadata → 'user'
             let role = (
                 profile?.role ||
@@ -135,27 +136,31 @@ export function AuthProvider({ children }) {
                 'user'
             ).toLowerCase().replace(/\s+/g, '_');
 
+            // Map "organizer" to "organiser" for regional consistency
+            if (role === 'organizer') role = 'organiser';
+
             let specializedData = {};
 
             if (adminRecord) {
-                // Admin: reuse already-fetched record — no extra query needed
+                // Admin: reuse already-fetched record
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
-                console.log("AuthContext: Admin record found, role:", role);
+                console.log("AuthContext: Admin found, role:", role);
 
             } else if (organiserRecord) {
-                // Organiser/Vendor: use organisers table (real table name in this schema)
+                // Organiser/Vendor: Record exists in organisers table
                 role = organiserRecord.type === 'professional_service' ? 'vendor' : 'organiser';
                 specializedData = organiserRecord;
-                console.log("AuthContext: Organiser record found, role:", role);
+                console.log("AuthContext: Organiser/Vendor record found, role:", role);
 
             } else if (role === 'staff') {
                 try {
                     const { data } = await supabase
-                        .from('staff_details').select('*').eq('id', supabaseUser.id).maybeSingle();
+                        .from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
                     if (data) specializedData = data;
-                } catch (_) { /* graceful */ }
+                } catch (_) { /* graceful fallback */ }
             }
+            // ────────────────────────
             // Note: 'user' role doesn't need specialised table queries
 
             const userData = {

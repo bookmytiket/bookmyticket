@@ -94,6 +94,9 @@ export default function SignInPage() {
 
         let destination = isInvalidRedirect ? "/" : decodedRedirect;
 
+        // Ensure role is normalized for comparison
+        const role = user?.role?.toLowerCase();
+
         // Security: Validate authorization for the target destination
         const isAdminPath = destination?.startsWith("/admin");
         const isBrandingPath = destination?.startsWith("/branding");
@@ -101,26 +104,36 @@ export default function SignInPage() {
         const isVendorPath = destination?.startsWith("/vendor");
 
         const isAuthorized = 
-            (!isAdminPath || user.role === "admin" || user.role === "super_admin") &&
-            (!isBrandingPath || user.role === "branding_partner" || user.role === "admin" || user.role === "super_admin") &&
-            (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(user.role)) &&
-            (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(user.role));
+            (!isAdminPath || role === "admin" || role === "super_admin") &&
+            (!isBrandingPath || role === "branding_partner" || role === "admin" || role === "super_admin") &&
+            (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(role)) &&
+            (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(role));
 
         // Apply role-based defaults if no valid redirect OR not authorized for target
         if (isInvalidRedirect || !isAuthorized) {
-            if (user.role === "admin" || user.role === "super_admin") {
-                destination = "/admin";
-            } else if (user.role === "staff") {
-                destination = "/organiser?tab=pwa_scanner";
-            } else if (user.role === "branding_partner") {
+            if (role === 'admin' || role === 'super_admin') {
+                destination = "/admin/dashboard";
+            } else if (role === 'staff') {
+                destination = "/pwa-scan";
+            } else if (role === 'branding_partner') {
                 destination = "/branding/dashboard";
-            } else if (user.role === "organiser" || user.role === "vendor") {
+            } else if (role === "organiser" || role === "organizer") {
+                // If they have organiser role but are a professional service, send to vendor dashboard
                 const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
                 destination = isProfessional ? "/vendor/dashboard" : "/organiser";
+            } else if (role === "vendor") {
+                destination = "/vendor/dashboard";
             } else {
                 destination = "/profile";
             }
         }
+
+        // ABSOLUTE SECURITY OVERRIDES (Regardless of redirectPath)
+        if (role === "staff") return "/pwa-scan";
+        if (role === "admin" || role === "super_admin") {
+            if (destination === "/" || destination === "/profile") return "/admin/dashboard";
+        }
+
         return destination;
     };
 

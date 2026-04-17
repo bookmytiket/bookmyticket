@@ -39,6 +39,13 @@ export default function RequireAuth({ children, allowedRoles }) {
       router.replace(buildRedirectUrl(pathname, searchParams));
       return;
     }
+
+    // SPECIAL CASE: Staff users are ONLY allowed on /pwa-scan
+    if (user.role === "staff" && pathname !== "/pwa-scan") {
+      router.replace("/pwa-scan");
+      return;
+    }
+
     if (!allowed) {
       router.replace(buildRedirectUrl(pathname, searchParams));
     }

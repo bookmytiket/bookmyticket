@@ -25,6 +25,7 @@ export default function ConditionalNavbar() {
         pathname?.startsWith("/services/") ||
         pathname?.startsWith("/profile") ||
         pathname?.startsWith("/meeting") ||
+        pathname?.startsWith("/pwa-scan") ||
         pathname?.startsWith("/turfs") ||
         pathname?.startsWith("/reset-password") ||
         pathname?.includes("/checkout")

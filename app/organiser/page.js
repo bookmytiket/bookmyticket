@@ -46,7 +46,7 @@ import {
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus
 } from "lucide-react";
 
 const ACCENT_BLUE = "#3b82f6";
@@ -398,7 +398,9 @@ function OrganiserPanel() {
         if (!loading && mounted) {
             if (!user) {
                 router.push("/signin?redirect=/organiser");
-            } else if (user.role !== "organiser" && user.role !== "admin" && user.role !== "staff") {
+            } else if (user.role === "staff") {
+                router.push("/pwa-scan");
+            } else if (user.role !== "organiser" && user.role !== "admin") {
                 // If a regular user tries to access organiser panel, redirect to profile
                 console.log("OrganiserPanel: unauthorized role", user.role, "- redirecting to profile");
                 router.push("/profile");
@@ -470,6 +472,7 @@ function OrganiserPanel() {
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [staffFormData, setStaffFormData] = useState({ name: "", email: "", password: "" });
     const [editingStaffId, setEditingStaffId] = useState(null);
+    const [postLoading, setPostLoading] = useState(false);
     const [deletingStaffId, setDeletingStaffId] = useState(null);
     const [supportTicketSearchId, setSupportTicketSearchId] = useState("");
     const [selectedTicketIds, setSelectedTicketIds] = useState([]);
@@ -717,8 +720,8 @@ function OrganiserPanel() {
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
     const [deleteStaffMutation] = useSupabaseMutation("profiles", "delete", (q, p) => q.eq("id", p.id));
     
-    const { data: staffAccounts = [] } = useSupabaseQuery(
-        "staff_details",
+    const { data: staffAccounts = [], refresh: refetchStaff } = useSupabaseQuery(
+        "staff",
         (q) => q.eq("organiser_id", user?.id),
         [user?.id]
     );
@@ -912,6 +915,14 @@ function OrganiserPanel() {
             { name: "Gold", price: 1000, rows: 4, isFree: false },
             { name: "Silver", price: 500, rows: 4, isFree: false },
         ],
+        // Advanced Information & Features
+        ageLimit: "All ages",
+        language: "English",
+        duration: "2-3 Hours",
+        safetyMeasures: true,
+        seatingType: "FCFS",
+        mandatoryCheckin: true,
+        
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
@@ -1171,6 +1182,14 @@ function OrganiserPanel() {
                 startNumber: Number(b.startNumber) || 1,
                 numberingDirection: b.numberingDirection || 'ltr'
             })) : undefined,
+            // Advanced Details
+            age_limit: postEvent.ageLimit || "All ages",
+            language: postEvent.language || "English",
+            duration: postEvent.duration || "2-3 Hours",
+            safety_measures: !!postEvent.safetyMeasures,
+            seating_type: postEvent.seatingType || "FCFS",
+            mandatory_checkin: !!postEvent.mandatoryCheckin,
+            gallery: postEvent.galleryPreviews || []
         };
 
         // Remove undefined keys
@@ -2793,22 +2812,92 @@ function OrganiserPanel() {
                             <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
 
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                                {/* Thumbnail Image */}
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
-                                    <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
-                                        <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
-                                            {postEvent.bannerPreview ? (
-                                                <img src={postEvent.bannerPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-                                            ) : <ImageIcon size={28} className="text-slate-300" />}
+                            {/* Section: Image Details (Media Management) */}
+                            <div className="mb-8 p-8 rounded-[2rem] bg-pink-50/30 border border-pink-100/50">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
+                                            <ImageIcon size={20} />
                                         </div>
-                                        <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
-                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
-                                        </div>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Image Details</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-black text-white uppercase tracking-widest">
+                                        <Sparkles size={10} className="text-pink-400" /> Premium Assets
                                     </div>
                                 </div>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                                    {/* Cover / Banner Upload */}
+                                    <div className="space-y-4">
+                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
+                                        <div 
+                                            className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all duration-500"
+                                            onClick={() => thumbnailInputRef.current?.click()}
+                                        >
+                                            {postEvent.bannerPreview ? (
+                                                <div className="relative w-full h-full">
+                                                    <img src={postEvent.bannerPreview} alt="Banner" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 transition-colors group-hover:bg-pink-50">
+                                                    <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-300 group-hover:text-pink-400 group-hover:scale-110 transition-all duration-500">
+                                                        <CloudUpload size={32} />
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="block text-xs font-black text-slate-900 uppercase tracking-tighter italic">Click to Upload Banner</span>
+                                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Gallery Management */}
+                                    <div className="space-y-4">
+                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {postEvent.galleryPreviews?.map((src, idx) => (
+                                                <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+                                                    <img src={src} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newPreviews = [...postEvent.galleryPreviews];
+                                                            const newImages = [...postEvent.galleryImages];
+                                                            newPreviews.splice(idx, 1);
+                                                            newImages.splice(idx, 1);
+                                                            setPostEvent(p => ({ ...p, galleryPreviews: newPreviews, galleryImages: newImages }));
+                                                        }}
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-md rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {(postEvent.galleryPreviews?.length || 0) < 10 && (
+                                                <div 
+                                                    onClick={() => galleryInputRef.current?.click()}
+                                                    className="aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-all group"
+                                                >
+                                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-pink-500 group-hover:rotate-90 transition-all duration-500">
+                                                        <Plus size={20} />
+                                                    </div>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Add More</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                                            <AlertCircle size={16} className="text-slate-400" />
+                                            <p className="text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                                                High resolution images help boost sales by up to 40%. Ensure your photos are clear and well-lit.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                                 {/* Basic Info */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
@@ -2819,6 +2908,158 @@ function OrganiserPanel() {
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                                         {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                         {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section: Event Information (From Screenshot) */}
+                            <div className="mb-8 p-8 rounded-[2rem] bg-slate-50 border border-slate-100">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
+                                        <Info size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Event Information</h3>
+                                </div>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                            <Users size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Age Limit</label>
+                                            <select 
+                                                value={postEvent.ageLimit} 
+                                                onChange={e => setPostEvent(p => ({ ...p, ageLimit: e.target.value }))}
+                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
+                                            >
+                                                <option value="All ages">All ages</option>
+                                                <option value="12+">12+</option>
+                                                <option value="16+">16+</option>
+                                                <option value="18+">18+</option>
+                                                <option value="21+">21+</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                            <Languages size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Language</label>
+                                            <select 
+                                                value={postEvent.language} 
+                                                onChange={e => setPostEvent(p => ({ ...p, language: e.target.value }))}
+                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
+                                            >
+                                                <option value="English">English</option>
+                                                <option value="Hindi">Hindi</option>
+                                                <option value="Tamil">Tamil</option>
+                                                <option value="Telugu">Telugu</option>
+                                                <option value="Malayalam">Malayalam</option>
+                                                <option value="Kannada">Kannada</option>
+                                                <option value="Others">Others</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Duration</label>
+                                            <input 
+                                                type="text"
+                                                value={postEvent.duration} 
+                                                onChange={e => setPostEvent(p => ({ ...p, duration: e.target.value }))}
+                                                placeholder="e.g. 13:00 or 3 Hours"
+                                                className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section: Venue & Features (From Screenshot) */}
+                            <div className="mb-8 p-8 rounded-[2rem] bg-indigo-50/50 border border-indigo-100/50">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                        <Navigation size={20} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Venue & Features</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                                <ShieldCheck size={20} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Safety Control</span>
+                                                <span className="block text-sm font-black text-slate-900 italic uppercase">All safety measures enabled</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setPostEvent(p => ({ ...p, safetyMeasures: !p.safetyMeasures }))}
+                                            className={`w-12 h-6 rounded-full transition-all duration-300 relative ${postEvent.safetyMeasures ? 'bg-indigo-500' : 'bg-slate-200'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${postEvent.safetyMeasures ? 'translate-x-6' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-11 h-11 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
+                                                <Armchair size={20} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
+                                                <span className="block text-sm font-black text-slate-900 italic uppercase">Seating ({postEvent.seatingType})</span>
+                                            </div>
+                                        </div>
+                                        <select 
+                                            value={postEvent.seatingType}
+                                            onChange={e => setPostEvent(p => ({ ...p, seatingType: e.target.value }))}
+                                            className="bg-slate-50 text-[10px] font-black uppercase text-slate-900 p-2 rounded-lg outline-none"
+                                        >
+                                            <option value="FCFS">FCFS</option>
+                                            <option value="Reserved">Reserved</option>
+                                            <option value="Standing">Standing</option>
+                                        </select>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                                <CheckCircle2 size={20} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reception Mode</span>
+                                                <span className="block text-sm font-black text-slate-900 italic uppercase">Mandatory Check-In</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setPostEvent(p => ({ ...p, mandatoryCheckin: !p.mandatoryCheckin }))}
+                                            className={`w-12 h-6 rounded-full transition-all duration-300 relative ${postEvent.mandatoryCheckin ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${postEvent.mandatoryCheckin ? 'translate-x-6' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                                                <Landmark size={20} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Venue Location</span>
+                                                <span className="block text-sm font-black text-slate-900 italic uppercase">{postEvent.environment} Event</span>
+                                            </div>
+                                        </div>
+                                        <select 
+                                            value={postEvent.environment}
+                                            onChange={e => setPostEvent(p => ({ ...p, environment: e.target.value }))}
+                                            className="bg-slate-50 text-[10px] font-black uppercase text-slate-900 p-2 rounded-lg outline-none"
+                                        >
+                                            <option value="Indoor">Indoor</option>
+                                            <option value="Outdoor">Outdoor</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -4105,7 +4346,25 @@ function OrganiserPanel() {
                                                             </div>
                                                         </td>
                                                         <td style={{ padding: "16px", color: t.textMain, fontWeight: 600 }}>{s.email}</td>
-                                                        <td style={{ padding: "16px", color: t.textMain, fontFamily: "monospace" }}>{s.password}</td>
+                                                        <td style={{ padding: "16px" }}>
+                                                            <div 
+                                                                onClick={async () => {
+                                                                    const newStatus = !s.is_active;
+                                                                    try {
+                                                                        const res = await fetch('/api/organiser/staff', {
+                                                                            method: 'PATCH',
+                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                            body: JSON.stringify({ id: s.id, is_active: newStatus }),
+                                                                        });
+                                                                        if (!res.ok) throw new Error('Failed to toggle status');
+                                                                        refetchStaff();
+                                                                    } catch (err) { alert(err.message); }
+                                                                }}
+                                                                className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-colors duration-200 ${s.is_active ? 'bg-green-500' : 'bg-slate-300'}`}
+                                                            >
+                                                                <div className={`w-3 h-3 bg-white rounded-full transition-transform duration-200 ${s.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                            </div>
+                                                         </td>
                                                         <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.created_at || s.createdAt).toLocaleDateString()}</td>
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
                                                                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
@@ -4155,13 +4414,27 @@ function OrganiserPanel() {
                                             </button>
                                             <button 
                                                 onClick={async () => {
-                                                    try {
-                                                        const idToDelete = deletingStaffId;
-                                                        setDeletingStaffId(null);
-                                                        await deleteStaffMutation({ id: idToDelete });
-                                                    } catch (err) {
-                                                        alert("Failed to delete staff account: " + err.message);
-                                                    }
+                                                     try {
+                                                         const idToDelete = deletingStaffId;
+                                                         const staff = staffAccounts.find(s => s.id === idToDelete);
+                                                         setDeletingStaffId(null);
+                                                         
+                                                         const res = await fetch('/api/organiser/staff', {
+                                                             method: 'DELETE',
+                                                             headers: { 'Content-Type': 'application/json' },
+                                                             body: JSON.stringify({ id: idToDelete, auth_user_id: staff.auth_user_id }),
+                                                         });
+                                                         
+                                                         if (!res.ok) {
+                                                             const data = await res.json();
+                                                             throw new Error(data.error || 'Failed to delete');
+                                                         }
+                                                         
+                                                         refetchStaff();
+                                                         toast.success("Staff account removed successfully");
+                                                     } catch (err) {
+                                                         alert("Failed to delete staff account: " + err.message);
+                                                     }
                                                 }}
                                                 style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
                                             >
@@ -4333,26 +4606,43 @@ function OrganiserPanel() {
                                 <button
                                     onClick={async () => {
                                         try {
-                                            if (!staffFormData.name || !staffFormData.email || !staffFormData.password) { alert("Please fill all fields"); return; }
+                                            if (!staffFormData.name || !staffFormData.email || (!editingStaffId && !staffFormData.password)) { 
+                                                toast.error("Please fill all required fields"); 
+                                                return; 
+                                            }
 
-                                            await import("@/app/utils/hashPassword").then(async ({ hashPassword }) => {
-                                                const hashedPassword = await hashPassword(staffFormData.password);
-                                                if (editingStaffId) {
-                                                    await updateStaffMutation({ id: editingStaffId, ...staffFormData, password: hashedPassword });
-                                                } else {
-                                                    await createStaffMutation({ ...staffFormData, password: hashedPassword, organiser_id: effectiveEmail });
-                                                }
-                                                setShowStaffModal(false);
-                                                setStaffFormData({ name: "", email: "", password: "" });
-                                                setEditingStaffId(null);
+                                            setPostLoading(true);
+                                            
+                                            // Call our custom Admin API
+                                            const method = editingStaffId ? 'PUT' : 'POST';
+                                            const body = editingStaffId 
+                                                ? { auth_user_id: staffAccounts.find(s => s.id === editingStaffId)?.auth_user_id, password: staffFormData.password }
+                                                : { ...staffFormData, organiserId: user.id };
+
+                                            const res = await fetch('/api/organiser/staff', {
+                                                method,
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(body),
                                             });
+
+                                            const data = await res.json();
+                                            if (!res.ok) throw new Error(data.error || 'Operation failed');
+
+                                            setShowStaffModal(false);
+                                            setStaffFormData({ name: "", email: "", password: "" });
+                                            setEditingStaffId(null);
+                                            refetchStaff();
+                                            showToast(editingStaffId ? "Password updated" : "Staff account created", "success");
                                         } catch (err) {
-                                            alert(err.message || "Failed to save staff account");
+                                            showToast(err.message || "Failed to save staff account", "error");
+                                        } finally {
+                                            setPostLoading(false);
                                         }
                                     }}
-                                    style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "12px" }}
+                                    disabled={postLoading}
+                                    style={{ width: "100%", padding: "16px", borderRadius: "12px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", marginTop: "12px", opacity: postLoading ? 0.7 : 1 }}
                                 >
-                                    {editingStaffId ? "Update Account" : "Create Account"}
+                                    {postLoading ? "Processing..." : (editingStaffId ? "Update Password" : "Create Account")}
                                 </button>
                             </div>
                         </div>
@@ -4535,6 +4825,12 @@ function OrganiserPanel() {
                         {!isStaff && (
                             <>
                                 <div className="sidebar-category">Settings</div>
+                                <button onClick={() => setActiveTab("staff_accounts")} className={`sidebar-item ${activeTab === "staff_accounts" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <UserPlus size={18} />
+                                        <span>Staff Management</span>
+                                    </div>
+                                </button>
                                 <button onClick={() => setActiveTab("edit_profile")} className={`sidebar-item ${activeTab === "edit_profile" ? "active" : ""}`}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                         <Users size={18} />
