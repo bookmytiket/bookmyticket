@@ -52,7 +52,9 @@ export default function ArtistProfilePage() {
         vendorProfile: rawData 
     } : null;
 
-    const { data: reviews = [] } = useSupabaseQuery('vendorReviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
+    // Fetch vendor reviews with profile join
+    const { data: reviewsData = [] } = useSupabaseQuery('vendorReviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
+    const reviews = Array.isArray(reviewsData) ? reviewsData : [];
     
     // Fetch relational packages
     const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => q.eq('vendor_id', vendorId), [vendorId]);

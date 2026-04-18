@@ -45,9 +45,20 @@ export default function ProfilePage() {
         const uid = user.identifier || user.email;
         supabase.from('bookings').select('*').eq('user_id', uid)
             .then(({ data }) => setEventBookingsList(data || []));
-        supabase.from('vendor_bookings').select('*').eq('user_id', uid)
-            .then(({ data }) => setVendorBookingsList((data || []).map(b => ({ ...b, isVendorBooking: true }))));
-    }, [user?.identifier, user?.email]);
+            
+        // Use user.id (UUID) for the relational vendorBookings table
+        if (user.id) {
+            supabase.from('vendorBookings').select('*').eq('user_id', user.id)
+                .then(({ data }) => setVendorBookingsList((data || []).map(b => ({ 
+                    ...b, 
+                    isVendorBooking: true,
+                    eventName: b.service_type || "Professional Service", // for display
+                    totalPrice: b.total_amount,
+                    bookingDate: b.booking_date,
+                    _id: b.id
+                }))));
+        }
+    }, [user?.identifier, user?.email, user.id]);
 
     // Removed forced redirect for organisers/staff to allow them to view personal bookings and join meetings
     // Automatically redirect to signin if user is not found and loading is complete

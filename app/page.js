@@ -83,6 +83,35 @@ function TicketCard({ event }) {
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 
+const parseEventDate = (dateStr, timeStr) => {
+  if (!dateStr) return null;
+  try {
+    let dt = String(dateStr).trim();
+    let t = String(timeStr || '23:59').trim();
+
+    // Handle DD/MM/YYYY or DD-MM-YYYY
+    if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+        const separator = dt.includes('/') ? '/' : '-';
+        const [day, month, year] = dt.split(separator);
+        dt = `${year}-${month}-${day}`;
+    }
+    
+    let normalizedTime = t;
+    if (t.includes(' ')) {
+        let [timePart, modifier] = t.split(' ');
+        let [hours, mins] = timePart.split(':').map(Number);
+        if (modifier === 'PM' && hours < 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
+        normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins || 0).padStart(2, '0')}`;
+    }
+    
+    const eventDate = new Date(`${dt}T${normalizedTime}`);
+    return isNaN(eventDate.getTime()) ? null : eventDate;
+  } catch (e) {
+    return null;
+  }
+};
+
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,7 +149,7 @@ export default function Home() {
   const { user } = useAuth();
   const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
     user?.id 
-      ? q.select('*, events(title, img)').eq('user_id', user.id).order('created_at', { ascending: false }) 
+      ? q.select('*, events(title, img, date, time)').eq('user_id', user.id).order('created_at', { ascending: false }) 
       : q.eq('id', '00000000-0000-0000-0000-000000000000'),
     [user?.id]
   );
@@ -128,8 +157,18 @@ export default function Home() {
 
   const activeBooking = useMemo(() => {
     if (!userBookings || userBookings.length === 0) return null;
+    const now = new Date();
     return userBookings
-      .filter(b => b.status === "Confirmed" || b.status === "Paid" || b.status === "Scanned")
+      .filter(b => {
+        const isValidStatus = b.status === "Confirmed" || b.status === "Paid" || b.status === "Scanned";
+        if (!isValidStatus) return false;
+        
+        // Date check: ensure event is not expired
+        const eventDate = parseEventDate(b.events?.date, b.events?.time);
+        if (eventDate && eventDate < now) return false;
+        
+        return true;
+      })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
   }, [userBookings]);
 
@@ -141,35 +180,6 @@ export default function Home() {
 
   const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
   const supabaseEvents = useMemo(() => supabaseEventsRaw || [], [supabaseEventsRaw]);
-
-  const parseEventDate = (dateStr, timeStr) => {
-    if (!dateStr) return null;
-    try {
-      let dt = String(dateStr).trim();
-      let t = String(timeStr || '23:59').trim();
-
-      // Handle DD/MM/YYYY or DD-MM-YYYY
-      if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
-          const separator = dt.includes('/') ? '/' : '-';
-          const [day, month, year] = dt.split(separator);
-          dt = `${year}-${month}-${day}`;
-      }
-      
-      let normalizedTime = t;
-      if (t.includes(' ')) {
-          let [timePart, modifier] = t.split(' ');
-          let [hours, mins] = timePart.split(':').map(Number);
-          if (modifier === 'PM' && hours < 12) hours += 12;
-          if (modifier === 'AM' && hours === 12) hours = 0;
-          normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins || 0).padStart(2, '0')}`;
-      }
-      
-      const eventDate = new Date(`${dt}T${normalizedTime}`);
-      return isNaN(eventDate.getTime()) ? null : eventDate;
-    } catch (e) {
-      return null;
-    }
-  };
 
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
