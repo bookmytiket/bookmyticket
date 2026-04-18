@@ -44,6 +44,6 @@ WITH CHECK (true);
 INSERT INTO public."communicationSettings" (key, value, description)
 VALUES 
 ('fast2sms', '{"apiKey": "", "senderId": "FSTSMS", "enabled": false}', 'Fast2SMS Configuration'),
-('whatsapp', '{"apiKey": "", "provider": "", "enabled": false}', 'WhatsApp API Configuration'),
+('whatsapp', '{"apiKey": "", "provider": "meta", "senderNumber": "", "enabled": false}', 'WhatsApp API Configuration'),
 ('otp_settings', '{"enabled": false, "expirySeconds": 300}', 'OTP Workflow Toggle')
 ON CONFLICT (key) DO NOTHING;

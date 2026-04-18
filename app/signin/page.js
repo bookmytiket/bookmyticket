@@ -183,6 +183,7 @@ export default function SignInPage() {
     const [signupPhone, setSignupPhone] = useState("");
     const [signupPhoneOtpCode, setSignupPhoneOtpCode] = useState("");
     const [signupPhoneOtpSent, setSignupPhoneOtpSent] = useState(false);
+    const [signupOtpSending, setSignupOtpSending] = useState(false);
     const [otpEnabled, setOtpEnabled] = useState(false);
 
     useEffect(() => {
@@ -333,12 +334,7 @@ export default function SignInPage() {
             const data = await res.json();
             if (!data.success) throw new Error(data.error || "Signup failed.");
 
-            // TRIGGER WELCOME SMS
-            fetch('/api/comm/trigger', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: signupPhone, type: 'SIGNUP', data: {} })
-            }).catch(e => console.error("Welcome SMS failed", e));
+
 
             setSignupSuccess(true);
         } catch (err) {

@@ -32,13 +32,19 @@ export async function POST(request) {
       const expiresAt = new Date(Date.now() + expirySecs * 1000).toISOString();
 
       // 3. Insert secure record
-      const { error } = await supabaseAdmin.from('otps').insert({
+      const otpData = {
         email: email || null,
-        phone: phone || null,
         code: newCode,
         purpose: purpose || 'signup',
         expires_at: expiresAt
-      });
+      };
+      
+      // Only add phone if it's provided to avoid 'missing column' errors if DB is not updated
+      if (phone) {
+        otpData.phone = phone;
+      }
+
+      const { error } = await supabaseAdmin.from('otps').insert(otpData);
 
       if (error) throw error;
 

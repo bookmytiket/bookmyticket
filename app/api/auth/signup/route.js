@@ -10,7 +10,7 @@ export async function POST(request) {
     );
 
     try {
-        const { email, password, full_name } = await request.json();
+        const { email, password, full_name, phone } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json(
@@ -71,11 +71,27 @@ export async function POST(request) {
 
         // Ensure the profiles row has the full_name (trigger may have set it from metadata,
         // but we upsert just in case the trigger ran before metadata was set).
-        if (data?.user?.id && full_name) {
+        if (data?.user?.id && (full_name || phone)) {
             await supabaseAdmin
                 .from('profiles')
-                .update({ full_name: full_name.trim() })
+                .update({ 
+                    full_name: (full_name || '').trim(),
+                    phone: phone 
+                })
                 .eq('id', data.user.id);
+        }
+
+        // Dispatch Welcome Notification (Background)
+        if (phone) {
+            // We use a relative URL if running in the same environment, 
+            // but for server-side it's better to call the service directly or trigger the API internally.
+            // Since we have the baseUrl in env, we'll use that.
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            fetch(`${baseUrl}/api/comm/trigger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: phone, type: 'SIGNUP', data: {} })
+            }).catch(e => console.error("Server-side Welcome trigger failed", e));
         }
 
         return NextResponse.json({ success: true, userId: data.user.id });
