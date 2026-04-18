@@ -3564,8 +3564,8 @@ function OrganiserPanel() {
                                                         <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800 }}>#{b.id.slice(-8).toUpperCase()}</td>
                                                         <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
                                                         <td style={{ padding: "20px 16px" }}>
-                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || "Guest User"}</div>
-                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.user_id || b.userId}</div>
+                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.user_id || b.userId}</div>
                                                         </td>
                                                         <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticket_count || b.ticketCount}</td>
                                                         <td style={{ padding: "20px 16px", fontSize: "15px", fontWeight: 800, color: "#22c55e" }}>₹{(b.total_price || b.totalPrice || 0).toLocaleString()}</td>
@@ -3846,8 +3846,8 @@ function OrganiserPanel() {
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
                                                     <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || "Guest User"}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_email || b.user_id || b.userId}</div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
+                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.customer_email || b.user_id || b.userId}</div>
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
@@ -3873,7 +3873,7 @@ function OrganiserPanel() {
                                                     </div>
                                                 </div>
                                                 <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.event_name || b.eventName || "—"}</div>
-                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.user_name || b.userName || "Guest User"}</div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
                                                 <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scanned_at || b.created_at || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                             </div>
                                         ))
