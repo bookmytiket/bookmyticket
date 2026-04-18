@@ -179,8 +179,19 @@ export default function SignInPage() {
     const [signupStep, setSignupStep] = useState(1); // 1=email, 2=otp, 3=details
     const [signupOtpCode, setSignupOtpCode] = useState("");
     const [signupOtpVerified, setSignupOtpVerified] = useState(false);
-    const [signupOtpSending, setSignupOtpSending] = useState(false);
     const [signupOtpVerifying, setSignupOtpVerifying] = useState(false);
+    const [signupPhone, setSignupPhone] = useState("");
+    const [signupPhoneOtpCode, setSignupPhoneOtpCode] = useState("");
+    const [signupPhoneOtpSent, setSignupPhoneOtpSent] = useState(false);
+    const [otpEnabled, setOtpEnabled] = useState(false);
+
+    useEffect(() => {
+        const checkOTPConfig = async () => {
+            const { data } = await supabase.from('communicationSettings').select('value').eq('key', 'otp_settings').maybeSingle();
+            if (data?.value?.enabled) setOtpEnabled(true);
+        };
+        checkOTPConfig();
+    }, []);
 
     // Forgot Password
     const [forgotEmail, setForgotEmail] = useState("");
@@ -285,11 +296,29 @@ export default function SignInPage() {
         if (signupPass.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
         if (!signupName.trim()) { setSignupError("Please enter your full name."); return; }
 
+        if (otpEnabled && !signupPhoneOtpSent) {
+            // Send Phone OTP before finalizing
+            if (!signupPhone) { setSignupError("Please enter your phone number."); return; }
+            setLoading(true);
+            try {
+                const res = await fetch('/api/auth/otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send', phone: signupPhone, purpose: 'signup' })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || "Failed to send SMS OTP.");
+                setSignupStep(4);
+                setSignupPhoneOtpSent(true);
+            } catch (err) {
+                setSignupError(err.message);
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
         try {
-            // Use the server-side admin API route so that:
-            // 1. email_confirm=true → user is immediately active (we already verified email via OTP)
-            // 2. The DB trigger auto-creates the profiles row
-            // 3. No client-side supabase.auth.signUp() → no Supabase confirmation email conflict
             const res = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -297,19 +326,49 @@ export default function SignInPage() {
                     email: signupEmail.trim().toLowerCase(),
                     password: signupPass,
                     full_name: signupName.trim(),
+                    phone: signupPhone,
                 }),
             });
 
             const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Signup failed.");
 
-            if (!data.success) {
-                throw new Error(data.error || "Signup failed. Please try again.");
-            }
+            // TRIGGER WELCOME SMS
+            fetch('/api/comm/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: signupPhone, type: 'SIGNUP', data: {} })
+            }).catch(e => console.error("Welcome SMS failed", e));
 
             setSignupSuccess(true);
         } catch (err) {
             console.error("Signup error:", err);
             setSignupError(err.message || "Could not create account. Please try again.");
+        }
+    };
+
+    const handleSignupVerifyPhoneOTP = async (e) => {
+        e.preventDefault();
+        setSignupError("");
+        if (signupPhoneOtpCode.length !== 6) { setSignupError("Please enter the 6-digit code."); return; }
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify', phone: signupPhone, code: signupPhoneOtpCode, purpose: 'signup' })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Invalid SMS OTP.");
+            
+            // Now finalize signup (calling handleSignup again but bypass OTP step)
+            setSignupPhoneOtpSent(true);
+            setSignupStep(3); // Go back but the next click will finish
+            setTimeout(() => handleSignup({ preventDefault: () => {} }), 100);
+        } catch (err) {
+            setSignupError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -783,14 +842,13 @@ export default function SignInPage() {
                                     </>
                                 )}
 
-                                {/* ── Step 3: Name + Password + Phone ── */}
                                 {!signupSuccess && signupStep === 3 && (
                                     <>
                                         <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#1e293b", marginBottom: "14px" }}>Details</h2>
                                         <form onSubmit={handleSignup}>
                                             <input type="text" required placeholder="Full Name" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
                                             <input type="email" readOnly value={signupEmail} style={{ ...inp, background: "#f1f5f9", cursor: "not-allowed" }} />
-                                            <input type="text" placeholder="Phone" style={inp} onFocus={fr} onBlur={bg} />
+                                            <input type="text" placeholder="Phone" value={signupPhone} onChange={e => setSignupPhone(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
                                             <div style={{ position: "relative" }}>
                                                 <input type={showSignupPass ? "text" : "password"} required placeholder="Password" value={signupPass} onChange={e => setSignupPass(e.target.value)} style={{ ...inp, paddingRight: "48px" }} onFocus={fr} onBlur={bg} />
                                                 <button type="button" onClick={() => setShowSignupPass(p => !p)}
@@ -806,6 +864,30 @@ export default function SignInPage() {
 
                                             <button type="submit" style={submitBtn}>
                                                 Continue
+                                            </button>
+                                        </form>
+                                    </>
+                                )}
+
+                                {/* ── Step 4: Verify Phone OTP ── */}
+                                {!signupSuccess && signupStep === 4 && (
+                                    <>
+                                        <div style={{ textAlign: "center", padding: "16px", background: "#fdf2f8", borderRadius: "12px", marginBottom: "24px", border: "1.5px solid #f0abfc" }}>
+                                            <p style={{ margin: 0, fontSize: "13px", color: "#86198f" }}>📱 SMS OTP sent to <strong>{signupPhone}</strong></p>
+                                        </div>
+                                        <form onSubmit={handleSignupVerifyPhoneOTP}>
+                                            <input
+                                                type="text" required
+                                                placeholder="000000"
+                                                maxLength={6}
+                                                value={signupPhoneOtpCode}
+                                                onChange={e => setSignupPhoneOtpCode(e.target.value.replace(/\D/g, ""))}
+                                                style={{ ...inp, letterSpacing: "6px", fontSize: "22px", textAlign: "center", fontWeight: 700 }}
+                                                onFocus={fr} onBlur={bg}
+                                            />
+                                            {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
+                                            <button type="submit" disabled={loading} style={submitBtn}>
+                                                {loading ? "Verifying..." : "Verify & Finish →"}
                                             </button>
                                         </form>
                                     </>

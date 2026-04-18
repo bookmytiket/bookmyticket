@@ -8,6 +8,7 @@ import {
     ArrowLeft, Image as ImageIcon, Send, Loader2, ChevronLeft, ChevronRight,
     Calendar, ShieldCheck, User, Mail, Phone
 } from "lucide-react";
+import { triggerNotification } from "@/lib/notificationHelper";
 import Link from "next/link";
 
 
@@ -152,6 +153,19 @@ export default function ArtistProfilePage() {
             const bookingId = bookingResult?.id;
             
             // Store confirmed booking details and show success screen
+            // ── TRIGGER SMS NOTIFICATION ──
+            if (formData.phone) {
+                triggerNotification({
+                    phoneNumber: formData.phone,
+                    type: "BOOKING",
+                    data: {
+                        eventName: categoryName + " Service",
+                        date: formData.date,
+                        bookingId: bookingResult.id
+                    }
+                });
+            }
+
             setConfirmedDetails({
                 bookingId,
                 service: fullProfile.organiser.category || "Professional Service",

@@ -452,6 +452,21 @@ function AdminHomePage() {
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const dropdownRef = React.useRef(null);
 
+    // Auto-expand sidebar categories based on active tab
+    useEffect(() => {
+        const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance"];
+        const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
+        const serviceTabs = ["all_turfs", "turf_bookings", "service_active", "service_banned"];
+        const growthTabs = ["promotions", "send_notif"];
+        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub"];
+
+        if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
+        if (organizerTabs.includes(activeTab)) setIsOrganizersOpen(true);
+        if (serviceTabs.includes(activeTab)) setIsServicesOpen(true);
+        if (growthTabs.includes(activeTab)) setIsGrowthOpen(true);
+        if (settingTabs.includes(activeTab)) setIsSettingsOpen(true);
+    }, [activeTab]);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -469,11 +484,11 @@ function AdminHomePage() {
     const [selectedRequestForApproval, setSelectedRequestForApproval] = useState(null);
     const [generatedTempPassword, setGeneratedTempPassword] = useState("");
     const [manualApprovalPassword, setManualApprovalPassword] = useState("");
-    const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(true);
-    const [isOrganizersOpen, setIsOrganizersOpen] = useState(true);
-    const [isServicesOpen, setIsServicesOpen] = useState(true);
-    const [isGrowthOpen, setIsGrowthOpen] = useState(true);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(true);
+    const [isHomeSettingsOpen, setIsHomeSettingsOpen] = useState(false);
+    const [isOrganizersOpen, setIsOrganizersOpen] = useState(false);
+    const [isServicesOpen, setIsServicesOpen] = useState(false);
+    const [isGrowthOpen, setIsGrowthOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     const [events, setEvents] = useState([]);
@@ -584,6 +599,9 @@ function AdminHomePage() {
             defaults.forEach(d => addEmailTemplate(d, { onConflict: 'identifier' }));
         }
     }, [emailTemplates]);
+
+    const { data: commSettingsArr = [], refresh: refreshComm } = useSupabaseQuery('communicationSettings');
+    const [updateCommSetting] = useSupabaseMutation('communicationSettings', 'update', (q, p) => q.eq('key', p.key));
 
     const { data: policiesArr = [] } = useSupabaseQuery('policies', q => q, [], { realtime: false });
     const [updatePolicies] = useSupabaseMutation('policies', 'update', (q, p) => q.eq('id', p.id));
@@ -1757,6 +1775,7 @@ function AdminHomePage() {
                                     <div className="space-y-0.5">
                                         {[
                                             { label: "API Keys", id: "api_settings" },
+                                            { label: "Communication", id: "comm_hub" },
                                             { label: "Payments", id: "payment_settings" },
                                             { label: "Emails", id: "email_settings" },
                                             { label: "SEO & Meta", id: "meta_management" },
@@ -3795,6 +3814,106 @@ function AdminHomePage() {
                                 <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Ticket & Notifications</h2>
                                 <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Configure ticket image/PDF format, company branding, and how tickets are sent (SMS, Email, WhatsApp PDF) after booking.</p>
                             </div>
+
+                    {activeTab === "comm_hub" && (
+                        <div style={{ maxWidth: "850px" }}>
+                            <div style={{ marginBottom: "24px" }}>
+                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Communication Hub</h2>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Manage SMS, WhatsApp, and Security/OTP configurations.</p>
+                            </div>
+
+                            <div style={{ display: "grid", gap: "24px" }}>
+                                {/* Fast2SMS Section */}
+                                <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <div style={{ padding: "10px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>
+                                                <Smartphone size={20} />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: 0 }}>Fast2SMS Configuration</h3>
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Global SMS gateway settings</p>
+                                            </div>
+                                        </div>
+                                        <div onClick={async () => {
+                                            const set = commSettingsArr.find(s => s.key === 'fast2sms');
+                                            await updateCommSetting({ key: 'fast2sms', value: { ...set.value, enabled: !set.value.enabled } });
+                                            refreshComm();
+                                        }} style={{ width: "40px", height: "20px", borderRadius: "20px", backgroundColor: commSettingsArr.find(s => s.key === 'fast2sms')?.value.enabled ? "#3b82f6" : "#cbd5e1", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                                            <div style={{ position: "absolute", top: "2px", left: commSettingsArr.find(s => s.key === 'fast2sms')?.value.enabled ? "22px" : "2px", width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", transition: "0.2s" }}></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>API Key</label>
+                                            <input 
+                                                type="password"
+                                                value={commSettingsArr.find(s => s.key === 'fast2sms')?.value.apiKey || ""}
+                                                onChange={async (e) => {
+                                                    const set = commSettingsArr.find(s => s.key === 'fast2sms');
+                                                    await updateCommSetting({ key: 'fast2sms', value: { ...set.value, apiKey: e.target.value } });
+                                                }}
+                                                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Sender ID</label>
+                                            <input 
+                                                type="text"
+                                                value={commSettingsArr.find(s => s.key === 'fast2sms')?.value.senderId || ""}
+                                                onChange={async (e) => {
+                                                    const set = commSettingsArr.find(s => s.key === 'fast2sms');
+                                                    await updateCommSetting({ key: 'fast2sms', value: { ...set.value, senderId: e.target.value } });
+                                                }}
+                                                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                            />
+                                        </div>
+                                        <button onClick={() => refreshComm()} style={{ gridColumn: "span 2", padding: "10px", borderRadius: "8px", border: "none", background: "#000", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save & Refresh</button>
+                                    </div>
+                                </div>
+
+                                {/* OTP Section */}
+                                <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", marginBottom: "20px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                                            <div style={{ padding: "10px", borderRadius: "12px", backgroundColor: "#f59e0b15", color: "#f59e0b" }}>
+                                                <Lock size={20} />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: 0 }}>Security / OTP Policy</h3>
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Phone verification during signup</p>
+                                            </div>
+                                        </div>
+                                        <div onClick={async () => {
+                                            const set = commSettingsArr.find(s => s.key === 'otp_settings');
+                                            await updateCommSetting({ key: 'otp_settings', value: { ...set.value, enabled: !set.value.enabled } });
+                                            refreshComm();
+                                        }} style={{ width: "40px", height: "20px", borderRadius: "20px", backgroundColor: commSettingsArr.find(s => s.key === 'otp_settings')?.value.enabled ? "#f59e0b" : "#cbd5e1", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                                            <div style={{ position: "absolute", top: "2px", left: commSettingsArr.find(s => s.key === 'otp_settings')?.value.enabled ? "22px" : "2px", width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", transition: "0.2s" }}></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>OTP Expiry (seconds)</label>
+                                            <input 
+                                                type="number"
+                                                value={commSettingsArr.find(s => s.key === 'otp_settings')?.value.expirySeconds || 300}
+                                                onChange={async (e) => {
+                                                    const set = commSettingsArr.find(s => s.key === 'otp_settings');
+                                                    await updateCommSetting({ key: 'otp_settings', value: { ...set.value, expirySeconds: parseInt(e.target.value) } });
+                                                }}
+                                                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1.5, padding: "16px", borderRadius: "12px", backgroundColor: "#fef3c7", border: "1px solid #fde68a" }}>
+                                            <p style={{ margin: 0, fontSize: "12px", color: "#92400e", fontWeight: "bold" }}>When enabled, users must prove their phone number identity before their account is finalized.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                             <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: "0 0 16px 0" }}>Company branding (on ticket)</h3>

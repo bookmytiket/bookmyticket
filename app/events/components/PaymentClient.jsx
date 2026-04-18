@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { CreditCard, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { triggerNotification } from "@/lib/notificationHelper";
 
 export default function PaymentClient({ eventId }) {
     const router = useRouter();
@@ -45,6 +46,20 @@ export default function PaymentClient({ eventId }) {
                 .eq('id', bookingId);
             
             if (error) throw error;
+            
+            // ── TRIGGER SMS NOTIFICATION ──
+            const phone = booking?.customer_details?.phone || "";
+            if (phone) {
+                triggerNotification({
+                    phoneNumber: phone,
+                    type: "BOOKING",
+                    data: {
+                        eventName: booking?.event_name || "Event",
+                        date: booking?.event_date || "Confirmed",
+                        bookingId: bookingId
+                    }
+                });
+            }
 
             setPaymentStatus('success');
             setTimeout(() => {

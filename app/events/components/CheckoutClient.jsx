@@ -14,6 +14,7 @@ import { DEFAULT_TICKET_TERMS } from '@/app/utils/ticketTerms';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
+import { triggerNotification } from "@/lib/notificationHelper";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
@@ -139,6 +140,19 @@ export default function CheckoutClient({ id }) {
                     location: event.location,
                     meetingUrl: event.meetingUrl,
                 });
+                // ── TRIGGER SMS NOTIFICATION ──
+                if (user?.phone) {
+                    triggerNotification({
+                        phoneNumber: user.phone,
+                        type: "BOOKING",
+                        data: {
+                            eventName: event.title,
+                            date: event.date,
+                            bookingId: booking.id
+                        }
+                    });
+                }
+
                 setBookingDone(true);
             } else {
                 router.push(`/events/book/payment?bookingId=${booking.id}&id=${id}`);
