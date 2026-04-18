@@ -115,7 +115,16 @@ SELECT id, business_name, NULL as category, type, NULL as description, kyc_statu
 CREATE OR REPLACE FUNCTION public.handle_organiser_details_mutation()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF (TG_OP = 'UPDATE') THEN
+    IF (TG_OP = 'INSERT') THEN
+        IF (NEW.type = 'professional_service') THEN
+            INSERT INTO public.vendors (id, business_name, category, type, description, kyc_status, is_approved, wallet_balance, kyc_details, lat, lng, updated_at)
+            VALUES (NEW.id, NEW.business_name, NEW.category, NEW.type, NEW.description, NEW.kyc_status, NEW.is_approved, NEW.wallet_balance, NEW.kyc_details, NEW.lat, NEW.lng, NOW());
+        ELSE
+            INSERT INTO public.organisers (id, business_name, type, kyc_status, is_approved, wallet_balance, kyc_details, force_password_change, lat, lng, updated_at)
+            VALUES (NEW.id, NEW.business_name, NEW.type, NEW.kyc_status, NEW.is_approved, NEW.wallet_balance, NEW.kyc_details, COALESCE(NEW.force_password_change, false), NEW.lat, NEW.lng, NOW());
+        END IF;
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
         IF (OLD.type = 'professional_service') THEN
             UPDATE public.vendors 
             SET business_name = NEW.business_name, 
@@ -151,6 +160,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS organiser_details_mutation_trigger ON public.organiser_details;
 CREATE TRIGGER organiser_details_mutation_trigger
-INSTEAD OF UPDATE OR DELETE ON public.organiser_details
+INSTEAD OF INSERT OR UPDATE OR DELETE ON public.organiser_details
 FOR EACH ROW EXECUTE FUNCTION public.handle_organiser_details_mutation();
+

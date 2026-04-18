@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { getVendorAccountKey } from "@/lib/vendorAccount";
 import { 
@@ -24,14 +25,15 @@ import {
 } from "lucide-react";
 import PromoteModal from "@/components/PromoteModal";
 import Link from "next/link";
+import { useToast } from "@/context/ToastContext";
 
 export default function ServicesPage() {
     const { user } = useAuth();
     const vendorId = getVendorAccountKey(user);
     
-    // Get full profile to know category
+    // Get full profile from service_providers
     const { data: profileArr = [] } = useSupabaseQuery('service_providers', (q) => 
-        q.eq('organiser_id', vendorId).single()
+        q.or(`id.eq.${vendorId},organiser_id.eq.${vendorId}`).maybeSingle()
     , [vendorId]);
 
     const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
@@ -46,6 +48,7 @@ export default function ServicesPage() {
 }
 
 function TurfServiceManagement({ user, vendorId, profile }) {
+    const { addToast } = useToast();
     const { data: turfs = [] } = useSupabaseQuery('turfs', (q) => 
         q.eq('organiser_id', vendorId)
     , [vendorId]);
@@ -105,14 +108,21 @@ function TurfServiceManagement({ user, vendorId, profile }) {
             setShowAddModal(false);
             setFormData(initialForm);
             setSelectedTurf(null);
+            addToast("Facility saved successfully!", "success");
         } catch (err) {
-            alert(err.message);
+            console.error("Save error:", err);
+            addToast(err.message || "Failed to save facility", "error");
         }
     };
 
     const handleDelete = async (id) => {
         if (confirm("Are you sure you want to delete this facility? This will also remove all scheduled patterns.")) {
-            await deleteTurf({ id });
+            try {
+                await deleteTurf({ id });
+                addToast("Facility deleted", "info");
+            } catch (err) {
+                addToast("Failed to delete facility", "error");
+            }
         }
     };
 
@@ -497,6 +507,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
     );
 }
 function ArtistServiceManagement({ user, vendorId, profile }) {
+    const { addToast } = useToast();
     const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
 
     const [pricing, setPricing] = useState([]);
@@ -505,9 +516,32 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
     const [promoteProfileModal, setPromoteProfileModal] = useState(false);
 
     useEffect(() => {
-        if (profile?.pricing) setPricing(profile.pricing);
-        if (profile?.advancedSettings) setAdvancedSettings(profile.advancedSettings);
-    }, [profile]);
+        const fetchPackages = async () => {
+            if (!vendorId) return;
+            const { data, error } = await supabase
+                .from('artistPackages')
+                .select('*')
+                .eq('vendor_id', vendorId);
+            
+            if (data) {
+                // Map database fields to the UI state
+                setPricing(data.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.title,
+                    price: pkg.price,
+                    description: pkg.description,
+                    duration: pkg.duration,
+                    features: pkg.features || [],
+                    type: pkg.type || 'standard'
+                })));
+            } else if (error) {
+                console.error("Error fetching packages:", error);
+            }
+        };
+
+        fetchPackages();
+        if (profile?.advanced_settings) setAdvancedSettings(profile.advanced_settings);
+    }, [vendorId, profile]);
 
     const handleAddPackage = () => {
         setPricing([...pricing, { 
@@ -541,16 +575,55 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
         setPricing(newPricing);
     };
 
+    const [saveProfile] = useSupabaseMutation('service_providers', 'upsert', (q) => q);
+
     const handleSave = async () => {
+        const targetId = profile?.id || vendorId;
+        if (!targetId) {
+            addToast("Authentication error: No vendor ID found", "error");
+            return;
+        }
+
         setIsSaving(true);
         try {
-            await updateProfile({
-                id: profile.id,
-                pricing,
-                advancedSettings
-            });
+            // 1. Save general profile settings to service_providers
+            const { error: profileError } = await supabase
+                .from('service_providers')
+                .upsert({
+                    id: targetId,
+                    organiser_id: targetId,
+                    business_name: user?.name || "Service Partner",
+                    category: profile?.category || user?.category || "Professional Service",
+                    advanced_settings: advancedSettings,
+                    status: 'active'
+                });
+
+            if (profileError) throw profileError;
+
+            // 2. Save packages to artistPackages
+            if (pricing.length > 0) {
+                const packagesToSave = pricing.map(pkg => ({
+                    ...(pkg.id ? { id: pkg.id } : {}), // only include id if it exists (for updates)
+                    vendor_id: targetId,
+                    title: pkg.name || "Untitled Package",
+                    price: pkg.price || 0,
+                    duration: pkg.duration || "",
+                    description: pkg.description || "",
+                    features: pkg.features || [],
+                    type: pkg.type === "Custom" ? "custom" : "standard"
+                }));
+
+                const { error: pkgError } = await supabase
+                    .from('artistPackages')
+                    .upsert(packagesToSave, { onConflict: 'id' });
+
+                if (pkgError) throw pkgError;
+            }
+
+            addToast("Settings and packages saved successfully!", "success");
         } catch (error) {
             console.error("Failed to save services:", error);
+            addToast(error.message || "Failed to save packages", "error");
         } finally {
             setIsSaving(false);
         }
@@ -610,7 +683,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                             : [...currentAddons, addon.id];
                                         setAdvancedSettings({ ...advancedSettings, addons: newAddons });
                                     }}
-                                    className={`p-4 rounded-2xl border transition-all flex items-center justify-between group ${
+                                    className={`p-3 rounded-xl border transition-all flex items-center justify-between group ${
                                         (advancedSettings.addons || []).includes(addon.id)
                                             ? 'bg-pink-50/50 border-pink-500 text-pink-500'
                                             : 'bg-white border-slate-200 text-slate-500 hover:border-pink-300'
@@ -633,10 +706,10 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+        <div className="max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-4">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-slate-200">
-                <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
+                <div className="space-y-2">
                     <div className="flex items-center space-x-4">
                         <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white p-3 shadow-2xl shadow-pink-500/30">
                             <Settings2 size={28} />
@@ -678,16 +751,18 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
             />
 
             {/* General Preferences Section */}
-            <div className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-                <div className="flex items-center space-x-3">
-                    <div className="w-1.5 h-6 bg-pink-500 rounded-full"></div>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">General Preferences</h3>
+            {profile?.category?.includes("Mehendi") && (
+                <div className="space-y-6 bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-1.5 h-6 bg-pink-500 rounded-full"></div>
+                        <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">General Preferences</h3>
+                    </div>
+                    {renderServiceSpecificFields()}
                 </div>
-                {renderServiceSpecificFields()}
-            </div>
+            )}
 
             {/* Packages Grid Section */}
-            <div className="space-y-10">
+            <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="w-1.5 h-6 bg-purple-600 rounded-full"></div>
@@ -719,15 +794,15 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                     {pricing.map((pkg, i) => (
                         <div 
                             key={i}
-                            className="bg-white rounded-[2.5rem] border border-slate-100 p-8 space-y-8 hover:border-pink-300 transition-all group shadow-xl shadow-slate-200/40 relative overflow-hidden animate-in zoom-in-95 duration-500"
+                            className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4 hover:border-pink-300 transition-all group shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-500"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-[4rem] -z-0 opacity-50 group-hover:bg-pink-50 transition-colors"></div>
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50 rounded-bl-3xl -z-0 opacity-50 group-hover:bg-pink-50 transition-colors"></div>
                             
                             <div className="flex items-start justify-between relative z-10">
-                                <div className="space-y-4 flex-1">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-pink-500 shadow-inner group-hover:bg-white transition-colors">
-                                            <Sparkles size={20} />
+                                <div className="space-y-3 flex-1">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-pink-500 shadow-inner group-hover:bg-white transition-colors">
+                                            <Sparkles size={16} />
                                         </div>
                                         <select 
                                             value={pkg.type || "Bridal Package"}
@@ -744,32 +819,32 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                 </div>
                                 <button 
                                     onClick={() => handleRemovePackage(i)}
-                                    className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={16} />
                                 </button>
                             </div>
 
-                            <div className="space-y-6 relative z-10">
+                            <div className="space-y-4 relative z-10">
                                 <div className="space-y-1">
                                     <input 
                                         type="text" 
                                         placeholder="Package Name"
                                         value={pkg.name}
                                         onChange={(e) => handleUpdatePackage(i, 'name', e.target.value)}
-                                        className="w-full bg-transparent text-2xl font-black text-slate-900 border-none outline-none placeholder:text-slate-200 tracking-tighter" 
+                                        className="w-full bg-transparent text-xl font-black text-slate-900 border-none outline-none placeholder:text-slate-200 tracking-tight" 
                                     />
-                                    <div className="h-0.5 w-12 bg-pink-500 rounded-full group-hover:w-full transition-all duration-700"></div>
+                                    <div className="h-0.5 w-8 bg-pink-500 rounded-full group-hover:w-full transition-all duration-700"></div>
                                 </div>
 
                                 <div className="relative group/price">
-                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 font-black text-2xl text-slate-300 group-focus-within/price:text-pink-500 transition-colors">₹</span>
+                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 font-black text-xl text-slate-300 group-focus-within/price:text-pink-500 transition-colors">₹</span>
                                     <input 
                                         type="number" 
                                         placeholder="0"
                                         value={pkg.price}
                                         onChange={(e) => handleUpdatePackage(i, 'price', parseInt(e.target.value))}
-                                        className="w-full bg-transparent text-4xl font-black text-pink-500 border-none outline-none pl-6 placeholder:text-slate-100"
+                                        className="w-full bg-transparent text-3xl font-black text-pink-500 border-none outline-none pl-5 placeholder:text-slate-100"
                                     />
                                 </div>
 
@@ -777,37 +852,37 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                     placeholder="Describe what's included..."
                                     value={pkg.description}
                                     onChange={(e) => handleUpdatePackage(i, 'description', e.target.value)}
-                                    className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl p-5 text-xs text-slate-600 font-medium focus:bg-white focus:border-pink-200 outline-none placeholder:text-slate-300 h-24 resize-none transition-all"
+                                    className="w-full bg-slate-50/50 border border-slate-100 rounded-xl p-3 text-xs text-slate-600 font-medium focus:bg-white focus:border-pink-200 outline-none placeholder:text-slate-300 h-16 resize-none transition-all"
                                 />
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div className="relative group/duration">
-                                        <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/duration:text-pink-500 transition-colors" />
+                                        <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/duration:text-pink-500 transition-colors" />
                                         <input 
                                             type="text" 
                                             placeholder="2 hrs"
                                             value={pkg.duration || ""}
                                             onChange={(e) => handleUpdatePackage(i, 'duration', e.target.value)}
-                                            className="w-full bg-slate-50/50 text-[10px] font-black text-slate-900 uppercase tracking-widest border border-slate-100 rounded-xl outline-none pl-10 pr-3 py-3 focus:bg-white focus:border-pink-200 transition-all placeholder:text-slate-300"
+                                            className="w-full bg-slate-50/50 text-[10px] font-black text-slate-900 uppercase tracking-widest border border-slate-100 rounded-lg outline-none pl-8 pr-2 py-2 focus:bg-white focus:border-pink-200 transition-all placeholder:text-slate-300"
                                         />
                                     </div>
-                                    <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 border border-slate-100 cursor-pointer hover:bg-white hover:border-pink-200 transition-all group/bulk">
+                                    <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-50/50 border border-slate-100 cursor-pointer hover:bg-white hover:border-pink-200 transition-all group/bulk">
                                         <input 
                                             type="checkbox" 
                                             checked={pkg.allowBulkBooking || false}
                                             onChange={(e) => handleUpdatePackage(i, 'allowBulkBooking', e.target.checked)}
-                                            className="w-4 h-4 rounded border-slate-200 text-pink-500 focus:ring-pink-500/20"
+                                            className="w-3.5 h-3.5 rounded border-slate-200 text-pink-500 focus:ring-pink-500/20"
                                         />
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover/bulk:text-pink-500 transition-colors">Bulk Job</span>
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest group-hover/bulk:text-pink-500 transition-colors">Bulk Job</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t border-slate-50 relative z-10">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Included Features</p>
-                                <div className="space-y-3">
+                            <div className="space-y-3 pt-3 border-t border-slate-50 relative z-10">
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Included Features</p>
+                                <div className="space-y-2">
                                     {(pkg.features || []).map((feature, fi) => (
-                                        <div key={fi} className="flex items-center space-x-3 group/feat">
+                                        <div key={fi} className="flex items-center space-x-2 group/feat">
                                             <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
                                             <input 
                                                 type="text" 
@@ -817,7 +892,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                                     newFeatures[fi] = e.target.value;
                                                     handleUpdatePackage(i, 'features', newFeatures);
                                                 }}
-                                                className="bg-transparent text-xs font-bold text-slate-600 border-none outline-none flex-1 placeholder:text-slate-200"
+                                                className="bg-transparent text-[11px] font-bold text-slate-600 border-none outline-none flex-1 placeholder:text-slate-200"
                                             />
                                             <button 
                                                 onClick={() => {
@@ -835,9 +910,9 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                             const newFeatures = [...(pkg.features || []), "New feature"];
                                             handleUpdatePackage(i, 'features', newFeatures);
                                         }}
-                                        className="text-[10px] font-bold text-pink-500 hover:text-pink-600 transition-all flex items-center space-x-2 bg-pink-50/50 px-3 py-1.5 rounded-lg w-fit"
+                                        className="text-[9px] font-bold text-pink-500 hover:text-pink-600 transition-all flex items-center space-x-1.5 bg-pink-50/50 px-2.5 py-1 rounded-md w-fit"
                                     >
-                                        <Plus size={12} />
+                                        <Plus size={10} />
                                         <span className="uppercase tracking-widest">Add Feature</span>
                                     </button>
                                 </div>
@@ -848,13 +923,13 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
             </div>
 
             {/* Help Card */}
-            <div className="bg-white rounded-[3rem] border border-slate-100 p-10 flex items-center space-x-8 shadow-xl shadow-slate-200/40">
-                <div className="w-20 h-20 rounded-[2rem] bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0 border border-pink-100 shadow-inner">
-                    <Info size={36} />
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col md:flex-row items-center md:space-x-6 gap-4 shadow-sm shadow-slate-200/40">
+                <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0 border border-pink-100 shadow-inner">
+                    <Info size={28} />
                 </div>
-                <div className="space-y-2">
-                    <h5 className="font-black text-slate-900 text-lg uppercase tracking-tight">Pricing Strategy & Visibility</h5>
-                    <p className="text-sm text-slate-500 max-w-2xl font-medium leading-relaxed">
+                <div className="space-y-2 text-center md:text-left">
+                    <h5 className="font-black text-slate-900 text-base uppercase tracking-tight">Pricing Strategy & Visibility</h5>
+                    <p className="text-xs text-slate-500 max-w-2xl font-medium leading-relaxed">
                         Your pricing is public. We recommend including all taxes and standard travel fees within the package cost. Transparent pricing builds client trust and leads to faster booking confirmations.
                     </p>
                 </div>

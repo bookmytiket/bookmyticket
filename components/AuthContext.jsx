@@ -15,16 +15,14 @@ export function AuthProvider({ children }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Initial session load
         const initializeAuth = async () => {
             if (!supabase) {
-                console.warn("AuthContext: Supabase client not initialized. Skipping session check.");
+                console.warn("AuthContext: Supabase client not initialized.");
                 setLoading(false);
                 return;
             }
 
             try {
-                // Ensure initial getSession has a hard cap to avoid blocking the app
                 const sessionPromise = supabase.auth.getSession();
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Session fetch timeout")), 8000));
                 
@@ -33,7 +31,6 @@ export function AuthProvider({ children }) {
                 if (session) {
                     const userData = await fetchAndSetUser(session.user);
                     if ((userData?.is_temporary_password || userData?.force_password_change) && !window.location.pathname.includes("/change-password")) {
-                        console.log("AuthContext: Enforcing password security on session load.");
                         router.push("/change-password");
                     }
                 }
@@ -56,13 +53,9 @@ export function AuthProvider({ children }) {
 
         initializeAuth();
 
-        // Auth state listener
         let subscription = null;
         if (supabase) {
             const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log("Supabase Auth Event:", event);
-                
-                // If it's a login event, we MUST show loading
                 if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
                     setLoading(true);
                 }
@@ -74,7 +67,6 @@ export function AuthProvider({ children }) {
                     localStorage.removeItem("user");
                 }
                 
-                // Always ensure loading is false after a session change is processed
                 setLoading(false);
             });
             subscription = sub;
@@ -85,34 +77,48 @@ export function AuthProvider({ children }) {
 
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
-        if (isProcessingRef.current) {
-            console.log("AuthContext: Fetch already in progress, skipping redundant call.");
-            return user; // Return cached user if any
-        }
+        if (isProcessingRef.current) return user;
         
         isProcessingRef.current = true;
         try {
-            // ── Fail-safe: 5s timeout to prevent hung database queries from blocking the entire app ──
             const fetchPromise = Promise.all([
-                supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(),
-                supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle(),
-                supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(),
+                (async () => {
+                    try { return await supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
+                (async () => {
+                    try { return await supabase.from('admins').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
+                (async () => {
+                    try { return await supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
+                (async () => {
+                    try { return await supabase.from('vendors').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
+                (async () => {
+                    try { return await supabase.from('service_providers').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
             ]);
 
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Database timeout")), 5000)
+                setTimeout(() => reject(new Error("Database timeout")), 10000)
             );
 
-            let profileResult, adminResult, organiserResult;
+            let profileResult, adminResult, organiserResult, vendorResult, providerResult;
             try {
-                [profileResult, adminResult, organiserResult] = await Promise.race([fetchPromise, timeoutPromise]);
+                const results = await Promise.race([fetchPromise, timeoutPromise]);
+                if (!Array.isArray(results)) throw new Error("Database timeout");
+                [profileResult, adminResult, organiserResult, vendorResult, providerResult] = results;
             } catch (err) {
                 console.error("AuthContext: Profile fetch timed out or failed:", err);
-                // Return minimal user data so the app doesn't hang
                 const minimalUser = {
                     id: supabaseUser.id,
                     email: supabaseUser.email,
-                    role: 'user', // Default to base role on timeout
+                    role: 'user',
                     name: supabaseUser.email?.split('@')[0],
                     is_pwa_mode: true
                 };
@@ -120,57 +126,55 @@ export function AuthProvider({ children }) {
                 return minimalUser;
             }
 
-            const profile         = profileResult.data;
-            const adminRecord     = adminResult.data;
-            const organiserRecord = organiserResult.data;
+            const profile         = profileResult?.data || null;
+            const adminRecord     = adminResult?.data || null;
+            const organiserRecord = organiserResult?.data || null;
+            const vendorRecord    = vendorResult?.data || null;
+            const providerRecord  = providerResult?.data || null;
 
-            if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-                console.warn("Profile fetch warning:", profileResult.error.message);
-            }
-
-            // ── ROLE DETERMINATION ──
-            // Role priority: admin table → organisers table → profiles.role → user_metadata → 'user'
-            let role = (
-                profile?.role ||
-                supabaseUser.user_metadata?.role ||
-                'user'
-            ).toLowerCase().replace(/\s+/g, '_');
-
-            // Map "organizer" to "organiser" for regional consistency
+            let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
             if (role === 'organizer') role = 'organiser';
 
             let specializedData = {};
 
             if (adminRecord) {
-                // Admin: reuse already-fetched record
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
-                console.log("AuthContext: Admin found, role:", role);
-
+            } else if (vendorRecord || providerRecord) {
+                role = 'vendor';
+                let finalProviderData = providerRecord;
+                if (!providerRecord && vendorRecord) {
+                    const { data: newProvider, error: insertError } = await supabase
+                        .from('service_providers')
+                        .insert({
+                            id: supabaseUser.id,
+                            organiser_id: supabaseUser.id,
+                            business_name: vendorRecord.business_name || profile?.full_name || supabaseUser.email?.split('@')[0],
+                            category: vendorRecord.category || 'Professional Service',
+                            status: 'active',
+                            advanced_settings: { blocked_dates: [] }
+                        })
+                        .select()
+                        .single();
+                    
+                    if (!insertError) finalProviderData = newProvider;
+                }
+                specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
             } else if (organiserRecord) {
-                // Organiser/Vendor: Record exists in organisers table
-                role = organiserRecord.type === 'professional_service' ? 'vendor' : 'organiser';
+                role = 'organiser';
                 specializedData = organiserRecord;
-                console.log("AuthContext: Organiser/Vendor record found, role:", role);
-
             } else if (role === 'staff') {
                 try {
-                    const { data } = await supabase
-                        .from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
+                    const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
                     if (data) specializedData = data;
-                } catch (_) { /* graceful fallback */ }
+                } catch (_) {}
             }
-            // ────────────────────────
-            // Note: 'user' role doesn't need specialised table queries
 
             const userData = {
                 id: supabaseUser.id,
                 identifier: supabaseUser.email,
                 email: supabaseUser.email,
-                name: profile?.full_name ||
-                      organiserRecord?.business_name ||
-                      supabaseUser.user_metadata?.full_name ||
-                      supabaseUser.email?.split('@')[0],
+                name: profile?.full_name || organiserRecord?.business_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0],
                 ...(profile || {}),
                 ...specializedData,
                 is_temporary_password: profile?.is_temporary_password || specializedData?.is_temporary_password || false,
@@ -182,17 +186,11 @@ export function AuthProvider({ children }) {
             return userData;
         } catch (err) {
             console.error("AuthContext: Critical error in fetchAndSetUser:", err);
-            // In production, we need a way to know if this failed without a white screen
-            if (typeof window !== 'undefined') {
-                window.auth_error = err.message;
-            }
             return null;
         } finally {
             isProcessingRef.current = false;
         }
     };
-
-
 
     const updateCity = async (city, hierarchy = null) => {
         setSelectedCity(city);
@@ -201,90 +199,27 @@ export function AuthProvider({ children }) {
             setLocationHierarchy(hierarchy);
             localStorage.setItem("locationHierarchy", JSON.stringify(hierarchy));
         }
-
-        // Sync to backend if user is logged in
         if (user?.id && supabase) {
             try {
-                await supabase
-                    .from('profiles')
-                    .update({ 
-                        selected_city: city, 
-                        location_hierarchy: hierarchy || undefined 
-                    })
-                    .eq('id', user.id);
-            } catch (err) {
-                console.error("Failed to sync location to backend:", err);
-            }
+                await supabase.from('profiles').update({ selected_city: city, location_hierarchy: hierarchy || undefined }).eq('id', user.id);
+            } catch (err) { console.error(err); }
         }
     };
 
     const login = async (identifier, password, redirectPath = null, meta = {}) => {
-        if (!supabase) {
-            return { success: false, error: "Authentication system not initialized. Please check configuration." };
-        }
+        if (!supabase) return { success: false, error: "System not initialized." };
         setLoading(true);
         try {
             let email = identifier;
-            
-            // If identifier is not an email, try to find the email by username
             if (!identifier.includes("@")) {
-                const { data: profile, error: profileErr } = await supabase
-                    .from('profiles')
-                    .select('email')
-                    .ilike('username', identifier)
-                    .single();
-                
-                if (profile?.email) {
-                    email = profile.email;
-                } else {
-                    // Fire alert for username-not-found attempts too
-                    fetch('/api/auth/security-alert', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: identifier.trim().toLowerCase(),
-                            ip: meta.ip || 'Unknown',
-                            userAgent: meta.userAgent || navigator.userAgent,
-                            timestamp: new Date().toISOString(),
-                        }),
-                    }).catch(() => {}); // fire and forget
-                    throw new Error("Invalid username or email.");
-                }
+                const { data: profile } = await supabase.from('profiles').select('email').ilike('username', identifier).single();
+                if (profile?.email) email = profile.email;
+                else throw new Error("Invalid username or email.");
             }
-
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (error) {
-                // Fire security alert for any credential failure (fire and forget)
-                fetch('/api/auth/security-alert', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: email.trim().toLowerCase(),
-                        ip: meta.ip || 'Unknown',
-                        userAgent: meta.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'),
-                        timestamp: new Date().toISOString(),
-                    }),
-                }).catch(() => {}); // fire and forget — never block the UI
-
-                // Provide a clearer message for the most common failure modes.
-                if (error.message?.toLowerCase().includes('email not confirmed')) {
-                    throw new Error("Your email address has not been confirmed. Please complete signup first.");
-                }
-                if (error.message?.toLowerCase().includes('invalid login credentials')) {
-                    throw new Error("Invalid email or password. Please check your credentials and try again.");
-                }
-                throw error;
-            }
-
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
             const userData = await fetchAndSetUser(data.user);
-            
-            if (userData) {
-                return { success: true, user: userData };
-            }
+            if (userData) return { success: true, user: userData };
             return { success: false, error: "Profile not found" };
         } catch (err) {
             console.error("Login error:", err);
@@ -295,18 +230,11 @@ export function AuthProvider({ children }) {
     };
 
     const logout = async () => {
-        // Clear local state immediately to avoid race conditions with redirect guards
         localStorage.removeItem("user");
         setUser(null);
-        
         if (supabase) {
-            try {
-                await supabase.auth.signOut();
-            } catch (err) {
-                console.error("Supabase signOut error:", err);
-            }
+            try { await supabase.auth.signOut(); } catch (err) { console.error(err); }
         }
-        
         router.replace("/signin");
     };
 

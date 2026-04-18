@@ -633,7 +633,7 @@ function AdminHomePage() {
     }, [vendorsOnly]);
 
 
-    const { data: serviceProvidersArr = [] } = useSupabaseQuery('service_providers');
+    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.eq('type', 'professional_service'));
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
     const { data: usersArr = [] } = useSupabaseQuery('profiles');
@@ -897,7 +897,13 @@ function AdminHomePage() {
 
 
     const serviceActive = useMemo(() => {
-        let filtered = serviceProvidersArr.filter(o => o.kyc_status === "Active" || o.kyc_status === "Not Required" || o.kyc_status === "KYC Completed");
+        let filtered = serviceProvidersArr.filter(o => 
+            o.kyc_status === "Active" || 
+            o.kyc_status === "Not Required" || 
+            o.kyc_status === "KYC Completed" ||
+            o.kyc_status === "Approved" ||
+            o.is_approved === true
+        );
         if (serviceCategoryFilter !== "all") {
             filtered = filtered.filter(o => (o.category || o.kyc_details?.category) === serviceCategoryFilter);
         }
@@ -3391,19 +3397,19 @@ function AdminHomePage() {
                                     </thead>
                                     <tbody>
                                         {(activeTab === "service_active" ? serviceActive : serviceBanned).map((org) => (
-                                            <tr key={org._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                            <tr key={org.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px", fontWeight: 600 }}>
-                                                    {org.name || (org.firstName ? `${org.firstName} ${org.lastName || ""}`.trim() : (org.kycDetails?.orgName || org.userId))}
+                                                    {org.business_name || org.name || "Unnamed"}
                                                 </td>
-                                                <td style={{ padding: "12px" }}>{org.userId}</td>
-                                                <td style={{ padding: "12px" }}>{org.category || org.kycDetails?.category}</td>
+                                                <td style={{ padding: "12px" }}>{org.email || org.id?.slice(0, 8)}</td>
+                                                <td style={{ padding: "12px" }}>{org.category || "Professional Service"}</td>
                                                 <td style={{ padding: "12px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
                                                         {activeTab === "service_active" && (
-                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kyc_status: "Banned" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
+                                                            <button onClick={() => supabase.from('vendors').update({ kyc_status: "Banned", is_approved: false }).eq('id', org.id)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#ef444415", color: "#ef4444", border: "none", cursor: "pointer", fontWeight: 600 }}>Ban</button>
                                                         )}
                                                         {activeTab === "service_banned" && (
-                                                            <button onClick={() => patchServiceProviderMutation({ id: org._id, kyc_status: "Active" })} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
+                                                            <button onClick={() => supabase.from('vendors').update({ kyc_status: "Active", is_approved: true }).eq('id', org.id)} style={{ padding: "6px 12px", borderRadius: "6px", background: "#22c55e15", color: "#22c55e", border: "none", cursor: "pointer", fontWeight: 600 }}>Activate</button>
                                                         )}
                                                     </div>
                                                 </td>

@@ -286,11 +286,11 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
 }
 
 function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, setPromoteProfileModal }) {
-    const { data: bookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+    const { data: bookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', vendorId).eq('status', 'Pending')
     , [vendorId]);
 
-    const { data: allBookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+    const { data: allBookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', vendorId)
     , [vendorId]);
 

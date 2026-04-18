@@ -13,7 +13,7 @@ async function sendM365Email(m365Config, fromEmail, toEmail, subject, content, i
   const client_secret = m365Config.client_secret || m365Config.clientSecret;
   
   if (!client_id || !tenant_id || !client_secret) {
-    throw new Error("Incomplete M365 configuration (missing client_id, tenant_id, or client_secret).");
+    throw new Error("Incomplete M365 configuration.");
   }
 
   // 1. Get OAuth Token
@@ -67,8 +67,6 @@ async function sendM365Email(m365Config, fromEmail, toEmail, subject, content, i
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  let backgroundTask = Promise.resolve();
-
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -76,291 +74,131 @@ serve(async (req) => {
     );
 
     const payload = await req.json();
-    const { table, record, type } = payload;
-
-    // Support both INSERT and UPDATE for pushing live 'events'
-    if (type !== 'INSERT' && !payload.force_test) {
-      // Allow UPDATE for events strictly when status changes to 'published'
-      if (table === 'events' && type === 'UPDATE') {
-        const { record: newRecord, old_record: oldRecord } = payload;
-        if (newRecord.status !== 'published' || oldRecord?.status === 'published') {
-          return new Response("Event update does not trigger notification", { status: 200 });
-        }
-      } else {
-        return new Response("Not a translatable event, skipping", { status: 200 });
-      }
-    }
+    const { table, record, type, old_record } = payload;
 
     // --- PRE-REQUISITE: FETCH CONFIG ---
     const { data: emailConfig } = await supabaseAdmin.from('email_settings').select('*').limit(1).single();
     if (!emailConfig || (emailConfig.provider === 'MICROSOFT_365' && !emailConfig.microsoft_365)) {
       throw new Error("Microsoft 365 configuration is missing in the database.");
     }
-    
-    // Determine the from email to use
     const fromEmail = emailConfig.from_email || "hello@bookmyticket.net";
 
+    const logNotification = async (email, subject, content, status, error = null) => {
+      try {
+        await supabaseAdmin.from('notifications_log').insert({
+          user_id: record?.user_id,
+          type: 'Email',
+          recipient: email,
+          subject,
+          content: content.slice(0, 5000), // Limit content size
+          status: status === 'sent' ? 'Sent' : 'Failed',
+          error_message: error
+        });
+      } catch (err) {
+        console.error("Logging failed:", err);
+      }
+    };
+
+    const sendMultiEmail = async (emails, subject, html) => {
+      const results = [];
+      for (const email of emails) {
+        if (!email) continue;
+        try {
+          await sendM365Email(emailConfig.microsoft_365, fromEmail, email, subject, html);
+          await logNotification(email, subject, html, 'sent');
+          results.push({ email, success: true });
+        } catch (err) {
+          console.error(`Failed to send email to ${email}:`, err);
+          await logNotification(email, subject, html, 'failed', err.message);
+          results.push({ email, success: false, error: err.message });
+        }
+      }
+      return results;
+    };
+
     // --- PROCESS BASED ON TABLE ---
-    if (table === 'otps') {
+    
+    // 1. OTPS
+    if (table === 'otps' && type === 'INSERT') {
       const { email, code, purpose } = record;
       const subject = `${code} is your verification code`;
       const html = `<h2>BookMyTicket</h2><p>Your OTP for ${purpose} is:</p><h1 style="color: #ec4899; spacing: 5px;">${code}</h1><p>Do not share this code.</p>`;
-      
-      if (emailConfig.provider === 'MICROSOFT_365') {
-        backgroundTask = sendM365Email(emailConfig.microsoft_365, fromEmail, email, subject, html);
-      } else {
-        return new Response("Provider is not MICROSOFT_365, ignoring OTP event as SMTP is handled in API route.", { status: 200 });
-      }
+      await sendMultiEmail([email], subject, html);
     } 
-    else if (table === 'profiles') {
-      const { email, role } = record;
-      if (role === 'user') { // Welcome email only for new standard users
-        const subject = "Welcome to BookMyTicket!";
-        const html = `<h2>Welcome to BookMyTicket!</h2><p>Your account has been created. Start exploring amazing events nearby!</p>`;
-        
-        if (emailConfig.provider === 'MICROSOFT_365') {
-          backgroundTask = sendM365Email(emailConfig.microsoft_365, fromEmail, email, subject, html);
-        }
-      }
-    } 
+
+    // 2. BOOKINGS (Events)
     else if (table === 'bookings') {
-      const { user_id, ticket_count, total_price, customer_details } = record;
-      const { data: user } = await supabaseAdmin.from('profiles').select('email').eq('id', user_id).single();
-      const customerEmail = customer_details?.email || user?.email;
+      const isConfirmed = record.status === 'Confirmed' && (type === 'INSERT' || old_record?.status !== 'Confirmed');
+      if (!isConfirmed) return new Response("Booking not confirmed, skipping", { status: 200 });
+
+      const { id, event_id, user_id, ticket_count, total_price, customer_details } = record;
+      const { data: event } = await supabaseAdmin.from('events').select('title, organiser_id').eq('id', event_id).single();
+      const { data: userProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', user_id).single();
+      const { data: organiserProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', event?.organiser_id).maybeSingle();
       
-      if (customerEmail && emailConfig.provider === 'MICROSOFT_365') {
-        const subject = `Booking Confirmation - ${ticket_count} Tickets`;
-        const html = `<h2>Booking Confirmed!</h2><p>You have successfully booked ${ticket_count} tickets.</p><p>Total Paid: ₹${total_price}</p><p>You can view your digital tickets in your dashboard.</p>`;
-        backgroundTask = sendM365Email(emailConfig.microsoft_365, fromEmail, customerEmail, subject, html);
-      }
-    } 
-    else if (table === 'events') {
-      // BULK EMAIL OPTIMIZATION for New Events
-      const { title, date, location, status } = record;
+      const userEmail = customer_details?.email || userProfile?.email;
+      const userName = customer_details?.name || 'Customer';
+      const organiserEmail = organiserProfile?.email;
 
-      if (status !== 'published') {
-        return new Response("Event is not published, skipping email notification.", { status: 200 });
-      }
-      
-      if (emailConfig.provider === 'MICROSOFT_365') {
-        backgroundTask = (async () => {
-          try {
-            const { data: subs } = await supabaseAdmin.from('subscribers').select('email');
-            const { data: profiles } = await supabaseAdmin.from('profiles').select('email').eq('role', 'user');
-            
-            const rawEmails = [...(subs || []), ...(profiles || [])].map(r => r.email).filter(Boolean);
-            const uniqueEmails = [...new Set(rawEmails)]; // Deduplicate
+      const userSubject = "Booking Confirmed";
+      const userHtml = `<h2>Booking Confirmed</h2><p>Your booking for <strong>${event?.title}</strong> is confirmed.</p><p>Tickets: ${ticket_count}<br/>Amount: ₹${total_price}<br/>ID: ${id}</p>`;
 
-            if (uniqueEmails.length === 0) return;
+      const orgSubject = "New Booking Received";
+      const orgHtml = `<h2>New Booking</h2><p><strong>User:</strong> ${userName}<br/><strong>Event:</strong> ${event?.title}<br/><strong>Tickets:</strong> ${ticket_count}<br/><strong>ID:</strong> ${id}</p>`;
 
-            const subject = "🎉 New Event Available on BookMyTicket!";
-            const html = `<h2>New Event!</h2><br/><strong>Event:</strong> ${title}<br/><strong>Date:</strong> ${date}<br/><strong>Location:</strong> ${location || 'TBA'}<br/><br/><a href="https://bookmyticket.net">Book Now</a>`;
-
-            // Process in batches of 400 (Graph API allows 500 BCC max)
-            const chunkSize = 400;
-            for (let i = 0; i < uniqueEmails.length; i += chunkSize) {
-              const batch = uniqueEmails.slice(i, i + chunkSize);
-              await sendM365Email(emailConfig.microsoft_365, fromEmail, batch, subject, html, true);
-            }
-          } catch (e) {
-            console.error("Bulk email error:", e);
-          }
-        })();
-      }
-    } else if (table === 'failed_login_attempts') {
-      // ── Security Alert Email ────────────────────────────────────────────
-      const { identifier, ip, user_agent, created_at } = record;
-      const recipientEmail = identifier;
-
-      if (!recipientEmail) {
-        return new Response("No identifier (email) in failed_login_attempts record.", { status: 200 });
-      }
-
-      // Try to get the user's display name for personalisation
-      let displayName = recipientEmail;
-      try {
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('full_name')
-          .eq('email', recipientEmail)
-          .maybeSingle();
-        if (profile?.full_name) displayName = profile.full_name;
-      } catch (_) { /* graceful — proceed without name */ }
-
-      // Parse timestamp to IST
-      const attemptDate = created_at ? new Date(created_at) : new Date();
-      const istFormatter = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      });
-      const formattedTime = istFormatter.format(attemptDate);
-
-      // Parse browser name from user-agent for readability
-      const ua = user_agent || 'Unknown device';
-      let browser = 'Unknown Browser';
-      if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Google Chrome';
-      else if (ua.includes('Firefox')) browser = 'Mozilla Firefox';
-      else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Apple Safari';
-      else if (ua.includes('Edg')) browser = 'Microsoft Edge';
-      else if (ua.includes('OPR') || ua.includes('Opera')) browser = 'Opera';
-      else if (ua !== 'Unknown device') browser = ua.substring(0, 60);
-
-      const subject = `⚠️ Security Alert: Failed Login Attempt on Your BookMyTicket Account`;
-
-      const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Security Alert</title>
-</head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-
-          <!-- RED ALERT BANNER -->
-          <tr>
-            <td style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:32px 40px;text-align:center;">
-              <div style="font-size:48px;margin-bottom:12px;">🚨</div>
-              <h1 style="color:#ffffff;font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-0.02em;">Security Alert</h1>
-              <p style="color:rgba(255,255,255,0.85);font-size:14px;margin:0;">An unrecognized login attempt was detected on your account</p>
-            </td>
-          </tr>
-
-          <!-- BODY -->
-          <tr>
-            <td style="padding:36px 40px;">
-              <p style="font-size:16px;color:#1e293b;margin:0 0 8px;">Hi <strong>${displayName}</strong>,</p>
-              <p style="font-size:15px;color:#475569;line-height:1.7;margin:0 0 28px;">
-                We detected a <strong>failed login attempt</strong> on your BookMyTicket account. 
-                Someone entered the wrong password for <strong>${recipientEmail}</strong>.
-                If this was <em>you</em>, no action is needed. If not, secure your account immediately.
-              </p>
-
-              <!-- DETAILS CARD -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;margin-bottom:28px;">
-                <tr>
-                  <td style="padding:24px 28px;">
-                    <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.05em;">Attempt Details</p>
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
-                          <span style="font-size:13px;color:#64748b;font-weight:600;">🕐 Time</span>
-                        </td>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
-                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${formattedTime} IST</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
-                          <span style="font-size:13px;color:#64748b;font-weight:600;">🌐 IP Address</span>
-                        </td>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
-                          <span style="font-size:13px;color:#1e293b;font-weight:700;font-family:monospace;">${ip || 'Unknown'}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;">
-                          <span style="font-size:13px;color:#64748b;font-weight:600;">💻 Browser / Device</span>
-                        </td>
-                        <td style="padding:8px 0;border-bottom:1px solid #fee2e2;text-align:right;">
-                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${browser}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;">
-                          <span style="font-size:13px;color:#64748b;font-weight:600;">📧 Target Account</span>
-                        </td>
-                        <td style="padding:8px 0;text-align:right;">
-                          <span style="font-size:13px;color:#1e293b;font-weight:700;">${recipientEmail}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA BUTTON -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-                <tr>
-                  <td align="center">
-                    <a href="https://bookmyticket.net/reset-password"
-                       style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.02em;">
-                      🔒 Secure My Account
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- TIPS -->
-              <div style="background:#f8fafc;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
-                <p style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 12px;">💡 Recommended Security Actions</p>
-                <ul style="margin:0;padding-left:18px;color:#475569;font-size:13px;line-height:2;">
-                  <li>Change your password immediately if you didn't attempt this login</li>
-                  <li>Choose a strong password with letters, numbers &amp; symbols</li>
-                  <li>Never share your credentials with anyone</li>
-                  <li>Enable a unique password for BookMyTicket</li>
-                </ul>
-              </div>
-
-              <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0;">
-                If you made this login attempt and simply forgot your password, you can safely 
-                <a href="https://bookmyticket.net/reset-password" style="color:#f43f5e;">reset it here</a>. 
-                This is an automated security notification — please do not reply to this email.
-              </p>
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#94a3b8;">
-                © ${new Date().getFullYear()} BookMyTicket · 
-                <a href="https://bookmyticket.net" style="color:#f43f5e;text-decoration:none;">bookmyticket.net</a>
-              </p>
-              <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1;">This email was sent because a login attempt was made on your account.</p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-      if (emailConfig.provider === 'MICROSOFT_365') {
-        backgroundTask = sendM365Email(
-          emailConfig.microsoft_365,
-          fromEmail,
-          recipientEmail,
-          subject,
-          html
-        );
-      }
-    } else {
-       return new Response(`Table [${table}] processing not defined.`, { status: 200 });
+      await sendMultiEmail([userEmail], userSubject, userHtml);
+      if (organiserEmail) await sendMultiEmail([organiserEmail], orgSubject, orgHtml);
     }
 
-    // Safely execute in background natively for Deno/Supabase
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-      EdgeRuntime.waitUntil(backgroundTask);
-    } else {
-      // If run locally, just await it or don't await so webhook returns fast. 
-      // It's dangerous not to await without waitUntil in standard node, but fine here.
-      // We will await it just in case as webhooks have 5s limit and most individual emails are < 1s.
-      if (table !== 'events') {
-         await backgroundTask;
-      }
+    // 3. TURF BOOKINGS
+    else if (table === 'turf_bookings') {
+      const isConfirmed = (record.booking_status === 'confirmed' || record.status === 'confirmed') && 
+                          (type === 'INSERT' || (old_record?.booking_status !== 'confirmed' && old_record?.status !== 'confirmed'));
+      if (!isConfirmed) return new Response("Turf booking not confirmed, skipping", { status: 200 });
+
+      const { id, organiser_id, turf_name, date, start_time, total_amount, customer_details, customer_name, customer_email } = record;
+      const { data: organiserProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', organiser_id).maybeSingle();
+      
+      const userEmail = customer_email || customer_details?.email;
+      const userName = customer_name || customer_details?.name || 'Customer';
+      const organiserEmail = organiserProfile?.email;
+
+      const userSubject = "Booking Confirmed";
+      const userHtml = `<h2>Turf Booking Confirmed</h2><p>Your booking for <strong>${turf_name}</strong> on ${date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+
+      const orgSubject = "New Turf Booking";
+      const orgHtml = `<h2>New Booking Received</h2><p><strong>User:</strong> ${userName}<br/><strong>Facility:</strong> ${turf_name}<br/><strong>Date:</strong> ${date}<br/><strong>ID:</strong> ${id}</p>`;
+
+      await sendMultiEmail([userEmail], userSubject, userHtml);
+      if (organiserEmail) await sendMultiEmail([organiserEmail], orgSubject, orgHtml);
     }
 
-    return new Response(JSON.stringify({ success: true, message: "Email dispatch started" }), {
+    // 4. VENDOR BOOKINGS
+    else if (table === 'vendor_bookings') {
+      const isConfirmed = (record.status === 'confirmed' || record.status === 'Confirmed') && 
+                          (type === 'INSERT' || (old_record?.status !== 'confirmed' && old_record?.status !== 'Confirmed'));
+      if (!isConfirmed) return new Response("Vendor booking not confirmed, skipping", { status: 200 });
+
+      const { id, vendor_id, service_type, booking_date, total_amount, customer_details, customer_name, customer_email } = record;
+      const { data: vendorProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', vendor_id).maybeSingle();
+      
+      const userEmail = customer_email || customer_details?.email;
+      const userName = customer_name || customer_details?.name || 'Customer';
+      const vendorEmail = vendorProfile?.email;
+
+      const userSubject = "Booking Confirmed";
+      const userHtml = `<h2>Service Booking Confirmed</h2><p>Your booking for <strong>${service_type}</strong> on ${booking_date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+
+      const vendorSubject = "New Booking Received";
+      const vendorHtml = `<h2>New Booking</h2><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p>`;
+
+      await sendMultiEmail([userEmail], userSubject, userHtml);
+      if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 202
+      status: 200
     });
 
   } catch (error) {

@@ -309,56 +309,116 @@ serve(async (req) => {
         .eq("id", requestId)
         .single()
 
-      if (reqError || !partnerReq) throw new Error("Partner request not found")
+      if (reqError || !partnerReq) throw new Error("Partner request not found");
 
-      // 2. Create Auth User
-      const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
-        email: partnerReq.email,
-        password: password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          role: partnerReq.type === 'professional_service' ? 'organiser' : 'organiser' 
-        }
-      })
+      const email = partnerReq.email.trim().toLowerCase();
+      let userId;
 
-      if (authError) throw authError
-
-      const newUserId = authData.user.id
-
-      // 3. Update Profile (Role and Category)
-      await supabaseClient
+      // 2. Check if Profile already exists (Safest check first)
+      const { data: existingProfile } = await supabaseClient
         .from("profiles")
-        .update({
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        userId = existingProfile.id;
+        console.log(`Email ${email} found in profiles table: ${userId}`);
+      } else {
+        // 3. Try creating Auth User
+        const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
+          email: email,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+            role: 'organiser'
+          }
+        })
+
+        if (authError) {
+          // Deep Search if createUser still says it exists
+          if (authError.message.includes("already been registered") || authError.status === 422) {
+             const { data: listRes, error: listError } = await supabaseClient.auth.admin.listUsers();
+             const found = listRes?.users?.find(u => u.email?.toLowerCase() === email);
+             if (found) {
+               userId = found.id;
+               console.log(`Email ${email} found in Auth list: ${userId}`);
+             } else {
+               throw new Error(`Auth internal conflict for ${email}. Supabase reports it exists but it is not in the list. Error: ${authError.message}`);
+             }
+          } else {
+            throw new Error(`Auth Creation Error for ${email}: ${authError.message}`);
+          }
+        } else {
+          userId = authData.user.id;
+        }
+      }
+
+      // 4. Upsert Profile
+      const { error: profileError } = await supabaseClient
+        .from("profiles")
+        .upsert({
+          id: userId,
+          email: email,
           role: 'organiser',
           full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          phone: partnerReq.phone
-        })
-        .eq("id", newUserId)
+          phone: partnerReq.phone,
+          status: 'Active'
+        });
 
-      // 4. Update Organiser Details
-      await supabaseClient
+      if (profileError) throw new Error(`Profile Update Failed: ${profileError.message}`);
+
+      // 5. Upsert Organiser Details
+      const { error: orgError } = await supabaseClient
         .from("organiser_details")
         .upsert({
-          id: newUserId,
-          business_name: `${partnerReq.first_name} ${partnerReq.last_name}'s Business`,
+          id: userId,
+          business_name: partnerReq.remarks || `${partnerReq.first_name} ${partnerReq.last_name}'s Business`,
           category: partnerReq.category,
           type: partnerReq.type,
           is_approved: true,
           kyc_status: partnerReq.type === 'professional_service' ? 'Not Required' : 'Completed'
-        })
+        });
 
-      // 5. Update Request Status
-      await supabaseClient
-        .from("partner_requests")
-        .update({
-          status: "Access Granted",
-          approved_at: new Date().toISOString(),
-          access_granted_at: new Date().toISOString()
-        })
-        .eq("id", requestId)
+      if (orgError) throw new Error(`Organiser Details Update Failed: ${orgError.message}`);
 
-      return new Response(JSON.stringify({ success: true, userId: newUserId }), {
+      // 6. Send Credentials Email
+      const { data: emailSettings } = await supabaseClient
+        .from("email_settings")
+        .select("*")
+        .maybeSingle()
+
+      if (emailSettings && emailSettings.provider === "MICROSOFT_365") {
+        try {
+          const subject = "Partner Access Granted - BookMyTicket";
+          const html = `
+            <h2>Welcome to BookMyTicket!</h2>
+            <p>Your partner request has been approved. You can now log into the Partner Portal using the credentials below:</p>
+            <p><strong>Login Email:</strong> ${partnerReq.email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+            <p><a href="https://bookmyticket.net/login" style="padding: 10px 20px; background-color: #ec4899; color: white; text-decoration: none; border-radius: 5px;">Login to Portal</a></p>
+            <p>Please change your password after your first login.</p>
+          `;
+
+          await sendM365Email(
+            emailSettings.microsoft_365 || emailSettings.microsoft365,
+            emailSettings.from_email || emailSettings.from,
+            partnerReq.email,
+            subject,
+            html
+          );
+        } catch (emailErr) {
+          console.error("Failed to send welcome email:", emailErr);
+          // We don't throw here to avoid rolling back the approval, but we log it.
+        }
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        userId, 
+        message: authError ? "Existing user upgraded & notified" : "New user created & notified" 
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200
       })

@@ -138,13 +138,13 @@ export default function SignInPage() {
     };
 
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
-    useEffect(() => {
-        if (!authLoading && user) {
-            const destination = getRedirectDestination(user, redirectPath);
-            console.log("SignInPage: Auto-redirect determined as:", destination);
-            router.replace(destination);
-        }
-    }, [user, authLoading, router, redirectPath]);
+    // useEffect(() => {
+    //     if (!authLoading && user) {
+    //         const destination = getRedirectDestination(user, redirectPath);
+    //         console.log("SignInPage: Auto-redirect determined as:", destination);
+    //         router.replace(destination);
+    //     }
+    // }, [user, authLoading, router, redirectPath]);
 
 
     // Sign In
@@ -605,8 +605,12 @@ export default function SignInPage() {
                         {mode === "signin" && (
                             <>
                                 <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                                    <h1 style={{ fontSize: "20px", fontWeight: 800, color: "#1e293b", margin: "0 0 2px" }}>Welcome</h1>
-                                    <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Sign in to your account</p>
+                                    <h1 style={{ fontSize: "20px", fontWeight: 800, color: "#1e293b", margin: "0 0 2px" }}>
+                                        {redirectPath?.startsWith("/admin") ? "Admin Login" : "Welcome"}
+                                    </h1>
+                                    <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                                        {redirectPath?.startsWith("/admin") ? "Access the control panel" : "Sign in to your account"}
+                                    </p>
                                 </div>
 
                                 <form onSubmit={handleLogin}>

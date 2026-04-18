@@ -527,7 +527,7 @@ export default function Navbar() {
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  {user.name && user.name[0].toUpperCase()}
+                  {user.name ? user.name[0].toUpperCase() : "U"}
                 </div>
                 
                 <AnimatePresence>

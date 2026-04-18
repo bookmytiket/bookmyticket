@@ -338,6 +338,41 @@ export default function ServicesPage() {
                       onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
                       onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
                     />
+                    {/* Status badge */}
+                    {(() => {
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isBlockedToday = (vendor.advanced_settings?.blocked_dates || []).includes(todayStr);
+                        if (isBlockedToday) {
+                            return (
+                                <div style={{
+                                    position: "absolute", top: "12px", left: "12px",
+                                    background: "rgba(239, 68, 68, 0.9)",
+                                    backdropFilter: "blur(8px)",
+                                    padding: "4px 10px", borderRadius: "12px",
+                                    fontSize: "10px", fontWeight: 900, color: "#fff",
+                                    textTransform: "uppercase", letterSpacing: "0.5px",
+                                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.2)",
+                                    zIndex: 10
+                                }}>
+                                    Busy Today
+                                </div>
+                            );
+                        }
+                        return (
+                            <div style={{
+                                position: "absolute", top: "12px", left: "12px",
+                                background: "rgba(34, 197, 94, 0.9)",
+                                backdropFilter: "blur(8px)",
+                                padding: "4px 10px", borderRadius: "12px",
+                                fontSize: "10px", fontWeight: 900, color: "#fff",
+                                textTransform: "uppercase", letterSpacing: "0.5px",
+                                boxShadow: "0 2px 8px rgba(34, 197, 94, 0.2)",
+                                zIndex: 10
+                            }}>
+                                Available
+                            </div>
+                        );
+                    })()}
                     {/* Rating badge */}
                     <div style={{
                       position: "absolute", top: "12px", right: "12px",
@@ -366,7 +401,7 @@ export default function ServicesPage() {
                       margin: "0 0 8px", lineHeight: 1.2,
                       whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     }}>
-                      {vendor.name}
+                      {vendor.business_name || vendor.name}
                     </h3>
                     <p style={{
                       color: "#64748b", fontSize: "12px", lineHeight: 1.6,

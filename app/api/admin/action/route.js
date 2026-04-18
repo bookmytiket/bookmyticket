@@ -126,65 +126,119 @@ export async function POST(request) {
       if (reqError || !partnerReq) throw new Error("Partner request not found");
 
       // 2. Generate temporary password if not provided
-      const tempPassword = manualPassword || Math.random().toString(36).slice(-10);
+      const pwd = (manualPassword || "").trim();
+      const tempPassword = pwd || Math.random().toString(36).slice(-10);
 
-      // 3. Create Auth User
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: partnerReq.email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          role: 'organiser' // Base role is organiser
+      const email = partnerReq.email.trim().toLowerCase();
+      let userId;
+
+      // 3. Robust User Lookup: Search directly in Auth to be 100% sure we have the right ID
+      const { data: listRes } = await supabaseAdmin.auth.admin.listUsers();
+      const authUser = listRes?.users?.find(u => u.email?.toLowerCase() === email);
+
+      if (authUser) {
+        userId = authUser.id;
+        console.log(`[approve-partner] User found in Auth system: ${userId}`);
+      } else {
+        // Check profiles table as a secondary fallback (though they should be in sync)
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        
+        if (profile) {
+          userId = profile.id;
+          console.log(`[approve-partner] User found in Profiles only: ${userId}`);
+        } else {
+          // 4. Create new Auth User if absolutely not found anywhere
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: {
+              full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+              role: 'organiser'
+            }
+          });
+
+          if (authError) {
+             console.error("[approve-partner] Auth Create Error:", authError);
+             throw authError;
+          }
+          userId = authData.user.id;
+          console.log(`[approve-partner] New user created: ${userId}`);
         }
-      });
-
-      if (authError) throw authError;
-
-      const newUserId = authData.user.id;
-
-      // 4. Update Profile
-      const isProfessional = partnerReq.type === 'professional_service';
-      const initialKycStatus = isProfessional ? 'Approved' : 'KYC Pending';
-
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .update({
-          role: 'organiser',
-          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          phone: partnerReq.phone,
-          is_temporary_password: true,
-          force_password_change: true // Force reset on first login
-        })
-        .eq("id", newUserId);
-      
-      if (profileError) {
-        // If profile row doesn't exist, we might need to insert (though trigger usually handles it)
-        await supabaseAdmin.from("profiles").upsert({
-          id: newUserId,
-          email: partnerReq.email,
-          role: 'organiser',
-          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
-          phone: partnerReq.phone,
-          is_temporary_password: true,
-          force_password_change: true
-        });
       }
 
-      // 5. Update Unified Partner (Organisers table)
-      const { error: organiserError } = await supabaseAdmin
-        .from("organisers")
+      const newUserId = userId;
+      console.log(`[approve-partner] Proceeding with Auth Update for ID: ${newUserId}`);
+
+      // Always update and confirm user
+      // We use both email_confirm and email_confirmed_at for maximum compatibility across Supabase versions
+      const { data: updateData, error: finalAuthError } = await supabaseAdmin.auth.admin.updateUserById(newUserId, {
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { 
+          role: 'organiser',
+          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`
+        },
+        // Explicitly confirm to bypass any "email not confirmed" blocks
+        email_confirmed_at: new Date().toISOString()
+      });
+
+      if (finalAuthError) {
+        console.error("[approve-partner] Auth Update Failed:", finalAuthError);
+        // If it's just a "same password" error, we can proceed
+        if (!finalAuthError.message.includes("same as the old one")) {
+           throw new Error("Critical Auth update failed: " + finalAuthError.message);
+        }
+      } else {
+        console.log(`[approve-partner] Auth account successfully updated and confirmed for ${email}`);
+      }
+
+
+      await supabaseAdmin
+        .from("profiles")
         .upsert({
           id: newUserId,
-          business_name: partnerReq.business_name || `${partnerReq.first_name} ${partnerReq.last_name}`,
-          category: partnerReq.category,
-          type: partnerReq.type,
-          is_approved: true,
-          kyc_status: initialKycStatus,
-          is_temporary_password: true,
-          force_password_change: true
+          email: email,
+          role: 'organiser',
+          full_name: `${partnerReq.first_name} ${partnerReq.last_name}`,
+          phone: partnerReq.phone,
+          is_temporary_password: false,
+          force_password_change: false
         });
-      if (organiserError) throw organiserError;
+
+      // 5. Update the correct partner table based on type
+      const isProfessional = partnerReq.type === 'professional_service';
+
+      if (isProfessional) {
+        // Professional services go to vendors table
+        const { error: vendorError } = await supabaseAdmin
+          .from("vendors")
+          .upsert({
+            id: newUserId,
+            business_name: partnerReq.business_name || `${partnerReq.first_name} ${partnerReq.last_name}`,
+            category: partnerReq.category,
+            type: partnerReq.type,
+            is_approved: true,
+            kyc_status: 'Approved'
+          });
+        if (vendorError) throw vendorError;
+      } else {
+        // Event organisers go to organisers table
+        const { error: organiserError } = await supabaseAdmin
+          .from("organisers")
+          .upsert({
+            id: newUserId,
+            business_name: partnerReq.business_name || `${partnerReq.first_name} ${partnerReq.last_name}`,
+            type: partnerReq.type,
+            is_approved: true,
+            kyc_status: 'KYC Pending'
+          });
+        if (organiserError) throw organiserError;
+      }
 
       // 6. Update Request Status
       await supabaseAdmin
@@ -214,85 +268,34 @@ export async function POST(request) {
       const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net'}/signin`;
       const emailContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; padding: 40px; border-radius: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net'}/logo.png" alt="BookMyTicket" style="height: 60px;">
-          </div>
           <h1 style="color: #0f172a; text-align: center; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Welcome to the Network!</h1>
-          <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved and is ready for use.</p>
+          <p style="color: #64748b; text-align: center; font-size: 16px; margin-bottom: 30px;">Hi ${partnerReq.first_name}, your partner account has been approved!</p>
           
           <div style="background: #f8fafc; padding: 30px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
             <h3 style="margin: 0 0 20px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;">Your Login Credentials</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Login Email:</td>
-                <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${partnerReq.email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
-                <td style="padding: 10px 0;"><code style="background: #fdf4ff; color: #a855f7; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-family: monospace; font-size: 15px;">${tempPassword}</code></td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Platform URL:</td>
-                <td style="padding: 10px 0;"><a href="https://bookmyticket.net" style="color: #a855f7; text-decoration: none; font-weight: 600;">bookmyticket.net</a></td>
-              </tr>
-            </table>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Password:</strong> <code style="background: #fdf4ff; color: #a855f7; padding: 4px 10px; border-radius: 6px; font-weight: 700;">${tempPassword}</code></p>
           </div>
 
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${loginUrl}" style="background: linear-gradient(135deg, #f84464 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block; box-shadow: 0 10px 20px rgba(168,85,247,0.25);">Login &amp; Secure Your Account →</a>
+            <a href="${loginUrl}" style="background: linear-gradient(135deg, #f84464 0%, #a855f7 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 14px; font-weight: 800; display: inline-block;">Login to Portal →</a>
           </div>
-
-          <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fde68a;">
-            <p style="font-size: 13px; color: #92400e; margin: 0; line-height: 1.5;">
-              <strong>Important Security Notice:</strong> This is a temporary password. You will be required to change it immediately upon your first login.
-            </p>
-          </div>
-          
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;">
-          <p style="text-align: center; font-size: 12px; color: #94a3b8; margin: 0;">
-            © ${new Date().getFullYear()} BookMyTicket. Empowering experiences.
-          </p>
+          <p style="text-align: center; font-size: 12px; color: #94a3b8;">© ${new Date().getFullYear()} BookMyTicket</p>
         </div>
       `;
 
       if (settings?.provider === 'MICROSOFT_365' && m365Config) {
         try {
-          console.log(`[approve-partner] Sending credentials email to ${partnerReq.email} via M365...`);
-          await sendM365Email(m365Config, fromEmail, partnerReq.email, subject, emailContent);
-          console.log(`[approve-partner] ✅ Credentials email sent to ${partnerReq.email}`);
-
-          // Log success (graceful — table may not exist)
-          try {
-            await supabaseAdmin.from('notifications_log').insert({
-              user_id: newUserId, type: 'Email', recipient: partnerReq.email,
-              subject, content: "Approval Credentials Sent", status: 'Sent'
-            });
-          } catch (_) { /* notifications_log table optional */ }
+          await sendM365Email(m365Config, fromEmail, email, subject, emailContent);
+          console.log(`[approve-partner] ✅ Credentials email sent to ${email}`);
+          await supabaseAdmin.from('notifications_log').insert({
+            user_id: newUserId, type: 'Email', recipient: email,
+            subject, content: "Approval Credentials Sent", status: 'Sent'
+          }).catch(() => {});
         } catch (emailErr) {
           console.error("[approve-partner] ❌ Failed to send credentials email:", emailErr.message);
-          // Log failure gracefully
-          try {
-            await supabaseAdmin.from('notifications_log').insert({
-              user_id: newUserId, type: 'Email', recipient: partnerReq.email,
-              subject, content: "Approval Credentials Failed",
-              status: 'Failed', error_message: emailErr.message
-            });
-          } catch (_) { /* notifications_log table optional */ }
         }
-      } else {
-        console.error(`[approve-partner] ❌ Email NOT sent — provider: ${settings?.provider}, m365Config present: ${!!m365Config}`);
       }
-
-      // 8. SMS Placeholder (Log as "Pending Provider")
-      try {
-        await supabaseAdmin.from('notifications_log').insert({
-          user_id: newUserId,
-          type: 'SMS',
-          recipient: partnerReq.phone,
-          content: `BookMyTicket: Your account is approved. Email: ${partnerReq.email}. Temp Pass: ${tempPassword}. Login at ${loginUrl}`,
-          status: 'Sent'
-        });
-      } catch (_) { /* notifications_log table optional */ }
 
       return NextResponse.json({ success: true, userId: newUserId });
     }

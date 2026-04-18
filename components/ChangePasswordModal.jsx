@@ -9,6 +9,10 @@ export default function ChangePasswordModal() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const [mounted, setMounted] = React.useState(false);
+  const [passwords, setPasswords] = useState({ new: "", confirm: "" });
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   React.useEffect(() => {
     setMounted(true);

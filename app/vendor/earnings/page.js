@@ -35,7 +35,7 @@ export default function EarningsPage() {
         q.eq('turf_id', provider?.id).eq('payment_status', 'Paid')
     , [provider?.id, isTurf]);
 
-    const { data: artistBookings = [] } = useSupabaseQuery('service_bookings', (q) => 
+    const { data: artistBookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', provider?.id).eq('status', 'Completed')
     , [provider?.id, !isTurf]);
 

@@ -35,22 +35,36 @@ export default function ArtistProfilePage() {
     const [confirmedDetails, setConfirmedDetails] = useState(null);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-    // Fetch full profile from Supabase
-    const { data: profileArr = [], loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
-        q.select('*, vendors(*)').eq('id', vendorId).single()
+    // Fetch profile and vendor in parallel to handle missing FK relationships
+    const { data: profileResult, loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
+        q.select('*').eq('id', vendorId).maybeSingle()
+    , [vendorId]);
+
+    const { data: vendorResult } = useSupabaseQuery('vendors', (q) => 
+        q.select('*').eq('id', vendorId).maybeSingle()
     , [vendorId]);
     
-    const fullProfile = profileArr && !Array.isArray(profileArr) ? { 
-        organiser: profileArr.vendors, 
-        vendorProfile: profileArr 
+    const rawData = profileResult;
+    const vendorData = vendorResult;
+    
+    const fullProfile = rawData ? { 
+        organiser: vendorData, 
+        vendorProfile: rawData 
     } : null;
 
-    const { data: reviews = [] } = useSupabaseQuery('service_reviews', (q) => q.eq('vendor_id', vendorId), [vendorId]);
-    const { data: availabilityArr = [] } = useSupabaseQuery('service_availability', (q) => q.eq('vendor_id', vendorId).single(), [vendorId]);
-    const availability = availabilityArr && !Array.isArray(availabilityArr) ? availabilityArr : null;
+    const { data: reviews = [] } = useSupabaseQuery('vendorReviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
     
-    const blockedDates = availability?.blocked_dates || [];
-    const confirmedBookings = availability?.confirmed_bookings || [];
+    // Fetch relational packages
+    const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => q.eq('vendor_id', vendorId), [vendorId]);
+    
+    // Fetch confirmed bookings for this vendor to block them in the calendar
+    const { data: confirmedBookings = [] } = useSupabaseQuery('vendorBookings', (q) => 
+        q.eq('vendor_id', vendorId).neq('status', 'Cancelled').neq('status', 'Rejected')
+    , [vendorId]);
+
+    const vendorProfile = fullProfile?.vendorProfile;
+    const blockedDates = vendorProfile?.advanced_settings?.blocked_dates || [];
+    const confirmedDates = confirmedBookings.map(b => b.booking_date).filter(Boolean);
 
     useEffect(() => {
         if (user) {
@@ -63,16 +77,19 @@ export default function ArtistProfilePage() {
         }
     }, [user]);
 
-    const [createBooking] = useSupabaseMutation('service_bookings', 'insert');
-    const [submitReview] = useSupabaseMutation('service_reviews', 'insert');
+    const [createBooking] = useSupabaseMutation('vendorBookings', 'insert');
+    const [submitReview] = useSupabaseMutation('vendorReviews', 'insert');
 
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
     const handleReviewSubmit = async (e) => {
-        e.preventDefault();
-        if (!user) return alert("Please sign in to leave a review.");
-        if (!reviewForm.comment.trim()) return alert("Please share a comment.");
+        if (e) e.preventDefault();
+        if (!user) {
+            router.push(`/signin?redirect=/services/${vendorId}`);
+            return;
+        }
+        if (!reviewForm.comment.trim()) return;
 
         setIsSubmittingReview(true);
         try {
@@ -83,10 +100,9 @@ export default function ArtistProfilePage() {
                 comment: reviewForm.comment
             });
             setReviewForm({ rating: 5, comment: "" });
-            alert("Thank you for your feedback!");
+            // Feedback provided silently through UI state update
         } catch (err) {
             console.error(err);
-            alert("Failed to submit review.");
         } finally {
             setIsSubmittingReview(false);
         }
@@ -94,23 +110,24 @@ export default function ArtistProfilePage() {
 
     const handleBooking = async (e) => {
         if (e) e.preventDefault();
+
+        // ── MANDATORY LOGIN CHECK ──
+        if (!user) {
+            router.push(`/signin?redirect=/services/${vendorId}`);
+            return;
+        }
+
         // Guard: prevent double submission
         if (isBooking || showSuccess) return;
         
-        if (!selectedPackage) {
-            alert("Please select a package first.");
-            return;
-        }
+        if (!selectedPackage) return;
 
         if (!formData.date) {
             setIsCalendarOpen(true);
             return;
         }
 
-        if (!agreedToTerms) {
-            alert("Please agree to the terms and conditions.");
-            return;
-        }
+        if (!agreedToTerms) return;
 
         setIsBooking(true);
         try {
@@ -136,13 +153,72 @@ export default function ArtistProfilePage() {
             setConfirmedDetails({
                 bookingId,
                 service: fullProfile.organiser.category || "Professional Service",
-                vendor: fullProfile.organiser.name,
+                vendor: fullProfile.organiser?.business_name || fullProfile.organiser?.name || "Professional",
                 date: formData.date,
                 package: selectedPackage.name,
                 amount: selectedPackage.price,
                 customerName: formData.name || user?.name || "Customer",
                 customerEmail: formData.email || user?.identifier || user?.email || "",
             });
+
+            // ── TRIGGER BOOKING EMAIL WORKFLOW ──
+            try {
+                const userEmailPayload = {
+                    to: formData.email || user?.email || user?.identifier,
+                    subject: `Booking Confirmed: ${fullProfile.vendorProfile.business_name || "Mehendi Artist"}`,
+                    html: `
+                        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 15px; padding: 20px;">
+                            <h2 style="color: #FF5A5F;">Booking Confirmed!</h2>
+                            <p>Hi ${formData.name || "Customer"},</p>
+                            <p>Your booking with <strong>${fullProfile.vendorProfile.business_name || "our partner"}</strong> is confirmed.</p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                            <p><strong>Package:</strong> ${selectedPackage.name}</p>
+                            <p><strong>Date:</strong> ${formData.date}</p>
+                            <p><strong>Amount:</strong> ₹${selectedPackage.price}</p>
+                            <p><strong>Address:</strong> ${formData.address}</p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                            <p style="font-size: 12px; color: #666;">If you have any questions, please contact the artist directly or reply to this email.</p>
+                            <p style="font-size: 14px; font-weight: bold;">Team BookMyTicket</p>
+                        </div>
+                    `
+                };
+
+                // Send Email to User
+                fetch('/api/email/booking-confirmation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userEmailPayload)
+                });
+
+                // Send Email to Vendor
+                fetch('/api/email/booking-confirmation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: fullProfile.organiser.email || fullProfile.vendorProfile.email,
+                        subject: `New Booking Received! - BookMyTicket`,
+                        html: `
+                            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 15px; padding: 20px;">
+                                <h2 style="color: #FF5A5F;">New Booking Received</h2>
+                                <p>Hi ${fullProfile.vendorProfile.business_name || "Partner"},</p>
+                                <p>You have received a new booking through BookMyTicket.</p>
+                                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                                <p><strong>Customer:</strong> ${formData.name || "Customer"}</p>
+                                <p><strong>Package:</strong> ${selectedPackage.name}</p>
+                                <p><strong>Booking Date:</strong> ${formData.date}</p>
+                                <p><strong>Amount:</strong> ₹${selectedPackage.price}</p>
+                                <p><strong>Contact:</strong> ${formData.phone || "N/A"} (${formData.email || "N/A"})</p>
+                                <p><strong>Address:</strong> ${formData.address}</p>
+                                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                                <p style="font-size: 14px; font-weight: bold;">Team BookMyTicket</p>
+                            </div>
+                        `
+                    })
+                });
+            } catch (e) {
+                console.warn("Email workflow deferred or failed silently:", e);
+            }
+
             setShowSuccess(true);
         } catch (error) {
             console.error("Failed to request booking:", error);
@@ -171,11 +247,19 @@ export default function ArtistProfilePage() {
         );
     }
 
-    const { organiser, vendorProfile } = fullProfile;
-    const portfolio = vendorProfile?.portfolio || [];
-    const pricing = vendorProfile?.pricing || [];
+    const organiser = fullProfile.organiser || fullProfile.vendorProfile; // fallback
+    const portfolio = fullProfile.vendorProfile?.portfolio || [];
+    const pricing = packages.length > 0 ? packages.map(pkg => ({
+        id: pkg.id,
+        name: pkg.title,
+        price: pkg.price,
+        description: pkg.description,
+        duration: pkg.duration,
+        features: pkg.features || [],
+        type: pkg.type
+    })) : (fullProfile.vendorProfile?.pricing || []);
     const avgRating = reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : 0;    
-    const categoryName = vendorProfile?.category || organiser.category || "";
+    const categoryName = fullProfile.vendorProfile?.category || organiser.category || "";
     const isUnknown = !categoryName || categoryName.toLowerCase() === "unknown";
     
     const dynamicDateLabel = "Available Date";
@@ -202,7 +286,7 @@ export default function ArtistProfilePage() {
             const isToday = new Date().toISOString().split('T')[0] === dateStr;
             const isSelected = formData.date === dateStr;
             const isBlocked = blockedDates.includes(dateStr);
-            const isBooked = confirmedBookings.some(b => b.booking_date === dateStr);
+            const isBooked = confirmedDates.includes(dateStr);
             const isUnavailable = isBlocked || isBooked || (new Date(dateStr) < new Date(new Date().setHours(0,0,0,0)));
 
             days.push(
@@ -454,23 +538,25 @@ export default function ArtistProfilePage() {
 
                                     {/* Recent List */}
                                     <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {reviews.length > 0 ? reviews.map((r, i) => (
-                                            <div key={i} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-slate-200 transition-colors shadow-sm">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 italic">
-                                                            {r.userId[0].toUpperCase()}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[12px] font-black text-slate-900 tracking-tight lowercase">{r.userId}</span>
-                                                            <div className="flex text-yellow-400">
-                                                                {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= r.rating ? "currentColor" : "none"} />)}
+                                        {reviews.length > 0 ? reviews.map((r, i) => {
+                                            const reviewerName = r.profiles?.full_name || r.profiles?.username || "Guest User";
+                                            return (
+                                                <div key={i} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-slate-200 transition-colors shadow-sm">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 italic text-[14px]">
+                                                                {reviewerName[0].toUpperCase()}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[12px] font-black text-slate-900 tracking-tight lowercase">{reviewerName}</span>
+                                                                <div className="flex text-yellow-400">
+                                                                    {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= r.rating ? "currentColor" : "none"} />)}
+                                                                </div>
                                                             </div>
                                                         </div>
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{new Date(r.created_at).toLocaleDateString()}</span>
                                                     </div>
-                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{new Date(r.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                                <p className="text-[12px] text-slate-500 font-medium leading-relaxed italic">"{r.comment}"</p>
+                                                    <p className="text-[12px] text-slate-500 font-medium leading-relaxed italic">"{r.comment}"</p>
                                                 {r.response && (
                                                     <div className="pt-4 mt-4 border-t border-slate-50">
                                                         <p className="text-[9px] font-black text-pink-500 uppercase tracking-widest mb-1 items-center flex gap-1.5 italic">
@@ -482,8 +568,9 @@ export default function ArtistProfilePage() {
                                                         </p>
                                                     </div>
                                                 )}
-                                            </div>
-                                        )) : (
+                                                </div>
+                                            );
+                                        }) : (
                                             <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] space-y-4">
                                                 <div className="w-16 h-16 bg-slate-50 rounded-full mx-auto flex items-center justify-center">
                                                     <Star size={24} className="text-slate-100" />
@@ -517,7 +604,7 @@ export default function ArtistProfilePage() {
                                 <div className="mb-6 pb-4 border-b border-slate-50 flex items-center justify-between">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Booking with</span>
-                                        <h3 className="text-[22px] font-black text-black tracking-tight leading-none uppercase italic">{organiser.name}</h3>
+                                        <h3 className="text-[22px] font-black text-black tracking-tight leading-none uppercase italic">{organiser.business_name || organiser.name}</h3>
                                     </div>
                                     <div className="w-12 h-12 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
                                         <img src={coverPhoto} className="w-full h-full object-cover" alt="Profile" />

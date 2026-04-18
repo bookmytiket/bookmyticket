@@ -148,7 +148,6 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this request? This cannot be undone.")) return;
         try {
             const { error } = await supabase
                 .from('partner_requests')
@@ -508,16 +507,32 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
 
                                     <div>
                                         <h3 style={{ fontSize: "14px", fontWeight: 800, color: t.textMain, marginBottom: "12px", borderBottom: `1px solid ${t.border}`, paddingBottom: "8px" }}>Uploaded Documents</h3>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                            {['pan', 'aadhar', 'cheque'].map(doc => (
-                                                <div key={doc} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                        <FileText size={16} color="#3b82f6" />
-                                                        <span style={{ fontSize: "13px", fontWeight: 700, color: t.textMain, textTransform: "capitalize" }}>{doc.toUpperCase()} Document</span>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                            {['pan_file', 'aadhar_file', 'cheque_file'].map(docKey => {
+                                                const url = kycData.kyc_details[docKey];
+                                                const label = docKey.replace('_file', '').toUpperCase();
+                                                return (
+                                                    <div key={docKey} style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", background: theme === 'dark' ? '#1e293b' : '#f8fafc', borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                            <FileText size={14} color="#3b82f6" />
+                                                            <span style={{ fontSize: "11px", fontWeight: 700, color: t.textSub }}>{label}</span>
+                                                        </div>
+                                                        {url ? (
+                                                            <div style={{ position: "relative", width: "100%", height: "100px", borderRadius: "8px", overflow: "hidden", backgroundColor: "#000" }}>
+                                                                <img 
+                                                                    src={url} 
+                                                                    alt={label}
+                                                                    style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }}
+                                                                    onClick={() => window.open(url, '_blank')}
+                                                                />
+                                                                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: "10px", padding: "4px", textAlign: "center" }}>Click to Enlarge</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ height: "100px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'dark' ? '#0f172a' : '#f1f5f9', borderRadius: "8px", fontSize: "10px", color: t.textSub }}>No file uploaded</div>
+                                                        )}
                                                     </div>
-                                                    <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: 600 }}>{kycData.kyc_details[doc] || "No file"}</span>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
 

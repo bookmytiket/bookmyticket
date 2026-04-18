@@ -36,8 +36,8 @@ export default function VendorLayout({ children }) {
         if (!loading && !user) {
             router.push("/signin");
         }
-        // Check if user is a vendor
-        const isVendor = user?.role === "organiser" || user?.role === "staff";
+        // Check if user is a vendor or admin
+        const isVendor = ["vendor", "organiser", "staff", "admin", "super_admin"].includes(user?.role);
         if (!loading && user && !isVendor) {
             router.push("/");
         }

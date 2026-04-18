@@ -31,17 +31,28 @@ export default function ServiceCheckoutPage() {
 
     useEffect(() => {
         if (!id) return;
-        const decoded = decodeURIComponent(id);
-        supabase.from('users').select('*, vendor_profiles(*)').eq('identifier', decoded).maybeSingle()
+        const decodedId = decodeURIComponent(id);
+        
+        // Fetch full profile (service provider + its organiser record)
+        supabase.from('service_providers').select('*, vendors(*)').eq('id', decodedId).single()
             .then(({ data }) => {
                 if (data) {
-                    setFullProfile({ organiser: data, vendorProfile: data.vendor_profiles?.[0] || null });
+                    setFullProfile({ organiser: data.vendors, vendorProfile: data });
+                    setBlockedDates(data.advanced_settings?.blocked_dates || []);
                 } else {
                     setFullProfile(null);
                 }
             });
-        supabase.from('vendor_bookings').select('booking_date').eq('vendor_id', decoded).eq('status', 'Confirmed')
-            .then(({ data }) => setConfirmedBookingDates((data || []).map(b => b.booking_date)));
+
+        // Fetch confirmed bookings for this vendor
+        supabase.from('vendor_bookings')
+            .select('booking_date')
+            .eq('vendor_id', decodedId)
+            .neq('status', 'Cancelled')
+            .neq('status', 'Rejected')
+            .then(({ data }) => {
+                setConfirmedBookingDates((data || []).map(b => b.booking_date).filter(Boolean));
+            });
     }, [id]);
 
     const organiser = fullProfile?.organiser;
@@ -112,16 +123,17 @@ export default function ServiceCheckoutPage() {
         setIsBooking(true);
         try {
             const { data: booking, error } = await supabase.from('vendor_bookings').insert({
-                vendor_id: organiser.identifier || organiser.id,
-                user_id: user.identifier || user.email,
+                vendor_id: id,
+                user_id: user.id || user.identifier || user.email || bookingData.email,
                 service_type: organiser.category || 'Professional Service',
                 booking_date: bookingData.date,
-                booking_time: bookingData.time || null,
                 total_amount: selectedPackage.price,
-                customer_name: bookingData.name,
-                customer_phone: bookingData.phone,
-                customer_email: bookingData.email,
-                customer_address: bookingData.address,
+                customer_details: {
+                    name: bookingData.name,
+                    phone: bookingData.phone,
+                    email: bookingData.email,
+                    address: bookingData.address
+                },
                 remarks: bookingData.remarks || null,
                 status: 'Pending',
             }).select('id').single();
