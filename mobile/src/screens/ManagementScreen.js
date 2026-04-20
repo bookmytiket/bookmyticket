@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Image, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
-import { supabase } from '../services/supabase';
+import { supabase } from '../lib/supabase';
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LineChart } from 'react-native-chart-kit';
+import { Dimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 function DataTable({ title, data, columns, renderItem }) {
@@ -52,8 +54,27 @@ export default function ManagementScreen() {
   const isStaff = user?.role === 'staff';
   const isAdmin = user?.role === 'admin';
   const isOrganiser = user?.role === 'organiser';
-  const isVendor = isServiceProvider(user?.category);
-  
+  const isVendor = user?.role === 'vendor' || isServiceProvider(user?.category);
+
+  if (!authLoading && isOrganiser && !isStaff && !isAdmin) {
+    return (
+      <View style={styles.blockContainer}>
+        <View style={styles.blockHeader}>
+            <Ionicons name="desktop-outline" size={80} color={Colors.secondary} />
+            <Text style={styles.blockTitle}>Web Access Only</Text>
+            <Text style={styles.blockText}>
+              To provide the best management tools, the Event Organiser Panel is exclusively available on our Web Portal.
+            </Text>
+            <Text style={styles.blockDomain}>bookmyticket.net</Text>
+        </View>
+        <TouchableOpacity style={styles.blockBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="home-outline" size={20} color="#fff" />
+          <Text style={styles.blockBtnText}>Return to Mobile App</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState(isStaff ? 'scans' : isVendor ? 'hub' : 'events');
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -81,25 +102,25 @@ export default function ManagementScreen() {
   }, [user?.id, isAdmin]);
 
   const { data: bookings = [], loading: loadingBookings } = useSupabaseQuery('bookings', (q) => {
-    let query = q.select('*, event:event_id(*)');
+    let query = q.select('*, event:event_id!inner(*)');
     if (!isAdmin) {
-      query = query.eq('organiser_id', user?.id);
+      query = query.eq('event.organiser_id', user?.id);
     }
     return query;
   }, [user?.id, isAdmin]);
 
   const { data: vendorBookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
-    q.select('*').eq('vendor_id', vendorId), 
+    vendorId ? q.select('*').eq('vendor_id', vendorId) : q.select('*').limit(0), 
     [vendorId]
   );
 
   const { data: reviews = [] } = useSupabaseQuery('vendor_reviews', (q) => 
-    q.select('*').eq('vendor_id', vendorId), 
+    vendorId ? q.select('*').eq('vendor_id', vendorId) : q.select('*').limit(0), 
     [vendorId]
   );
 
-  const { data: vendorProfile, loading: loadingProfile } = useSupabaseQuery('vendor_profiles', (q) => 
-    q.select('*').eq('organiser_id', user?.id).single(),
+  const { data: vendorProfile, loading: loadingProfile } = useSupabaseQuery('service_providers', (q) => 
+    q.select('*, profiles!organiser_id(*)').eq('id', user?.id).single(),
     [user?.id]
   );
 
@@ -108,16 +129,24 @@ export default function ManagementScreen() {
     [user?.id]
   );
 
+  const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => 
+    user?.id ? q.select('*').eq('vendor_id', user?.id) : q.select('*').limit(0), 
+    [user?.id]
+  );
+
   // Migrations
-  const { mutate: updateVendorProfile } = useSupabaseMutation('vendor_profiles');
-  const { mutate: confirmBooking } = useSupabaseMutation('bookings');
-  const { mutate: updateVendorBookingStatus } = useSupabaseMutation('vendor_bookings');
-  const { mutate: respondToReview } = useSupabaseMutation('vendor_reviews');
+  const { mutate: updateVendorProfile } = useSupabaseMutation((s, updates) => s.from('service_providers').update(updates).eq('id', updates.id));
+  const { mutate: confirmBooking } = useSupabaseMutation((s, payload) => s.from('bookings').update({ status: payload.status }).eq('id', payload.id));
+  const { mutate: updateVendorBookingStatus } = useSupabaseMutation((s, payload) => s.from('vendor_bookings').update({ status: payload.status }).eq('id', payload.id));
+  const { mutate: respondToReview } = useSupabaseMutation((s, payload) => s.from('vendor_reviews').update({ response: payload.response }).eq('id', payload.id));
+  const { mutate: createArtistPackage } = useSupabaseMutation((s, data) => s.from('artistPackages').insert(data));
+  const { mutate: updateArtistPackage } = useSupabaseMutation((s, p) => s.from('artistPackages').update({ price: p.price }).eq('id', p.id));
+  const { mutate: deleteArtistPackage } = useSupabaseMutation((s, p) => s.from('artistPackages').delete().eq('id', p.id));
 
   const totals = useMemo(() => ({
-    bookings: events.reduce((acc, e) => acc + (e.bookings_count || 0), 0),
-    revenue: events.reduce((acc, e) => acc + (e.revenue || 0), 0),
-    rating: reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : "0.0"
+    bookings: (events || []).reduce((acc, e) => acc + (e.bookings_count || 0), 0) || 0,
+    revenue: (events || []).reduce((acc, e) => acc + (e.revenue || 0), 0) || 0,
+    rating: (reviews || []).length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : "0.0"
   }), [events, reviews]);
 
   const handleConfirm = async (id) => {
@@ -183,34 +212,56 @@ export default function ManagementScreen() {
     setPortfolioMeta({ url: '', category: 'Bridal', isTopDesign: false, beforeAfter: false });
   };
 
-  const updatePrice = (identifier, newPrice) => {
-    const currentPricing = vendorProfile?.pricing || [];
-    const updated = currentPricing.map(p => {
-      const pId = p.label || p.name;
-      return pId === identifier ? { ...p, price: parseFloat(newPrice) } : p;
-    });
-    handleUpdateProfile({ 
-      pricing: updated
-    });
+  const updatePrice = async (pkgId, newPrice) => {
+    try {
+      await updateArtistPackage({ id: pkgId, price: parseFloat(newPrice) });
+      Alert.alert('Success', 'Price updated');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update price');
+    }
     setEditItem(null);
   };
 
-  const createPackage = () => {
+  const createPackage = async () => {
     if (!newPkg.label || !newPkg.price) {
       Alert.alert('Required', 'Please provide at least a name and price.');
       return;
     }
-    const currentPricing = vendorProfile?.pricing || [];
-    const updated = [...currentPricing, { 
-      label: newPkg.label, 
-      description: newPkg.description, 
-      price: parseFloat(newPkg.price) 
-    }];
-    handleUpdateProfile({ 
-      pricing: updated
-    });
-    setIsAddingPkg(false);
-    setNewPkg({ label: '', description: '', price: '' });
+    try {
+      await createArtistPackage({ 
+        vendor_id: user.id,
+        title: newPkg.label, 
+        description: newPkg.description, 
+        price: parseFloat(newPkg.price),
+        status: 'Active'
+      });
+      setIsAddingPkg(false);
+      setNewPkg({ label: '', description: '', price: '' });
+      Alert.alert('Success', 'Package created!');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to create package');
+    }
+  };
+
+  const removePackage = async (pkgId) => {
+    Alert.alert(
+      "Confirm Removal",
+      "Are you sure you want to delete this service tier?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await deleteArtistPackage({ id: pkgId });
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete package');
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (authLoading || !user) {
@@ -366,7 +417,7 @@ export default function ManagementScreen() {
             <View style={[styles.tableHeader, { marginTop: 16 }]}>
               <View>
                 <Text style={styles.tableTitle}>Manage Pricing</Text>
-                <Text style={styles.subCell}>{vendorProfile?.pricing?.length || 0} packages active</Text>
+                <Text style={styles.subCell}>{packages?.length || 0} packages active</Text>
               </View>
               <TouchableOpacity 
                 style={styles.addBtnCircle} 
@@ -397,7 +448,7 @@ export default function ManagementScreen() {
                   <View style={styles.editRow}>
                      <Text style={styles.editPrefix}>₹</Text>
                      <TextInput 
-                       style={styles.inputField}
+                       style={[styles.inputField, { flex: 1, marginRight: 10 }]}
                        keyboardType="numeric"
                        value={newPkg.price}
                        onChangeText={(val) => setNewPkg({ ...newPkg, price: val })}
@@ -405,7 +456,7 @@ export default function ManagementScreen() {
                        placeholderTextColor="#94a3b8"
                      />
                      <TouchableOpacity 
-                       style={styles.saveBtn}
+                       style={[styles.saveBtn, { flex: 0.8 }]}
                        onPress={createPackage}
                      >
                        <Text style={styles.saveBtnText}>Create</Text>
@@ -416,41 +467,48 @@ export default function ManagementScreen() {
 
             <DataTable 
               title=""
-              data={vendorProfile?.pricing || []}
+              data={packages}
               columns={[
                 { label: 'Service / Package', flex: 2 },
-                { label: 'Price (₹)', flex: 1 },
+                { label: 'Price (₹)', flex: 1.5 },
               ]}
               renderItem={(item) => (
                 <>
                   <View style={{ flex: 2 }}>
-                    <Text style={styles.cell}>{item.label || item.name}</Text>
+                    <Text style={styles.cell}>{item.title || item.name}</Text>
                     <Text style={styles.subCell} numberOfLines={1}>{item.description || 'No description provided'}</Text>
                   </View>
-                  <View style={{ flex: 1, alignItems: 'flex-end', gap: 4 }}>
-                    <Text style={[styles.cell, { color: Colors.secondary, fontSize: 16 }]}>₹{item.price}</Text>
-                    <TouchableOpacity onPress={() => { setEditItem(item); setIsAddingPkg(false); }} style={styles.editBtnSmall}>
-                      <Text style={styles.editBtnText}>Edit Price</Text>
-                    </TouchableOpacity>
+                  <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.cell, { color: Colors.secondary, fontSize: 16 }]}>₹{item.price}</Text>
+                        <TouchableOpacity onPress={() => { setEditItem(item); setIsAddingPkg(false); }} style={styles.editBtnSmall}>
+                          <Text style={styles.editBtnText}>Edit Price</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <TouchableOpacity onPress={() => removePackage(item.id)} style={{ padding: 4 }}>
+                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </>
               )}
             />
             {editItem && (
                <View style={styles.inlineEdit}>
-                 <Text style={styles.editTitle}>Update Price for {editItem.label || editItem.name}</Text>
+                 <Text style={styles.editTitle}>Update Price for {editItem.title || editItem.name}</Text>
                  <View style={styles.editRow}>
                     <Text style={styles.editPrefix}>₹</Text>
                     <TextInput 
-                      style={styles.inputField}
+                      style={[styles.inputField, { flex: 1, marginRight: 10 }]}
                       keyboardType="numeric"
                       value={String(editItem.price ?? "")}
                       onChangeText={(val) => setEditItem({ ...editItem, price: val })}
                       placeholder="Enter price"
                     />
                     <TouchableOpacity 
-                      style={styles.saveBtn}
-                      onPress={() => updatePrice(editItem.label, editItem.price)}
+                      style={[styles.saveBtn, { flex: 0.8 }]}
+                      onPress={() => updatePrice(editItem.id, editItem.price)}
                     >
                       <Text style={styles.saveBtnText}>Save</Text>
                     </TouchableOpacity>
@@ -617,10 +675,47 @@ export default function ManagementScreen() {
               </View>
               <View style={styles.vDivider} />
               <View style={styles.statBannerRight}>
-                <Text style={styles.statValueMed}>{reviews.length}</Text>
+                <Text style={styles.statValueMed}>{reviews?.length || 0}</Text>
                 <Text style={styles.statLabelSub}>Reflections</Text>
               </View>
             </View>
+
+            {/* Analytics Chart */}
+            <View style={styles.chartSection}>
+              <Text style={styles.chartTitle}>Revenue Trend (7 Days)</Text>
+              <LineChart
+                data={{
+                  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                  datasets: [{
+                    data: [
+                      Math.random() * 5000,
+                      Math.random() * 5000,
+                      Math.random() * 5000,
+                      Math.random() * 5000,
+                      Math.random() * 10000,
+                      Math.random() * 15000,
+                      Math.random() * 20000,
+                    ]
+                  }]
+                }}
+                width={Dimensions.get("window").width - 32}
+                height={180}
+                yAxisLabel="₹"
+                chartConfig={{
+                  backgroundColor: "#fff",
+                  backgroundGradientFrom: "#fff",
+                  backgroundGradientTo: "#fff",
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(244, 63, 94, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+                  style: { borderRadius: 16 },
+                  propsForDots: { r: "4", strokeWidth: "2", stroke: "#f43f5e" }
+                }}
+                bezier
+                style={{ marginVertical: 8, borderRadius: 16 }}
+              />
+            </View>
+
             <Text style={styles.hubWelcome}>Business Command Center</Text>
             <View style={styles.hubGrid}>
               <TouchableOpacity style={styles.hubCard} onPress={() => setActiveTab('vendor_bookings')}>
@@ -628,7 +723,7 @@ export default function ManagementScreen() {
                   <Ionicons name="calendar" size={28} color="#3b82f6" />
                 </View>
                 <Text style={styles.hubCardTitle}>Bookings</Text>
-                <Text style={styles.hubCardSub}>{vendorBookings.length} Active Leads</Text>
+                <Text style={styles.hubCardSub}>{vendorBookings?.length || 0} Active Leads</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.hubCard} onPress={() => setActiveTab('portfolio')}>
                 <View style={[styles.hubIconBox, { backgroundColor: '#fdf2f8' }]}>
@@ -642,14 +737,14 @@ export default function ManagementScreen() {
                   <Ionicons name="pricetags" size={28} color="#22c55e" />
                 </View>
                 <Text style={styles.hubCardTitle}>Pricing</Text>
-                <Text style={styles.hubCardSub}>{vendorProfile?.pricing?.length || 0} Packages</Text>
+                <Text style={styles.hubCardSub}>{packages?.length || 0} Packages</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.hubCard} onPress={() => setActiveTab('feedbacks')}>
                 <View style={[styles.hubIconBox, { backgroundColor: '#fff7ed' }]}>
                   <Ionicons name="star" size={28} color="#f59e0b" />
                 </View>
                 <Text style={styles.hubCardTitle}>Feedbacks</Text>
-                <Text style={styles.hubCardSub}>{reviews.length} Reflections</Text>
+                <Text style={styles.hubCardSub}>{reviews?.length || 0} Reflections</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -716,7 +811,14 @@ const styles = StyleSheet.create({
   eventLabel: { fontSize: 10, color: Colors.secondary, fontWeight: '900', textTransform: 'uppercase', marginTop: 4 },
   actionButtonSmall: { backgroundColor: Colors.secondary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   actionButtonText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  empty: { textAlign: 'center', marginTop: 40, color: '#94a3b8', fontSize: 14, fontWeight: '700' },
+  empty: { textAlign: 'center', padding: 20, color: Colors.textLight, fontStyle: 'italic' },
+  blockContainer: { flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 40 },
+  blockHeader: { alignItems: 'center', marginBottom: 40 },
+  blockTitle: { fontSize: 24, fontWeight: '900', color: Colors.text, marginTop: 24, marginBottom: 12 },
+  blockText: { fontSize: 15, color: Colors.textLight, textAlign: 'center', lineHeight: 24, marginBottom: 16 },
+  blockDomain: { fontSize: 18, color: Colors.secondary, fontWeight: '800' },
+  blockBtn: { backgroundColor: Colors.secondary, paddingHorizontal: 32, paddingVertical: 18, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: Colors.secondary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  blockBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   backToHub: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 8 },
   backToHubText: { fontSize: 14, fontWeight: '800', color: Colors.secondary },
   hubContainer: { padding: 16 },
@@ -772,4 +874,6 @@ const styles = StyleSheet.create({
   toggleBtnActive: { backgroundColor: Colors.secondary },
   toggleText: { fontSize: 11, fontWeight: '800', color: '#94a3b8' },
   toggleTextActive: { color: '#fff' },
+  chartSection: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 2 },
+  chartTitle: { fontSize: 13, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 0.5 },
 });

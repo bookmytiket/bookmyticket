@@ -34,9 +34,11 @@ export default function VendorSignInScreen({ navigation }) {
     try {
       const result = await vendorLogin(identifier, password);
       if (result.success) {
-        // AuthContext handles state, AppNavigator will redirect
-        // But we can also manually navigate if needed
-        navigation.replace('MainTabs');
+        // Vendors should always go directly to their Professional Hub
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Management' }],
+        });
       } else {
         Alert.alert('Access Denied', result.error || 'Invalid vendor credentials');
       }

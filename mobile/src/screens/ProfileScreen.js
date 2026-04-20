@@ -14,18 +14,18 @@ export default function ProfileScreen() {
 
   // Migrated to Supabase
   const { data: eventBookingsList } = useSupabaseQuery('bookings', (q) => 
-    q.select('*, events(*)').eq('user_id', user?.identifier), 
-    [user?.identifier]
+    q.select('*, events(*)').eq('user_id', user?.id), 
+    [user?.id]
   );
   
   const { data: vendorBookingsList } = useSupabaseQuery('vendor_bookings', (q) => 
-    q.select('*').eq('user_id', user?.identifier), 
-    [user?.identifier]
+    q.select('*').eq('user_id', user?.id), 
+    [user?.id]
   );
 
   const { data: turfBookingsList } = useSupabaseQuery('turf_bookings', (q) => 
-    q.select('*, turfs(*)').eq('user_id', user?.identifier), 
-    [user?.identifier]
+    q.select('*, turfs(*)').eq('user_id', user?.id), 
+    [user?.id]
   );
 
   const userBookings = [
@@ -89,20 +89,20 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>{(user?.name || 'U')[0]}</Text>
         </LinearGradient>
         <Text style={styles.name}>{user?.name || 'User'}</Text>
-        <Text style={styles.role}>{user?.role || 'user'}</Text>
+        <Text style={styles.role}>{user?.role || 'public'}</Text>
 
-        {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'staff') && (
+        {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'vendor') && (
           <TouchableOpacity 
             style={styles.actionBtn} 
-            onPress={() => navigation.navigate('Dashboard')}
+            onPress={() => navigation.navigate('Management')}
           >
             <Ionicons name="grid-outline" size={20} color={Colors.secondary} />
-            <Text style={styles.actionText}>Go to Dashboard</Text>
+            <Text style={styles.actionText}>Professional Hub</Text>
           </TouchableOpacity>
         )}
 
         {/* Action bounds for normal users to become partners */}
-        {(!user?.role || user?.role === 'user') && (
+        {(!user?.role || user?.role === 'public') && (
           <>
             <TouchableOpacity 
               style={styles.actionBtn} 
@@ -119,7 +119,6 @@ export default function ProfileScreen() {
                <Text style={[styles.actionText, { color: '#f59e0b' }]}>Check Partner Status</Text>
             </TouchableOpacity>
           </>
-
         )}
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>

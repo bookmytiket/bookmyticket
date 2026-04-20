@@ -160,38 +160,28 @@ export default function CalendarPage() {
                 <div 
                     key={day} 
                     onClick={() => setSelectedDate(date)}
-                    className={`h-12 md:h-14 border border-slate-50 p-1.5 md:p-2 transition-all cursor-pointer relative group overflow-hidden ${
-                        isSelected ? 'bg-pink-50 ring-2 ring-pink-500/20 z-10' : 'bg-white hover:bg-slate-50'
+                    className={`h-12 md:h-14 border border-slate-50 p-1.5 md:p-2 transition-all duration-300 cursor-pointer relative group overflow-hidden rounded-xl m-0.5 ${
+                        isSelected ? 'bg-slate-900 ring-4 ring-slate-900/10 z-10' : 'bg-white hover:bg-slate-50'
                     }`}
                 >
                     <div className="flex items-center justify-between">
                         <span className={`text-[11px] md:text-sm font-black ${
-                            isSelected ? 'text-pink-600' : isBlocked ? 'text-red-500 line-through decoration-2' : isToday ? 'text-pink-500' : 'text-slate-900'
+                            isSelected ? 'text-white' : isBlocked ? 'text-slate-300 line-through' : isToday ? 'text-pink-500' : 'text-slate-900'
                         }`}>
                             {day}
                         </span>
                         {dayBookings.length > 0 ? (
-                            <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shadow-xl shadow-pink-500/50 animate-pulse"></span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-pink-500 shadow-pink-500/50' : 'bg-pink-500 shadow-pink-500/30'} shadow-xl animate-pulse`}></span>
                         ) : isBlocked ? (
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-xl shadow-red-500/50"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
                         ) : null}
                     </div>
                     <div className="mt-2 space-y-1">
                         {dayBookings.slice(0, 1).map((b, i) => (
-                            <div key={i} className="text-[7px] font-black uppercase tracking-tighter truncate bg-slate-900 text-white px-1.5 py-0.5 rounded shadow-lg italic">
+                            <div key={i} className={`text-[7px] font-black uppercase tracking-tighter truncate px-1.5 py-0.5 rounded shadow-sm italic ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-900 text-white'}`}>
                                 {b.customer_details?.name || "Job"}
                             </div>
                         ))}
-                        {isBlocked && dayBookings.length === 0 && (
-                            <div className="text-[7px] font-black uppercase tracking-tighter truncate bg-red-100 text-red-600 px-1.5 py-0.5 rounded shadow-sm italic">
-                                Blocked
-                            </div>
-                        )}
-                        {dayBookings.length > 1 && (
-                            <div className="text-[7px] font-black text-pink-500 uppercase tracking-widest pl-0.5">
-                                + {dayBookings.length - 1} more
-                            </div>
-                        )}
                     </div>
                 </div>
             );

@@ -175,7 +175,7 @@ export default function PartnerStatusScreen() {
         {(status === 'approved' || status === 'access granted') && (
           <TouchableOpacity
             style={styles.dashboardBtn}
-            onPress={() => navigation.navigate('Dashboard')}
+            onPress={() => navigation.navigate('Management')}
           >
             <Ionicons name="grid-outline" size={20} color="#fff" />
             <Text style={styles.dashboardBtnText}>Go to Dashboard</Text>

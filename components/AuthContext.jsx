@@ -134,12 +134,16 @@ export function AuthProvider({ children }) {
 
             let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
             if (role === 'organizer') role = 'organiser';
+            if (role === 'user') role = 'public';
 
             let specializedData = {};
 
             if (adminRecord) {
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
+            } else if (organiserRecord) {
+                role = 'organiser';
+                specializedData = organiserRecord;
             } else if (vendorRecord || providerRecord) {
                 role = 'vendor';
                 let finalProviderData = providerRecord;
@@ -160,10 +164,8 @@ export function AuthProvider({ children }) {
                     if (!insertError) finalProviderData = newProvider;
                 }
                 specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
-            } else if (organiserRecord) {
-                role = 'organiser';
-                specializedData = organiserRecord;
-            } else if (role === 'staff') {
+            }
+ else if (role === 'staff') {
                 try {
                     const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
                     if (data) specializedData = data;
@@ -219,7 +221,17 @@ export function AuthProvider({ children }) {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
             const userData = await fetchAndSetUser(data.user);
-            if (userData) return { success: true, user: userData };
+            if (userData) {
+                // REDIRECTION LOGIC
+                if (userData.role === 'organiser') {
+                    router.push('/organiser');
+                } else if (userData.role === 'admin') {
+                    router.push('/admin');
+                } else if (userData.role === 'vendor') {
+                    router.push('/vendor');
+                }
+                return { success: true, user: userData };
+            }
             return { success: false, error: "Profile not found" };
         } catch (err) {
             console.error("Login error:", err);

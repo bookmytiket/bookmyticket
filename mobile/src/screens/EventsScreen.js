@@ -15,9 +15,9 @@ export default function EventsScreen() {
   
   // Migrated from Convex useQuery to Supabase useSupabaseQuery
   const { data: supabaseEvents } = useSupabaseQuery('events', (q) => 
-    q.or('status.eq.Active,status.is.null').order('createdAt', { ascending: false })
+    q.or('status.eq.Active,status.is.null').order('created_at', { ascending: false })
   );
-  const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.order('createdAt', { ascending: false }));
+  const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.order('created_at', { ascending: false }));
   const { data: supabaseCategories } = useSupabaseQuery('categories');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,8 +55,8 @@ export default function EventsScreen() {
       let dateStr = ev?.date;
       let timeStr = ev?.time;
 
-      if (isMeeting && !dateStr && ev?.createdAt) {
-        const d = new Date(ev.createdAt);
+      if (isMeeting && !dateStr && ev?.created_at) {
+        const d = new Date(ev.created_at);
         dateStr = d.toLocaleDateString('en-GB');
         timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       }
@@ -99,8 +99,8 @@ export default function EventsScreen() {
       if (ev.endDateTime && now.getTime() > ev.endDateTime) return false;
 
       // 24-hour expiration for standalone meetings
-      if (ev.isMeeting && !ev.endDateTime && ev.createdAt) {
-          const expirationTime = ev.createdAt + (24 * 60 * 60 * 1000); 
+      if (ev.isMeeting && !ev.endDateTime && ev?.created_at) {
+          const expirationTime = new Date(ev.created_at).getTime() + (24 * 60 * 60 * 1000); 
           if (now.getTime() > expirationTime) return false;
       }
 

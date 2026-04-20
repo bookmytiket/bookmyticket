@@ -15,7 +15,7 @@ import {
   Alert
 } from 'react-native';
 import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
-import { supabase } from '../services/supabase';
+import { supabase } from '../lib/supabase';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
@@ -50,14 +50,20 @@ export default function ServiceDetailScreen() {
   });
 
   // Migrated to Supabase: Fetch full profile
-  const { data: fullProfile, loading: loadingProfile } = useSupabaseQuery('vendor_profiles', (q) => 
-    q.select('*, organisers:organiser_id(*)').eq('id', vendorId).single(),
+  const { data: fullProfile, loading: loadingProfile } = useSupabaseQuery('service_providers', (q) => 
+    q.select('*, profiles!organiser_id(*)').eq('id', vendorId).single(),
     [vendorId]
   );
 
   // Migrated to Supabase: Fetch availability
-  const { data: availabilityData } = useSupabaseQuery('vendor_bookings', (q) => 
-    q.select('booking_date').eq('vendor_id', vendorId).in('status', ['Confirmed', 'Scanned']),
+  const { data: availabilityData } = useSupabaseQuery('"vendorBookings"', (q) => 
+    vendorId ? q.select('booking_date').eq('vendor_id', vendorId).in('status', ['Confirmed', 'Scanned']) : q.select('*').limit(0),
+    [vendorId]
+  );
+
+  // Migrated to Supabase: Fetch service tiers (Packages)
+  const { data: packages = [] } = useSupabaseQuery('"artistPackages"', (q) => 
+    vendorId ? q.select('*').eq('vendor_id', vendorId) : q.select('*').limit(0),
     [vendorId]
   );
 
@@ -67,16 +73,16 @@ export default function ServiceDetailScreen() {
   };
 
   // Migrated to Supabase: Create booking
-  const { mutate: createBooking } = useSupabaseMutation('vendor_bookings');
+  const { mutate: createBooking } = useSupabaseMutation((s, data) => s.from('"vendorBookings"').insert(data));
 
   // Migrated to Supabase: Fetch reviews
-  const { data: reviews = [] } = useSupabaseQuery('vendor_reviews', (q) => 
-    q.select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false }),
+  const { data: reviews = [] } = useSupabaseQuery('"vendorReviews"', (q) => 
+    vendorId ? q.select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false }) : q.select('*').limit(0),
     [vendorId]
   );
 
   // Migrated to Supabase: Submit review
-  const { mutate: submitReview } = useSupabaseMutation('vendor_reviews');
+  const { mutate: submitReview } = useSupabaseMutation((s, data) => s.from('"vendorReviews"').insert(data));
 
   const handleReviewSubmit = async () => {
     if (!user) {
@@ -91,7 +97,7 @@ export default function ServiceDetailScreen() {
     try {
       await submitReview({
         vendor_id: vendorId,
-        user_id: user.id || user.identifier,
+        user_id: user.id, // Must be UUID
         rating: reviewForm.rating,
         comment: reviewForm.comment
       });
@@ -132,6 +138,28 @@ export default function ServiceDetailScreen() {
         },
         status: 'Pending'
       });
+
+      // Trigger Notification (Fire and Forget)
+      if (bookingForm.phone && process.env.EXPO_PUBLIC_API_BASE_URL) {
+        try {
+          fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/comm/trigger`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phoneNumber: bookingForm.phone,
+              type: 'BOOKING',
+              data: {
+                eventName: fullProfile?.category || "Professional Service",
+                date: bookingForm.date,
+                bookingId: "Request Sent"
+              }
+            })
+          }).catch(e => console.warn("Background notification failed:", e.message));
+        } catch (e) {
+          console.warn("Notification system unavailable");
+        }
+      }
+
       alert("Booking Request Sent Successfully!");
       navigation.goBack();
     } catch (error) {
@@ -150,10 +178,15 @@ export default function ServiceDetailScreen() {
     );
   }
 
-  const { organisers: organiser } = fullProfile;
-  const portfolio = fullProfile?.portfolio || [];
-  const pricing = fullProfile?.pricing || [];
-  const coverImage = portfolio?.[0]?.url || 'https://images.unsplash.com/photo-1596704017254-9b1210630b65?w=800';
+  const { profiles: organiser } = fullProfile;
+  const portfolio = Array.isArray(fullProfile?.portfolio) ? fullProfile.portfolio : [];
+  const pricing = (packages || []).length > 0 ? packages.map(pkg => ({
+    id: pkg.id,
+    name: pkg.title || pkg.name,
+    price: pkg.price,
+    description: pkg.description
+  })) : (Array.isArray(fullProfile?.pricing) ? fullProfile.pricing : []);
+  const coverImage = (portfolio || [])?.[0]?.url || fullProfile?.image_url || 'https://images.unsplash.com/photo-1596704017254-9b1210630b65?w=800';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -308,7 +341,7 @@ export default function ServiceDetailScreen() {
                   <Image source={{ uri: item.url }} style={styles.portfolioImage} />
                 </View>
               ))}
-              {portfolio.length === 0 && <Text style={styles.emptyText}>No portfolio images available.</Text>}
+              {(portfolio || []).length === 0 && <Text style={styles.emptyText}>No portfolio images available.</Text>}
             </ScrollView>
           </View>
 
@@ -345,7 +378,7 @@ export default function ServiceDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Contact Information</Text>
             <View style={styles.inputGroup}>
-              <div style={styles.inputRow}>
+              <View style={styles.inputRow}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>Full Name</Text>
                   <TextInput 
@@ -367,7 +400,7 @@ export default function ServiceDetailScreen() {
                     keyboardType="phone-pad"
                   />
                 </View>
-              </div>
+              </View>
 
               <View style={{ marginTop: 12 }}>
                 <Text style={styles.inputLabel}>Email Address</Text>
@@ -417,16 +450,16 @@ export default function ServiceDetailScreen() {
           </View>
 
           {/* Reviews Section */}
-          <View style={[styles.section, { borderBottomWidth: 0, paddingBottom: 100 }]}>
+                          <View style={[styles.section, { borderBottomWidth: 0, paddingBottom: 100 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={styles.sectionTitle}>Customer Reflections</Text>
+              <Text style={styles.sectionTitle}>Reviews & Ratings</Text>
               <TouchableOpacity onPress={() => setIsReviewModalOpen(true)}>
                 <Text style={{ color: Colors.secondary, fontWeight: '800', fontSize: 12 }}>Rate & Review</Text>
               </TouchableOpacity>
             </View>
 
-            {reviews.length > 0 ? (
-              reviews.map((r, i) => (
+            {(reviews || []).length > 0 ? (
+              (reviews || []).map((r, i) => (
                 <View key={i} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
                     <View style={styles.avatarMini}><Text style={styles.avatarText}>{r.user_id[0].toUpperCase()}</Text></View>
@@ -474,7 +507,84 @@ export default function ServiceDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Review Modal and Dropdown Modal are handled here similarly to original code */}
+      {/* Package Selection Modal */}
+      <Modal visible={isDropdownOpen} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setIsDropdownOpen(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Service Tier</Text>
+              <TouchableOpacity onPress={() => setIsDropdownOpen(false)}>
+                <Ionicons name="close" size={24} color={Colors.black} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {(pricing || []).map((pkg, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setSelectedPackage(pkg);
+                    setIsDropdownOpen(false);
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optionName}>{pkg.name}</Text>
+                    {pkg.description && <Text style={styles.optionDesc} numberOfLines={2}>{pkg.description}</Text>}
+                  </View>
+                  <Text style={styles.optionPrice}>₹{pkg.price}</Text>
+                </TouchableOpacity>
+              ))}
+              {(pricing || []).length === 0 && <Text style={styles.emptyText}>No packages available for this artist.</Text>}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Review Submission Modal */}
+      <Modal visible={isReviewModalOpen} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setIsReviewModalOpen(false)} />
+          <View style={[styles.modalContent, { height: 'auto' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Share Reflection</Text>
+              <TouchableOpacity onPress={() => setIsReviewModalOpen(false)}>
+                <Ionicons name="close" size={24} color={Colors.black} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ alignItems: 'center', marginVertical: 20 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <TouchableOpacity key={s} onPress={() => setReviewForm({ ...reviewForm, rating: s })}>
+                    <Ionicons 
+                      name={s <= reviewForm.rating ? "star" : "star-outline"} 
+                      size={32} 
+                      color={s <= reviewForm.rating ? "#fbbf24" : "#e2e8f0"} 
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TextInput
+              style={[styles.input, { height: 120, textAlignVertical: 'top', paddingTop: 12 }]}
+              placeholder="Describe your experience..."
+              value={reviewForm.comment}
+              onChangeText={(v) => setReviewForm({ ...reviewForm, comment: v })}
+              multiline
+            />
+
+            <TouchableOpacity 
+              style={[styles.bookBtn, { marginTop: 24, width: '100%', alignItems: 'center' }]}
+              onPress={handleReviewSubmit}
+              disabled={isSubmittingReview}
+            >
+              {isSubmittingReview ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookBtnText}>Post Reflection</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -601,4 +711,15 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 10, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' },
+  modalOption: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingVertical: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f5f9' 
+  },
+  optionName: { fontSize: 14, fontWeight: '900', color: Colors.black, textTransform: 'uppercase' },
+  optionDesc: { fontSize: 11, color: '#64748b', marginTop: 4, lineHeight: 16 },
+  optionPrice: { fontSize: 16, fontWeight: '900', color: Colors.secondary },
 });

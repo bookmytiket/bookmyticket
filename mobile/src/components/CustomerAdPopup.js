@@ -60,7 +60,7 @@ async function shouldShowPopup(popupId, showEveryMinutes) {
 }
 
 export default function CustomerAdPopup() {
-  const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.eq('status', 'Active'));
+  const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.eq('is_active', true));
   const [currentPopup, setCurrentPopup] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -75,7 +75,7 @@ export default function CustomerAdPopup() {
       // 1. Find all ads eligible to be shown based on their interval
       const eligible = [];
       for (const p of popups) {
-        if (await shouldShowPopup(p._id, p.showEveryMinutes)) {
+        if (await shouldShowPopup(p.id, p.show_every_minutes || 30)) {
           eligible.push(p);
         }
       }
@@ -88,11 +88,11 @@ export default function CustomerAdPopup() {
       // 3. Rotation: Try to pick one that isn't the same as the lastShownId
       let selected = shuffled[0];
       if (shuffled.length > 1) {
-        const different = shuffled.find(p => p._id !== lastId);
+        const different = shuffled.find(p => p.id !== lastId);
         if (different) selected = different;
       }
 
-      const idxInOriginal = popups.findIndex(p => p._id === selected._id);
+      const idxInOriginal = popups.findIndex(p => p.id === selected.id);
       setCurrentPopup(selected);
       setCurrentIndex(idxInOriginal);
       setVisible(true);
@@ -109,13 +109,13 @@ export default function CustomerAdPopup() {
   );
 
   useEffect(() => {
-    if (!activePopups.length) return;
+    if (!activePopups?.length) return;
     const timer = setTimeout(() => {
       findAndShowNext(activePopups);
     }, INITIAL_DELAY_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePopups.length]);
+  }, [activePopups?.length]);
 
   const handleClose = useCallback(async () => {
     // Animate out
@@ -125,7 +125,7 @@ export default function CustomerAdPopup() {
       useNativeDriver: true,
     }).start(async () => {
       if (currentPopup) {
-        await markSeen(currentPopup._id);
+        await markSeen(currentPopup.id);
       }
       setVisible(false);
       slideAnim.setValue(300);
@@ -138,8 +138,8 @@ export default function CustomerAdPopup() {
   }, [currentPopup, activePopups, currentIndex, findAndShowNext, slideAnim]);
 
   const handleCTA = useCallback(async () => {
-    if (currentPopup?.redirectUrl) {
-      const url = currentPopup.redirectUrl;
+    if (currentPopup?.redirect_url) {
+      const url = currentPopup.redirect_url;
       const canOpen = await Linking.canOpenURL(url).catch(() => false);
       if (canOpen) {
         Linking.openURL(url).catch(() =>
@@ -155,7 +155,7 @@ export default function CustomerAdPopup() {
   if (!currentPopup || !visible) return null;
 
   const gradPair = DEFAULT_GRADIENTS[currentIndex % DEFAULT_GRADIENTS.length];
-  const hasImage = !!currentPopup.imageUrl;
+  const hasImage = !!currentPopup.image_url;
 
   return (
     <Modal
@@ -198,7 +198,7 @@ export default function CustomerAdPopup() {
           >
             {hasImage ? (
               <Image
-                source={{ uri: currentPopup.imageUrl }}
+                source={{ uri: currentPopup.image_url }}
                 style={styles.heroImage}
                 resizeMode="cover"
               />
@@ -217,9 +217,9 @@ export default function CustomerAdPopup() {
             {hasImage && <View style={styles.heroOverlay} />}
 
             {/* Badge */}
-            {currentPopup.badgeText ? (
+            {currentPopup.badge_text ? (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{currentPopup.badgeText}</Text>
+                <Text style={styles.badgeText}>{currentPopup.badge_text}</Text>
               </View>
             ) : null}
 
@@ -239,14 +239,14 @@ export default function CustomerAdPopup() {
             ) : null}
 
             {/* CTA */}
-            {currentPopup.redirectUrl ? (
+            {currentPopup.redirect_url ? (
               <TouchableOpacity
                 style={[styles.ctaBtn, { backgroundColor: gradPair[0] }]}
                 onPress={handleCTA}
                 activeOpacity={0.88}
               >
                 <Text style={styles.ctaBtnText}>
-                  {currentPopup.ctaText || 'Book Now'}
+                  {currentPopup.cta_text || 'Book Now'}
                 </Text>
                 <Ionicons name="open-outline" size={18} color="#fff" />
               </TouchableOpacity>
@@ -258,9 +258,9 @@ export default function CustomerAdPopup() {
           </View>
 
           {/* Pagination Dots */}
-          {activePopups.length > 1 && (
+          {(activePopups?.length || 0) > 1 && (
             <View style={styles.dots}>
-              {activePopups.map((_, i) => (
+              {(activePopups || []).map((_, i) => (
                 <View
                   key={i}
                   style={[

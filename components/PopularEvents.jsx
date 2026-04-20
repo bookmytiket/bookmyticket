@@ -95,34 +95,39 @@ export default function PopularEvents({ events }) {
                 </div>
 
                 {/* Grid Container */}
-                <div style={{ display: "flex", flexDirection: "column", gap: list.length > 0 ? "40px" : "0" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: list.length > 0 ? "32px" : "0" }}>
                     {/* Main / Static Events Row */}
-                        <div
+                    <div
                         aria-labelledby="popular-events-heading"
+                        className="events-scroll-container"
                         style={{
                             display: "grid",
                             gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                            gap: "12px",
+                            gap: "16px",
                         }}
                     >
                         {list.filter(e => !e._id).map(event => (
-                            <PopularCard key={event.id} event={event} />
+                            <div key={event.id} className="event-item-wrapper">
+                                <PopularCard event={event} />
+                            </div>
                         ))}
                     </div>
 
                     {/* Organiser Events Row (Convex) */}
                     {list.some(e => e._id) && (
-                        <div style={{ borderTop: "1px solid #eee", paddingTop: "40px" }}>
-                            {/* Title removed per user request */}
+                        <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "32px" }}>
                             <div
+                                className="events-scroll-container"
                                 style={{
                                     display: "grid",
                                     gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                                    gap: "12px",
+                                    gap: "16px",
                                 }}
                             >
                                 {list.filter(e => e._id).map(event => (
-                                    <PopularCard key={event.id} event={event} />
+                                    <div key={event.id} className="event-item-wrapper">
+                                        <PopularCard event={event} />
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -135,6 +140,31 @@ export default function PopularEvents({ events }) {
                     )}
                 </div>
 
+                <style jsx>{`
+                    @media (max-width: 768px) {
+                        .events-scroll-container {
+                            display: flex !important;
+                            flex-wrap: nowrap !important;
+                            overflow-x: auto !important;
+                            overflow-y: hidden;
+                            scroll-snap-type: x mandatory;
+                            padding-bottom: 20px;
+                            margin: 0 -20px;
+                            padding: 0 20px;
+                            gap: 16px !important;
+                            -webkit-overflow-scrolling: touch;
+                        }
+                        
+                        .events-scroll-container::-webkit-scrollbar {
+                            display: none;
+                        }
+
+                        .event-item-wrapper {
+                            flex: 0 0 280px;
+                            scroll-snap-align: start;
+                        }
+                    }
+                `}</style>
             </div>
         </section>
     );

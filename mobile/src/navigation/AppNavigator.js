@@ -93,11 +93,11 @@ export default function AppNavigator() {
             options={{ title: 'Scan Ticket' }}
           />
         )}
-        {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'staff') && (
+        {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'staff' || user?.role === 'vendor') && (
           <Stack.Screen
             name="Management"
             component={ManagementScreen}
-            options={{ title: 'Dashboard' }}
+            options={{ title: 'Professional Hub' }}
           />
         )}
         <Stack.Screen

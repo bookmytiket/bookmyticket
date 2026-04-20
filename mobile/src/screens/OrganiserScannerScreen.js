@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSupabaseMutation } from '../hooks/useSupabase';
-import { supabase } from '../services/supabase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
@@ -71,7 +71,7 @@ export default function OrganiserScannerScreen() {
       const res = await validateScan({
         bookingId: scannedBooking.id,
         eventId: 'manual_or_scan',
-        organiserId: user?.identifier || user?.id,
+        organiserId: user?.id || user?.identifier,
       });
 
       if (res.success) {

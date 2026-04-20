@@ -639,25 +639,40 @@ function OrganiserPanel() {
         const evaluateStateImpl = (isFallback) => {
             if (timeoutId) clearTimeout(timeoutId);
 
-            if (isStaff) {
+            // 1. Staff and Admins bypass onboarding
+            if (isStaff || user?.role === "admin") {
                 setCurrentStage("approved");
-            } else if (!organiserData) {
+                return;
+            }
+
+            // 2. Determine effective data (use local query data with Context data as fallback)
+            const effectiveOrgData = organiserData || (user?.role === "organiser" ? user : null);
+
+            if (!effectiveOrgData) {
                 // No record yet, start KYC
                 console.log("OrganiserPanel: No organiser record found.");
                 setCurrentStage("kyc_start");
-            } else if (isProfessionalService) {
+                return;
+            }
+
+            if (isProfessionalService) {
                 // Already approved as a pro-service
                 setCurrentStage("approved");
                 router.replace("/vendor/dashboard");
+                return;
+            }
+
+            // 3. Status Evaluation
+            const status = (effectiveOrgData.kyc_status || "").toLowerCase();
+            const isApprovedRecord = effectiveOrgData.is_approved === true || effectiveOrgData.isApproved === true;
+
+            if (status === "active" || status === "approved" || status === "kyc verified" || isApprovedRecord) {
+                setCurrentStage("approved");
+            } else if (status === "submitted" || status === "under review" || status === "pending") {
+                setCurrentStage("pending");
             } else {
-                const status = (organiserData.kyc_status || "").toLowerCase();
-                if (status === "active" || status === "approved" || status === "kyc verified") {
-                    setCurrentStage("approved");
-                } else if (status === "submitted" || status === "under review" || status === "pending") {
-                    setCurrentStage("pending");
-                } else {
-                    setCurrentStage("kyc_start");
-                }
+                // Any other status (e.g. "rejected", "incomplete") or missing status goes to onboarding
+                setCurrentStage("kyc_start");
             }
         };
 

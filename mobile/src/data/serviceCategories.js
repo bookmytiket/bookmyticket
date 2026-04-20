@@ -1,13 +1,5 @@
 export const SERVICE_CATEGORIES = [
   {
-    id: "org",
-    name: "Event Organiser",
-    icon: "people",
-    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80",
-    gradient: ['#F43F5E', '#FB7185'],
-    description: "Expert planners for your events"
-  },
-  {
     id: "mehendi",
     name: "Mehendi Artist",
     icon: "brush",

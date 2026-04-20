@@ -115,6 +115,13 @@ main {
   .show-on-mobile {
     display: block !important;
   }
+  .mobile-page-padding {
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 20px)) !important;
+  }
+}
+
+.mobile-page-padding {
+  padding-bottom: 0;
 }
 
 .show-on-mobile {
@@ -346,6 +353,59 @@ textarea {
 #__next-build-watcher,
 nextjs-portal {
   display: none !important;
+}
+
+/* ════════════ MOBILE APP FEEL ════════════ */
+@media (max-width: 768px) {
+  :root {
+    --header-h: 60px;
+  }
+  
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  .site-header {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .header-main {
+    height: 60px !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 16px !important;
+  }
+
+  .header-logo img {
+    height: 40px !important;
+  }
+
+  .header-subnav {
+    display: none !important;
+  }
+
+  /* App-like cards */
+  .event-card-mobile {
+    border-radius: 20px !important;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f1f5f9;
+  }
+  
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ═══════════════════════════════════════════

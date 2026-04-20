@@ -31,13 +31,22 @@ export function AuthProvider({ children }) {
           .select('*')
           .eq('id', session.user.id)
           .single();
+        
+        const role = (profile?.role || 'user').toLowerCase();
+
+        // Security check for organiser on auth state change: 
+        // We allow them to stay logged in for public features, but skip setting professional state
+        if (role === 'organiser') {
+           // We used to sign out here, but it caused login loops. 
+           // Now we just let them stay as a user but blocks professional screens later.
+        }
           
         const authUser = {
           id: session.user.id,
           identifier: session.user.email,
           email: session.user.email,
           name: profile?.name || session.user.user_metadata?.name || 'User',
-          role: profile?.role || 'user',
+          role: role === 'user' ? 'public' : role,
           category: profile?.category
         };
         setUser(authUser);
@@ -96,11 +105,11 @@ export function AuthProvider({ children }) {
   }, [user]);
 
 
-  const login = useCallback(async (identifier, password, manualRole, userData = null) => {
+  const login = useCallback(async (identifier, password, manualRole) => {
     // 1. Admin login remains local/hardcoded for now
     if (manualRole === 'admin') {
       if (identifier === 'bookmyticket-admin' && password === 'D0n+$h@rE2k26') {
-        const mockUser = { identifier, role: 'admin', name: 'Master Admin' };
+        const mockUser = { id: 'admin-id', identifier, role: 'admin', name: 'Master Admin' };
         setUser(mockUser);
         await AsyncStorage.setItem('user', JSON.stringify(mockUser));
         return { success: true, role: 'admin' };
@@ -111,8 +120,26 @@ export function AuthProvider({ children }) {
     // 2. All other roles use Supabase Auth
     try {
       console.log('[DEBUG] Attempting login for:', identifier);
+      
+      const trimmedIdentifier = identifier.trim();
+      let email = trimmedIdentifier;
+      // Handle username login by looking up email in profiles
+      if (!trimmedIdentifier.includes('@')) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('username', trimmedIdentifier)
+          .single();
+        
+        if (profile?.email) {
+          email = profile.email;
+        } else {
+          return { success: false, error: 'Invalid username or email' };
+        }
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier,
+        email: email,
         password: password,
       });
 
@@ -125,19 +152,17 @@ export function AuthProvider({ children }) {
         .eq('id', sessionUser.id)
         .single();
 
-      if (profile?.role === 'organiser') {
-        if (!isServiceProvider(profile.category)) {
-          return { 
-            success: false, 
-            error: 'Please log in through the Web Portal. Mobile access is currently not available for organisers.' 
-          };
-        }
+      const role = (profile?.role || 'user').toLowerCase();
+
+      // Organisers are Web-Only for Management
+      if (role === 'organiser') {
+         // We allow login but inform them about platform restrictions if they try to access Management
       }
 
       const authUser = { 
         id: sessionUser.id,
         identifier: sessionUser.email, 
-        role: profile?.role || 'user', 
+        role: role === 'user' ? 'public' : role, // Alias 'user' to 'public' as requested
         name: profile?.name || sessionUser.user_metadata?.name || 'User', 
         category: profile?.category
       };
@@ -147,7 +172,10 @@ export function AuthProvider({ children }) {
       return { success: true, role: authUser.role };
     } catch (err) {
       console.error('[DEBUG] Login error:', err);
-      return { success: false, error: err.message || 'Invalid credentials' };
+      // Simplify error message for user
+      let msg = err.message || 'Invalid credentials';
+      if (msg.includes('Invalid login credentials')) msg = 'Invalid email or password';
+      return { success: false, error: msg };
     }
   }, []);
 
@@ -170,6 +198,19 @@ export function AuthProvider({ children }) {
       return { success: false, error: err.message };
     }
   }, []);
+
+  const vendorLogin = useCallback(async (identifier, password) => {
+    const res = await login(identifier, password);
+    if (res.success) {
+      // Ensure the user actually has a professional role
+      if (res.role !== 'vendor' && res.role !== 'organiser' && res.role !== 'staff' && res.role !== 'admin') {
+        // Not a professional role
+        await logout();
+        return { success: false, error: 'Access denied. This portal is for professional service providers only.' };
+      }
+    }
+    return res;
+  }, [login, logout]);
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
@@ -205,6 +246,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     login,
+    vendorLogin,
     verifyLoginOTP,
     logout,
     loading,
@@ -213,7 +255,7 @@ export function AuthProvider({ children }) {
     updateCity,
     recentlyViewed,
     addToRecentlyViewed
-  }), [user, login, verifyLoginOTP, logout, loading, selectedCity, locationHierarchy, updateCity, recentlyViewed, addToRecentlyViewed]);
+  }), [user, login, vendorLogin, verifyLoginOTP, logout, loading, selectedCity, locationHierarchy, updateCity, recentlyViewed, addToRecentlyViewed]);
 
 
   return (

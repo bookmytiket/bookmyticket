@@ -15,6 +15,14 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = []) {
     async function fetchData(isRetry = false) {
       if (!isMounted.current) return;
 
+      // Safety check: if any dependency is undefined or an empty string, 
+      // we likely don't have the user ID or required filter yet.
+      // Skipping prevents "invalid input syntax for type uuid: 'undefined'" (22P02)
+      if (deps && deps.some(d => d === undefined || d === 'undefined' || d === '')) {
+        setLoading(false);
+        return;
+      }
+
       const handleContentionError = async (err) => {
         const errMsg = err.message || JSON.stringify(err);
         const isLockError = 
@@ -64,8 +72,9 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = []) {
     const timeoutId = setTimeout(() => fetchData(), jitter);
 
     // Subscribe to changes for reactivity
+    const channelId = `realtime:${table}:${Math.floor(Math.random() * 1000000)}`;
     const channel = supabase
-      .channel(`public:${table}`)
+      .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
         fetchData();
       })

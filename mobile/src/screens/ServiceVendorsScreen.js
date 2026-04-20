@@ -23,8 +23,8 @@ export default function ServiceVendorsScreen() {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   
   // Migrated to Supabase: Fetch vendors by category
-  const { data: vendorsRaw, loading: loadingVendors } = useSupabaseQuery('vendor_profiles', (q) => {
-    let query = q.select('*, organisers:organiser_id(*)');
+  const { data: vendorsRaw, loading: loadingVendors } = useSupabaseQuery('service_providers', (q) => {
+    let query = q.select('*, profiles!organiser_id(*)');
     if (selectedCategory !== "All" && selectedCategory !== "Turf Booking") {
       query = query.eq('category', selectedCategory);
     }
@@ -40,11 +40,12 @@ export default function ServiceVendorsScreen() {
   const mergedItems = useMemo(() => {
     const vList = (vendorsRaw || []).map(v => ({
       id: v.id,
-      name: v.organisers?.name || v.organisers?.full_name || "Vendor",
+      name: v.profiles?.full_name || v.profiles?.name || "Vendor",
       category: v.category,
       bio: v.bio,
       portfolio: v.portfolio || [],
       pricing: v.pricing || [],
+      startingPrice: v.starting_price,
       rating: v.rating || 0,
       reviewsCount: v.reviews_count || 0,
       isTurf: false
@@ -122,7 +123,7 @@ export default function ServiceVendorsScreen() {
       <View style={styles.footer}>
         <View>
           <Text style={styles.priceLabel}>Starting from</Text>
-          <Text style={styles.priceValue}>₹{item.pricing?.[0]?.price || "1,999"}</Text>
+          <Text style={styles.priceValue}>₹{item.startingPrice ? item.startingPrice.toLocaleString() : "1,999"}</Text>
         </View>
         <TouchableOpacity 
           style={styles.viewProfileBtn}

@@ -674,7 +674,7 @@ function AdminHomePage() {
     }, [vendorsOnly]);
 
 
-    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.eq('type', 'professional_service'));
+    const { data: serviceProvidersArr = [] } = useSupabaseQuery('vendors', (q) => q.select('*, profiles:id(email)'));
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
     const { data: usersArr = [] } = useSupabaseQuery('profiles');
@@ -3443,7 +3443,7 @@ function AdminHomePage() {
                                                 <td style={{ padding: "12px", fontWeight: 600 }}>
                                                     {org.business_name || org.name || "Unnamed"}
                                                 </td>
-                                                <td style={{ padding: "12px" }}>{org.email || org.id?.slice(0, 8)}</td>
+                                                <td style={{ padding: "12px" }}>{org.profiles?.email || org.email || org.id?.slice(0, 8)}</td>
                                                 <td style={{ padding: "12px" }}>{org.category || "Professional Service"}</td>
                                                 <td style={{ padding: "12px" }}>
                                                     <div style={{ display: "flex", gap: "8px" }}>
@@ -3914,7 +3914,7 @@ function AdminHomePage() {
                             </div>
 
                             <div style={{ display: "grid", gap: "24px" }}>
-                                {/* Fast2SMS Section */}
+                                {/* SMS Gateway Section */}
                                 <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -3922,37 +3922,86 @@ function AdminHomePage() {
                                                 <Smartphone size={20} />
                                             </div>
                                             <div>
-                                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: 0 }}>Fast2SMS Configuration</h3>
-                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Global SMS gateway settings</p>
+                                                <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, margin: 0 }}>SMS Gateway Configuration</h3>
+                                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Manage Twilio or Fast2SMS integration</p>
                                             </div>
                                         </div>
                                         <div onClick={() => {
-                                            const set = localCommSettings.find(s => s.key === 'fast2sms');
-                                            updateLocalSetting('fast2sms', 'enabled', !set.value.enabled);
-                                        }} style={{ width: "40px", height: "20px", borderRadius: "20px", backgroundColor: localCommSettings.find(s => s.key === 'fast2sms')?.value.enabled ? "#3b82f6" : "#cbd5e1", position: "relative", cursor: "pointer", transition: "0.2s" }}>
-                                            <div style={{ position: "absolute", top: "2px", left: localCommSettings.find(s => s.key === 'fast2sms')?.value.enabled ? "22px" : "2px", width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", transition: "0.2s" }}></div>
+                                            const set = localCommSettings.find(s => s.key === 'sms_settings');
+                                            updateLocalSetting('sms_settings', 'enabled', !set.value.enabled);
+                                        }} style={{ width: "40px", height: "20px", borderRadius: "20px", backgroundColor: localCommSettings.find(s => s.key === 'sms_settings')?.value.enabled ? "#3b82f6" : "#cbd5e1", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                                            <div style={{ position: "absolute", top: "2px", left: localCommSettings.find(s => s.key === 'sms_settings')?.value.enabled ? "22px" : "2px", width: "16px", height: "16px", backgroundColor: "#fff", borderRadius: "50%", transition: "0.2s" }}></div>
                                         </div>
                                     </div>
                                     
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>API Key</label>
-                                            <input 
-                                                type="password"
-                                                value={localCommSettings.find(s => s.key === 'fast2sms')?.value.apiKey || ""}
-                                                onChange={(e) => updateLocalSetting('fast2sms', 'apiKey', e.target.value)}
+                                        <div style={{ gridColumn: "span 2" }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Provider</label>
+                                            <select 
+                                                value={localCommSettings.find(s => s.key === 'sms_settings')?.value.provider || "twilio"}
+                                                onChange={(e) => updateLocalSetting('sms_settings', 'provider', e.target.value)}
                                                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                            />
+                                            >
+                                                <option value="twilio">Twilio (Recommended)</option>
+                                                <option value="fast2sms">Fast2SMS (Legacy)</option>
+                                            </select>
                                         </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Sender ID</label>
-                                            <input 
-                                                type="text"
-                                                value={localCommSettings.find(s => s.key === 'fast2sms')?.value.senderId || ""}
-                                                onChange={(e) => updateLocalSetting('fast2sms', 'senderId', e.target.value)}
-                                                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                            />
-                                        </div>
+
+                                        {localCommSettings.find(s => s.key === 'sms_settings')?.value.provider === 'twilio' ? (
+                                            <>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Account SID</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={localCommSettings.find(s => s.key === 'sms_settings')?.value.accountSid || ""}
+                                                        onChange={(e) => updateLocalSetting('sms_settings', 'accountSid', e.target.value)}
+                                                        placeholder="AC..."
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Auth Token</label>
+                                                    <input 
+                                                        type="password"
+                                                        value={localCommSettings.find(s => s.key === 'sms_settings')?.value.authToken || ""}
+                                                        onChange={(e) => updateLocalSetting('sms_settings', 'authToken', e.target.value)}
+                                                        placeholder="Enter Twilio Auth Token"
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                                <div style={{ gridColumn: "span 2" }}>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>From Phone Number</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={localCommSettings.find(s => s.key === 'sms_settings')?.value.fromNumber || ""}
+                                                        onChange={(e) => updateLocalSetting('sms_settings', 'fromNumber', e.target.value)}
+                                                        placeholder="+1..."
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>API Key</label>
+                                                    <input 
+                                                        type="password"
+                                                        value={localCommSettings.find(s => s.key === 'sms_settings')?.value.apiKey || ""}
+                                                        onChange={(e) => updateLocalSetting('sms_settings', 'apiKey', e.target.value)}
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Sender ID</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={localCommSettings.find(s => s.key === 'sms_settings')?.value.senderId || ""}
+                                                        onChange={(e) => updateLocalSetting('sms_settings', 'senderId', e.target.value)}
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                         <button onClick={handleSaveComm} style={{ gridColumn: "span 2", padding: "10px", borderRadius: "8px", border: "none", background: "#000", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Save & Refresh</button>
                                     </div>
                                 </div>
@@ -3978,16 +4027,42 @@ function AdminHomePage() {
                                     </div>
                                     
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                        <div style={{ gridColumn: "span 2" }}>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>API Key / Token</label>
-                                            <input 
-                                                type="password"
-                                                value={localCommSettings.find(s => s.key === 'whatsapp')?.value.apiKey || ""}
-                                                onChange={(e) => updateLocalSetting('whatsapp', 'apiKey', e.target.value)}
-                                                placeholder="WhatsApp Business Token"
-                                                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                            />
-                                        </div>
+                                        {localCommSettings.find(s => s.key === 'whatsapp')?.value.provider === 'meta' && (
+                                            <div style={{ gridColumn: "span 2" }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>API Key / Token</label>
+                                                <input 
+                                                    type="password"
+                                                    value={localCommSettings.find(s => s.key === 'whatsapp')?.value.apiKey || ""}
+                                                    onChange={(e) => updateLocalSetting('whatsapp', 'apiKey', e.target.value)}
+                                                    placeholder="WhatsApp Business Token"
+                                                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                />
+                                            </div>
+                                        )}
+                                        {localCommSettings.find(s => s.key === 'whatsapp')?.value.provider === 'twilio' && (
+                                            <>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Account SID</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={localCommSettings.find(s => s.key === 'whatsapp')?.value.accountSid || ""}
+                                                        onChange={(e) => updateLocalSetting('whatsapp', 'accountSid', e.target.value)}
+                                                        placeholder="AC..."
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Auth Token</label>
+                                                    <input 
+                                                        type="password"
+                                                        value={localCommSettings.find(s => s.key === 'whatsapp')?.value.authToken || ""}
+                                                        onChange={(e) => updateLocalSetting('whatsapp', 'authToken', e.target.value)}
+                                                        placeholder="Enter Twilio Auth Token"
+                                                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                         <div>
                                             <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Provider</label>
                                             <select 
@@ -3997,21 +4072,38 @@ function AdminHomePage() {
                                             >
                                                 <option value="meta">Meta Cloud API (Official)</option>
                                                 <option value="twilio">Twilio</option>
+                                                <option value="fast2sms">Fast2SMS (Unofficial/Beta)</option>
+                                                <option value="bridge">Custom Bridge (Selenium)</option>
                                                 <option value="gupshup">Gupshup</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Sender Phone ID / Number</label>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Sender Number / ID</label>
                                             <input 
                                                 type="text"
                                                 value={localCommSettings.find(s => s.key === 'whatsapp')?.value.senderNumber || ""}
                                                 onChange={(e) => updateLocalSetting('whatsapp', 'senderNumber', e.target.value)}
-                                                placeholder="e.g. 15551234567"
+                                                placeholder={localCommSettings.find(s => s.key === 'whatsapp')?.value.provider === 'meta' ? "Phone ID" : "+1..."}
                                                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
                                             />
+                                            <p style={{ fontSize: "10px", color: t.textSub, marginTop: "4px" }}>
+                                                {localCommSettings.find(s => s.key === 'whatsapp')?.value.provider === 'meta' ? "💡 Use the 'Phone Number ID' from Meta dashboard." : "💡 Enter the Twilio number or Phone number with country code."}
+                                            </p>
+                                        </div>
+                                        {localCommSettings.find(s => s.key === 'whatsapp')?.value.provider === 'fast2sms' && (
+                                            <div style={{ gridColumn: "span 2" }}>
+                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "6px" }}>Fast2SMS Template ID (Message ID)</label>
+                                                <input 
+                                                    type="text"
+                                                    value={localCommSettings.find(s => s.key === 'whatsapp')?.value.templateId || ""}
+                                                    onChange={(e) => updateLocalSetting('whatsapp', 'templateId', e.target.value)}
+                                                    placeholder="Enter the approved Template ID from Fast2SMS"
+                                                    style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
+                                                />
+                                            </div>
+                                        )}
                                         </div>
                                     </div>
-                                </div>
 
                                 {/* OTP Section */}
                                 <div style={{ backgroundColor: theme === "light" ? "#fff" : t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>

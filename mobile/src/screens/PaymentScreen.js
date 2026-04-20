@@ -41,6 +41,24 @@ export default function PaymentScreen() {
     await new Promise(resolve => setTimeout(resolve, 1800));
     try {
       await callConfirmBooking(bookingId);
+      
+      // Trigger Notification
+      if (booking?.customer_details?.phone) {
+        fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/comm/trigger`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phoneNumber: booking.customer_details.phone,
+            type: 'BOOKING',
+            data: {
+              eventName: displayEvent?.title || 'Event',
+              date: displayEvent?.date || 'TBA',
+              bookingId: bookingId
+            }
+          })
+        }).catch(e => console.error("Notification trigger failed", e));
+      }
+
       setPaymentSuccess(true);
     } catch (err) {
       console.error(err);

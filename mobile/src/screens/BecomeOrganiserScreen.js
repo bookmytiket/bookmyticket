@@ -22,13 +22,17 @@ const CATEGORIES = [...SERVICE_CATEGORIES.map(c => c.name), "Other"];
 const ROLES = ["Organiser", "Individual", "Pvt Ltd", "Others"];
 
 export default function BecomeOrganiserScreen({ navigation }) {
-  const { mutate: submitPartnerRequest } = useSupabaseMutation(async (supabase, data) => await supabase.from('organiser_details').insert([{
-    business_name: `${data.firstName} ${data.lastName}`,
+  const { mutate: submitPartnerRequest } = useSupabaseMutation(async (supabase, data) => await supabase.from('partner_requests').insert([{
+    first_name: data.firstName,
+    last_name: data.lastName,
+    email: data.email,
+    phone: data.phone,
     category: data.category,
-    type: data.type,
-    kyc_status: 'Pending',
-    kyc_details: { email: data.email, phone: data.phone, remarks: data.remarks, role: data.role },
-    is_approved: false
+    role: data.role,
+    remarks: data.remarks,
+    type: "event_organiser",
+    status: 'Pending',
+    kyc_status: 'Not Started'
   }]));
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);

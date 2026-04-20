@@ -12,8 +12,8 @@ export default function WebHeader() {
   const [menuVisible, setMenuVisible] = useState(false);
   const navigation = useNavigation();
 
-  const { data: userBookings } = useSupabaseQuery('bookings', (q) => q.eq('userIdentifier', user?.identifier), [user?.identifier]);
-  const activeMeeting = userBookings.find(b => (b.virtual || b.eventType === "Online" || b.meetingUrl) && b.status !== 'Cancelled');
+  const { data: userBookings } = useSupabaseQuery('bookings', (q) => q.eq('user_id', user?.id || user?.identifier), [user?.id || user?.identifier]);
+  const activeMeeting = userBookings?.find?.(b => (b.virtual || b.eventType === "Online" || b.meetingUrl) && b.status !== 'Cancelled');
 
   const isStaff = user?.role === 'staff';
 

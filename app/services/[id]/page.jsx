@@ -295,7 +295,7 @@ export default function ArtistProfilePage() {
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         // Padding for the start of the month
-        for (let i = 0; i < startDay; i++) days.push(<div key={`pad-${i}`} className="h-10"></div>);
+        for (let i = 0; i < startDay; i++) days.push(<div key={`pad-${i}`} className="h-10 opacity-0"></div>);
 
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -314,38 +314,55 @@ export default function ArtistProfilePage() {
                             setIsCalendarOpen(false);
                         }
                     }}
-                    className={`h-10 w-full flex items-center justify-center text-[13px] font-bold rounded-lg cursor-pointer transition-all
+                    className={`h-10 w-full flex items-center justify-center text-[12px] font-black rounded-xl cursor-pointer transition-all duration-300 relative group
                         ${isUnavailable ? "text-slate-200 cursor-not-allowed" : 
-                          isSelected ? "bg-[#FF5A5F] text-white shadow-md scale-105" : 
-                          isToday ? "border border-[#FF5A5F] text-[#FF5A5F]" : "hover:bg-slate-50 text-slate-600"}`}
+                          isSelected ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20 scale-105 z-10" : 
+                          isToday ? "bg-pink-50 text-[#FF5A5F] ring-1 ring-pink-200" : "hover:bg-slate-50 text-slate-800"}`}
                 >
-                    {day}
+                    <span className="relative z-10">{day}</span>
+                    {isSelected && <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-xl opacity-100" />}
                 </div>
             );
         }
 
         return (
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xl relative z-[100]">
-                <div className="flex items-center justify-between mb-5">
+            <div className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-2xl relative z-[150] animate-in fade-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex flex-col">
-                        <h4 className="font-extrabold text-[15px] text-slate-800">{monthNames[month]} {year}</h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real-time Availability</span>
+                        <h4 className="font-black text-[13px] text-slate-900 uppercase tracking-widest">{monthNames[month]} {year}</h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50"></span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Real-time Availability</span>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={() => setViewDate(new Date(year, month - 1))} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"><ChevronLeft size={18} /></button>
-                        <button type="button" onClick={() => setViewDate(new Date(year, month + 1))} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"><ChevronRight size={18} /></button>
+                    <div className="flex gap-1.5">
+                        <button type="button" onClick={() => setViewDate(new Date(year, month - 1))} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronLeft size={16} /></button>
+                        <button type="button" onClick={() => setViewDate(new Date(year, month + 1))} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronRight size={16} /></button>
                     </div>
                 </div>
-                <div className="grid grid-cols-7 gap-1 mb-2">
+                <div className="grid grid-cols-7 gap-1 mb-3">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                        <div key={`${d}-${i}`} className="h-8 flex items-center justify-center text-[10px] font-black text-slate-300 tracking-widest">{d}</div>
+                        <div key={`${d}-${i}`} className="h-8 flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-tighter">{d}</div>
                     ))}
                 </div>
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-1.5">
                     {days}
+                </div>
+                <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-center">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-100"></div>
+                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Available</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
+                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Today</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Past</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

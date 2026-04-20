@@ -173,11 +173,31 @@ serve(async (req) => {
       if (organiserEmail) await sendMultiEmail([organiserEmail], orgSubject, orgHtml);
     }
 
+    // 5. PROFILES (Welcome Email)
+    if (table === 'profiles' && type === 'INSERT') {
+      const { email, full_name } = record;
+      const subject = "Welcome to BookMyTicket! 🎉";
+      const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f1f5f9; border-radius: 24px; padding: 40px; background: #fff;">
+          <h2 style="color: #1e293b;">Welcome to BookMyTicket!</h2>
+          <p>Hi ${full_name || 'there'},</p>
+          <p>Your account has been successfully created. We're excited to have you on board!</p>
+          <p>Start exploring amazing events and professional services curated just for you.</p>
+          <div style="margin: 30px 0;">
+            <a href="https://bookmyticket.net" style="background: #ec4899; color: white; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-weight: bold;">Explore Events</a>
+          </div>
+          <p style="color: #64748b; font-size: 13px;">If you have any questions, just reply to this email.</p>
+        </div>
+      `;
+      await sendMultiEmail([email], subject, html);
+    }
+
     // 4. VENDOR BOOKINGS
     else if (table === 'vendor_bookings') {
       const isConfirmed = (record.status === 'confirmed' || record.status === 'Confirmed') && 
                           (type === 'INSERT' || (old_record?.status !== 'confirmed' && old_record?.status !== 'Confirmed'));
-      if (!isConfirmed) return new Response("Vendor booking not confirmed, skipping", { status: 200 });
+      
+      const isRequested = (type === 'INSERT' && (record.status === 'pending' || record.status === 'Pending'));
 
       const { id, vendor_id, service_type, booking_date, total_amount, customer_details, customer_name, customer_email } = record;
       const { data: vendorProfile } = await supabaseAdmin.from('profiles').select('email').eq('id', vendor_id).maybeSingle();
@@ -186,14 +206,26 @@ serve(async (req) => {
       const userName = customer_name || customer_details?.name || 'Customer';
       const vendorEmail = vendorProfile?.email;
 
-      const userSubject = "Booking Confirmed";
-      const userHtml = `<h2>Service Booking Confirmed</h2><p>Your booking for <strong>${service_type}</strong> on ${booking_date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+      if (isConfirmed) {
+        const userSubject = "Booking Confirmed - BookMyTicket";
+        const userHtml = `<h2>Service Booking Confirmed</h2><p>Your booking for <strong>${service_type}</strong> on ${booking_date} is confirmed.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
 
-      const vendorSubject = "New Booking Received";
-      const vendorHtml = `<h2>New Booking</h2><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p>`;
+        const vendorSubject = "New Booking Confirmed";
+        const vendorHtml = `<h2>Booking Confirmed</h2><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p>`;
 
-      await sendMultiEmail([userEmail], userSubject, userHtml);
-      if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+        await sendMultiEmail([userEmail], userSubject, userHtml);
+        if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+      } 
+      else if (isRequested) {
+        const userSubject = "Booking Request Sent";
+        const userHtml = `<h2>Request Received</h2><p>Your request for <strong>${service_type}</strong> on ${booking_date} has been sent to the professional.</p><p>You will receive a confirmation email once they approve your request.</p><p>Amount: ₹${total_amount}<br/>ID: ${id}</p>`;
+
+        const vendorSubject = "New Service Request - Action Required";
+        const vendorHtml = `<h2>Action Required: New Request</h2><p>You have received a new booking request.</p><p><strong>User:</strong> ${userName}<br/><strong>Service:</strong> ${service_type}<br/><strong>Date:</strong> ${booking_date}<br/><strong>ID:</strong> ${id}</p><p><a href="https://bookmyticket.net/vendor/bookings">Review and Confirm Request</a></p>`;
+
+        await sendMultiEmail([userEmail], userSubject, userHtml);
+        if (vendorEmail) await sendMultiEmail([vendorEmail], vendorSubject, vendorHtml);
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {

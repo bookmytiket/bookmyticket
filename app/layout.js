@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import CustomerAdPopup from '@/components/CustomerAdPopup';
+import MobileBottomNav from '@/components/MobileBottomNav';
 
 export const metadata = {
   title: 'BookMyTicket - Event Booking, Turf & Services Platform',
@@ -12,6 +13,14 @@ export const metadata = {
   alternates: {
     canonical: '/',
   },
+  themeColor: '#000000',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'BookMyTicket',
+  },
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   openGraph: {
     title: 'BookMyTicket',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
@@ -81,7 +90,10 @@ export default function RootLayout({ children }) {
                   <CustomerAdPopup />
                   <ToastContainer />
                   <ChangePasswordModal />
-                  {children}
+                  <section style={{ paddingBottom: '70px' }} className="mobile-page-padding">
+                    {children}
+                  </section>
+                  <MobileBottomNav />
                 </Suspense>
               </MaintenanceGuard>
             </AuthProvider>

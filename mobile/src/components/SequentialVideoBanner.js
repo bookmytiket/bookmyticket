@@ -23,9 +23,9 @@ export default function SequentialVideoBanner() {
 
     const videoRef = useRef(null);
 
-    // Initial configuration of audio to allow playback without ringtone interrupting
+    // Initial configuration and subscription
     useEffect(() => {
-        const setAudioParams = async () => {
+        const setup = async () => {
             try {
                 await Audio.setAudioModeAsync({
                     playsInSilentModeIOS: true,
@@ -37,12 +37,12 @@ export default function SequentialVideoBanner() {
                 console.warn(e);
             }
         };
-        setAudioParams();
+        setup();
     }, []);
 
-    // Load and optionally shuffle playlist
+    // Handle Initial Load
     useEffect(() => {
-        if (banners !== undefined) {
+        if (banners !== undefined && banners !== null) {
             // Setup playlist
             if (banners.length === 0) {
                 setPlaylist([]);
@@ -66,11 +66,12 @@ export default function SequentialVideoBanner() {
 
     // Handle Image display duration manually if it's an image
     useEffect(() => {
-        if (!playlist || playlist.length === 0) return;
+        if (!playlist?.length) return;
         
         const currentBanner = playlist[currentIndex];
+        if (!currentBanner) return;
+
         let timer;
-        
         if (currentBanner.type === "image") {
             // Show image for 5 seconds before moving to next
             timer = setTimeout(() => {

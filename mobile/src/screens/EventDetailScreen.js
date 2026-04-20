@@ -41,10 +41,10 @@ export default function EventDetailScreen() {
   }, [eventId, routeEvent, convexEvents]);
 
   const { data: access } = useSupabaseQuery('bookings', (q) => 
-    event?.id && user?.identifier 
-      ? q.eq('event_id', event.id).eq('email', user.identifier).eq('status', 'Confirmed').single()
+    event?.id && user?.id
+      ? q.eq('event_id', event.id).eq('user_id', user.id).eq('status', 'Confirmed').single()
       : q.eq('id', 'none'),
-    [event?.id, user?.identifier]
+    [event?.id, user?.id]
   );
 
   React.useEffect(() => {
@@ -70,9 +70,9 @@ export default function EventDetailScreen() {
       return;
     }
     
-    const isSeating = event.seatingEnabled !== false && 
-                     Array.isArray(event.seatCategories) && 
-                     event.seatCategories.length > 0 && 
+    const isSeating = (event.seating_enabled ?? event.seatingEnabled) !== false && 
+                     Array.isArray(event.seat_categories || event.seatCategories) && 
+                     (event.seat_categories || event.seatCategories).length > 0 && 
                      Number(event.cols) > 0;
 
     if (isSeating) {

@@ -165,8 +165,8 @@ export default function HomeScreen() {
       let dateStr = ev?.date;
       let timeStr = ev?.time;
 
-      if (isMeeting && !dateStr && ev?.createdAt) {
-        const d = new Date(ev.createdAt);
+      if (isMeeting && !dateStr && ev?.created_at) {
+        const d = new Date(ev.created_at);
         dateStr = d.toLocaleDateString('en-GB'); // DD/MM/YYYY
         timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       }
@@ -213,8 +213,8 @@ export default function HomeScreen() {
       if (ev.endDateTime && now.getTime() > ev.endDateTime) return false;
 
       // 24-hour expiration for standalone meetings without endDateTime
-      if (ev.isMeeting && !ev.endDateTime && ev.createdAt) {
-          const expirationTime = ev.createdAt + (24 * 60 * 60 * 1000); 
+      if (ev.isMeeting && !ev.endDateTime && ev.created_at) {
+          const expirationTime = new Date(ev.created_at).getTime() + (24 * 60 * 60 * 1000); 
           if (now.getTime() > expirationTime) return false;
       }
 

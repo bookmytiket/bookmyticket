@@ -181,7 +181,7 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
             padding: "20px",
             backdropFilter: "blur(8px)"
         }}>
-            <div style={{
+            <div className="partner-modal-card" style={{
                 background: "rgba(255, 255, 255, 0.15)",
                 backdropFilter: "blur(40px) saturate(150%)",
                 WebkitBackdropFilter: "blur(40px) saturate(150%)",
@@ -193,10 +193,25 @@ export default function BecomePartnerModal({ isOpen, onClose }) {
                 animation: "liquidIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
             }}>
                 <style>{`
-                    @keyframes liquidIn { 
-                        from { opacity: 0; transform: scale(0.9) translateY(20px); filter: blur(10px); } 
-                        to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } 
+                    @media (max-width: 768px) {
+                        .partner-modal-card {
+                            border-radius: 32px 32px 0 0 !important;
+                            position: fixed !important;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            max-width: none !important;
+                            animation: slideSheet 0.5s cubic-bezier(0.32, 0.72, 0, 1) !important;
+                            padding-bottom: env(safe-area-inset-bottom, 20px);
+                            max-height: 90vh;
+                            overflow-y: auto;
+                        }
+                        @keyframes slideSheet {
+                            from { transform: translateY(100%); }
+                            to { transform: translateY(0); }
+                        }
                     }
+
                     .partner-input { 
                         width: 100%; 
                         border: 1.5px solid rgba(15, 23, 42, 0.08); 

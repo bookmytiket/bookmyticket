@@ -1,5 +1,4 @@
 export const SERVICE_CATEGORIES = [
-  "Event Organiser",
   "Mehendi Artist",
   "Photographer/Studio",
   "Makeup Artist",

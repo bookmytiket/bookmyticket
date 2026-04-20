@@ -44,7 +44,7 @@ export default function TurfDetailScreen() {
   );
 
   // Migrated to Supabase: Reserve slot
-  const { mutate: reserveSlot } = useSupabaseMutation('turf_bookings');
+  const { mutate: reserveSlot } = useSupabaseMutation((s, data) => s.from('turf_bookings').insert(data));
 
   if (loadingTurf) {
     return (
@@ -63,7 +63,7 @@ export default function TurfDetailScreen() {
   }
 
   const currentDayOfWeek = new Date(selectedDate).getDay();
-  const daySlots = slots.filter(s => s.day_of_week === currentDayOfWeek).sort((a,b) => a.start_time.localeCompare(b.start_time));
+  const daySlots = (slots || []).filter(s => s.day_of_week === currentDayOfWeek).sort((a,b) => a.start_time.localeCompare(b.start_time));
 
   const calculateTotal = () => {
     if (!selectedSlot || !turf) return 0;
@@ -193,7 +193,7 @@ export default function TurfDetailScreen() {
           {daySlots.length === 0 ? (
             <Text style={styles.noSlots}>No slots available on this day.</Text>
           ) : (
-            <div style={styles.slotsGrid}>
+            <View style={styles.slotsGrid}>
               {daySlots.map((slot) => {
                 const isSelected = selectedSlot?.id === slot.id;
                 return (
@@ -211,7 +211,7 @@ export default function TurfDetailScreen() {
                   </TouchableOpacity>
                 )
               })}
-            </div>
+            </View>
           )}
 
           <Text style={styles.sectionTitle}>Number of Players (Optional)</Text>

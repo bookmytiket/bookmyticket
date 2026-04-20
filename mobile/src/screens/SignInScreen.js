@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
 import { HERO_BANNER_SLIDES } from '../data/homeEvents';
-import { hashPassword } from '../utils/hashPassword';
 
 const { width } = Dimensions.get('window');
 
@@ -16,7 +15,7 @@ export default function SignInScreen() {
   console.log('!!!!!!! [CRITICAL] SIGN IN SCREEN LOADED - VERSION 8 !!!!!!!');
   const { login, verifyLoginOTP, selectedCity } = useAuth();
   const navigation = useNavigation();
-  const API_URL = 'https://bookmyticket.net/api';
+  const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
   const [mode, setMode] = useState('signin');
   const [identifier, setIdentifier] = useState('');
@@ -45,6 +44,7 @@ export default function SignInScreen() {
   const [signupUsername, setSignupUsername] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPass, setSignupPass] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
   const [signupStep, setSignupStep] = useState(1); // 1: Email, 2: OTP, 3: Details
   const [otpCode, setOtpCode] = useState('');
   const [loginStep, setLoginStep] = useState(1); // 1: Password, 2: OTP
@@ -79,25 +79,11 @@ export default function SignInScreen() {
   const handleLogin = async () => {
     setError('');
     setLoading(true);
-    const rawId = identifier.trim();
-    const id = rawId.toLowerCase();
+    const id = identifier.trim();
 
     try {
-      const hashed = await hashPassword(password);
-
-      // Handle Admin separately as it's not in the unified backend yet
-      if (rawId === 'bookmyticket-admin') {
-        const res = await login(rawId, password, 'admin');
-        if (res.success) {
-          navigation.goBack();
-          return;
-        }
-        setError(res.error);
-        return;
-      }
-
       // Unified Login for all other roles
-      const res = await login(id, hashed);
+      const res = await login(id, password, id === 'bookmyticket-admin' ? 'admin' : undefined);
       
       if (res.success) {
         if (res.needsOtp) {
@@ -113,11 +99,31 @@ export default function SignInScreen() {
           });
           return;
         } 
+
+        if (res.role === 'vendor' || res.role === 'admin') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Management' }],
+          });
+          return;
+        }
         
         if (!selectedCity) {
-          navigation.navigate('Location');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Location' }],
+          });
         } else {
-          navigation.goBack();
+          // If they came from a specific page (e.g. checkout), go back. 
+          // Otherwise, go to MainTabs.
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+          }
         }
         return;
       }
@@ -147,11 +153,29 @@ export default function SignInScreen() {
           });
           return;
         }
+
+        if (res.role === 'vendor' || res.role === 'admin') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Management' }],
+          });
+          return;
+        }
         
         if (!selectedCity) {
-          navigation.navigate('Location');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Location' }],
+          });
         } else {
-          navigation.goBack();
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+          }
         }
         return;
       }
@@ -210,7 +234,7 @@ export default function SignInScreen() {
 
   const handleFinalSignUp = async () => {
     setError('');
-    if (!signupName.trim() || !signupUsername.trim() || !signupPass.trim()) {
+    if (!signupName.trim() || !signupUsername.trim() || !signupPass.trim() || !signupPhone.trim()) {
       setError('Please fill all fields.');
       return;
     }
@@ -220,7 +244,6 @@ export default function SignInScreen() {
     }
     setLoading(true);
     try {
-      const hashed = await hashPassword(signupPass);
       const res = await fetch(`${API_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -229,7 +252,8 @@ export default function SignInScreen() {
           code: otpCode,
           fullName: signupName.trim(),
           username: signupUsername.trim().toLowerCase(),
-          password: hashed,
+          password: signupPass.trim(),
+          phone: signupPhone.trim(),
         })
       });
       if (!res.ok) throw new Error('Signup failed on server');
@@ -454,6 +478,14 @@ export default function SignInScreen() {
                       value={signupUsername}
                       onChangeText={setSignupUsername}
                       autoCapitalize="none"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Phone Number"
+                      placeholderTextColor="#9ca3af"
+                      value={signupPhone}
+                      onChangeText={setSignupPhone}
+                      keyboardType="phone-pad"
                     />
                     <TextInput
                       style={styles.input}

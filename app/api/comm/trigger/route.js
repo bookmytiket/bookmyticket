@@ -9,6 +9,7 @@ export async function POST(req) {
 
         if (type === "BOOKING") {
             message = `Booking Confirmed! Event: ${data.eventName}. Date: ${data.date}. Booking ID: ${data.bookingId}. Thanks for choosing BookMyTicket!`;
+            isWhatsAppEligible = true;
         } else if (type === "CANCELLATION") {
             message = `Your booking for ${data.eventName} (${data.bookingId}) has been cancelled successfully.`;
         } else if (type === "OTP") {

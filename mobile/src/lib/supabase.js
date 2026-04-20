@@ -2,8 +2,14 @@ import 'react-native-get-random-values';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const supabaseUrl = 'https://yayrfycnmbpeeintfcvf.supabase.co';
-const supabaseAnonKey = 'sb_publishable_uDGW5qXObQq5NseQGJVwTQ_ZgIur68-';
+import { ENV } from '../config/env';
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || ENV.SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ENV.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('[CRITICAL] Supabase URL or Anon Key is missing from both environment and fallback config!');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
