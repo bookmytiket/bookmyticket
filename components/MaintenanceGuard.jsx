@@ -28,16 +28,19 @@ export default function MaintenanceGuard({ children }) {
 
             try {
                 const { data, error } = await supabase
-                    .from('systemConfig')
-                    .select('maintenance_mode')
+                    .from('system_config')
+                    .select('value')
+                    .eq('key', 'maintenance_mode')
                     .maybeSingle();
 
-                if (data?.maintenance_mode) {
+                if (data?.value?.maintenance_mode) {
                     // Check if current user is admin
                     if (!user || user.role !== 'admin') {
                         setMaintenanceActive(true);
+                        console.log(`[MaintenanceGuard] Redirecting to /maintenance from ${pathname}`);
                         router.replace('/maintenance');
                     } else {
+                        console.log(`[MaintenanceGuard] Admin bypass for maintenance on ${pathname}`);
                         setMaintenanceActive(false);
                     }
                 } else {

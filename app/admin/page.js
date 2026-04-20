@@ -34,24 +34,34 @@ const NavIcon = ({ icon: Icon, size = 18, color }) => (
 );
 
 const useSupabaseConfig = (table, initialValue) => {
-    const { data } = useSupabaseQuery(table);
-    const [updateConfig] = useSupabaseMutation(table, 'update', (q, p) => q.eq('id', p.id));
+    const { key } = initialValue || {};
+    const { data } = useSupabaseQuery(table, (q) => key ? q.eq('key', key) : q, [key]);
+    const [updateConfig] = useSupabaseMutation(table, 'update', (q, p) => p.id ? q.eq('id', p.id) : (key ? q.eq('key', key) : q));
 
-    const config = data && data[0] ? data[0] : initialValue;
+    const rawData = data && data[0] ? data[0] : initialValue;
+    const config = (table === 'system_config' && rawData?.value) 
+        ? { ...rawData, ...rawData.value } 
+        : rawData;
 
     const setConfig = async (newValue) => {
         const payload = typeof newValue === 'function' ? newValue(config) : newValue;
-        if (config.id || config.key) {
-            const updatePayload = { ...payload };
-            if (config.id) updatePayload.id = config.id;
-            if (config.key) updatePayload.key = config.key;
-            // Clean up undefined fields to avoid "column does not exist" errors
-            Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
+        const isKeyValueTable = table === 'system_config';
+        
+        if (config.id || (isKeyValueTable && key)) {
+            let updatePayload;
+            if (isKeyValueTable) {
+                const { id: _, key: __, value: ___, updated_at: ____, ...rest } = payload;
+                updatePayload = { key, value: rest };
+                if (config.id) updatePayload.id = config.id;
+            } else {
+                updatePayload = { ...payload };
+                if (config.id) updatePayload.id = config.id;
+            }
             
+            Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
             await updateConfig(updatePayload);
         } else {
-            // Logic for insert if needed
-            await supabase.from(table).insert(payload);
+            await supabase.from(table).insert(isKeyValueTable ? { key, value: payload } : payload);
         }
     };
 
@@ -513,7 +523,8 @@ function AdminHomePage() {
         subtitle: "Explore concerts, shows, nightlife, and exclusive experiences happening around you.",
     });
 
-    const [maintenanceConfig, setMaintenanceConfig] = useSupabaseConfig("systemConfig", {
+    const [maintenanceConfig, setMaintenanceConfig] = useSupabaseConfig("system_config", {
+        key: 'maintenance_mode',
         maintenance_mode: false,
         maintenance_message: "We're upgrading your experience. Please check back soon!"
     });

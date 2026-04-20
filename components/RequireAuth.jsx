@@ -36,12 +36,15 @@ export default function RequireAuth({ children, allowedRoles }) {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(buildRedirectUrl(pathname, searchParams));
+      const dest = buildRedirectUrl(pathname, searchParams);
+      console.log(`[RequireAuth] No user found on ${pathname}. Redirecting to ${dest}`);
+      router.replace(dest);
       return;
     }
 
     // SPECIAL CASE: Staff users are ONLY allowed on /pwa-scan
     if (user.role === "staff" && pathname !== "/pwa-scan") {
+      console.log(`[RequireAuth] Staff user on ${pathname}. Redirecting to /pwa-scan`);
       router.replace("/pwa-scan");
       return;
     }

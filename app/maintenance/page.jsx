@@ -13,13 +13,16 @@ export default function MaintenancePage() {
     useEffect(() => {
         const checkStatus = async () => {
             const { data, error } = await supabase
-                .from('systemConfig')
-                .select('maintenance_mode, maintenance_message')
+                .from('system_config')
+                .select('value')
+                .eq('key', 'maintenance_mode')
                 .maybeSingle();
+            
+            const config = data?.value;
 
-            if (data) {
-                setMessage(data.maintenance_message);
-                if (!data.maintenance_mode) {
+            if (config) {
+                setMessage(config.maintenance_message);
+                if (!config.maintenance_mode) {
                     router.push('/');
                 }
             }
@@ -32,8 +35,8 @@ export default function MaintenancePage() {
 
     const handleManualRefresh = async () => {
         setIsChecking(true);
-        const { data } = await supabase.from('systemConfig').select('maintenance_mode').maybeSingle();
-        if (data && !data.maintenance_mode) {
+        const { data } = await supabase.from('system_config').select('value').eq('key', 'maintenance_mode').maybeSingle();
+        if (data?.value && !data.value.maintenance_mode) {
             router.push('/');
         } else {
             setTimeout(() => setIsChecking(false), 1000);
