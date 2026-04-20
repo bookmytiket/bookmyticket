@@ -45,9 +45,9 @@ export function AuthProvider({ children }) {
           id: session.user.id,
           identifier: session.user.email,
           email: session.user.email,
-          name: profile?.name || session.user.user_metadata?.name || 'User',
+          name: profile?.full_name || profile?.name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
           role: role === 'user' ? 'public' : role,
-          category: profile?.category
+          ...(profile || {}),
         };
         setUser(authUser);
         await AsyncStorage.setItem('user', JSON.stringify(authUser));
@@ -162,16 +162,16 @@ export function AuthProvider({ children }) {
       const authUser = { 
         id: sessionUser.id,
         identifier: sessionUser.email, 
-        role: role === 'user' ? 'public' : role, // Alias 'user' to 'public' as requested
-        name: profile?.name || sessionUser.user_metadata?.name || 'User', 
-        category: profile?.category
+        role: role === 'user' ? 'public' : role,
+        name: profile?.full_name || profile?.name || sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || 'User', 
+        ...(profile || {}),
       };
       
       setUser(authUser);
       await AsyncStorage.setItem('user', JSON.stringify(authUser));
       return { success: true, role: authUser.role };
     } catch (err) {
-      console.error('[DEBUG] Login error:', err);
+      // console.error('[DEBUG] Login error:', err); // Suppress for cleaner UI
       // Simplify error message for user
       let msg = err.message || 'Invalid credentials';
       if (msg.includes('Invalid login credentials')) msg = 'Invalid email or password';

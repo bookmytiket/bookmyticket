@@ -60,6 +60,19 @@ export default function WebHeader() {
                 <Ionicons name="person-outline" size={20} color={Colors.text} />
                 <Text style={styles.menuItemText}>Profile</Text>
               </TouchableOpacity>
+
+              {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'vendor') && (
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => {
+                    setMenuVisible(false);
+                    Linking.openURL('https://bookmyticket.net/organiser');
+                  }}
+                >
+                  <Ionicons name="globe-outline" size={20} color={Colors.primary} />
+                  <Text style={[styles.menuItemText, { color: Colors.primary }]}>Web Portal</Text>
+                </TouchableOpacity>
+              )}
               
               {activeMeeting && (
                 <TouchableOpacity 

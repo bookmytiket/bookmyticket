@@ -32,18 +32,24 @@ export default function ProfileScreen() {
     ...(eventBookingsList || []).map(b => ({ 
       ...b, 
       bookingType: 'event', 
-      eventName: b.events?.title || 'Event' 
+      eventName: b.events?.title || 'Event',
+      date: b.events?.date || b.date,
+      totalPrice: b.total_price || b.totalPrice || 0
     })),
     ...(vendorBookingsList || []).map(b => ({ 
       ...b, 
       bookingType: 'vendor', 
-      eventName: b.service_type || 'Service' 
+      eventName: b.service_type || 'Service',
+      date: b.booking_date,
+      totalPrice: b.total_amount || b.total_price || 0 
     })),
     ...(turfBookingsList || []).map(b => ({ 
       ...b, 
       bookingType: 'turf', 
       eventName: b.turfs?.name || 'Turf', 
-      ticketCount: b.participant_count || 1 
+      ticketCount: b.participant_count || 1,
+      date: b.date || b.slot_time,
+      totalPrice: b.totalPrice || b.amount || 0
     })),
   ].sort((a, b) => {
     const dateA = a.created_at;
@@ -89,16 +95,29 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>{(user?.name || 'U')[0]}</Text>
         </LinearGradient>
         <Text style={styles.name}>{user?.name || 'User'}</Text>
+        {user?.username && <Text style={{ color: Colors.secondary, fontWeight: '700', marginBottom: 4 }}>@{user.username}</Text>}
         <Text style={styles.role}>{user?.role || 'public'}</Text>
 
-        {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'vendor') && (
-          <TouchableOpacity 
-            style={styles.actionBtn} 
-            onPress={() => navigation.navigate('Management')}
-          >
-            <Ionicons name="grid-outline" size={20} color={Colors.secondary} />
-            <Text style={styles.actionText}>Professional Hub</Text>
-          </TouchableOpacity>
+        {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'vendor' || user?.role === 'organiser') && (
+          <>
+            <TouchableOpacity 
+              style={styles.actionBtn} 
+              onPress={() => navigation.navigate('Management')}
+            >
+              <Ionicons name="grid-outline" size={20} color={Colors.secondary} />
+              <Text style={styles.actionText}>Professional Hub</Text>
+            </TouchableOpacity>
+
+            {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'vendor') && (
+              <TouchableOpacity 
+                style={[styles.actionBtn, { borderColor: Colors.primary }]} 
+                onPress={() => Linking.openURL('https://bookmyticket.net/organiser')}
+              >
+                <Ionicons name="globe-outline" size={20} color={Colors.primary} />
+                <Text style={[styles.actionText, { color: Colors.primary }]}>Go to Web Portal</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
 
         {/* Action bounds for normal users to become partners */}
@@ -239,6 +258,15 @@ export default function ProfileScreen() {
                   )}
                 </View>
               )}
+            </View>
+            
+            <View style={[styles.modalStatusBadge, { 
+                backgroundColor: selectedTicket?.status === 'Confirmed' ? '#ecfdf5' : '#fef2f2',
+                borderColor: selectedTicket?.status === 'Confirmed' ? '#10b981' : '#ef4444'
+            }]}>
+              <Text style={[styles.modalStatusText, { color: selectedTicket?.status === 'Confirmed' ? '#059669' : '#b91c1c' }]}>
+                {selectedTicket?.status || 'Pending'}
+              </Text>
             </View>
 
             <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
@@ -474,4 +502,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
+  modalStatusBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  modalStatusText: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
 });

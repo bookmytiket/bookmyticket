@@ -80,6 +80,13 @@ export default function SignInScreen() {
     setError('');
     setLoading(true);
     const id = identifier.trim();
+    
+    // Check for common typos (as seen in user feedback with .vom)
+    if (id.toLowerCase().endsWith('.vom')) {
+      setError('Typo detected: Did you mean ".com"?');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Unified Login for all other roles
@@ -100,7 +107,7 @@ export default function SignInScreen() {
           return;
         } 
 
-        if (res.role === 'vendor' || res.role === 'admin') {
+        if (res.role === 'vendor' || res.role === 'admin' || res.role === 'organiser') {
           navigation.reset({
             index: 0,
             routes: [{ name: 'Management' }],
@@ -154,7 +161,7 @@ export default function SignInScreen() {
           return;
         }
 
-        if (res.role === 'vendor' || res.role === 'admin') {
+        if (res.role === 'vendor' || res.role === 'admin' || res.role === 'organiser') {
           navigation.reset({
             index: 0,
             routes: [{ name: 'Management' }],

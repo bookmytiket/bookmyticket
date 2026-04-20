@@ -56,13 +56,13 @@ export default function ServiceDetailScreen() {
   );
 
   // Migrated to Supabase: Fetch availability
-  const { data: availabilityData } = useSupabaseQuery('"vendorBookings"', (q) => 
+  const { data: availabilityData } = useSupabaseQuery('vendor_bookings', (q) => 
     vendorId ? q.select('booking_date').eq('vendor_id', vendorId).in('status', ['Confirmed', 'Scanned']) : q.select('*').limit(0),
     [vendorId]
   );
 
   // Migrated to Supabase: Fetch service tiers (Packages)
-  const { data: packages = [] } = useSupabaseQuery('"artistPackages"', (q) => 
+  const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => 
     vendorId ? q.select('*').eq('vendor_id', vendorId) : q.select('*').limit(0),
     [vendorId]
   );
@@ -73,16 +73,16 @@ export default function ServiceDetailScreen() {
   };
 
   // Migrated to Supabase: Create booking
-  const { mutate: createBooking } = useSupabaseMutation((s, data) => s.from('"vendorBookings"').insert(data));
+  const { mutate: createBooking } = useSupabaseMutation((s, data) => s.from('vendor_bookings').insert(data));
 
   // Migrated to Supabase: Fetch reviews
-  const { data: reviews = [] } = useSupabaseQuery('"vendorReviews"', (q) => 
+  const { data: reviews = [] } = useSupabaseQuery('vendor_reviews', (q) => 
     vendorId ? q.select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false }) : q.select('*').limit(0),
     [vendorId]
   );
 
   // Migrated to Supabase: Submit review
-  const { mutate: submitReview } = useSupabaseMutation((s, data) => s.from('"vendorReviews"').insert(data));
+  const { mutate: submitReview } = useSupabaseMutation((s, data) => s.from('vendor_reviews').insert(data));
 
   const handleReviewSubmit = async () => {
     if (!user) {

@@ -56,24 +56,7 @@ export default function ManagementScreen() {
   const isOrganiser = user?.role === 'organiser';
   const isVendor = user?.role === 'vendor' || isServiceProvider(user?.category);
 
-  if (!authLoading && isOrganiser && !isStaff && !isAdmin) {
-    return (
-      <View style={styles.blockContainer}>
-        <View style={styles.blockHeader}>
-            <Ionicons name="desktop-outline" size={80} color={Colors.secondary} />
-            <Text style={styles.blockTitle}>Web Access Only</Text>
-            <Text style={styles.blockText}>
-              To provide the best management tools, the Event Organiser Panel is exclusively available on our Web Portal.
-            </Text>
-            <Text style={styles.blockDomain}>bookmyticket.net</Text>
-        </View>
-        <TouchableOpacity style={styles.blockBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="home-outline" size={20} color="#fff" />
-          <Text style={styles.blockBtnText}>Return to Mobile App</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+
 
   const [activeTab, setActiveTab] = useState(isStaff ? 'scans' : isVendor ? 'hub' : 'events');
   const [replyingTo, setReplyingTo] = useState(null);
@@ -273,23 +256,7 @@ export default function ManagementScreen() {
     );
   }
 
-  if (isOrganiser && !isVendor) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
-        <Ionicons name="lock-closed" size={80} color={Colors.secondary} />
-        <Text style={[styles.title, { textAlign: 'center', marginTop: 24, color: Colors.text }]}>Access Restricted</Text>
-        <Text style={[styles.sub, { textAlign: 'center', marginTop: 12, fontSize: 16, color: '#64748b' }]}>
-          Please log in through the Web Portal. Mobile access is currently not available for Event Organisers.
-        </Text>
-        <TouchableOpacity 
-          style={[styles.actionButtonSmall, { marginTop: 32, backgroundColor: Colors.primary, paddingHorizontal: 30 }]} 
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.actionButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -757,11 +724,30 @@ export default function ManagementScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Management</Text>
+        <View>
+          <Text style={styles.headerTitle}>Management</Text>
+          {isOrganiser && <Text style={styles.subCell}>Organiser Console</Text>}
+        </View>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
           <Ionicons name="person-circle" size={32} color={Colors.secondary} />
         </TouchableOpacity>
       </View>
+
+      {isOrganiser && !isVendor && (
+        <TouchableOpacity 
+          style={styles.webPortalBanner} 
+          onPress={() => Linking.openURL('https://bookmyticket.net/organiser')}
+        >
+          <View style={styles.webPortalIcon}>
+            <Ionicons name="globe-outline" size={20} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.webPortalTitle}>Advanced Tools on Web</Text>
+            <Text style={styles.webPortalSub}>Open bookmyticket.net for full panel access</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+        </TouchableOpacity>
+      )}
       <View style={styles.tabs}>
         {!isVendor && (
           <>
@@ -876,4 +862,28 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: '#fff' },
   chartSection: { backgroundColor: '#fff', borderRadius: 24, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 2 },
   chartTitle: { fontSize: 13, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 0.5 },
+  webPortalBanner: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: Colors.secondary,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: Colors.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  webPortalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webPortalTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  webPortalSub: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '600' },
 });
