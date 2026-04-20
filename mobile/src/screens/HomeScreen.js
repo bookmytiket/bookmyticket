@@ -57,13 +57,13 @@ function FeaturedSection({ title, subtitle, events, onEventPress, gradientColors
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
-  const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.eq('type', 'Meeting').eq('status', 'Active'), []);
-  const { data: convexVendors } = useSupabaseQuery('profiles', (q) => q.eq('role', 'organiser'), []);
-  const { data: convexCategories } = useSupabaseQuery('categories', (q) => q, []);
-  const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'banner_slides').single(), []);
+  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.select('*').eq('status', 'Active'), []);
+  const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.select('*').eq('type', 'Meeting').eq('status', 'Active'), []);
+  const { data: convexVendors } = useSupabaseQuery('profiles', (q) => q.select('*').eq('role', 'organiser'), []);
+  const { data: convexCategories } = useSupabaseQuery('categories', (q) => q.select('*'), []);
+  const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'banner_slides').single(), []);
   const convexBanners = convexBannersRaw?.value || [];
-  const { data: convexCouponsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'home_coupons').single(), []);
+  const { data: convexCouponsRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'home_coupons').single(), []);
   const convexCoupons = convexCouponsRaw?.value || [];
 
   const allCoupons = useMemo(() => {

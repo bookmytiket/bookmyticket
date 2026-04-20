@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useSupabaseQuery } from '../hooks/useSupabase';
 
 export default function PromotionBanner() {
-    const { data: activePromos } = useSupabaseQuery('promotions', (q) => q.eq('active', true));
+    const { data: activePromos } = useSupabaseQuery('promotions', (q) => q.select('*').eq('active', true));
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {

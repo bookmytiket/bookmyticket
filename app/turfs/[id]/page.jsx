@@ -116,14 +116,14 @@ export default function TurfProfilePage() {
 
             const bookingId = await reserveSlot({
                 turfId: turf._id,
-                userId: user.identifier || user.email,
+                userId: user.id,
                 date: selectedDate,
                 slotId: selectedSlot._id,
                 participantCount,
                 paymentType,
                 customerDetails: {
                     name: user.name || "Customer",
-                    email: user.identifier || user.email || "",
+                    email: user.email || "",
                     phone: user.phone || ""
                 }
             });
@@ -152,7 +152,7 @@ export default function TurfProfilePage() {
                 },
                 prefill: {
                     name: user.name || "Customer",
-                    email: user.identifier || user.email || "",
+                    email: user.email || user.identifier || "",
                     contact: user.phone || ""
                 },
                 theme: { color: "#2563eb" },

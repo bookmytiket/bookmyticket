@@ -13,14 +13,12 @@ export const metadata = {
   alternates: {
     canonical: '/',
   },
-  themeColor: '#000000',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'BookMyTicket',
   },
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
   openGraph: {
     title: 'BookMyTicket',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
@@ -43,6 +41,14 @@ export const metadata = {
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
     images: ['/logo.png'],
   },
+};
+
+export const viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 import { AuthProvider } from '@/components/AuthContext';

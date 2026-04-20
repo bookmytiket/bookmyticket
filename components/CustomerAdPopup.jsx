@@ -45,7 +45,7 @@ export default function CustomerAdPopup() {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   
-  const { data: activePopupsRaw, error: popupError } = useSupabaseQuery('ad_popups', (q) => q.eq('is_active', true), []);
+  const { data: activePopupsRaw, error: popupError } = useSupabaseQuery('ad_popups', (q) => q.select('*').eq('is_active', true), []);
   
   const activePopups = useMemo(() => {
     if (popupError || !activePopupsRaw) return [];

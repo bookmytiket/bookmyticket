@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 export default function SequentialVideoBanner() {
-    const { data: banners } = useSupabaseQuery('mobile_banners', (q) => q.eq('is_active', true));
-    const { data: configRows } = useSupabaseQuery('system_config');
+    const { data: banners } = useSupabaseQuery('mobile_banners', (q) => q.select('*').eq('is_active', true));
+    const { data: configRows } = useSupabaseQuery('system_config', (q) => q.select('*'));
     const allConfig = configRows?.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {}) || {};
     
     const [currentIndex, setCurrentIndex] = useState(0);

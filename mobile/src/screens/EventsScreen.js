@@ -15,10 +15,10 @@ export default function EventsScreen() {
   
   // Migrated from Convex useQuery to Supabase useSupabaseQuery
   const { data: supabaseEvents } = useSupabaseQuery('events', (q) => 
-    q.or('status.eq.Active,status.is.null').order('created_at', { ascending: false })
+    q.select('*').or('status.eq.Active,status.is.null').order('created_at', { ascending: false })
   );
-  const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.order('created_at', { ascending: false }));
-  const { data: supabaseCategories } = useSupabaseQuery('categories');
+  const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.select('*').order('created_at', { ascending: false }));
+  const { data: supabaseCategories } = useSupabaseQuery('categories', (q) => q.select('*'));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(route.params?.category || 'All');

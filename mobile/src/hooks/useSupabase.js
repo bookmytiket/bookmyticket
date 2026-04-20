@@ -44,8 +44,30 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = []) {
 
       try {
         if (!isRetry) setLoading(true);
-        let query = supabase.from(table).select('*');
-        query = queryFn(query);
+        let base = supabase.from(table);
+        let query;
+
+        try {
+            // First attempt: Assume queryFn handles its own select (New Style)
+            // or is the default (q) => q.
+            query = queryFn(base);
+            
+            // If the resulting object still has a 'select' method, 
+            // it means no select operation was initiated yet.
+            if (query && typeof query.select === 'function') {
+                query = query.select('*');
+            }
+        } catch (err) {
+            // Fallback: Assume queryFn expects an already-selected query builder (Old Style)
+            // This happens if queryFn tries to call .eq() directly on the passed object.
+            try {
+                query = queryFn(base.select('*'));
+            } catch (fallbackErr) {
+                // If even this fails, throw the original error
+                throw err;
+            }
+        }
+
         const { data: result, error: queryError } = await query;
         
         if (queryError) {

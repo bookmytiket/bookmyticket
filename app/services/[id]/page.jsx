@@ -54,14 +54,14 @@ export default function ArtistProfilePage() {
     } : null;
 
     // Fetch vendor reviews with profile join
-    const { data: reviewsData = [] } = useSupabaseQuery('vendorReviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
+    const { data: reviewsData = [] } = useSupabaseQuery('vendor_reviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
     const reviews = Array.isArray(reviewsData) ? reviewsData : [];
     
     // Fetch relational packages
     const { data: packages = [] } = useSupabaseQuery('artistPackages', (q) => q.eq('vendor_id', vendorId), [vendorId]);
     
     // Fetch confirmed bookings for this vendor to block them in the calendar
-    const { data: confirmedBookings = [] } = useSupabaseQuery('vendorBookings', (q) => 
+    const { data: confirmedBookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', vendorId).neq('status', 'Cancelled').neq('status', 'Rejected')
     , [vendorId]);
 
@@ -80,8 +80,8 @@ export default function ArtistProfilePage() {
         }
     }, [user]);
 
-    const [createBooking] = useSupabaseMutation('vendorBookings', 'insert');
-    const [submitReview] = useSupabaseMutation('vendorReviews', 'insert');
+    const [createBooking] = useSupabaseMutation('vendor_bookings', 'insert');
+    const [submitReview] = useSupabaseMutation('vendor_reviews', 'insert');
 
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -98,7 +98,7 @@ export default function ArtistProfilePage() {
         try {
             await submitReview({
                 vendor_id: vendorId,
-                user_id: user.id || user.email || user.identifier,
+                user_id: user.id,
                 rating: reviewForm.rating,
                 comment: reviewForm.comment
             });
@@ -136,7 +136,7 @@ export default function ArtistProfilePage() {
         try {
             const bookingResult = await createBooking({
                 vendor_id: fullProfile.organiser.id,
-                user_id: user?.id || user?.identifier || user?.email || formData.email,
+                user_id: user?.id,
                 service_type: fullProfile.organiser.category || "Professional Service",
                 booking_date: formData.date,
                 total_amount: selectedPackage.price,
@@ -174,7 +174,7 @@ export default function ArtistProfilePage() {
                 package: selectedPackage.name,
                 amount: selectedPackage.price,
                 customerName: formData.name || user?.name || "Customer",
-                customerEmail: formData.email || user?.identifier || user?.email || "",
+                customerEmail: formData.email || user?.email || user?.identifier || "",
             });
 
             // ── TRIGGER BOOKING EMAIL WORKFLOW ──

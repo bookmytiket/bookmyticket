@@ -60,7 +60,7 @@ async function shouldShowPopup(popupId, showEveryMinutes) {
 }
 
 export default function CustomerAdPopup() {
-  const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.eq('is_active', true));
+  const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.select('*').eq('is_active', true));
   const [currentPopup, setCurrentPopup] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);

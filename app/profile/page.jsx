@@ -41,20 +41,34 @@ export default function ProfilePage() {
     const [vendorBookingsList, setVendorBookingsList] = useState([]);
 
     useEffect(() => {
-        if (!user?.identifier && !user?.email) return;
-        const uid = user.identifier || user.email;
-        supabase.from('bookings').select('*').eq('user_id', uid)
-            .then(({ data }) => setEventBookingsList(data || []));
+        if (!user?.id) return;
+        const uid = user.id;
+        supabase.from('bookings').select('*, events(*)').eq('user_id', uid)
+            .then(({ data }) => setEventBookingsList((data || []).map(b => ({
+                ...b,
+                eventName: b.events?.title || "Event Booking",
+                eventImg: b.events?.img || b.events?.banner_preview,
+                eventDate: b.events?.date,
+                eventTime: b.events?.time || "TBA",
+                eventLocation: b.events?.venue || b.events?.location || b.events?.address || "Venue",
+                ticketCount: b.ticket_count,
+                totalPrice: b.total_price,
+                _id: b.id
+            }))));
             
-        // Use user.id (UUID) for the relational vendorBookings table
+        // Use user.id (UUID) for the relational vendor_bookings table
         if (user.id) {
-            supabase.from('vendorBookings').select('*').eq('user_id', user.id)
+            supabase.from('vendor_bookings').select('*').eq('user_id', user.id)
                 .then(({ data }) => setVendorBookingsList((data || []).map(b => ({ 
                     ...b, 
                     isVendorBooking: true,
-                    eventName: b.service_type || "Professional Service", // for display
+                    eventName: b.service_type || "Professional Service", 
+                    eventImg: b.customer_details?.service_image || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
                     totalPrice: b.total_amount,
                     bookingDate: b.booking_date,
+                    eventDate: b.booking_date,
+                    eventTime: b.booking_time || "TBA",
+                    eventLocation: b.customer_address || b.customer_details?.address || "Venue",
                     _id: b.id
                 }))));
         }
@@ -157,7 +171,7 @@ export default function ProfilePage() {
                                                     {booking.eventName}
                                                 </h4>
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                                    <span>ID: #{booking._id.slice(-6).toUpperCase()}</span>
+                                                    <span>ID: #{(booking._id || booking.id || "000000").slice(-8).toUpperCase()}</span>
                                                     <span>•</span>
                                                     {booking.isVendorBooking ? (
                                                         <span>Service Session</span>
