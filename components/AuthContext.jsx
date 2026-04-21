@@ -75,6 +75,32 @@ export function AuthProvider({ children }) {
         return () => subscription?.unsubscribe();
     }, [router]);
 
+    // Inactivity Logout Logic (15 Minutes)
+    useEffect(() => {
+        if (!user) return;
+
+        let inactivityTimer;
+        const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 Minutes
+
+        const resetTimer = () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                console.log("[AuthContext] Inactivity timeout reached. Signing out...");
+                logout();
+            }, INACTIVITY_LIMIT);
+        };
+
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => window.addEventListener(event, resetTimer));
+
+        resetTimer(); // Initialize timer
+
+        return () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
+        };
+    }, [user]);
+
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
         if (isProcessingRef.current) return user;

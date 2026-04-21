@@ -787,11 +787,11 @@ export default function Navbar() {
                 Join Now
               </button>
 
-              <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
+              <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1.5rem", paddingBottom: "2rem" }}>
                 {user ? (
-                  <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)' }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
+                  <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", borderRadius: "12px", height: "48px", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', color: "#fff", fontWeight: 800 }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
                 ) : (
-                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
+                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", borderRadius: "12px", height: "48px", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', gap: '8px', color: "#fff", fontWeight: 800 }} onClick={() => setMenuOpen(false)}>Book Now</Link>
                 )}
               </div>
             </div>

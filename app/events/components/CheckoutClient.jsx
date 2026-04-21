@@ -163,22 +163,12 @@ export default function CheckoutClient({ id }) {
         }
     }, [id, event, user, total, qty, router]);
 
-    const [redirectCountdown, setRedirectCountdown] = useState(5);
+    // Removed auto-redirect to ensure user can download ticket on the same page
     useEffect(() => {
         if (bookingDone) {
-            const timer = setInterval(() => {
-                setRedirectCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        // Mandatory redirect to Home Page (/)
-                        router.push('/');
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(timer);
+            // No redirect - keep user on success page for ticket download
         }
-    }, [bookingDone, router]);
+    }, [bookingDone]);
 
     const handleSendEmail = useCallback(() => {
         if (!event) return;
@@ -207,7 +197,7 @@ export default function CheckoutClient({ id }) {
                         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px', color: '#111827' }}>Booking confirmed</h1>
                         <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>{event.title} — {qty} ticket{qty !== 1 ? 's' : ''}.</p>
                         <p style={{ fontSize: '14px', color: '#059669', marginTop: '12px', fontWeight: 700, borderRadius: '8px', background: '#ecfdf5', padding: '10px', display: 'inline-block' }}>
-                            Redirecting to Home Page in <span style={{ fontSize: '18px', color: '#10b981' }}>{redirectCountdown}</span> seconds...
+                            Booking ID: <span style={{ color: '#10b981' }}>#{lastBooking?.id?.slice(-8).toUpperCase()}</span>
                         </p>
                     </div>
 

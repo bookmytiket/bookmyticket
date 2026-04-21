@@ -420,7 +420,7 @@ export default function ProfilePage() {
 
             {/* View Ticket Modal */}
             {viewTicketModal && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px", backdropFilter: "blur(8px)" }} onClick={() => setViewTicketModal(null)}>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 11000, padding: "10px", paddingBottom: "20px", backdropFilter: "blur(12px)", overflowY: "auto" }} onClick={() => setViewTicketModal(null)}>
                     <div style={{ width: "100%", maxWidth: "850px", position: "relative" }} onClick={e => e.stopPropagation()}>
                         <button 
                             onClick={() => setViewTicketModal(null)} 

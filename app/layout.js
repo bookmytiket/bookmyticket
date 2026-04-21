@@ -96,7 +96,7 @@ export default function RootLayout({ children }) {
                   <CustomerAdPopup />
                   <ToastContainer />
                   <ChangePasswordModal />
-                  <section style={{ paddingBottom: '70px' }} className="mobile-page-padding">
+                  <section style={{ paddingBottom: '140px' }} className="mobile-page-padding">
                     {children}
                   </section>
                   <MobileBottomNav />

@@ -461,6 +461,22 @@ export default function SignInPage() {
                     .hide-on-mobile { display: none !important; }
                     .signin-wrapper { justify-content: center !important; }
                 }
+                @media (max-width: 768px) {
+                    .phone-mockup-frame {
+                        width: 100% !important;
+                        height: 100% !important;
+                        max-width: none !important;
+                        max-height: none !important;
+                        border-radius: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        margin: 0 !important;
+                        min-height: 100vh !important;
+                    }
+                    .phone-notch, .phone-status-bar {
+                        display: none !important;
+                    }
+                }
                 body { overflow: hidden; margin: 0; }
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -610,7 +626,7 @@ export default function SignInPage() {
                 )}
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
-                <div style={{ 
+                <div className="phone-mockup-frame" style={{ 
                     width: "min(350px, 92vw)", 
                     height: "min(680px, 92vh)", 
                     background: "#ffffff", 
@@ -624,12 +640,31 @@ export default function SignInPage() {
                     margin: "10px auto"
                 }}>
                     {/* Notch (Dynamic Island Style) */}
-                    <div style={{ width: "110px", height: "24px", background: "#101010", position: "absolute", top: "10px", left: "50%", transform: "translateX(-50%)", borderRadius: "18px", zIndex: 10 }}>
+                    <div className="phone-notch" style={{ 
+                        width: "110px", 
+                        height: "24px", 
+                        background: "#101010", 
+                        position: "absolute", 
+                        top: "10px", 
+                        left: "50%", 
+                        transform: "translateX(-50%)", 
+                        borderRadius: "18px", 
+                        zIndex: 10
+                    }}>
                          <div style={{ width: "8px", height: "8px", background: "#1e293b", borderRadius: "50%", position: "absolute", right: "14px", top: "8px" }} />
                     </div>
 
                     {/* Status Bar */}
-                    <div style={{ padding: "12px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", fontWeight: 700, color: "#000", zIndex: 9 }}>
+                    <div className="phone-status-bar" style={{ 
+                        padding: "12px 22px 4px", 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center", 
+                        fontSize: "12px", 
+                        fontWeight: 700, 
+                        color: "#000", 
+                        zIndex: 9 
+                    }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <span>{currentTime}</span>
                             <span style={{ fontSize: "10px", color: "#64748b" }}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>

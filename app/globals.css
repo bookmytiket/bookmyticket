@@ -116,7 +116,7 @@ main {
     display: block !important;
   }
   .mobile-page-padding {
-    padding-bottom: calc(75px + env(safe-area-inset-bottom, 20px)) !important;
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 20px)) !important;
   }
 }
 

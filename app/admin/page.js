@@ -9,6 +9,7 @@ import { useAuth } from "@/components/AuthContext";
 import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
+import BrandingHeader from "@/components/BrandingHeader";
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -673,6 +674,8 @@ function AdminHomePage() {
     // Consolidated remaining queries
     const { data: bannerRequests = [] } = useSupabaseQuery('banners', (q) => q.eq('status', 'Pending'));
     const { data: allBanners = [] } = useSupabaseQuery('banners');
+    const { data: allBrandingKYC = [] } = useSupabaseQuery('brand_kyc');
+    const [verifyKYCMutation] = useSupabaseMutation('brand_kyc', 'update', (q, p) => q.eq('id', p.id));
     const { data: siteBrandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: false });
     const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
     
@@ -808,7 +811,14 @@ function AdminHomePage() {
         logo_url: "/logo.png"
     }, [siteBrandingArr]);
 
-    const [localBranding, setLocalBranding] = useState({ name: "book my ticket", logo_color: "#111111", logo_url: "/logo.png" });
+    const [localBranding, setLocalBranding] = useState({ 
+        name: "book my ticket", 
+        logo_color: "#111111", 
+        logo_url: "/logo.png",
+        site_url: "https://www.bookmyticket.net",
+        powered_by_logo_url: "",
+        powered_by_link: ""
+    });
 
     useEffect(() => {
         if (siteBrandingArr[0]) {
@@ -836,6 +846,33 @@ function AdminHomePage() {
         facebook: !!ssoSettingsArr[0]?.facebook_enabled,
         google: !!ssoSettingsArr[0]?.google_enabled
     }), [ssoSettingsArr]);
+
+    const handleBrandingUpload = async (file, type) => {
+        if (!file) return;
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${type}-${Date.now()}.${fileExt}`;
+            const { data, error } = await supabase.storage
+                .from('branding')
+                .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('branding')
+                .getPublicUrl(fileName);
+
+            if (type === 'logo') {
+                setLocalBranding(prev => ({ ...prev, logo_url: publicUrl }));
+            } else {
+                setLocalBranding(prev => ({ ...prev, powered_by_logo_url: publicUrl }));
+            }
+            showToast(`${type === 'logo' ? 'Site logo' : 'Powered By logo'} uploaded successfully!`, "success");
+        } catch (err) {
+            console.error("Upload error:", err);
+            showToast("Upload failed: " + err.message, "error");
+        }
+    };
 
     useEffect(() => {
         if (activeTemplate) {
@@ -1110,10 +1147,17 @@ function AdminHomePage() {
         monthlyPrice: 999,
         yearlyPrice: 9999
     });
+    const [brandingPricing, setBrandingPricing] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
 
-    const handleSaveBrandingPricing = async (pricing) => {
+    useEffect(() => {
+        if (brandingPricingConfig) {
+            setBrandingPricing(brandingPricingConfig);
+        }
+    }, [brandingPricingConfig]);
+
+    const handleSaveBrandingPricing = async () => {
         try {
-            await setBrandingPricingConfig(pricing);
+            await setBrandingPricingConfig(brandingPricing);
             showToast("Premium Banner Pricing updated successfully!", "success");
         } catch (e) {
             showToast("Error updating pricing", "error");
@@ -1839,6 +1883,7 @@ function AdminHomePage() {
                             <p className="text-[8px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
                         </div>
                     </div>
+                    <BrandingHeader style={{ marginBottom: '12px' }} />
                     <button 
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
@@ -3064,22 +3109,31 @@ function AdminHomePage() {
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Logo URL</label>
-                                        <div style={{ display: "flex", gap: "12px" }}>
+                                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                                             <input
                                                 type="text"
                                                 placeholder="e.g. /logo.png or https://..."
-                                                value={localBranding.logoUrl || ""}
-                                                onChange={(e) => setLocalBranding({ ...localBranding, logoUrl: e.target.value })}
+                                                value={localBranding.logo_url || ""}
+                                                onChange={(e) => setLocalBranding({ ...localBranding, logo_url: e.target.value })}
                                                 style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                             />
+                                            <label style={{ padding: "10px 16px", backgroundColor: t.border, borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "12px", color: t.textMain }}>
+                                                <Upload size={16} /> Upload
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    style={{ display: "none" }} 
+                                                    onChange={(e) => handleBrandingUpload(e.target.files[0], 'logo')}
+                                                />
+                                            </label>
                                         </div>
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Logomark Color</label>
                                         <input
                                             type="color"
-                                            value={localBranding.logoColor || "#111111"}
-                                            onChange={(e) => setLocalBranding({ ...localBranding, logoColor: e.target.value })}
+                                            value={localBranding.logo_color || "#111111"}
+                                            onChange={(e) => setLocalBranding({ ...localBranding, logo_color: e.target.value })}
                                             style={{ width: "60px", height: "40px", padding: "2px", borderRadius: "4px", border: "none", cursor: "pointer" }}
                                         />
                                     </div>
@@ -3088,11 +3142,45 @@ function AdminHomePage() {
                                         <input
                                             type="text"
                                             placeholder="e.g. https://bookmyticket.in"
-                                            value={localBranding.siteUrl || ""}
-                                            onChange={(e) => setLocalBranding({ ...localBranding, siteUrl: e.target.value })}
+                                            value={localBranding.site_url || ""}
+                                            onChange={(e) => setLocalBranding({ ...localBranding, site_url: e.target.value })}
                                             style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
                                         />
                                         <p style={{ fontSize: "11px", color: t.textSub, marginTop: "4px", marginBottom: 0 }}>This is used to construct full image URLs in transactional emails.</p>
+                                    </div>
+                                    <div style={{ padding: "16px", backgroundColor: "#f1f5f9", borderRadius: "12px", marginTop: "10px" }}>
+                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: "#334155" }}>"Powered By" Branding</h4>
+                                        <div style={{ marginBottom: "12px" }}>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Powered By Logo URL</label>
+                                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. /powered-by.png"
+                                                    value={localBranding.powered_by_logo_url || ""}
+                                                    onChange={(e) => setLocalBranding({ ...localBranding, powered_by_logo_url: e.target.value })}
+                                                    style={{ flex: 1, padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "#fff", color: "#1e293b" }}
+                                                />
+                                                <label style={{ padding: "8px 12px", backgroundColor: "#e2e8f0", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "11px", color: "#1e293b" }}>
+                                                    <Upload size={14} />
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        style={{ display: "none" }} 
+                                                        onChange={(e) => handleBrandingUpload(e.target.files[0], 'powered_by')}
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Powered By Link URL</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. https://bookmyticket.net"
+                                                value={localBranding.powered_by_link || ""}
+                                                onChange={(e) => setLocalBranding({ ...localBranding, powered_by_link: e.target.value })}
+                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "#fff", color: "#1e293b" }}
+                                            />
+                                        </div>
                                     </div>
                                     <button 
                                         onClick={async (e) => {
@@ -3100,29 +3188,37 @@ function AdminHomePage() {
                                             const originalText = btn.innerText;
                                             btn.innerText = "Saving...";
                                             try {
-                                                let finalUrl = localBranding.logoUrl || "";
-                                                // Auto-fix the URL if the user typed the server path
+                                                let finalUrl = localBranding.logo_url || "";
                                                 if (finalUrl.includes("public/")) {
                                                     finalUrl = "/" + finalUrl.split("public/")[1];
                                                 }
-                                                setLocalBranding({ ...localBranding, logoUrl: finalUrl });
                                                 
-                                                let finalSiteUrl = localBranding.siteUrl || "";
+                                                let finalSiteUrl = localBranding.site_url || "";
                                                 if (finalSiteUrl.endsWith("/")) {
                                                     finalSiteUrl = finalSiteUrl.slice(0, -1);
                                                 }
-                                                setLocalBranding(prev => ({ ...prev, siteUrl: finalSiteUrl }));
 
-                                                await updateSiteBrandingMutation({ name: localBranding.name || "", logoColor: localBranding.logoColor || "#111111", logoUrl: finalUrl, siteUrl: finalSiteUrl });
+                                                const payload = {
+                                                    id: localBranding.id,
+                                                    name: localBranding.name || "BookMyTicket",
+                                                    logo_color: localBranding.logo_color || "#111111",
+                                                    logo_url: finalUrl,
+                                                    site_url: finalSiteUrl,
+                                                    powered_by_logo_url: localBranding.powered_by_logo_url,
+                                                    powered_by_link: localBranding.powered_by_link
+                                                };
+
+                                                await updateSiteBranding(payload);
                                                 
                                                 btn.innerText = "Saved!";
                                                 setTimeout(() => { btn.innerText = originalText; }, 2000);
+                                                showToast("Branding updated successfully!", "success");
                                             } catch(err) {
                                                 showToast("Error saving: " + err.message, "error");
                                                 btn.innerText = originalText;
                                             }
                                         }}
-                                        style={{ padding: "12px 24px", borderRadius: "8px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", alignSelf: "flex-start", marginTop: "10px", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}
+                                        style={{ padding: "12px 24px", borderRadius: "8px", background: `linear-gradient(135deg, ${localBranding.logo_color || '#3b82f6'}, #1d4ed8)`, color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", alignSelf: "flex-start", marginTop: "10px", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}
                                     >
                                         Save Branding Info
                                     </button>
@@ -3131,10 +3227,10 @@ function AdminHomePage() {
                                     <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Logo Preview</label>
                                     <div style={{ padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', overflow: "hidden" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                            {localBranding.logoUrl ? (
+                                            {localBranding.logo_url ? (
                                                 <img
-                                                    key={`img-${localBranding.logoUrl}`}
-                                                    src={localBranding.logoUrl}
+                                                    key={`img-${localBranding.logo_url}`}
+                                                    src={localBranding.logo_url}
                                                     alt="Logo URL missing or invalid"
                                                     style={{
                                                         height: "80px",
@@ -3151,8 +3247,8 @@ function AdminHomePage() {
                                                     }}
                                                 />
                                             ) : null}
-                                            <div key={`fallback-${localBranding.logoUrl}`} style={{ display: localBranding.logoUrl ? "none" : "flex", alignItems: "center", gap: "12px" }}>
-                                                <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${localBranding.logoColor}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
+                                            <div key={`fallback-${localBranding.logo_url}`} style={{ display: localBranding.logo_url ? "none" : "flex", alignItems: "center", gap: "12px" }}>
+                                                <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${localBranding.logo_color}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
                                                     <Ticket color="#fff" size={28} />
                                                 </div>
                                                 <span style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{localBranding.name}</span>
@@ -3224,17 +3320,17 @@ function AdminHomePage() {
                                     </thead>
                                     <tbody>
                                         {allBrandingKYC.length > 0 ? allBrandingKYC.map((kyc) => (
-                                            <tr key={kyc._id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                            <tr key={kyc.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px" }}>
-                                                    <div style={{ fontWeight: 700 }}>{kyc.orgName}</div>
-                                                    <div style={{ fontSize: "11px", color: t.textSub }}>ID: {kyc.brandId.slice(-8)}</div>
+                                                    <div style={{ fontWeight: 700 }}>{kyc.org_name}</div>
+                                                    <div style={{ fontSize: "11px", color: t.textSub }}>ID: {kyc.brand_id ? kyc.brand_id.slice(-8) : 'N/A'}</div>
                                                 </td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>
                                                     {kyc.city}, {kyc.state}
                                                 </td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>
-                                                    <div>GST: {kyc.gstNumber}</div>
-                                                    <div>PAN: {kyc.panNumber}</div>
+                                                    <div>GST: {kyc.gst_number}</div>
+                                                    <div>PAN: {kyc.pan_number}</div>
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
                                                     <span style={{ 
@@ -3252,20 +3348,20 @@ function AdminHomePage() {
                                                     {kyc.status === "Pending Review" || kyc.status === "Verification Pending" ? (
                                                         <div style={{ display: "flex", gap: "8px" }}>
                                                             <button 
-                                                                onClick={() => verifyKYCMutation({ brandId: kyc.brandId, status: "Verified" })}
+                                                                onClick={() => verifyKYCMutation({ id: kyc.id, status: "Verified" })}
                                                                 style={{ padding: "6px 12px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
                                                             >
                                                                 Approve
                                                             </button>
                                                             <button 
-                                                                onClick={() => verifyKYCMutation({ brandId: kyc.brandId, status: "Rejected" })}
+                                                                onClick={() => verifyKYCMutation({ id: kyc.id, status: "Rejected" })}
                                                                 style={{ padding: "6px 12px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
                                                             >
                                                                 Reject
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <span style={{ fontSize: "12px", color: t.textSub }}>Processed</span>
+                                                        <span style={{ fontSize: "12px", color: t.textSub }}>No actions available</span>
                                                     )}
                                                 </td>
                                             </tr>

@@ -713,8 +713,12 @@ function OrganiserPanel() {
 
     const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
         "events",
-        (q) => q.eq("organiser_id", organiserData?.id || user?.id),
-        [organiserData?.id, user?.id]
+        (q) => {
+            const baseQuery = q.select('*');
+            if (user?.role === "admin") return baseQuery;
+            return baseQuery.eq("organiser_id", organiserData?.id || user?.id);
+        },
+        [organiserData?.id, user?.id, user?.role]
     );
     const [createEventMutation] = useSupabaseMutation("events", "insert");
     const [updateEventMutation] = useSupabaseMutation("events", "update", (q, p) => q.eq("id", p.id));
