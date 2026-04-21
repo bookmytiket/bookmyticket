@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, Image, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, Image, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, TextInput, Alert, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSupabaseQuery } from '../hooks/useSupabase';
 import { supabase } from '../lib/supabase';
@@ -57,8 +57,9 @@ function FeaturedSection({ title, subtitle, events, onEventPress, gradientColors
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.select('*').eq('status', 'Active'), []);
-  const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.select('*').eq('type', 'Meeting').eq('status', 'Active'), []);
+  const [refreshing, setRefreshing] = useState(false);
+  const { data: convexEvents, loading: eventsLoading, refresh: refreshEvents } = useSupabaseQuery('events', (q) => q.select('*').or('status.eq.Active,status.eq.published'), []);
+  const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.select('*').eq('type', 'Meeting').or('status.eq.Active,status.eq.published'), []);
   const { data: convexVendors } = useSupabaseQuery('profiles', (q) => q.select('*').eq('role', 'organiser'), []);
   const { data: convexCategories } = useSupabaseQuery('categories', (q) => q.select('*'), []);
   const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'banner_slides').single(), []);
@@ -285,7 +286,21 @@ export default function HomeScreen() {
   }
   return (
     <>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={async () => {
+              setRefreshing(true);
+              await refreshEvents();
+              setRefreshing(false);
+            }} 
+            colors={[Colors.secondary]}
+          />
+        }
+      >
         {/* 1) Video Hero Banner (Top) */}
         <SequentialVideoBanner />
 

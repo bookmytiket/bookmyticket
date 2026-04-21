@@ -6,11 +6,44 @@ import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
+import BrandingHeader from '../components/BrandingHeader';
+
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation();
   const [selectedTicket, setSelectedTicket] = React.useState(null);
+  const [downloading, setDownloading] = React.useState(false);
+  const ticketViewRef = React.useRef();
+
+  const handleDownloadTicket = async () => {
+    if (!ticketViewRef.current) return;
+    try {
+      setDownloading(true);
+      const uri = await captureRef(ticketViewRef, {
+        format: 'jpg',
+        quality: 0.9,
+        result: 'tmpfile',
+      });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Save your Ticket',
+          UTI: 'public.jpeg',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (err) {
+      console.error('Capture error:', err);
+      Alert.alert('Error', 'Failed to save ticket image');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Migrated to Supabase
   const { data: eventBookingsList } = useSupabaseQuery('bookings', (q) => 
@@ -237,79 +270,124 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Digital Ticket</Text>
+              <Text style={styles.modalTitle}>Your E-Ticket</Text>
               <TouchableOpacity onPress={() => setSelectedTicket(null)}>
                 <Ionicons name="close" size={24} color={Colors.text} />
               </TouchableOpacity>
             </View>
-            
-            <View style={styles.qrContainer}>
-              {selectedTicket && (
-                <View style={{ opacity: selectedTicket.scanned ? 0.3 : 1 }}>
-                  <Image
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${selectedTicket.id}` }}
-                    style={styles.qrCode}
+
+            {/* Ticket Card for Capture */}
+            <View style={styles.ticketCardWrapper}>
+              <View 
+                ref={ticketViewRef}
+                collapsable={false}
+                style={styles.ticketCardInner}
+              >
+                <View style={styles.ticketTop}>
+                  <Image 
+                    source={{ uri: selectedTicket?.img || (selectedTicket?.events && selectedTicket?.events.img) || "https://images.unsplash.com/photo-1540575467063-178a50c2df87" }} 
+                    style={styles.ticketImage}
+                    resizeMode="cover"
                   />
-                  {selectedTicket.scanned && (
-                    <View style={styles.scannedOverlay}>
-                      <Ionicons name="checkmark-circle" size={80} color="#10b981" />
-                      <Text style={styles.scannedText}>SCANNED</Text>
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                    style={styles.ticketImageOverlay}
+                  />
+                  <View style={styles.ticketBadgeContainer}>
+                    <View style={styles.ticketBadge}>
+                      <Text style={styles.ticketBadgeText}>ACTIVE</Text>
                     </View>
-                  )}
+                  </View>
+                  <View style={styles.ticketHeaderInfo}>
+                    <Text style={styles.ticketEventTitle} numberOfLines={2}>{selectedTicket?.eventName}</Text>
+                  </View>
                 </View>
-              )}
-            </View>
-            
-            <View style={[styles.modalStatusBadge, { 
-                backgroundColor: selectedTicket?.status === 'Confirmed' ? '#ecfdf5' : '#fef2f2',
-                borderColor: selectedTicket?.status === 'Confirmed' ? '#10b981' : '#ef4444'
-            }]}>
-              <Text style={[styles.modalStatusText, { color: selectedTicket?.status === 'Confirmed' ? '#059669' : '#b91c1c' }]}>
-                {selectedTicket?.status || 'Pending'}
-              </Text>
+
+                <View style={styles.ticketBody}>
+                   <View style={styles.ticketInfoRow}>
+                      <View style={styles.ticketInfoCol}>
+                         <Text style={styles.ticketLabel}>DATE</Text>
+                         <Text style={styles.ticketValue}>{selectedTicket?.date || selectedTicket?.events?.date || 'TBA'}</Text>
+                      </View>
+                      <View style={styles.ticketInfoCol}>
+                         <Text style={styles.ticketLabel}>TIME</Text>
+                         <Text style={styles.ticketValue}>{selectedTicket?.slot_time || selectedTicket?.events?.time || 'TBA'}</Text>
+                      </View>
+                   </View>
+                   
+                   <View style={[styles.ticketInfoRow, { marginTop: 15 }]}>
+                      <View style={styles.ticketInfoCol}>
+                         <Text style={styles.ticketLabel}>VENUE</Text>
+                         <Text style={styles.ticketValue} numberOfLines={1}>{selectedTicket?.location || selectedTicket?.events?.location || 'Venue'}</Text>
+                      </View>
+                   </View>
+
+                   <View style={styles.ticketDivider}>
+                      <View style={styles.dividerDotLeft} />
+                      <View style={styles.dividerLine} />
+                      <View style={styles.dividerDotRight} />
+                   </View>
+
+                   <View style={styles.ticketFooter}>
+                      <View style={styles.rectangularQrCard}>
+                        <View style={styles.qrInner}>
+                          <Image
+                            source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${selectedTicket?.id}` }}
+                            style={styles.ticketQr}
+                          />
+                        </View>
+                        <View style={styles.idInner}>
+                           <Text style={styles.idLabel}>BOOKING ID</Text>
+                           <Text style={styles.idValue}>#{selectedTicket?.id?.slice(-8).toUpperCase()}</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.brandSide}>
+                         <Image 
+                            source={{ uri: 'https://www.bookmyticket.net/logo.png' }} 
+                            style={{ height: 30, width: 90 }} 
+                            resizeMode="contain" 
+                         />
+                         <Text style={styles.statusLabel}>{selectedTicket?.status?.toUpperCase()}</Text>
+                      </View>
+                   </View>
+                </View>
+                
+                <View style={styles.ticketWatermark}>
+                   <Text style={styles.watermarkText}>POWERED BY BOOKMYTICKET</Text>
+                </View>
+              </View>
             </View>
 
-            <Text style={styles.modalEventName}>{selectedTicket?.eventName}</Text>
-            {(selectedTicket?.date || (selectedTicket?.events && selectedTicket?.events.date)) && (
-              <Text style={styles.modalBookingMeta}>
-                📅 {selectedTicket.date || selectedTicket.events.date}
-                {selectedTicket.slot_time ? ` • ${selectedTicket.slot_time}` : ''}
-              </Text>
-            )}
-            {(selectedTicket?.ticket_count || selectedTicket?.ticketCount) > 0 && (
-              <Text style={styles.modalBookingMeta}>
-                🎫 {selectedTicket.ticket_count || selectedTicket.ticketCount} Ticket{(selectedTicket.ticket_count || selectedTicket.ticketCount) !== 1 ? 's' : ''}
-              </Text>
-            )}
-            <Text style={styles.modalBookingId}>Booking ID: {selectedTicket?.id}</Text>
-            
-            {(selectedTicket?.meeting_url || selectedTicket?.meetingUrl || selectedTicket?.event_type === "Online" || (selectedTicket?.events && selectedTicket?.events.virtual)) && (
+            <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.joinBtn, { marginTop: 20 }]} 
-                onPress={() => {
-                  const url = selectedTicket.meeting_url || selectedTicket.meetingUrl;
-                  const isInternal = url?.toLowerCase().includes("organiser") || url?.toLowerCase().includes("admin") || url?.toLowerCase().includes("vendor");
-                  
-                  if (!url || isInternal) {
-                    Alert.alert("Notice", "Meeting has not started yet or the link is still being prepared. Please check back in a few minutes.");
-                    return;
-                  }
-                  
-                  const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `https://bookmyticket.net/${url}`;
-                  Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
-                }}
+                style={styles.downloadBtn} 
+                onPress={handleDownloadTicket}
+                disabled={downloading}
               >
                 <LinearGradient
-                  colors={['#059669', '#10b981']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btnGradient}
+                  colors={Colors.gradient}
+                  style={styles.downloadGradient}
                 >
-                  <Ionicons name="videocam" size={20} color="#fff" />
-                  <Text style={styles.joinBtnText}>Join Now</Text>
+                  <Ionicons name={downloading ? "refresh" : "download"} size={20} color="#fff" />
+                  <Text style={styles.downloadBtnText}>{downloading ? "PREPARING..." : "SAVE AS IMAGE"}</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            )}
+              
+              {(selectedTicket?.meeting_url || selectedTicket?.meetingUrl || selectedTicket?.event_type === "Online" || (selectedTicket?.events && selectedTicket?.events.virtual)) && (
+                <TouchableOpacity 
+                  style={styles.secondaryJoinBtn} 
+                  onPress={() => {
+                    const url = selectedTicket.meeting_url || selectedTicket.meetingUrl;
+                    const target = (url.startsWith("http://") || url.startsWith("https://")) ? url : `https://bookmyticket.net/${url}`;
+                    Linking.openURL(target).catch(err => console.error("Couldn't load meeting page", err));
+                  }}
+                >
+                  <Ionicons name="videocam" size={20} color={Colors.secondary} />
+                  <Text style={styles.secondaryJoinText}>Join Meeting</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -418,101 +496,241 @@ const styles = StyleSheet.create({
   emptyText: { marginTop: 12, fontSize: 14, color: Colors.textMuted, fontWeight: '600' },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20,
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 32,
+    borderRadius: 32,
+    padding: 20,
     alignItems: 'center',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
-  qrContainer: {
-    padding: 24,
-    backgroundColor: '#f8fafc',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    borderStyle: 'dashed',
-    marginBottom: 24,
-    position: 'relative',
+  ticketCardWrapper: {
+    width: '100%',
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  qrCode: { width: 200, height: 200 },
-  scannedOverlay: {
+  ticketCardInner: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  ticketTop: {
+    height: 180,
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  ticketImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.8,
+  },
+  ticketImageOverlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
+  },
+  ticketBadgeContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  ticketBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 50,
+  },
+  ticketBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  ticketHeaderInfo: {
+    position: 'absolute',
+    bottom: 16,
+    left: 20,
+    right: 20,
+  },
+  ticketEventTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: -0.5,
+    fontStyle: 'italic',
+  },
+  ticketBody: {
+    padding: 24,
+    backgroundColor: '#fff',
+  },
+  ticketInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  ticketInfoCol: {
+    flex: 1,
+  },
+  ticketLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  ticketValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1e293b',
+    textTransform: 'uppercase',
+  },
+  ticketDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    paddingHorizontal: -24,
+  },
+  dividerDotLeft: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    marginLeft: -32,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginHorizontal: 10,
+  },
+  dividerDotRight: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    marginRight: -32,
+  },
+  ticketFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  rectangularQrCard: {
+    width: 110,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  qrInner: {
+    padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scannedText: {
-    fontSize: 24,
+  idInner: {
+    backgroundColor: '#0f172a',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  idLabel: {
+    fontSize: 7,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1,
+  },
+  idValue: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#fff',
+    fontStyle: 'italic',
+  },
+  brandSide: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  statusLabel: {
+    fontSize: 12,
     fontWeight: '900',
     color: '#10b981',
-    letterSpacing: 2,
-    marginTop: 10,
+    letterSpacing: 1,
   },
-  modalEventName: { fontSize: 18, fontWeight: '800', color: Colors.text, marginBottom: 6, textAlign: 'center' },
-  modalBookingMeta: { fontSize: 13, color: Colors.textMuted, marginBottom: 4, textAlign: 'center' },
-  modalBookingId: { fontSize: 12, color: Colors.textMuted, marginBottom: 24, marginTop: 4 },
-  btn: { padding: 18, borderRadius: 14, width: '100%', alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  joinBtn: {
+  ticketQr: {
+    width: 90,
+    height: 90,
+  },
+  ticketWatermark: {
+    backgroundColor: '#0f172a',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  watermarkText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 4,
+    opacity: 0.5,
+  },
+  modalActions: {
     width: '100%',
-    borderRadius: 14,
+    gap: 12,
+  },
+  downloadBtn: {
+    width: '100%',
+    borderRadius: 16,
     overflow: 'hidden',
   },
-  btnGradient: {
+  downloadGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     gap: 10,
   },
-  joinBtnText: {
+  downloadBtnText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  inlineJoinBtn: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  inlineJoinGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  inlineJoinText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
-  modalStatusBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  modalStatusText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
-    textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  secondaryJoinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  secondaryJoinText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.secondary,
+  },
+  title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
 });

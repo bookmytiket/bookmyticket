@@ -100,6 +100,14 @@ export default function TabNavigator() {
         />
       )}
       <Tab.Screen
+        name="Tickets"
+        component={ProfileScreen}
+        initialParams={{ tab: 'my_booking' }}
+        options={{
+          tabBarIcon: ({ focused, color }) => TabIcon({ name: focused ? 'ticket' : 'ticket-outline', focused, color }),
+        }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{

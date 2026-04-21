@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSupabaseQuery } from '../hooks/useSupabase';
 import { useAuth } from '../context/AuthContext';
@@ -13,9 +13,10 @@ export default function EventsScreen() {
   const route = useRoute();
   const { selectedCity } = useAuth();
   
+  const [refreshing, setRefreshing] = useState(false);
   // Migrated from Convex useQuery to Supabase useSupabaseQuery
-  const { data: supabaseEvents } = useSupabaseQuery('events', (q) => 
-    q.select('*').or('status.eq.Active,status.is.null').order('created_at', { ascending: false })
+  const { data: supabaseEvents, refresh: refreshEvents } = useSupabaseQuery('events', (q) => 
+    q.select('*').or('status.eq.Active,status.eq.published,status.is.null').order('created_at', { ascending: false })
   );
   const { data: supabaseMeetings } = useSupabaseQuery('meetings', (q) => q.select('*').order('created_at', { ascending: false }));
   const { data: supabaseCategories } = useSupabaseQuery('categories', (q) => q.select('*'));
@@ -218,6 +219,17 @@ export default function EventsScreen() {
           </View>
         )}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={async () => {
+              setRefreshing(true);
+              await refreshEvents();
+              setRefreshing(false);
+            }} 
+            colors={[Colors.secondary]}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color="#e2e8f0" />

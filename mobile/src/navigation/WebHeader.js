@@ -61,6 +61,17 @@ export default function WebHeader() {
                 <Text style={styles.menuItemText}>Profile</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('MainTabs', { screen: 'Tickets' });
+                }}
+              >
+                <Ionicons name="ticket-outline" size={20} color={Colors.text} />
+                <Text style={styles.menuItemText}>My Tickets</Text>
+              </TouchableOpacity>
+
               {(user?.role === 'admin' || user?.role === 'organiser' || user?.role === 'vendor') && (
                 <TouchableOpacity 
                   style={styles.menuItem} 

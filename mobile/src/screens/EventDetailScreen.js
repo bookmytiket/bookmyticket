@@ -33,7 +33,7 @@ export default function EventDetailScreen() {
   const navigation = useNavigation();
   const { user, addToRecentlyViewed } = useAuth();
   const { eventId, event: routeEvent } = route.params || {};
-  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'), []);
+  const { data: convexEvents } = useSupabaseQuery('events', (q) => q.select('*').or('status.eq.Active,status.eq.published'), []);
 
   const event = useMemo(() => {
     if (routeEvent) return { ...routeEvent, id: routeEvent.id };
@@ -42,7 +42,7 @@ export default function EventDetailScreen() {
 
   const { data: access } = useSupabaseQuery('bookings', (q) => 
     event?.id && user?.id
-      ? q.eq('event_id', event.id).eq('user_id', user.id).eq('status', 'Confirmed').single()
+      ? q.eq('event_id', event.id).eq('user_id', user.id).eq('status', 'Confirmed').maybeSingle()
       : q.eq('id', 'none'),
     [event?.id, user?.id]
   );

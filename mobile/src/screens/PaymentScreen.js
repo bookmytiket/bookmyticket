@@ -5,11 +5,18 @@ import { useSupabaseQuery, useSupabaseMutation } from '../hooks/useSupabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { generateTicketPDF } from '../utils/ticketGenerator';
+import BrandingHeader from '../components/BrandingHeader';
+
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 
 export default function PaymentScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { bookingId, total, success, event } = route.params || {};
+  const ticketViewRef = React.useRef();
+  const [downloading, setDownloading] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(success || false);
@@ -68,8 +75,31 @@ export default function PaymentScreen() {
     }
   };
 
-  const handleBackToHome = () => {
-    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+  const handleDownloadTicket = async () => {
+    if (!ticketViewRef.current) return;
+    try {
+      setDownloading(true);
+      const uri = await captureRef(ticketViewRef, {
+        format: 'jpg',
+        quality: 0.9,
+        result: 'tmpfile',
+      });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Save your Ticket',
+          UTI: 'public.jpeg',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (err) {
+      console.error('Capture error:', err);
+      Alert.alert('Error', 'Failed to save ticket image');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (isConfirmed) {
@@ -83,56 +113,93 @@ export default function PaymentScreen() {
           <Text style={styles.successSub}>Your ticket has been secured 🎉</Text>
         </LinearGradient>
 
-        <View style={styles.ticketCard}>
-          <View style={styles.qrSection}>
-            <Text style={styles.qrLabel}>SCAN TO VERIFY</Text>
-            {bookingId ? (
-              <Image
-                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${bookingId}&bgcolor=ffffff&color=111827&margin=10` }}
-                style={styles.qrImage}
-              />
-            ) : (
-              <View style={styles.qrPlaceholder}>
-                <Ionicons name="qr-code-outline" size={80} color="#e2e8f0" />
-              </View>
-            )}
-            <Text style={styles.bookingIdText} numberOfLines={1}>#{bookingId || 'N/A'}</Text>
-          </View>
+        <BrandingHeader style={{ marginTop: 16 }} />
 
-          <View style={styles.divider} />
-
-          <View style={styles.ticketDetails}>
-            <Text style={styles.ticketEventName} numberOfLines={2}>{displayEvent?.title || 'Event'}</Text>
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketCol}>
-                <Text style={styles.ticketMetaLabel}>DATE</Text>
-                <Text style={styles.ticketMetaValue}>{displayEvent?.date || 'TBA'}</Text>
-              </View>
-              <View style={styles.ticketColRight}>
-                <Text style={styles.ticketMetaLabel}>TICKETS</Text>
-                <Text style={styles.ticketMetaValue}>{booking?.ticket_count || 1}</Text>
-              </View>
+        {/* Capturable Ticket Card */}
+        <View style={styles.ticketWrapper}>
+          <View 
+            ref={ticketViewRef}
+            collapsable={false}
+            style={styles.ticketInner}
+          >
+            <View style={styles.ticketTop}>
+               <Image 
+                 source={{ uri: displayEvent?.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87" }} 
+                 style={styles.ticketImg}
+                 resizeMode="cover"
+               />
+               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.imgOverlay} />
+               <View style={styles.badgeContainer}>
+                  <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>ACTIVE</Text></View>
+               </View>
+               <Text style={styles.eventNameOverlay} numberOfLines={2}>{displayEvent?.title}</Text>
             </View>
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketCol}>
-                <Text style={styles.ticketMetaLabel}>VENUE</Text>
-                <Text style={styles.ticketMetaValue} numberOfLines={1}>{displayEvent?.location || 'TBA'}</Text>
-              </View>
-              <View style={styles.ticketColRight}>
-                <Text style={styles.ticketMetaLabel}>PAID</Text>
-                <Text style={[styles.ticketMetaValue, { color: '#10b981', fontWeight: '900' }]}>₹{Number(displayTotal).toFixed(0)}</Text>
-              </View>
+
+            <View style={styles.ticketBody}>
+               <View style={styles.infoGrid}>
+                  <View style={styles.infoCell}>
+                     <Text style={styles.infoLabel}>DATE</Text>
+                     <Text style={styles.infoValue}>{displayEvent?.date || 'TBA'}</Text>
+                  </View>
+                  <View style={styles.infoCell}>
+                     <Text style={styles.infoLabel}>TIME</Text>
+                     <Text style={styles.infoValue}>{displayEvent?.time || 'TBA'}</Text>
+                  </View>
+               </View>
+               
+               <View style={[styles.infoGrid, { marginTop: 15 }]}>
+                  <View style={styles.infoCell}>
+                     <Text style={styles.infoLabel}>VENUE</Text>
+                     <Text style={styles.infoValue} numberOfLines={1}>{displayEvent?.location || 'Venue'}</Text>
+                  </View>
+               </View>
+
+               <View style={styles.cardDivider}>
+                  <View style={styles.dotL} /><View style={styles.dLine} /><View style={styles.dotR} />
+               </View>
+
+               <View style={styles.cardFooter}>
+                  <View style={styles.qrBox}>
+                    <Image
+                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${bookingId}` }}
+                      style={styles.qrSmall}
+                    />
+                  </View>
+                  <View style={styles.idBox}>
+                    <Text style={styles.infoLabel}>BOOKING ID</Text>
+                    <Text style={styles.bookingId}>#{bookingId?.slice(-8).toUpperCase()}</Text>
+                    
+                    <View style={{ marginTop: 10 }}>
+                      <Image source={{ uri: 'https://www.bookmyticket.net/logo.png' }} style={{ height: 30, width: 90 }} resizeMode="contain" />
+                    </View>
+                  </View>
+               </View>
+            </View>
+            
+            <View style={styles.cardWatermark}>
+               <Text style={styles.watermarkText}>POWERED BY BOOKMYTICKET</Text>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.homeBtn} onPress={handleBackToHome}>
-          <Ionicons name="home-outline" size={20} color="#fff" />
-          <Text style={styles.homeBtnText}>Back to Home</Text>
+        <TouchableOpacity 
+          style={styles.downloadBtn} 
+          onPress={handleDownloadTicket}
+          disabled={downloading}
+        >
+          <LinearGradient colors={Colors.gradient} style={styles.btnGradient}>
+            <Ionicons name={downloading ? "refresh" : "download-outline"} size={22} color="#fff" />
+            <Text style={styles.btnTextLg}>{downloading ? "PREPARING..." : "Download E-Ticket"}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.homeBtnAlt} onPress={handleBackToHome}>
+          <Ionicons name="home-outline" size={20} color={Colors.secondary} />
+          <Text style={styles.homeBtnTextAlt}>Back to Home</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' })}>
-          <Ionicons name="ticket-outline" size={20} color={Colors.secondary} />
+          <Ionicons name="ticket-outline" size={20} color="#64748b" />
           <Text style={styles.profileBtnText}>View All My Tickets</Text>
         </TouchableOpacity>
 
@@ -190,24 +257,206 @@ const styles = StyleSheet.create({
   successIconWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   successTitle: { fontSize: 28, fontWeight: '900', color: '#fff', marginBottom: 6 },
   successSub: { fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
-  ticketCard: { marginHorizontal: 20, marginTop: 24, backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8, borderWidth: 1, borderColor: '#f1f5f9' },
-  qrSection: { alignItems: 'center', paddingVertical: 28, backgroundColor: '#fff' },
-  qrLabel: { fontSize: 11, fontWeight: '800', color: '#94a3b8', letterSpacing: 2, marginBottom: 16 },
-  qrImage: { width: 180, height: 180, borderRadius: 8 },
-  qrPlaceholder: { width: 180, height: 180, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderRadius: 8 },
-  bookingIdText: { marginTop: 12, fontSize: 11, color: '#94a3b8', fontWeight: '600' },
-  divider: { height: 1, backgroundColor: '#f1f5f9', marginHorizontal: 20 },
-  ticketDetails: { padding: 20 },
-  ticketEventName: { fontSize: 20, fontWeight: '900', color: '#111827', marginBottom: 20 },
-  ticketRow: { flexDirection: 'row', marginBottom: 16 },
-  ticketCol: { flex: 1 },
-  ticketColRight: { flex: 1, alignItems: 'flex-end' },
-  ticketMetaLabel: { fontSize: 10, fontWeight: '800', color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
-  ticketMetaValue: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  homeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.secondary, marginHorizontal: 20, marginTop: 20, padding: 18, borderRadius: 16, shadowColor: Colors.secondary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
-  homeBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  profileBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 20, marginTop: 12, padding: 16, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.secondary },
-  profileBtnText: { color: Colors.secondary, fontSize: 15, fontWeight: '700' },
+  ticketWrapper: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ticketInner: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  ticketTop: {
+    height: 180,
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  ticketImg: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.8,
+  },
+  imgOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  activeBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 50,
+  },
+  activeBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  eventNameOverlay: {
+    position: 'absolute',
+    bottom: 16,
+    left: 20,
+    right: 20,
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    fontStyle: 'italic',
+  },
+  ticketBody: {
+    padding: 24,
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  infoCell: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1e293b',
+    textTransform: 'uppercase',
+  },
+  cardDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    paddingHorizontal: -24,
+  },
+  dotL: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    marginLeft: -32,
+  },
+  dLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginHorizontal: 10,
+  },
+  dotR: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    marginRight: -32,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  qrBox: {
+    width: 110,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    overflow: 'hidden',
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrSmall: {
+    width: 90,
+    height: 90,
+  },
+  idBox: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  bookingId: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: 1,
+  },
+  cardWatermark: {
+    backgroundColor: '#0f172a',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  watermarkText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 4,
+    opacity: 0.5,
+  },
+  downloadBtn: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  btnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+    gap: 10,
+  },
+  btnTextLg: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  homeBtnAlt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.secondary,
+  },
+  homeBtnTextAlt: {
+    color: Colors.secondary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  profileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 14,
+  },
+  profileBtnText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   card: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', margin: 20, borderRadius: 24, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 6, borderWidth: 1, borderColor: '#f1f5f9' },
   iconWrap: { marginBottom: 20, height: 80, justifyContent: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: Colors.text, marginBottom: 8, textAlign: 'center' },

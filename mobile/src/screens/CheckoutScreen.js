@@ -27,7 +27,7 @@ export default function CheckoutScreen() {
   const { eventId, event: routeEvent, selectedSeats = [] } = route.params || {};
 
   // Migrated to Supabase
-  const { data: supabaseEvents } = useSupabaseQuery('events', (q) => q.eq('status', 'Active'));
+  const { data: supabaseEvents } = useSupabaseQuery('events', (q) => q.select('*').or('status.eq.Active,status.eq.published'));
   const { data: supabaseConfig } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings'));
 
   const isSeating = selectedSeats.length > 0;

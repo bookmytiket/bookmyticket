@@ -21,6 +21,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState('');
   const [locationHierarchy, setLocationHierarchy] = useState(null);
+  const [lastActivity, setLastActivity] = useState(Date.now());
+  const inactivityTimerRef = React.useRef(null);
   useEffect(() => {
     loadStoredUser();
     
@@ -59,6 +61,36 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Inactivity Logout Logic (15 Minutes)
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 Minutes
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = setTimeout(() => {
+        console.log("[AuthContext] Mobile Inactivity timeout reached. Signing out...");
+        logout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    // For mobile, we mainly track AppState changes as a proxy for activity
+    // and reset the timer when the app comes to foreground or is active
+    const subscription = require('react-native').AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        resetInactivityTimer();
+      }
+    });
+
+    resetInactivityTimer(); // Initialize timer
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      subscription.remove();
+    };
+  }, [user, logout]);
 
   const loadStoredUser = async () => {
     try {
