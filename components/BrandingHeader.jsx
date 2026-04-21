@@ -3,7 +3,7 @@ import React from 'react';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
 
 export default function BrandingHeader({ style = {} }) {
-  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: true });
   const branding = (brandingArr && brandingArr[0] && brandingArr[0].powered_by_logo_url) 
     ? brandingArr[0] 
     : {

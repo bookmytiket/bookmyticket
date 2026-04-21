@@ -1496,7 +1496,7 @@ function AdminHomePage() {
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
+        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
                 .admin-container { 
@@ -1606,11 +1606,9 @@ function AdminHomePage() {
                     border-radius: 10px;
                 }
                 .main-content {
-                    margin-left: 250px;
                     flex: 1;
-                    padding: 32px;
+                    padding: 24px;
                     min-width: 0;
-                    transition: margin-left 0.3s ease;
                 }
                 @media (max-width: 1024px) {
                     .sidebar { transform: translateX(-100%); width: 280px; }
@@ -1889,7 +1887,7 @@ function AdminHomePage() {
                             <p className="text-[8px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
                         </div>
                     </div>
-                    <BrandingHeader style={{ marginBottom: '12px' }} />
+                    <div className="mb-2" />
                     <button 
                         onClick={handleLogout}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
@@ -1901,7 +1899,7 @@ function AdminHomePage() {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 
                 {/* Top Header */}
                 <header className="h-16 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
@@ -1945,7 +1943,7 @@ function AdminHomePage() {
                 </header>
 
                 {/* Main */}
-                <main style={{ padding: "20px" }}>
+                <main className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === "dashboard" && (
                         <>
                             {/* Welcome Banner */}
@@ -3231,34 +3229,41 @@ function AdminHomePage() {
                                 </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Logo Preview</label>
-                                    <div style={{ padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', overflow: "hidden" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ padding: "40px", border: `2px dashed ${t.border}`, borderRadius: "12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', overflow: "hidden", gap: "24px" }}>
+                                        <div style={{ textAlign: "center" }}>
+                                            <p style={{ fontSize: "10px", color: t.textSub, marginBottom: "8px", textTransform: "uppercase", fontWeight: 700 }}>Main Logo</p>
                                             {localBranding.logo_url ? (
                                                 <img
                                                     key={`img-${localBranding.logo_url}`}
                                                     src={localBranding.logo_url}
-                                                    alt="Logo URL missing or invalid"
-                                                    style={{
-                                                        height: "80px",
-                                                        objectFit: "contain",
-                                                        filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none'
-                                                    }}
-                                                    onLoad={(e) => { 
-                                                        e.target.style.display = 'block'; 
-                                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; 
-                                                    }}
-                                                    onError={(e) => { 
-                                                        e.target.style.display = 'none'; 
-                                                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; 
-                                                    }}
+                                                    alt="Logo Preview"
+                                                    style={{ height: "60px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }}
                                                 />
-                                            ) : null}
-                                            <div key={`fallback-${localBranding.logo_url}`} style={{ display: localBranding.logo_url ? "none" : "flex", alignItems: "center", gap: "12px" }}>
-                                                <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${localBranding.logo_color}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
-                                                    <Ticket color="#fff" size={28} />
+                                            ) : (
+                                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                    <div style={{ width: "48px", height: "48px", background: `linear-gradient(135deg, ${localBranding.logo_color}, #3b82f6)`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 15px rgba(37, 99, 235, 0.3)" }}>
+                                                        <Ticket color="#fff" size={28} />
+                                                    </div>
+                                                    <span style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{localBranding.name}</span>
                                                 </div>
-                                                <span style={{ fontSize: "24px", fontWeight: 800, color: t.textMain }}>{localBranding.name}</span>
-                                            </div>
+                                            )}
+                                        </div>
+
+                                        <div style={{ textAlign: "center", borderTop: `1px solid ${t.border}`, paddingTop: "24px", width: "100%" }}>
+                                            <p style={{ fontSize: "10px", color: t.textSub, marginBottom: "8px", textTransform: "uppercase", fontWeight: 700 }}>"Powered By" Logo</p>
+                                            {localBranding.powered_by_logo_url ? (
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                                    <span style={{ fontSize: "10px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase" }}>Powered By</span>
+                                                    <img
+                                                        key={`pb-${localBranding.powered_by_logo_url}`}
+                                                        src={localBranding.powered_by_logo_url}
+                                                        alt="Powered By Preview"
+                                                        style={{ height: "40px", objectFit: "contain", filter: theme === 'dark' ? 'invert(1) brightness(2)' : 'none' }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <p style={{ color: t.textSub, fontSize: "12px" }}>No "Powered By" logo</p>
+                                            )}
                                         </div>
                                     </div>
                                     <p style={{ fontSize: "12px", color: t.textSub, marginTop: "12px" }}>Logo images with transparent backgrounds work best.</p>
@@ -3515,7 +3520,7 @@ function AdminHomePage() {
 
 
                     {["service_active", "service_banned"].includes(activeTab) && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                     <div style={{ width: "4px", height: "24px", background: ACCENT_GRADIENT, borderRadius: "2px" }}></div>
@@ -3580,7 +3585,7 @@ function AdminHomePage() {
 
 
                     {activeTab === "partner_requests" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}`, minHeight: "600px" }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                                 <h3 style={{ fontSize: "20px", fontWeight: 900, color: t.textMain }}>Partner Requests</h3>
                             </div>

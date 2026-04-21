@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import CustomerAdPopup from '@/components/CustomerAdPopup';
+import ConditionalLayoutWrapper from '@/components/ConditionalLayoutWrapper';
 import MobileBottomNav from '@/components/MobileBottomNav';
 
 export const metadata = {
@@ -96,10 +97,9 @@ export default function RootLayout({ children }) {
                   <CustomerAdPopup />
                   <ToastContainer />
                   <ChangePasswordModal />
-                  <section style={{ paddingBottom: '140px' }} className="mobile-page-padding">
+                  <ConditionalLayoutWrapper>
                     {children}
-                  </section>
-                  <MobileBottomNav />
+                  </ConditionalLayoutWrapper>
                 </Suspense>
               </MaintenanceGuard>
             </AuthProvider>
