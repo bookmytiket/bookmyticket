@@ -10,6 +10,8 @@ import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
 import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
 import BrandingHeader from "@/components/BrandingHeader";
+import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
+
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
@@ -468,7 +470,7 @@ function AdminHomePage() {
         const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance"];
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "service_active", "service_banned"];
-        const growthTabs = ["promotions", "send_notif"];
+        const growthTabs = ["promotions", "send_notif", "comm_hub"];
         const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub"];
 
         if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
@@ -1836,6 +1838,8 @@ function AdminHomePage() {
                                         {[
                                             { label: "Promotions", id: "promotions" },
                                             { label: "Push Notifications", id: "send_notif" },
+                                            { label: "Email Broadcast", id: "email_templates" },
+
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
                                         ))}
@@ -1860,8 +1864,8 @@ function AdminHomePage() {
                                 {isSettingsOpen && (
                                     <div className="space-y-0.5">
                                         {[
-                                            { label: "API Keys", id: "api_settings" },
-                                            { label: "Communication", id: "comm_hub" },
+                                            { label: "Email System", id: "email_templates" },
+                                            { label: "SMS & WhatsApp", id: "comm_hub" },
                                             { label: "Payments", id: "payment_settings" },
                                             { label: "Emails", id: "email_settings" },
                                             { label: "SEO & Meta", id: "meta_management" },
@@ -4634,117 +4638,7 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "email_templates" && (
-                        <div style={{ maxWidth: "1000px" }}>
-                            <div style={{ marginBottom: "20px" }}>
-                                <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Email Templates</h2>
-                                <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>Manage the content and auto-send behavior of system-generated emails</p>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "24px" }}>
-                                {/* Left Side: Template List */}
-                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                    {emailTemplates.map(tmp => (
-                                        <div
-                                            key={tmp.id}
-                                            onClick={() => setActiveTemplate(tmp)}
-                                            style={{
-                                                padding: "16px",
-                                                borderRadius: "12px",
-                                                border: `1.5px solid ${activeTemplate?.id === tmp.id ? "#3b82f6" : t.border}`,
-                                                backgroundColor: activeTemplate?.id === tmp.id ? "#3b82f610" : t.cardBg,
-                                                cursor: "pointer",
-                                                transition: "0.2s"
-                                            }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <h4 style={{ margin: 0, fontSize: "14px", color: t.textMain }}>{tmp.name}</h4>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: tmp.autoSend ? "#22c55e" : "#cbd5e1" }}></div>
-                                            </div>
-                                            <p style={{ margin: "4px 0 0", fontSize: "11px", color: t.textSub }}>Subject: {tmp.subject.substring(0, 30)}...</p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Right Side: Editor */}
-                                <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                    {editingTemplate ? (
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>Edit {editingTemplate.name}</h3>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                    <span style={{ fontSize: "12px", color: t.textSub }}>Auto-send:</span>
-                                                    <button
-                                                        onClick={() => setEditingTemplate({ ...editingTemplate, autoSend: !editingTemplate.autoSend })}
-                                                        style={{
-                                                            width: "44px", height: "22px", borderRadius: "11px",
-                                                            backgroundColor: editingTemplate.autoSend ? "#3b82f6" : "#cbd5e1",
-                                                            border: "none", cursor: "pointer", position: "relative", transition: "0.3s"
-                                                        }}>
-                                                        <div style={{
-                                                            position: "absolute", top: "2px", left: editingTemplate.autoSend ? "24px" : "2px",
-                                                            width: "18px", height: "18px", borderRadius: "50%", background: "#fff", transition: "0.3s"
-                                                        }} />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Email Subject</label>
-                                                <input
-                                                    type="text"
-                                                    value={editingTemplate.subject}
-                                                    onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
-                                                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none" }}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Message Content (HTML Supported)</label>
-                                                <textarea
-                                                    rows={10}
-                                                    placeholder="HTML content here..."
-                                                    value={editingTemplate.body}
-                                                    onChange={(e) => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
-                                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", fontFamily: "monospace" }}
-                                                />
-                                            </div>
-
-                                            <div style={{ display: "flex", gap: "10px", padding: "12px", backgroundColor: "#3b82f610", borderRadius: "8px", border: "1px solid #3b82f630" }}>
-                                                <Code size={16} color="#3b82f6" />
-                                                <div style={{ fontSize: "11px", color: "#3b82f6" }}>
-                                                    <strong>Available Variables:</strong> {"{{event_name}}, {{user_name}}, {{ticket_id}}, {{booking_date}}, {{otp}}"}
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        await patchEmailTemplateMutation({
-                                                            id: editingTemplate._id,
-                                                            subject: editingTemplate.subject,
-                                                            body: editingTemplate.body,
-                                                            autoSend: editingTemplate.autoSend,
-                                                            name: editingTemplate.name,
-                                                            identifier: editingTemplate.identifier
-                                                        });
-                                                        showToast("Template saved successfully!", "success");
-                                                    } catch (err) {
-                                                        console.error("Failed to save template:", err);
-                                                        showToast("Error saving template.", "error");
-                                                    }
-                                                }}
-                                                style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"} onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
-                                                Save Template Changes
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div style={{ height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                            <Mail size={48} color={t.textSub} style={{ opacity: 0.2, marginBottom: "16px" }} />
-                                            <p style={{ color: t.textSub, fontSize: "14px" }}>Select a template to edit</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <EmailCommSystem t={t} theme={theme} />
                     )}
                     {activeTab === "disclaimer_settings" && (
                         <div style={{ maxWidth: "850px" }}>
@@ -5154,6 +5048,11 @@ function AdminHomePage() {
                             <SubscribersTable t={t} theme={theme} />
                         </div>
                     )}
+
+                    {activeTab === "comm_hub" && (
+                        <EmailCommSystem t={t} theme={theme} />
+                    )}
+
 
                     {activeTab === "api_settings" && (
                         <div style={{ maxWidth: "850px" }}>

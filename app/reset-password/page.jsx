@@ -118,6 +118,12 @@ function ResetPasswordForm() {
     const [tokenValid, setTokenValid] = useState(null); // null=loading, true/false
 
     useEffect(() => {
+        // Special case for TEST_TOKEN to allow previewing the reset form
+        if (token === 'TEST_TOKEN') {
+            setTokenValid(true);
+            return;
+        }
+
         if (!token || !email || isForced) { setTokenValid(isForced ? true : false); return; }
         const verifyToken = async () => {
             try {
@@ -138,6 +144,14 @@ function ResetPasswordForm() {
 
     const handleReset = async (e) => {
         e.preventDefault();
+        
+        // Special case for TEST_TOKEN simulation
+        if (token === 'TEST_TOKEN') {
+            setStatus("loading");
+            setTimeout(() => setStatus("success"), 1000);
+            return;
+        }
+
         if (newPassword !== confirmPassword) {
             setErrorMessage("Passwords do not match.");
             return;
@@ -211,7 +225,12 @@ function ResetPasswordForm() {
     return (
         <div style={cardStyle}>
             <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                <img src="/logo.png" alt="Logo" style={{ height: "60px", marginBottom: "16px" }} />
+                <div style={{ position: "relative", display: "inline-block", margin: "0 auto" }}>
+                    <img src="/logo.png" alt="Logo" style={{ height: "65px", width: "auto", display: "block", marginBottom: "16px" }} />
+                    <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+                        <svg width="40" height="20" viewBox="0 0 40 20"><path d="M5 15L10 5M20 18L20 2M35 15L30 5" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                    </div>
+                </div>
                 <h2 style={titleStyle}>{isForced ? "Security Update" : "Set New Password"}</h2>
                 <p style={subStyle}>
                     {isForced 

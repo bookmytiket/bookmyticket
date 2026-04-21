@@ -445,12 +445,57 @@ export default function SignInPage() {
         }
     };
 
-    const inp = { width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", color: "#1e293b", outline: "none", background: "#fff", boxSizing: "border-box", marginBottom: "8px", transition: "all .2s" };
+    const inp = { 
+        width: "100%", 
+        padding: "16px 20px", 
+        borderRadius: "16px", 
+        border: "1px solid #e2e8f0", 
+        fontSize: "15px", 
+        color: "#1e293b", 
+        outline: "none", 
+        background: "#fff", 
+        boxSizing: "border-box", 
+        marginBottom: "12px", 
+        transition: "all .3s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+    };
     const lbl = { display: "block", fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" };
-    const fr = e => { e.target.style.borderColor = "#f84464"; };
-    const bg = e => { e.target.style.borderColor = "#e2e8f0"; };
-    const submitBtn = { width: "100%", padding: "14px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", color: "#fff", fontWeight: 800, fontSize: "15px", cursor: "pointer", marginBottom: "15px", marginTop: "8px", transition: "all 0.3s ease", boxShadow: "0 4px 15px rgba(248, 68, 164, 0.25)" };
-    const linkBtn = { background: "none", border: "none", color: "#000", fontWeight: 800, cursor: "pointer", fontSize: "14px", textDecoration: "none", padding: 0 };
+    const fr = e => { 
+        e.target.style.borderColor = "#f84464"; 
+        e.target.style.boxShadow = "0 0 0 4px rgba(248, 68, 100, 0.1)";
+    };
+    const bg = e => { 
+        e.target.style.borderColor = "#e2e8f0"; 
+        e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+    };
+    const submitBtn = { 
+        width: "100%", 
+        padding: "18px", 
+        borderRadius: "16px", 
+        border: "none", 
+        background: "linear-gradient(135deg, #f84464 0%, #a855f7 100%)", 
+        color: "#fff", 
+        fontWeight: 800, 
+        fontSize: "16px", 
+        cursor: "pointer", 
+        marginBottom: "20px", 
+        marginTop: "10px", 
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
+        boxShadow: "0 10px 20px rgba(248, 68, 100, 0.25)" 
+    };
+    const socialBtn = {
+        flex: 1,
+        height: "54px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "16px",
+        border: "1px solid #e2e8f0",
+        background: "#fff",
+        cursor: "pointer",
+        transition: "0.2s"
+    };
+    const linkBtn = { background: "none", border: "none", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "14px", textDecoration: "underline", padding: 0 };
 
     const activeDeal = PARTNER_DEALS[dealIdx];
 
@@ -685,21 +730,27 @@ export default function SignInPage() {
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "4px", marginTop: "12px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "24px" }}>
                             <Link href="/">
-                                <img src="/logo.png" alt="BookMyTicket" style={{ height: "60px", width: "auto", display: "block", cursor: "pointer" }} />
+                                <div style={{ position: "relative" }}>
+                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "65px", width: "auto", display: "block", cursor: "pointer" }} />
+                                    {/* Hand-drawn effect rays from image */}
+                                    <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+                                        <svg width="40" height="20" viewBox="0 0 40 20"><path d="M5 15L10 5M20 18L20 2M35 15L30 5" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                                    </div>
+                                </div>
                             </Link>
                         </div>
 
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                                    <h1 style={{ fontSize: "20px", fontWeight: 800, color: "#1e293b", margin: "0 0 2px" }}>
-                                        {redirectPath?.startsWith("/admin") ? "Admin Login" : "Welcome"}
+                                <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                                    <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                        Welcome
                                     </h1>
-                                    <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
-                                        {redirectPath?.startsWith("/admin") ? "Access the control panel" : "Sign in to your account"}
+                                    <p style={{ fontSize: "15px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                        Sign in to your account
                                     </p>
                                 </div>
 
@@ -712,17 +763,17 @@ export default function SignInPage() {
                                         style={inp} onFocus={fr} onBlur={bg}
                                     />
 
-                                    <div style={{ position: "relative", marginBottom: "16px" }}>
+                                    <div style={{ position: "relative", marginBottom: "24px" }}>
                                         <input
                                             type={showPass ? "text" : "password"} required
                                             placeholder="Password"
                                             value={password}
                                             onChange={e => setPassword(e.target.value)}
-                                            style={{ ...inp, paddingRight: "40px", marginBottom: 0 }} onFocus={fr} onBlur={bg}
+                                            style={{ ...inp, paddingRight: "50px", marginBottom: 0 }} onFocus={fr} onBlur={bg}
                                         />
                                         <button type="button" onClick={() => setShowPass(p => !p)}
-                                            style={{ position: "absolute", right: "10px", top: "12px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
-                                            {showPass ? <Eye size={16} /> : <EyeOff size={16} />}
+                                            style={{ position: "absolute", right: "16px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                            {showPass ? <Eye size={20} /> : <EyeOff size={20} />}
                                         </button>
                                     </div>
 
@@ -774,33 +825,42 @@ export default function SignInPage() {
                                         @keyframes spin { to { transform: rotate(360deg); } }
                                         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                                     ` }} />
-                                    <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "12px", color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
+                                    <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "14px", color: "#3b82f6", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
                                     </div>
                                 </form>
 
                                 {(ssoConfigs?.google || ssoConfigs?.facebook) && (
                                     <div style={{ marginTop: "12px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", color: "#94a3b8", fontSize: "10px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", color: "#94a3b8", fontSize: "12px", fontWeight: 700 }}>
                                             <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
                                         </div>
-                                        <div style={{ display: "flex", gap: "10px" }}>
+                                        <div style={{ display: "flex", gap: "16px" }}>
                                             {ssoConfigs.google && (
                                                 <button 
                                                     onClick={() => handleSSOLogin("google")}
-                                                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}
+                                                    style={socialBtn}
                                                 >
-                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "16px" }} />
+                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "22px" }} />
                                                 </button>
                                             )}
                                             {ssoConfigs.facebook && (
                                                 <button 
                                                     onClick={() => handleSSOLogin("facebook")}
-                                                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer" }}
+                                                    style={socialBtn}
                                                 >
-                                                    <div style={{ width: "16px", height: "16px", background: "#1877F2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", color: "#fff", fontSize: "10px", fontWeight: 900 }}>f</div>
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="F" style={{ width: "22px" }} />
                                                 </button>
                                             )}
+                                        </div>
+
+                                        <div style={{ marginTop: "24px", textAlign: "center" }}>
+                                            <div style={{ marginBottom: "16px", fontSize: "13px", color: "#64748b", fontWeight: 600 }}>
+                                                <span style={{ textDecoration: "underline", cursor: "pointer" }}>Terms</span> & <span style={{ textDecoration: "underline", cursor: "pointer" }}>Privacy</span>
+                                            </div>
+                                            <p style={{ fontSize: "14px", color: "#1e293b", fontWeight: 600, margin: 0 }}>
+                                                New here? <span onClick={() => setMode("signup")} style={{ color: "#f84464", cursor: "pointer", fontWeight: 800 }}>Create account</span>
+                                            </p>
                                         </div>
                                     </div>
                                 )}

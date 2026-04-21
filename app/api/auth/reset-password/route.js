@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { sendTemplatedEmail } from '@/lib/emailService';
+import crypto from 'crypto';
 
 // Helper: Microsoft 365 Graph API Email Dispatch
 const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) => {
@@ -53,6 +55,11 @@ const sendM365Email = async (m365Config, fromEmail, toEmail, subject, content) =
 };
 
 export async function POST(request) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
   try {
     const body = await request.json();
     const { action, email } = body;
@@ -80,35 +87,29 @@ export async function POST(request) {
       }
 
       // 3. Create Reset Link
-      const resetLink = `https://bookmyticket.net/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bookmyticket.net';
+      if (!baseUrl.startsWith('http')) baseUrl = `https://${baseUrl}`;
+      
+      const resetLink = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-      // 4. Send Email via OAuth2 (Graph API)
+      // 4. Send Email via Centralized Service
       try {
-        const { data: settings } = await supabaseAdmin.from('email_settings').select('*').single();
-        if (!settings) throw new Error("No mail dispatcher configuration found.");
+        const { data: userProfile } = await supabaseAdmin.from('profiles').select('full_name').eq('email', email).single();
+        
+        const mailRes = await sendTemplatedEmail({
+          templateIdentifier: 'password_reset',
+          to: email,
+          variables: {
+            name: userProfile?.full_name || 'User',
+            reset_link: resetLink
+          },
+          metadata: { action: 'reset_request' }
+        });
 
-        const subject = 'Reset Your BookMyTicket Password';
-        const html = `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center;">
-            <h2>Password Reset Request</h2>
-            <p>You requested to reset your password. Click the button below to set a new password:</p>
-            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #ec4899; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0;">Reset Password</a>
-            <p>If you did not request this, you can safely ignore this email.</p>
-            <p style="font-size: 12px; color: #666; margin-top: 30px;">This link will expire in 10 minutes.</p>
-          </div>
-        `;
+        if (!mailRes.success) throw new Error(mailRes.error);
 
-        if (settings.provider === 'MICROSOFT_365' && settings.microsoft_365) {
-          console.log(`Attempting to send reset email via Microsoft Graph API for ${email}`);
-          const fromEmail = "hello@bookmyticket.net";
-          await sendM365Email(settings.microsoft_365, fromEmail, email, subject, html);
-          console.log(`Reset email successfully sent to ${email} via Microsoft Graph API.`);
-        }
-        else {
-            throw new Error(`Email provider is not configured for MICROSOFT_365.`);
-        }
       } catch (mailErr) {
-        console.error("Local email dispatch error:", mailErr);
+        console.error("Password reset email error:", mailErr);
         throw mailErr;
       }
 

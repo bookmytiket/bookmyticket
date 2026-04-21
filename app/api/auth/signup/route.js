@@ -82,17 +82,17 @@ export async function POST(request) {
         }
 
         // Dispatch Welcome Notification (Background)
-        if (phone) {
-            // We use a relative URL if running in the same environment, 
-            // but for server-side it's better to call the service directly or trigger the API internally.
-            // Since we have the baseUrl in env, we'll use that.
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-            fetch(`${baseUrl}/api/comm/trigger`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: phone, type: 'SIGNUP', data: {} })
-            }).catch(e => console.error("Server-side Welcome trigger failed", e));
-        }
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        fetch(`${baseUrl}/api/comm/trigger`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                phoneNumber: phone, 
+                email: email.trim().toLowerCase(),
+                type: 'SIGNUP', 
+                data: { name: full_name } 
+            })
+        }).catch(e => console.error("Server-side Welcome trigger failed", e));
 
         return NextResponse.json({ success: true, userId: data.user.id });
     } catch (err) {
