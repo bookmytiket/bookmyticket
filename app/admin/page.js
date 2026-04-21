@@ -1151,7 +1151,13 @@ function AdminHomePage() {
 
     useEffect(() => {
         if (brandingPricingConfig) {
-            setBrandingPricing(brandingPricingConfig);
+            setBrandingPricing(prev => {
+                if (prev.monthlyPrice === brandingPricingConfig.monthlyPrice && 
+                    prev.yearlyPrice === brandingPricingConfig.yearlyPrice) {
+                    return prev;
+                }
+                return { ...brandingPricingConfig };
+            });
         }
     }, [brandingPricingConfig]);
 
