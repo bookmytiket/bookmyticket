@@ -447,19 +447,19 @@ export default function SignInPage() {
 
     const inp = { 
         width: "100%", 
-        padding: "16px 20px", 
-        borderRadius: "16px", 
+        padding: "12px 16px", 
+        borderRadius: "12px", 
         border: "1px solid #e2e8f0", 
-        fontSize: "15px", 
+        fontSize: "14px", 
         color: "#1e293b", 
         outline: "none", 
         background: "#fff", 
         boxSizing: "border-box", 
-        marginBottom: "12px", 
+        marginBottom: "10px", 
         transition: "all .3s cubic-bezier(0.4, 0, 0.2, 1)",
         boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
     };
-    const lbl = { display: "block", fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" };
+    const lbl = { display: "block", fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "4px" };
     const fr = e => { 
         e.target.style.borderColor = "#f84464"; 
         e.target.style.boxShadow = "0 0 0 4px rgba(248, 68, 100, 0.1)";
@@ -470,58 +470,43 @@ export default function SignInPage() {
     };
     const submitBtn = { 
         width: "100%", 
-        padding: "18px", 
-        borderRadius: "16px", 
+        padding: "14px", 
+        borderRadius: "14px", 
         border: "none", 
         background: "linear-gradient(135deg, #f84464 0%, #a855f7 100%)", 
         color: "#fff", 
         fontWeight: 800, 
-        fontSize: "16px", 
+        fontSize: "15px", 
         cursor: "pointer", 
-        marginBottom: "20px", 
-        marginTop: "10px", 
+        marginBottom: "12px", 
+        marginTop: "6px", 
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
-        boxShadow: "0 10px 20px rgba(248, 68, 100, 0.25)" 
+        boxShadow: "0 6px 12px rgba(248, 68, 100, 0.2)" 
     };
     const socialBtn = {
         flex: 1,
-        height: "54px",
+        height: "46px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: "16px",
+        borderRadius: "12px",
         border: "1px solid #e2e8f0",
         background: "#fff",
         cursor: "pointer",
         transition: "0.2s"
     };
-    const linkBtn = { background: "none", border: "none", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "14px", textDecoration: "underline", padding: 0 };
+    const linkBtn = { background: "none", border: "none", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "13px", textDecoration: "underline", padding: 0 };
 
     const activeDeal = PARTNER_DEALS[dealIdx];
 
     return (
-        <div style={{ minHeight: "100vh", display: "flex", width: "100%", fontFamily: "'Inter','Roboto',sans-serif", background: "#f8fafc" }}>
+        <div style={{ minHeight: "100vh", display: "flex", width: "100%", fontFamily: "'Inter','Roboto',sans-serif", background: "#f1f5f9" }}>
             <style dangerouslySetInnerHTML={{ __html: `
-                @media (max-width: 1024px) {
+                @media (max-width: 1200px) {
                     .hide-on-mobile { display: none !important; }
                     .signin-wrapper { justify-content: center !important; }
                 }
-                @media (max-width: 768px) {
-                    .phone-mockup-frame {
-                        width: 100% !important;
-                        height: 100% !important;
-                        max-width: none !important;
-                        max-height: none !important;
-                        border-radius: 0 !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        margin: 0 !important;
-                        min-height: 100vh !important;
-                    }
-                    .phone-notch, .phone-status-bar {
-                        display: none !important;
-                    }
-                }
+                /* Phone mockup frame stays consistent across all devices */
                 body { overflow: hidden; margin: 0; }
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -671,32 +656,40 @@ export default function SignInPage() {
                 )}
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
-                <div className="phone-mockup-frame" style={{ 
-                    width: "min(350px, 92vw)", 
-                    height: "min(680px, 92vh)", 
+                <div style={{ 
+                    width: "350px", 
+                    maxWidth: "92vw",
+                    height: "700px", 
+                    maxHeight: "92vh",
                     background: "#ffffff", 
                     borderRadius: "40px", 
-                    border: "8px solid #1a1a1a", 
+                    border: "12px solid #101010", 
                     position: "relative", 
-                    boxShadow: "0 40px 80px rgba(0,0,0,0.15)",
+                    boxShadow: "0 40px 80px rgba(0,0,0,0.25)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    margin: "10px auto"
+                    margin: "10px auto",
+                    zIndex: 10
                 }}>
                     {/* Notch (Dynamic Island Style) */}
                     <div className="phone-notch" style={{ 
                         width: "110px", 
-                        height: "24px", 
+                        height: "25px", 
                         background: "#101010", 
                         position: "absolute", 
                         top: "10px", 
                         left: "50%", 
                         transform: "translateX(-50%)", 
                         borderRadius: "18px", 
-                        zIndex: 10
+                        zIndex: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        padding: "0 14px"
                     }}>
-                         <div style={{ width: "8px", height: "8px", background: "#1e293b", borderRadius: "50%", position: "absolute", right: "14px", top: "8px" }} />
+                         <div style={{ width: "6px", height: "6px", background: "#1e293b", borderRadius: "50%", marginRight: "8px", opacity: 0.8 }} />
+                         <div style={{ width: "10px", height: "10px", background: "radial-gradient(circle, #2d3748 0%, #1a202c 100%)", borderRadius: "50%", border: "1px solid #2d3748" }} />
                     </div>
 
                     {/* Status Bar */}
@@ -730,13 +723,13 @@ export default function SignInPage() {
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "24px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "4px", marginTop: "10px" }}>
                             <Link href="/">
                                 <div style={{ position: "relative" }}>
-                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "65px", width: "auto", display: "block", cursor: "pointer" }} />
+                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "45px", width: "auto", display: "block", cursor: "pointer" }} />
                                     {/* Hand-drawn effect rays from image */}
-                                    <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
-                                        <svg width="40" height="20" viewBox="0 0 40 20"><path d="M5 15L10 5M20 18L20 2M35 15L30 5" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                                    <div style={{ position: "absolute", top: "-6px", left: "50%", transform: "translateX(-50%)" }}>
+                                        <svg width="24" height="12" viewBox="0 0 40 20"><path d="M5 15L10 5M20 18L20 2M35 15L30 5" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
                                     </div>
                                 </div>
                             </Link>
@@ -745,11 +738,11 @@ export default function SignInPage() {
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                                    <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
+                                <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                                    <h1 style={{ fontSize: "20px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 1px" }}>
                                         Welcome
                                     </h1>
-                                    <p style={{ fontSize: "15px", color: "#64748b", margin: 0, fontWeight: 500 }}>
+                                    <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>
                                         Sign in to your account
                                     </p>
                                 </div>
@@ -763,7 +756,7 @@ export default function SignInPage() {
                                         style={inp} onFocus={fr} onBlur={bg}
                                     />
 
-                                    <div style={{ position: "relative", marginBottom: "24px" }}>
+                                    <div style={{ position: "relative", marginBottom: "16px" }}>
                                         <input
                                             type={showPass ? "text" : "password"} required
                                             placeholder="Password"
@@ -772,8 +765,8 @@ export default function SignInPage() {
                                             style={{ ...inp, paddingRight: "50px", marginBottom: 0 }} onFocus={fr} onBlur={bg}
                                         />
                                         <button type="button" onClick={() => setShowPass(p => !p)}
-                                            style={{ position: "absolute", right: "16px", top: "18px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
-                                            {showPass ? <Eye size={20} /> : <EyeOff size={20} />}
+                                            style={{ position: "absolute", right: "16px", top: "14px", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 0 }}>
+                                            {showPass ? <Eye size={18} /> : <EyeOff size={18} />}
                                         </button>
                                     </div>
 
@@ -825,23 +818,23 @@ export default function SignInPage() {
                                         @keyframes spin { to { transform: rotate(360deg); } }
                                         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                                     ` }} />
-                                    <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "14px", color: "#3b82f6", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
+                                    <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                                        <button type="button" onClick={() => setMode("forgot")} style={{ background: "none", border: "none", fontSize: "13px", color: "#3b82f6", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Forgot password?</button>
                                     </div>
                                 </form>
 
                                 {(ssoConfigs?.google || ssoConfigs?.facebook) && (
                                     <div style={{ marginTop: "12px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", color: "#94a3b8", fontSize: "12px", fontWeight: 700 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", color: "#94a3b8", fontSize: "11px", fontWeight: 700 }}>
                                             <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
                                         </div>
-                                        <div style={{ display: "flex", gap: "16px" }}>
+                                        <div style={{ display: "flex", gap: "12px" }}>
                                             {ssoConfigs.google && (
                                                 <button 
                                                     onClick={() => handleSSOLogin("google")}
                                                     style={socialBtn}
                                                 >
-                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "22px" }} />
+                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{ width: "20px" }} />
                                                 </button>
                                             )}
                                             {ssoConfigs.facebook && (
@@ -849,29 +842,21 @@ export default function SignInPage() {
                                                     onClick={() => handleSSOLogin("facebook")}
                                                     style={socialBtn}
                                                 >
-                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="F" style={{ width: "22px" }} />
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="F" style={{ width: "20px" }} />
                                                 </button>
                                             )}
                                         </div>
 
-                                        <div style={{ marginTop: "24px", textAlign: "center" }}>
-                                            <div style={{ marginBottom: "16px", fontSize: "13px", color: "#64748b", fontWeight: 600 }}>
+                                        <div style={{ marginTop: "12px", textAlign: "center" }}>
+                                            <div style={{ marginBottom: "6px", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
                                                 <span style={{ textDecoration: "underline", cursor: "pointer" }}>Terms</span> & <span style={{ textDecoration: "underline", cursor: "pointer" }}>Privacy</span>
                                             </div>
-                                            <p style={{ fontSize: "14px", color: "#1e293b", fontWeight: 600, margin: 0 }}>
+                                            <p style={{ fontSize: "13px", color: "#1e293b", fontWeight: 600, margin: 0 }}>
                                                 New here? <span onClick={() => setMode("signup")} style={{ color: "#f84464", cursor: "pointer", fontWeight: 800 }}>Create account</span>
                                             </p>
                                         </div>
                                     </div>
                                 )}
-
-                                <p style={{ marginTop: "16px", fontSize: "10px", color: "#94a3b8", textAlign: "center" }}>
-                                    <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Terms</a> &amp; <a href="#" style={{ color: "#475569", textDecoration: "underline" }}>Privacy</a>
-                                </p>
-
-                                <p style={{ textAlign: "center", marginTop: "20px", fontSize: "12px", color: "#64748b" }}>
-                                    New here? <button onClick={() => setMode("signup")} style={{ ...linkBtn, fontSize: "12px", color: "#f43f5e" }}>Create account</button>
-                                </p>
                             </>
                         )}
 
