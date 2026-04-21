@@ -63,14 +63,9 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
     };
 
     try {
-      // Let queryFn define the select if it wants to, otherwise default to "*"
-      let query = supabase.from(table);
+      // We call .select() immediately to get the filter builder so queryFn can use eq(), order(), etc.
+      let query = supabase.from(table).select("*");
       query = queryFn(query);
-      
-      // If queryFn didn't call select, we call it here to ensure a valid query
-      if (!query.url.searchParams.has('select')) {
-        query = query.select("*");
-      }
       
       const { data: result, error: err } = await query;
       

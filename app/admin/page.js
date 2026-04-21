@@ -987,11 +987,12 @@ function AdminHomePage() {
 
     const serviceActive = useMemo(() => {
         let filtered = serviceProvidersArr.filter(o => 
-            o.kyc_status === "Active" || 
+            (o.kyc_status === "Active" || 
             o.kyc_status === "Not Required" || 
             o.kyc_status === "KYC Completed" ||
             o.kyc_status === "Approved" ||
-            o.is_approved === true
+            o.is_approved === true) &&
+            !organisersArr.some(org => org.id === o.id)
         );
         if (serviceCategoryFilter !== "all") {
             filtered = filtered.filter(o => (o.category || o.kyc_details?.category) === serviceCategoryFilter);
@@ -1000,7 +1001,10 @@ function AdminHomePage() {
     }, [serviceProvidersArr, serviceCategoryFilter]);
 
     const serviceBanned = useMemo(() => {
-        let filtered = serviceProvidersArr.filter(o => o.kyc_status === "Banned");
+        let filtered = serviceProvidersArr.filter(o => 
+            o.kyc_status === "Banned" && 
+            !organisersArr.some(org => org.id === o.id)
+        );
         if (serviceCategoryFilter !== "all") {
             filtered = filtered.filter(o => (o.category || o.kyc_details?.category) === serviceCategoryFilter);
         }
