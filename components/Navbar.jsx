@@ -371,7 +371,7 @@ export default function Navbar() {
                   pointerEvents: 'none',
                 }}
               >
-                Book Now
+                Sign In
               </Link>
             ) : (
                 <>
@@ -479,7 +479,7 @@ export default function Navbar() {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
                       }}
                     >
-                      Book Now
+                      Sign In
                     </Link>
                 )}
                 </>
@@ -791,7 +791,7 @@ export default function Navbar() {
                 {user ? (
                   <button className="nav-action-signin" style={{ width: "100%", justifyContent: "center", borderRadius: "12px", height: "48px", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', color: "#fff", fontWeight: 800 }} onClick={() => { logout(); setMenuOpen(false); }}>Sign Out</button>
                 ) : (
-                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", borderRadius: "12px", height: "48px", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', gap: '8px', color: "#fff", fontWeight: 800 }} onClick={() => setMenuOpen(false)}>Book Now</Link>
+                  <Link href="/signin" className="nav-action-signin" style={{ width: "100%", justifyContent: "center", borderRadius: "12px", height: "48px", background: 'linear-gradient(135deg, #f844a4 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', gap: '8px', color: "#fff", fontWeight: 800 }} onClick={() => setMenuOpen(false)}>Sign In</Link>
                 )}
               </div>
             </div>

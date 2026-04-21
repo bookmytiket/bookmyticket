@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Calendar, Ticket, User, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from './AuthContext';
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Home' },
@@ -14,6 +15,15 @@ const NAV_ITEMS = [
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
+
+  const handleBookNow = () => {
+    if (!user) {
+      router.push(`/signin?redirect=${encodeURIComponent(pathname)}`);
+    } else {
+      router.push('/#explore-popular-events');
+    }
+  };
 
   return (
     <nav className="mobile-bottom-nav">
@@ -33,7 +43,7 @@ export default function MobileBottomNav() {
         {/* Floating Book Now Action */}
         <div className="nav-item-action">
           <button 
-            onClick={() => router.push('/#explore-popular-events')}
+            onClick={handleBookNow}
             className="book-now-floating"
           >
             <div className="book-now-inner">
@@ -44,13 +54,19 @@ export default function MobileBottomNav() {
         </div>
 
         {/* Tickets */}
-        <Link href="/profile?tab=my_booking" className={`nav-item ${pathname.includes('my_booking') ? 'active' : ''}`}>
+        <Link 
+          href={user ? "/profile?tab=my_booking" : `/signin?redirect=${encodeURIComponent('/profile?tab=my_booking')}`} 
+          className={`nav-item ${pathname.includes('my_booking') ? 'active' : ''}`}
+        >
           <Ticket size={22} className="nav-icon" />
           <span className="nav-label">Tickets</span>
         </Link>
 
         {/* Profile */}
-        <Link href="/profile" className={`nav-item ${pathname === '/profile' ? 'active' : ''}`}>
+        <Link 
+          href={user ? "/profile" : "/signin?redirect=/profile"} 
+          className={`nav-item ${pathname === '/profile' ? 'active' : ''}`}
+        >
           <User size={22} className="nav-icon" />
           <span className="nav-label">Profile</span>
         </Link>
