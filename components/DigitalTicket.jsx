@@ -2,23 +2,27 @@
 
 import React from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { 
-    Calendar, 
-    MapPin, 
-    Ticket, 
-    CheckCircle2, 
-    Clock, 
-    AlertCircle, 
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { Calendar,
+    MapPin,
+    Ticket,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
     ShieldCheck,
     Download,
     Loader2
-} from "lucide-react";
+} from "lucide-react"; 
+
 import { DEFAULT_TICKET_TERMS } from "@/app/utils/ticketTerms";
 import BrandingHeader from "./BrandingHeader";
 import * as htmlToImage from 'html-to-image';
 import jsPDF from 'jspdf';
 
 export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
+  // Fetch branding for Powered By logo
+  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: true });
+  const branding = (brandingArr && brandingArr[0] && brandingArr[0].powered_by_logo_url) ? brandingArr[0] : { powered_by_logo_url: '/logo.png' };
     const ticketRef = React.useRef(null);
     const [downloading, setDownloading] = React.useState(false);
     const [isCapturing, setIsCapturing] = React.useState(false);
@@ -233,7 +237,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     
                     {/* Centered Logo - UI Size */}
                     <div className="flex-1 flex justify-center">
-                        <img src={getFinalSrc("/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                        <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
                     </div>
 
                     {showDownload && (
@@ -261,7 +265,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                     gap: '12px',
                     borderTop: '1px solid rgba(255,255,255,0.1)'
                 }}>
-                    <img src={getFinalSrc("/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                    <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
                     <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>
                         This ticket is verified by BookMyTicket
                     </div>
