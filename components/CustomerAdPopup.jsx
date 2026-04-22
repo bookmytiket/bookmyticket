@@ -1,14 +1,16 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink, Sparkles } from "lucide-react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "./AuthContext";
+import { resolveBannerRedirect } from "@/lib/bannerHelper";
 
 const STORAGE_PREFIX = "bmt_adpopup_";
 const LAST_ID_KEY = `${STORAGE_PREFIX}last_id`;
 const INITIAL_DELAY_MS = 3000; // show 3s after login/page load
+const SESSION_SHOWN_KEY = `${STORAGE_PREFIX}shown_this_tab`;
 
 function shouldShowPopup(popupId, showEveryMinutes) {
   if (typeof window === "undefined") return false;
@@ -47,6 +49,12 @@ export default function CustomerAdPopup() {
   
   const { data: activePopupsRaw, error: popupError } = useSupabaseQuery('ad_popups', (q) => q.select('*').eq('is_active', true), []);
   
+  // Constants
+  const SESSION_SHOWN_KEY = "bmt_ad_shown_this_session";
+  const LAST_ID_KEY = "bmt_last_ad_index";
+  const INITIAL_DELAY_MS = 2500; // Show after 2.5s on home page
+  const DISPLAY_DURATION_MS = 5000; // 5s visibility
+
   const activePopups = useMemo(() => {
     if (popupError || !activePopupsRaw) return [];
     return activePopupsRaw.map(p => ({
@@ -63,6 +71,9 @@ export default function CustomerAdPopup() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [currentPopup, setCurrentPopup] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(5);
+  const [progress, setProgress] = useState(100);
+  const hasTriggered = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -73,67 +84,89 @@ export default function CustomerAdPopup() {
     (popups) => {
       if (!popups?.length || typeof window === "undefined") return null;
       
-      const lastId = localStorage.getItem(LAST_ID_KEY);
+      const lastIndexRaw = localStorage.getItem(`${LAST_ID_KEY}_index`);
+      const lastIndex = lastIndexRaw ? parseInt(lastIndexRaw, 10) : -1;
+      const nextIndex = (lastIndex + 1) % popups.length;
       
-      // 1. Find all ads eligible to be shown based on their interval
-      const eligible = popups.filter(p => shouldShowPopup(p.id, p.showEveryMinutes));
-      if (!eligible.length) return null;
- 
-      // 2. Mixing: Shuffle the eligible ads
-      const shuffled = [...eligible].sort(() => Math.random() - 0.5);
- 
-      // 3. Rotation: Try to pick one that isn't the same as the lastShownId
-      if (shuffled.length > 1) {
-        const different = shuffled.find(p => p.id !== lastId);
-        if (different) {
-          const idxInOriginal = popups.findIndex(p => p.id === different.id);
-          return { popup: different, index: idxInOriginal };
-        }
-      }
- 
-      // 4. Fallback: If only one is eligible (even if it's the last one), show it
-      const fallback = shuffled[0];
-      const fallbackIdx = popups.findIndex(p => p.id === fallback.id);
-      return { popup: fallback, index: fallbackIdx };
+      localStorage.setItem(`${LAST_ID_KEY}_index`, String(nextIndex));
+      return { popup: popups[nextIndex], index: nextIndex };
     },
     []
   );
  
   // Trigger popup on page load or when user logs in
   useEffect(() => {
-    if (!mounted || !activePopups.length) return;
- 
+    // Only trigger on Home Page as requested
+    if (!mounted || !activePopups.length || hasTriggered.current || pathname !== "/") return;
+    
+    // Check if shown in this session
+    if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_SHOWN_KEY)) return;
+
     const timer = setTimeout(() => {
       const result = findNextPopup(activePopups);
       if (result) {
         setCurrentPopup(result.popup);
         setCurrentIndex(result.index);
         setVisible(true);
+        hasTriggered.current = true;
+        
+        // Mark as shown in session
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(SESSION_SHOWN_KEY, "true");
+        }
       }
     }, INITIAL_DELAY_MS);
- 
+
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, activePopups.length, user]); // re-trigger on login
+  }, [mounted, activePopups.length, user, findNextPopup, pathname]);
  
   const handleClose = useCallback(() => {
     if (currentPopup) markPopupSeen(currentPopup.id);
     setVisible(false);
+  }, [currentPopup]);
 
-    // After close, queue next ad (if any) after interval
-    setTimeout(() => {
-      const result = findNextPopup(activePopups);
-      if (result) {
-        setCurrentPopup(result.popup);
-        setCurrentIndex(result.index);
-        setVisible(true);
-      }
-    }, 500); // brief pause between ads
-  }, [currentPopup, activePopups, currentIndex, findNextPopup]);
+  // Auto-close timer
+  useEffect(() => {
+    if (!visible) return;
+
+    setTimeLeft(DISPLAY_DURATION_MS / 1000);
+    setProgress(100);
+
+    const timer = setTimeout(() => {
+      handleClose();
+    }, DISPLAY_DURATION_MS);
+
+    const progressTimer = setInterval(() => {
+      setProgress((prev) => Math.max(0, prev - (100 / (DISPLAY_DURATION_MS / 100))));
+    }, 100);
+
+    const countdownTimer = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(progressTimer);
+      clearInterval(countdownTimer);
+    };
+  }, [visible, handleClose]);
 
   const handleCTA = useCallback(() => {
-    if (currentPopup?.redirectUrl) {
-      window.open(currentPopup.redirectUrl, "_blank", "noopener,noreferrer");
+    const targetUrl = resolveBannerRedirect(
+      currentPopup?.redirectType,
+      currentPopup?.redirectId,
+      currentPopup?.redirectUrl
+    );
+    
+    if (targetUrl && targetUrl !== "#") {
+      if (targetUrl.startsWith('http')) {
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
+      } else {
+        // For local routes, we can use router.push if we had it, 
+        // but since this is a global popup, we might use window.location or import useRouter.
+        // Let's use window.location.href for simplicity or check if we can use router.
+        window.location.href = targetUrl;
+      }
     }
     handleClose();
   }, [currentPopup, handleClose]);
@@ -406,33 +439,25 @@ export default function CustomerAdPopup() {
               </button>
             </motion.div>
 
-            {/* Pagination dots (if multiple ads) */}
-            {activePopups.length > 1 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "6px",
-                  padding: "0 24px 16px",
-                }}
-              >
-                {activePopups.map((p, i) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      width: i === currentIndex ? "20px" : "6px",
-                      height: "6px",
-                      borderRadius: "3px",
-                      background:
-                        i === currentIndex
-                          ? "#f84464"
-                          : "rgba(0,0,0,0.15)",
-                      transition: "all 0.3s",
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Auto-close Progress Bar */}
+            <div style={{ width: "100%", height: "4px", background: "#f3f4f6", position: "relative" }}>
+              <motion.div 
+                initial={{ width: "100%" }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.1 }}
+                style={{ 
+                  height: "100%", 
+                  background: gradientBg, 
+                  position: "absolute",
+                  left: 0,
+                  top: 0
+                }} 
+              />
+            </div>
+            
+            <div style={{ textAlign: "center", padding: "8px 0", fontSize: "11px", color: "#9ca3af", fontWeight: 600 }}>
+              Closing in {timeLeft}s
+            </div>
           </motion.div>
         </>
       )}

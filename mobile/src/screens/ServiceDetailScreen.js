@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
+import BrandingHeader from '../components/BrandingHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -55,7 +56,7 @@ export default function ServiceDetailScreen() {
 
   // Migrated to Supabase: Fetch full profile
   const { data: fullProfile, loading: loadingProfile } = useSupabaseQuery('service_providers', (q) => 
-    q.select('*, profiles!organiser_id(*)').eq('id', vendorId).single(),
+    q.select('*, profiles:organiser_id(*)').eq('id', vendorId).single(),
     [vendorId]
   );
 
@@ -290,7 +291,7 @@ export default function ServiceDetailScreen() {
           {/* Artist Info */}
           <View style={styles.artistHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.artistName}>{organiser?.name || "Professional Artist"}</Text>
+              <Text style={styles.artistName}>{organiser?.full_name || organiser?.username || organiser?.name || "Professional Artist"}</Text>
               <Text style={styles.artistCategory}>{fullProfile?.category || organiser?.category} Professional</Text>
             </View>
             <View style={styles.ratingBadge}>
@@ -587,6 +588,7 @@ export default function ServiceDetailScreen() {
               </View>
             )}
           </View>
+          <BrandingHeader style={{ marginTop: 24, marginBottom: 48 }} />
         </View>
       </ScrollView>
 

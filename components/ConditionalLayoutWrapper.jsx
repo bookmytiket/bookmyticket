@@ -34,10 +34,22 @@ export default function ConditionalLayoutWrapper({ children }) {
 
     return (
         <>
-            <section style={{ paddingBottom: '140px' }} className="mobile-page-padding">
+            <section className="page-main-content mobile-page-padding">
                 {children}
             </section>
             <MobileBottomNav />
+            <style jsx>{`
+                .page-main-content {
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                }
+                @media (max-width: 768px) {
+                    .page-main-content {
+                        padding-bottom: 140px;
+                    }
+                }
+            `}</style>
         </>
     );
 }

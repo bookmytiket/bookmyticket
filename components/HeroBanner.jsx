@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { useRouter } from "next/navigation";
+import { resolveBannerRedirect } from "@/lib/bannerHelper";
 
 const FEATURES = [
     { num: "01", title: "Create Event Page", sub: "Do-it-yourself approach" },
@@ -66,12 +68,15 @@ function PromoSlide({ isMobile }) {
 export default function HeroBanner({ slides: propSlides, showDetails = true, showPromo = true }) {
     const { data: activeAdsRaw } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), []);
     const activeAds = activeAdsRaw || [];
+    const router = useRouter();
 
     const slides = useMemo(() => {
         const adSlides = activeAds.map(ad => ({
             image: ad.imageUrl || ad.img || ad.image_url,
             alt: ad.title || "Advertisement",
-            url: ad.redirectUrl || ad.link,
+            url: ad.redirectUrl || ad.link || ad.redirect_url,
+            redirect_type: ad.redirect_type,
+            redirect_id: ad.redirect_id,
             isAd: true
         }));
 
@@ -140,8 +145,22 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                         <PromoSlide isMobile={isMobile} />
                     ) : (
                         <div
-                            onClick={() => slide.url && window.open(slide.url, "_blank")}
-                            style={{ width: "100%", height: "100%", cursor: slide.url ? "pointer" : "default", position: "relative" }}
+                            onClick={() => {
+                                const resolvedUrl = resolveBannerRedirect(
+                                    slide.redirect_type,
+                                    slide.redirect_id,
+                                    slide.url
+                                );
+                                
+                                if (resolvedUrl) {
+                                    if (resolvedUrl.startsWith('http')) {
+                                        window.open(resolvedUrl, "_blank");
+                                    } else {
+                                        router.push(resolvedUrl);
+                                    }
+                                }
+                            }}
+                            style={{ width: "100%", height: "100%", cursor: (slide.url || (slide.redirect_type && slide.redirect_id)) ? "pointer" : "default", position: "relative" }}
                         >
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
                             <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />

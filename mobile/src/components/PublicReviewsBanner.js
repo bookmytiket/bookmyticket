@@ -33,15 +33,26 @@ export default function PublicReviewsBanner() {
 
         async function fetchReviews() {
             try {
-                const { data, error } = await supabase
+                const { data: reviewsRaw, error: reviewError } = await supabase
                     .from('vendor_reviews')
-                    .select('*, profiles(full_name, username)')
+                    .select('*')
                     .order('created_at', { ascending: false })
                     .limit(10);
 
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    setReviews(data);
+                if (reviewError) throw reviewError;
+
+                if (reviewsRaw && reviewsRaw.length > 0) {
+                    const userIds = [...new Set(reviewsRaw.map(r => r.user_id))];
+                    const { data: profilesData } = await supabase
+                        .from('profiles')
+                        .select('id, full_name, username')
+                        .in('id', userIds);
+
+                    const merged = reviewsRaw.map(r => ({
+                        ...r,
+                        profiles: profilesData?.find(p => p.id === r.user_id)
+                    }));
+                    setReviews(merged);
                 }
             } catch (err) {
                 console.error("Error fetching mobile reviews banner:", err);

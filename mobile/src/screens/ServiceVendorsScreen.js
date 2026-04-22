@@ -24,7 +24,7 @@ export default function ServiceVendorsScreen() {
   
   // Migrated to Supabase: Fetch vendors by category
   const { data: vendorsRaw, loading: loadingVendors } = useSupabaseQuery('service_providers', (q) => {
-    let query = q.select('*, profiles!organiser_id(*)');
+    let query = q.select('*, profiles:organiser_id(*)');
     if (selectedCategory !== "All" && selectedCategory !== "Turf Booking") {
       query = query.eq('category', selectedCategory);
     }

@@ -103,7 +103,7 @@ export default function ManagementScreen() {
   );
 
   const { data: vendorProfile, loading: loadingProfile } = useSupabaseQuery('service_providers', (q) => 
-    q.select('*, profiles!organiser_id(*)').eq('id', user?.id).single(),
+    q.select('*, profiles:organiser_id(*)').eq('id', user?.id).single(),
     [user?.id]
   );
 

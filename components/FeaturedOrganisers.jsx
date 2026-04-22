@@ -73,7 +73,7 @@ export default function FeaturedOrganisers({ organisers = [] }) {
                   }}
                 >
                   <div style={{ width: "80px", height: "80px", borderRadius: "10px", overflow: "hidden", flexShrink: 0 }}>
-                    <img src={org.logo} alt={org.name} style={{ width: "100%", height: "100%", objectFit: "contain", mixBlendMode: "multiply", backgroundColor: "transparent" }} />
+                    <img src={org.logo_url || org.logo} alt={org.name} style={{ width: "100%", height: "100%", objectFit: "contain", mixBlendMode: "multiply", backgroundColor: "transparent" }} />
                   </div>
                 </div>
               </Link>

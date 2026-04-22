@@ -25,6 +25,8 @@ export default function MobileBannersAdmin() {
         mediaUrl: "",
         title: "",
         isActive: true,
+        redirect_type: "event",
+        redirect_id: "",
     });
     const [selectedFile, setSelectedFile] = useState(null);
     
@@ -38,7 +40,7 @@ export default function MobileBannersAdmin() {
     };
 
     const resetForm = () => {
-        setFormState({ type: "video", mediaUrl: "", title: "", isActive: true });
+        setFormState({ type: "video", mediaUrl: "", title: "", isActive: true, redirect_type: "event", redirect_id: "" });
         setSelectedFile(null);
         setEditingId(null);
         setShowForm(false);
@@ -51,6 +53,8 @@ export default function MobileBannersAdmin() {
             mediaUrl: b.media_url,
             title: b.title || "",
             isActive: b.is_active,
+            redirect_type: b.redirect_type || "event",
+            redirect_id: b.redirect_id || "",
         });
         setShowForm(true);
     };
@@ -74,6 +78,8 @@ export default function MobileBannersAdmin() {
                 media_url: finalMediaUrl,
                 title: formState.title,
                 is_active: formState.isActive,
+                redirect_type: formState.redirect_type,
+                redirect_id: formState.redirect_id,
                 sort_order: editingId ? banners.find(b => b.id === editingId).sort_order : banners.length,
             };
 
@@ -183,8 +189,30 @@ export default function MobileBannersAdmin() {
                                 style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
                             />
                         </div>
+                        <div>
+                            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", fontSize: "14px" }}>Redirect Type</label>
+                            <select 
+                                value={formState.redirect_type} 
+                                onChange={(e) => setFormState({...formState, redirect_type: e.target.value})}
+                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+                            >
+                                <option value="event">Event</option>
+                                <option value="service">Service</option>
+                                <option value="turf">Turf</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", fontSize: "14px" }}>Redirect ID (Event/Service/Turf UUID)</label>
+                            <input 
+                                type="text" 
+                                value={formState.redirect_id} 
+                                onChange={(e) => setFormState({...formState, redirect_id: e.target.value})}
+                                placeholder="Paste UUID here"
+                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
+                            />
+                        </div>
                         <div style={{ gridColumn: "span 2" }}>
-                            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", fontSize: "14px" }}>Media Action (Choose one)</label>
+                            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", fontSize: "14px" }}>Media URL</label>
                             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                 <input 
                                     type="url" 
@@ -192,15 +220,6 @@ export default function MobileBannersAdmin() {
                                     value={formState.mediaUrl} 
                                     onChange={(e) => setFormState({...formState, mediaUrl: e.target.value})}
                                     style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #d1d5db" }}
-                                    disabled={!!selectedFile}
-                                />
-                                <span style={{ fontWeight: "bold", color: "#9ca3af" }}>OR</span>
-                                <input 
-                                    type="file" 
-                                    accept={formState.type === "video" ? "video/*" : "image/*"}
-                                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                                    style={{ flex: 1 }}
-                                    disabled={!!formState.mediaUrl}
                                 />
                             </div>
                         </div>
@@ -208,12 +227,13 @@ export default function MobileBannersAdmin() {
                             <button type="button" onClick={resetForm} style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#e5e7eb", border: "none", cursor: "pointer", fontWeight: "600" }}>
                                 Cancel
                             </button>
-                            <button type="submit" disabled={isSaving || (!formState.mediaUrl && !selectedFile)} style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "white", border: "none", cursor: "pointer", fontWeight: "600" }}>
+                            <button type="submit" disabled={isSaving || !formState.mediaUrl} style={{ padding: "10px 16px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "white", border: "none", cursor: "pointer", fontWeight: "600" }}>
                                 {isSaving ? "Saving..." : "Save Banner"}
                             </button>
                         </div>
                     </form>
                 </div>
+
             )}
 
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>

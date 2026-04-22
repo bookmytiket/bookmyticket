@@ -7,6 +7,11 @@ import Toast from './src/components/Toast';
 import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
+  // Reset session flags on mount
+  global.bmtAdShownThisSession = false;
+  global.bmtPromotionActive = false;
+  global.bmtPromotionShownThisSession = false;
+
   return (
     <ToastProvider>
       <ConfirmProvider>

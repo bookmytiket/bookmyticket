@@ -61,6 +61,12 @@ export default function ProfileScreen() {
     [user?.id]
   );
 
+  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+  const branding = (brandingArr && brandingArr[0]) || {
+    powered_by_logo_url: "https://www.bookmyticket.net/logo.png",
+    powered_by_link: "https://www.bookmyticket.net"
+  };
+
   const userBookings = [
     ...(eventBookingsList || []).map(b => ({ 
       ...b, 
@@ -343,11 +349,11 @@ export default function ProfileScreen() {
                       </View>
                       
                       <View style={styles.brandSide}>
-                         <Image 
-                            source={{ uri: 'https://www.bookmyticket.net/logo.png' }} 
-                            style={{ height: 30, width: 90 }} 
-                            resizeMode="contain" 
-                         />
+                          <Image 
+                             source={{ uri: branding.powered_by_logo_url }} 
+                             style={{ height: 30, width: 90 }} 
+                             resizeMode="contain" 
+                          />
                          <Text style={styles.statusLabel}>{selectedTicket?.status?.toUpperCase()}</Text>
                       </View>
                    </View>
@@ -391,6 +397,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+      <BrandingHeader style={{ marginTop: 24, marginBottom: 48 }} />
     </ScrollView>
   );
 }

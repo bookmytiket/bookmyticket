@@ -21,13 +21,19 @@ export default function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(success || false);
 
-  // Migrated to Supabase with Join
+  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+  const branding = (brandingArr && brandingArr[0]) || {
+    powered_by_logo_url: "https://www.bookmyticket.net/logo.png",
+    powered_by_link: "https://www.bookmyticket.net"
+  };
+
   const { data: supabaseBooking } = useSupabaseQuery('bookings', (q) => 
     q.select('*, events(*)').eq('id', bookingId).maybeSingle(), 
     [bookingId]
   );
   
   const booking = supabaseBooking;
+  const eventDetails = event || booking?.events || { title: 'Event', date: 'TBA', location: 'Venue' };
 
   // Mutation using Edge Function
   const { mutate: callConfirmBooking } = useSupabaseMutation(async (supabase, bId) => {
@@ -40,7 +46,6 @@ export default function PaymentScreen() {
 
   const isConfirmed = booking?.status === 'Confirmed' || paymentSuccess;
   const displayTotal = total || booking?.total_price || 0;
-  const displayEvent = event || { title: booking?.events?.title || 'Event', date: booking?.events?.date, location: booking?.events?.location };
 
   const handlePayNow = async () => {
     if (!bookingId) return;
@@ -58,8 +63,8 @@ export default function PaymentScreen() {
             phoneNumber: booking.customer_details.phone,
             type: 'BOOKING',
             data: {
-              eventName: displayEvent?.title || 'Event',
-              date: displayEvent?.date || 'TBA',
+              eventName: eventDetails?.title || 'Event',
+              date: eventDetails?.date || 'TBA',
               bookingId: bookingId
             }
           })
@@ -124,7 +129,7 @@ export default function PaymentScreen() {
           >
             <View style={styles.ticketTop}>
                <Image 
-                 source={{ uri: displayEvent?.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87" }} 
+                 source={{ uri: eventDetails?.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87" }} 
                  style={styles.ticketImg}
                  resizeMode="cover"
                />
@@ -132,25 +137,25 @@ export default function PaymentScreen() {
                <View style={styles.badgeContainer}>
                   <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>ACTIVE</Text></View>
                </View>
-               <Text style={styles.eventNameOverlay} numberOfLines={2}>{displayEvent?.title}</Text>
+               <Text style={styles.eventNameOverlay} numberOfLines={2}>{eventDetails?.title}</Text>
             </View>
 
             <View style={styles.ticketBody}>
                <View style={styles.infoGrid}>
                   <View style={styles.infoCell}>
                      <Text style={styles.infoLabel}>DATE</Text>
-                     <Text style={styles.infoValue}>{displayEvent?.date || 'TBA'}</Text>
+                     <Text style={styles.infoValue}>{eventDetails?.date || 'TBA'}</Text>
                   </View>
                   <View style={styles.infoCell}>
                      <Text style={styles.infoLabel}>TIME</Text>
-                     <Text style={styles.infoValue}>{displayEvent?.time || 'TBA'}</Text>
+                     <Text style={styles.infoValue}>{eventDetails?.time || 'TBA'}</Text>
                   </View>
                </View>
                
                <View style={[styles.infoGrid, { marginTop: 15 }]}>
                   <View style={styles.infoCell}>
                      <Text style={styles.infoLabel}>VENUE</Text>
-                     <Text style={styles.infoValue} numberOfLines={1}>{displayEvent?.location || 'Venue'}</Text>
+                     <Text style={styles.infoValue} numberOfLines={1}>{eventDetails?.location || 'Venue'}</Text>
                   </View>
                </View>
 
@@ -170,7 +175,7 @@ export default function PaymentScreen() {
                     <Text style={styles.bookingId}>#{bookingId?.slice(-8).toUpperCase()}</Text>
                     
                     <View style={{ marginTop: 10 }}>
-                      <Image source={{ uri: 'https://www.bookmyticket.net/logo.png' }} style={{ height: 30, width: 90 }} resizeMode="contain" />
+                      <Image source={{ uri: branding.powered_by_logo_url }} style={{ height: 30, width: 90 }} resizeMode="contain" />
                     </View>
                   </View>
                </View>
@@ -221,15 +226,15 @@ export default function PaymentScreen() {
         <Text style={styles.sub}>
           {isProcessing
             ? 'Please do not close the app while we process your payment.'
-            : `Complete payment to confirm your booking for ${displayEvent?.title || 'the event'}.`}
+            : `Complete payment to confirm your booking for ${eventDetails?.title || 'the event'}.`}
         </Text>
 
         {!isProcessing && (
           <View style={styles.summaryBox}>
             <Text style={styles.summaryLabel}>Total Amount</Text>
             <Text style={styles.amount}>₹{Number(displayTotal).toFixed(0)}</Text>
-            {displayEvent?.date && <Text style={styles.summaryMeta}>📅 {displayEvent.date}</Text>}
-            {displayEvent?.location && <Text style={styles.summaryMeta}>📍 {displayEvent.location}</Text>}
+            {eventDetails?.date && <Text style={styles.summaryMeta}>📅 {eventDetails.date}</Text>}
+            {eventDetails?.location && <Text style={styles.summaryMeta}>📍 {eventDetails.location}</Text>}
           </View>
         )}
 

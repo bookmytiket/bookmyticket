@@ -16,8 +16,8 @@ export default function RecentMemories({ memories: propMemories = [] }) {
 
     const galleryItems = displayMemories.length > 0
         ? displayMemories.map(mem => ({
-            image: mem.imageUrl || mem.img,
-            text: mem.altText || mem.alt
+            image: mem.image_url || mem.img || mem.imageUrl,
+            text: mem.alt_text || mem.alt || mem.altText
         }))
         : undefined;
 

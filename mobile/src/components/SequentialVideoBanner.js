@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator, Linking } from 'react-native';
 import { Video, ResizeMode, Audio } from 'expo-av';
+import { useNavigation } from '@react-navigation/native'; // Redirection hook
 import { useSupabaseQuery } from '../hooks/useSupabase';
 import { Colors } from '../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
+import { resolveMobileBannerRedirect } from '../utils/bannerHelper';
 
 const { width } = Dimensions.get('window');
 
 export default function SequentialVideoBanner() {
-    const { data: banners } = useSupabaseQuery('mobile_banners', (q) => q.select('*').eq('is_active', true));
+    const { data: banners } = useSupabaseQuery('mobile_video_banners', (q) => q.select('*').eq('is_active', true).order('sort_order', { ascending: true }));
     const { data: configRows } = useSupabaseQuery('system_config', (q) => q.select('*'));
+    const navigation = useNavigation();
     const allConfig = configRows?.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {}) || {};
     
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -106,6 +109,30 @@ export default function SequentialVideoBanner() {
         setIsMuted(!isMuted);
     };
 
+    const handleBannerPress = () => {
+        const current = playlist[currentIndex];
+        if (!current) return;
+
+        const { url, isExternal, route, params } = resolveMobileBannerRedirect(
+            current.redirect_type,
+            current.redirect_id
+        );
+
+        if (route) {
+            navigation.navigate(route, params);
+        } else if (url) {
+            // Check if it's an external URL
+            if (isExternal || url.startsWith('http')) {
+                Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+            }
+        } else if (current.redirect_url) {
+            // Legacy fallback
+            if (current.redirect_url.startsWith('http')) {
+                Linking.openURL(current.redirect_url).catch(err => console.error("Couldn't load page", err));
+            }
+        }
+    };
+
     if (isLoading) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -121,15 +148,19 @@ export default function SequentialVideoBanner() {
     const activeBanner = playlist[currentIndex];
 
     // Fallback if media is missing
-    if (!activeBanner?.resolvedUrl) return null;
+    if (!activeBanner?.media_url) return null;
 
     return (
-        <View style={styles.container}>
+        <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={handleBannerPress}
+            style={styles.container}
+        >
             <View style={styles.mediaContainer}>
                 {activeBanner.type === "video" ? (
                     <Video
                         ref={videoRef}
-                        source={{ uri: activeBanner.resolvedUrl }}
+                        source={{ uri: activeBanner.media_url }}
                         style={styles.media}
                         resizeMode={ResizeMode.COVER}
                         shouldPlay
@@ -139,7 +170,7 @@ export default function SequentialVideoBanner() {
                     />
                 ) : (
                     <Image
-                        source={{ uri: activeBanner.resolvedUrl }}
+                        source={{ uri: activeBanner.media_url }}
                         style={styles.media}
                         resizeMode="cover"
                     />
@@ -171,9 +202,10 @@ export default function SequentialVideoBanner() {
                     </View>
                 )}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {

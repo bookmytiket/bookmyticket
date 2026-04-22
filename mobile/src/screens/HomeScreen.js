@@ -18,6 +18,7 @@ import CustomerAdPopup from '../components/CustomerAdPopup';
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
 import PublicReviewsBanner from '../components/PublicReviewsBanner';
 import { HERO_BANNER_SLIDES, BRAND_COUPONS } from '../data/homeEvents';
+import PromotionPopup from '../components/PromotionPopup';
 
 
 
@@ -63,9 +64,9 @@ export default function HomeScreen() {
   const { data: convexMeetings } = useSupabaseQuery('events', (q) => q.select('*').eq('type', 'Meeting').or('status.eq.Active,status.eq.published'), []);
   const { data: convexVendors } = useSupabaseQuery('profiles', (q) => q.select('*').eq('role', 'organiser'), []);
   const { data: convexCategories } = useSupabaseQuery('categories', (q) => q.select('*'), []);
-  const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'banner_slides').single(), []);
+  const { data: convexBannersRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'banner_slides').maybeSingle(), []);
   const convexBanners = convexBannersRaw?.value || [];
-  const { data: convexCouponsRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'home_coupons').single(), []);
+  const { data: convexCouponsRaw } = useSupabaseQuery('system_config', (q) => q.select('value').eq('key', 'home_coupons').maybeSingle(), []);
   const convexCoupons = convexCouponsRaw?.value || [];
 
   const allCoupons = useMemo(() => {
@@ -76,6 +77,7 @@ export default function HomeScreen() {
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [subscribeEmail, setSubscribeEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [popupsFinished, setPopupsFinished] = useState(false);
 
   const handleSubscribe = async () => {
     if (!subscribeEmail) {
@@ -285,6 +287,25 @@ export default function HomeScreen() {
       </View>
     );
   }
+  const handleBannerPress = (banner) => {
+    if (!banner) return;
+    
+    // Unified navigation logic for hero banners
+    if (banner.redirect_type && banner.redirect_id) {
+      const { redirect_type, redirect_id } = banner;
+      if (redirect_type === 'event') {
+        navigation.navigate('EventDetail', { eventId: String(redirect_id) });
+      } else if (redirect_type === 'service') {
+        navigation.navigate('ServiceDetail', { vendorId: String(redirect_id) });
+      } else if (redirect_type === 'turf') {
+        navigation.navigate('TurfDetail', { turfId: String(redirect_id) });
+      }
+    } else if (banner.redirectUrl) {
+      // Backward compatibility for simple screen names
+      navigation.navigate(banner.redirectUrl);
+    }
+  };
+
   return (
     <>
       <ScrollView 
@@ -343,9 +364,10 @@ export default function HomeScreen() {
           <View style={styles.heroBannerContainer}>
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => currentBanner?.redirectUrl && navigation.navigate(currentBanner.redirectUrl)}
+              onPress={() => handleBannerPress(currentBanner)}
               style={styles.heroBannerContent}
             >
+
               <Image
                 source={{ uri: currentBanner?.imageUrl || currentBanner?.image || currentBanner?.img }}
                 style={styles.heroImage}
@@ -575,7 +597,8 @@ export default function HomeScreen() {
         coupon={selectedCoupon} 
         onClose={() => setSelectedCoupon(null)} 
       />
-      <CustomerAdPopup />
+      {popupsFinished && <CustomerAdPopup />}
+      <PromotionPopup onFinish={() => setPopupsFinished(true)} />
     </>
   );
 }

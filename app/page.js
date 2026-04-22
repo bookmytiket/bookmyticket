@@ -31,6 +31,7 @@ import DigitalTicket from '@/components/DigitalTicket';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
 import PublicReviewsBanner from '@/components/PublicReviewsBanner';
+import { resolveBannerRedirect } from '@/lib/bannerHelper';
 
 function TicketCard({ event }) {
   return (
@@ -347,24 +348,24 @@ export default function Home() {
     if (activeBanners.length > 0) {
       const brandSlides = activeBanners.map((b) => ({
         id: b.id,
-        img: b.imageUrl,
-        title: "",
+        img: b.img || b.image_url,
+        title: b.title || "",
         sub: "Premium Partner",
         alt: "Sponsored Brand",
-        url: b.redirectUrl || "#"
+        url: resolveBannerRedirect(b.redirect_type, b.redirect_id, b.redirect_url || "#")
       }));
       mappedSlides = [...mappedSlides, ...brandSlides];
     }
     
     // Inject active Home Coupons as advert banners
     if (homeCoupons.length > 0) {
-      const couponSlides = homeCoupons.filter(c => c.bannerUrl).map((c) => ({
+      const couponSlides = homeCoupons.filter(c => c.bannerUrl || c.img).map((c) => ({
         id: c.id,
-        img: c.bannerUrl,
+        img: c.bannerUrl || c.img,
         title: c.title,
-        sub: c.discountType === "Percentage" ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`,
+        sub: c.discountType === "Percentage" ? `${c.discountValue}% OFF` : (c.discountValue ? `₹${c.discountValue} OFF` : c.discount || ""),
         alt: c.brandName || "Coupon Offer",
-        url: c.redirectUrl || "#"
+        url: resolveBannerRedirect(c.redirect_type, c.redirect_id, c.redirect_url || "#")
       }));
       mappedSlides = [...mappedSlides, ...couponSlides];
     }
@@ -481,6 +482,7 @@ export default function Home() {
         </div>
 
         <SubnavMarquee />
+
 
 
         {/* Search & Category Filter Results Section */}
@@ -625,6 +627,7 @@ export default function Home() {
             <div style={{ width: '100%' }}>
               <FeaturedOrganisers organisers={eventPartners} />
             </div>
+            <RecentMemories />
             <div style={{ width: '100%' }}>
               <Sponsors />
             </div>

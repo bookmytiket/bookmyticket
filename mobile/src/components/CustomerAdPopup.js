@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSupabaseQuery } from '../hooks/useSupabase';
+import { resolveMobileBannerRedirect } from '../utils/bannerHelper';
 import { Colors } from '../theme/Theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORAGE_PREFIX = 'bmt_adpopup_';
-const LAST_ID_KEY = `${STORAGE_PREFIX}last_id`;
-const INITIAL_DELAY_MS = 3000; // show 3s after mount
+const LAST_INDEX_KEY = `${STORAGE_PREFIX}last_index`;
+const SESSION_SHOWN_KEY = 'bmt_ad_shown_this_session';
+const INITIAL_DELAY_MS = 6000; // Show after splash/branding (6s)
 
 const DEFAULT_GRADIENTS = [
   ['#f84464', '#c026d3'],
@@ -29,34 +31,20 @@ const DEFAULT_GRADIENTS = [
   ['#10b981', '#0ea5e9'],
 ];
 
-async function getLastSeen(popupId) {
+async function getNextIndex(total) {
   try {
-    const raw = await AsyncStorage.getItem(`${STORAGE_PREFIX}${popupId}`);
-    return raw ? parseInt(raw, 10) : null;
+    const raw = await AsyncStorage.getItem(LAST_INDEX_KEY);
+    const lastIndex = raw ? parseInt(raw, 10) : -1;
+    return (lastIndex + 1) % total;
   } catch {
-    return null;
+    return 0;
   }
 }
 
-async function markSeen(popupId) {
+async function updateLastIndex(index) {
   try {
-    const now = String(Date.now());
-    await AsyncStorage.setItem(`${STORAGE_PREFIX}seen_${popupId}`, now);
-    await AsyncStorage.setItem(LAST_ID_KEY, popupId);
+    await AsyncStorage.setItem(LAST_INDEX_KEY, String(index));
   } catch {}
-}
-
-async function shouldShowPopup(popupId, showEveryMinutes) {
-  try {
-    const raw = await AsyncStorage.getItem(`${STORAGE_PREFIX}seen_${popupId}`);
-    if (!raw) return true; // never seen
-    const lastSeen = parseInt(raw, 10);
-    const ageMs = Date.now() - lastSeen;
-    const intervalMs = showEveryMinutes * 60 * 1000;
-    return ageMs >= intervalMs;
-  } catch {
-    return true;
-  }
 }
 
 export default function CustomerAdPopup() {
@@ -65,57 +53,91 @@ export default function CustomerAdPopup() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const slideAnim = React.useRef(new Animated.Value(300)).current;
+  const progressAnim = React.useRef(new Animated.Value(1)).current;
+  const [timeLeft, setTimeLeft] = useState(5);
+  const isProcessing = useRef(false);
 
   const findAndShowNext = useCallback(
     async (popups) => {
-      if (!popups?.length) return;
+      if (!popups?.length || isProcessing.current) return;
       
-      const lastId = await AsyncStorage.getItem(LAST_ID_KEY);
+      // Ensure we only show one per session
+      if (global.bmtAdShownThisSession) return;
       
-      // 1. Find all ads eligible to be shown based on their interval
-      const eligible = [];
-      for (const p of popups) {
-        if (await shouldShowPopup(p.id, p.show_every_minutes || 30)) {
-          eligible.push(p);
-        }
-      }
+      isProcessing.current = true;
+      global.bmtAdShownThisSession = true;
+
+      const nextIndex = await getNextIndex(popups.length);
+      const selected = popups[nextIndex];
       
-      if (!eligible.length) return;
+      if (!selected) return;
 
-      // 2. Mixing: Shuffle the eligible ads
-      const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-
-      // 3. Rotation: Try to pick one that isn't the same as the lastShownId
-      let selected = shuffled[0];
-      if (shuffled.length > 1) {
-        const different = shuffled.find(p => p.id !== lastId);
-        if (different) selected = different;
-      }
-
-      const idxInOriginal = popups.findIndex(p => p.id === selected.id);
       setCurrentPopup(selected);
-      setCurrentIndex(idxInOriginal);
+      setCurrentIndex(nextIndex);
       setVisible(true);
+      global.bmtAdShownThisSession = true;
+      await updateLastIndex(nextIndex);
       
       // Animate in
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 60,
-        friction: 9,
-      }).start();
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 60,
+          friction: 9,
+        }),
+        Animated.timing(progressAnim, {
+          toValue: 0,
+          duration: 5000,
+          useNativeDriver: false, // width/flex doesn't support native driver well for all properties, but we'll use scaleX or just a width interpolation
+        })
+      ]).start();
+
+      setTimeLeft(5);
     },
-    [slideAnim]
+    [slideAnim, progressAnim]
   );
 
   useEffect(() => {
     if (!activePopups?.length) return;
+    
+    const checkTimer = setInterval(() => {
+      if (!global.bmtPromotionActive && !global.bmtAdShownThisSession) {
+        findAndShowNext(activePopups);
+        clearInterval(checkTimer);
+      }
+    }, 500); // Check every 500ms for faster handoff
+    return () => clearInterval(checkTimer);
+  }, [activePopups, findAndShowNext]);
+
+  // Auto-close logic
+  useEffect(() => {
+    if (!visible) return;
+    
+    // Reset timer to 5s
+    setTimeLeft(5);
+    progressAnim.setValue(1);
+
     const timer = setTimeout(() => {
-      findAndShowNext(activePopups);
-    }, INITIAL_DELAY_MS);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePopups?.length]);
+      handleClose();
+    }, 5000); // 5s duration
+
+    Animated.timing(progressAnim, {
+      toValue: 0,
+      duration: 5000,
+      useNativeDriver: false,
+      easing: Easing.linear,
+    }).start();
+
+    const countdown = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(countdown);
+    };
+  }, [visible, handleClose]);
 
   const handleClose = useCallback(async () => {
     // Animate out
@@ -123,30 +145,38 @@ export default function CustomerAdPopup() {
       toValue: 400,
       duration: 220,
       useNativeDriver: true,
-    }).start(async () => {
-      if (currentPopup) {
-        await markSeen(currentPopup.id);
-      }
+    }).start(() => {
       setVisible(false);
       slideAnim.setValue(300);
-
-      // Queue next ad
-      setTimeout(() => {
-        findAndShowNext(activePopups);
-      }, 400);
+      progressAnim.setValue(1);
     });
-  }, [currentPopup, activePopups, currentIndex, findAndShowNext, slideAnim]);
+  }, [slideAnim, progressAnim]);
+
 
   const handleCTA = useCallback(async () => {
-    if (currentPopup?.redirect_url) {
-      const url = currentPopup.redirect_url;
-      const canOpen = await Linking.canOpenURL(url).catch(() => false);
-      if (canOpen) {
-        Linking.openURL(url).catch(() =>
-          Alert.alert('Error', 'Could not open the link.')
-        );
+    const { url, isExternal } = resolveMobileBannerRedirect(
+      currentPopup?.redirect_type,
+      currentPopup?.redirect_id
+    );
+
+    const finalUrl = url || currentPopup?.redirect_url;
+
+    if (finalUrl) {
+      if (isExternal || finalUrl.startsWith('http')) {
+        const canOpen = await Linking.canOpenURL(finalUrl).catch(() => false);
+        if (canOpen) {
+          Linking.openURL(finalUrl).catch(() =>
+            Alert.alert('Error', 'Could not open the link.')
+          );
+        } else {
+          Alert.alert('Error', 'Could not open the link.');
+        }
       } else {
-        Alert.alert('Error', 'Could not open the link.');
+        // Handle internal navigation if needed
+        // For now, we can try to open it as a deep link
+        Linking.openURL(finalUrl).catch(() =>
+          Alert.alert('Error', 'Internal navigation failed.')
+        );
       }
     }
     handleClose();
@@ -239,7 +269,7 @@ export default function CustomerAdPopup() {
             ) : null}
 
             {/* CTA */}
-            {currentPopup.redirect_url ? (
+            {currentPopup.redirect_url || currentPopup.redirect_id ? (
               <TouchableOpacity
                 style={[styles.ctaBtn, { backgroundColor: gradPair[0] }]}
                 onPress={handleCTA}
@@ -248,7 +278,7 @@ export default function CustomerAdPopup() {
                 <Text style={styles.ctaBtnText}>
                   {currentPopup.cta_text || 'Book Now'}
                 </Text>
-                <Ionicons name="open-outline" size={18} color="#fff" />
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
               </TouchableOpacity>
             ) : null}
 
@@ -257,20 +287,24 @@ export default function CustomerAdPopup() {
             </TouchableOpacity>
           </View>
 
-          {/* Pagination Dots */}
-          {(activePopups?.length || 0) > 1 && (
-            <View style={styles.dots}>
-              {(activePopups || []).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.dot,
-                    i === currentIndex && styles.dotActive,
-                  ]}
-                />
-              ))}
+          {/* Progress Section */}
+          <View style={styles.timerContainer}>
+            <View style={styles.progressBarBg}>
+              <Animated.View 
+                style={[
+                  styles.progressBarFill, 
+                  { 
+                    backgroundColor: gradPair[0],
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%']
+                    })
+                  }
+                ]} 
+              />
             </View>
-          )}
+            <Text style={styles.timerText}>Closing in {timeLeft}s</Text>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -430,5 +464,26 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 20,
     backgroundColor: '#f84464',
+  },
+  timerContainer: {
+    paddingHorizontal: 22,
+    paddingBottom: 24,
+    alignItems: 'center',
+  },
+  progressBarBg: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+  },
+  timerText: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '600',
   },
 });

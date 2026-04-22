@@ -695,7 +695,7 @@ function AdminHomePage() {
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
     const { data: usersArr = [] } = useSupabaseQuery('profiles');
     const { data: adminsArr = [] } = useSupabaseQuery('admins');
-    const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q, [], { realtime: false });
+    const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('sort_order', { ascending: true }), [], { realtime: false });
     const { data: eventsArr = [] } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
     const { data: bookingsArr = [] } = useSupabaseQuery('bookings');
     const { data: apiKeysArr = [] } = useSupabaseQuery('api_keys', q => q, [], { realtime: false });
@@ -714,23 +714,24 @@ function AdminHomePage() {
         if (!file) return;
 
         setIsUploading(true);
-        const formData = new FormData();
-        formData.append("file", file);
-
         try {
-            const res = await fetch("/api/memories/upload", {
-                method: "POST",
-                body: formData,
-            });
-            const data = await res.json();
-            if (data.success) {
-                setMemoryForm({ ...memoryForm, imageUrl: data.imageUrl });
-            } else {
-                showToast("Upload failed: " + data.error, "error");
-            }
+            const fileExt = file.name.split('.').pop();
+            const fileName = `memory-${Date.now()}.${fileExt}`;
+            const { data, error } = await supabase.storage
+                .from('branding')
+                .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('branding')
+                .getPublicUrl(fileName);
+
+            setMemoryForm({ ...memoryForm, imageUrl: publicUrl });
+            showToast("Image uploaded successfully!", "success");
         } catch (err) {
-            console.error(err);
-            showToast("Upload error", "error");
+            console.error("Upload error:", err);
+            showToast("Upload failed: " + err.message, "error");
         } finally {
             setIsUploading(false);
         }
@@ -745,14 +746,14 @@ function AdminHomePage() {
             if (editingMemoryObj) {
                 await updateMemory({
                     id: editingMemoryObj.id,
-                    imageUrl: memoryForm.imageUrl,
-                    altText: memoryForm.altText,
+                    image_url: memoryForm.imageUrl,
+                    alt_text: memoryForm.altText,
                 });
                 showToast("Memory updated successfully", "success");
             } else {
                 await createMemory({
-                    imageUrl: memoryForm.imageUrl,
-                    altText: memoryForm.altText,
+                    image_url: memoryForm.imageUrl,
+                    alt_text: memoryForm.altText,
                 });
                 showToast("Memory created successfully", "success");
             }
@@ -1090,9 +1091,11 @@ function AdminHomePage() {
     
     const [adPopupForm, setAdPopupForm] = useState({
         title: "", description: "", imageUrl: "",
-        redirectUrl: "", ctaText: "Book Now",
+        redirectUrl: "", redirectType: "url", redirectId: "", 
+        ctaText: "Book Now",
         bgColor: "", badgeText: "",
         isActive: true, showEveryMinutes: 30,
+        sortOrder: 0
     });
     const [adPopupEditingId, setAdPopupEditingId] = useState(null);
     const [adPopupImageFile, setAdPopupImageFile] = useState(null);
@@ -1107,13 +1110,28 @@ function AdminHomePage() {
             // File upload logic to Supabase storage would go here
             // For now, assume imageUrl is provided or handled elsewhere
             
+            const payload = {
+                title: adPopupForm.title,
+                description: adPopupForm.description,
+                image_url: finalImageUrl,
+                redirect_url: adPopupForm.redirectUrl,
+                redirect_type: adPopupForm.redirectType,
+                redirect_id: adPopupForm.redirectId,
+                cta_text: adPopupForm.ctaText,
+                bg_color: adPopupForm.bgColor,
+                badge_text: adPopupForm.badgeText,
+                is_active: adPopupForm.isActive,
+                show_every_minutes: adPopupForm.showEveryMinutes,
+                sort_order: adPopupForm.sortOrder
+            };
+
             if (adPopupEditingId) {
-                await updateAdPopup({ id: adPopupEditingId, ...adPopupForm, image_url: finalImageUrl });
+                await updateAdPopup({ id: adPopupEditingId, ...payload });
             } else {
-                await createAdPopup({ ...adPopupForm, image_url: finalImageUrl });
+                await createAdPopup(payload);
             }
             
-            setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30 });
+            setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", redirectType: "url", redirectId: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30, sortOrder: 0 });
             setAdPopupEditingId(null);
             setAdPopupImageFile(null);
             setShowAdPopupForm(false);
@@ -1126,9 +1144,13 @@ function AdminHomePage() {
         setAdPopupForm({
             title: popup.title || "", description: popup.description || "",
             imageUrl: popup.image_url || "",
-            redirectUrl: popup.redirect_url || "", ctaText: popup.cta_text || "",
+            redirectUrl: popup.redirect_url || "", 
+            redirectType: popup.redirect_type || "url",
+            redirectId: popup.redirect_id || "",
+            ctaText: popup.cta_text || "",
             bgColor: popup.bg_color || "", badgeText: popup.badge_text || "",
-            isActive: popup.is_active, showEveryMinutes: popup.show_every_minutes || 30,
+            isActive: popup.is_active, show_every_minutes: popup.show_every_minutes || 30,
+            sortOrder: popup.sort_order || 0
         });
         setAdPopupEditingId(popup.id);
         setAdPopupImageFile(null);
@@ -1272,16 +1294,16 @@ function AdminHomePage() {
             if (partnerModal === "add") {
                 await addEventPartner({
                     name: partnerForm.name,
-                    logo: partnerForm.logo,
+                    logo_url: partnerForm.logo,
                     url: partnerForm.url,
-                    order: eventPartners.length + 1
+                    sort_order: eventPartners.length + 1
                 });
                 showToast("Partner added", "success");
             } else if (partnerModal === "edit" && editingPartner) {
                 await patchEventPartner({
                     id: editingPartner.id,
                     name: partnerForm.name,
-                    logo: partnerForm.logo,
+                    logo_url: partnerForm.logo,
                     url: partnerForm.url
                 });
                 showToast("Partner updated", "success");
@@ -2188,13 +2210,25 @@ function AdminHomePage() {
                                             onChange={async (e) => {
                                                 const file = e.target.files[0];
                                                 if (!file) return;
-                                                const formData = new FormData();
-                                                formData.append("file", file);
                                                 try {
-                                                    const res = await fetch("/api/memories/upload", { method: "POST", body: formData });
-                                                    const data = await res.json();
-                                                    if (data.success) setBannerImage(data.imageUrl);
-                                                } catch (err) { showToast("Upload failed", "error"); }
+                                                    const fileExt = file.name.split('.').pop();
+                                                    const fileName = `banner-${Date.now()}.${fileExt}`;
+                                                    const { data, error } = await supabase.storage
+                                                        .from('branding')
+                                                        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+                                                    if (error) throw error;
+
+                                                    const { data: { publicUrl } } = supabase.storage
+                                                        .from('branding')
+                                                        .getPublicUrl(fileName);
+
+                                                    setBannerImage(publicUrl);
+                                                    showToast("Banner uploaded!", "success");
+                                                } catch (err) { 
+                                                    console.error(err);
+                                                    showToast("Upload failed: " + err.message, "error"); 
+                                                }
                                             }}
                                         />
                                         <label htmlFor="banner-upload" style={{ cursor: "pointer" }}>
@@ -2702,8 +2736,8 @@ function AdminHomePage() {
                                 {eventPartners.map(partner => (
                                     <div key={partner.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: `1px solid ${t.border}`, borderRadius: "12px", backgroundColor: t.bg, boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
                                         <div style={{ width: "80px", height: "80px", borderRadius: "12px", backgroundColor: "#f8fafc", overflow: "hidden", flexShrink: 0, border: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            {partner.logo ? (
-                                                <img src={partner.logo} alt={partner.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", mixBlendMode: theme === 'light' ? 'multiply' : 'normal' }} />
+                                            {partner.logo_url ? (
+                                                <img src={partner.logo_url} alt={partner.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", mixBlendMode: theme === 'light' ? 'multiply' : 'normal' }} />
                                             ) : (
                                                 <ImageIcon size={32} color="#cbd5e1" />
                                             )}
@@ -2715,7 +2749,7 @@ function AdminHomePage() {
                                                 <button
                                                     onClick={() => {
                                                         setEditingPartner(partner);
-                                                        setPartnerForm({ name: partner.name, logo: partner.logo, url: partner.url || "" });
+                                                        setPartnerForm({ name: partner.name, logo: partner.logo_url, url: partner.url || "" });
                                                         setPartnerModal("edit");
                                                     }}
                                                     style={{ display: "flex", alignItems: "center", gap: "6px", color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "13px", fontWeight: 700 }}
@@ -2809,16 +2843,16 @@ function AdminHomePage() {
                                 <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>Existing Memories ({memories.length})</h3>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "20px" }}>
                                     {memories.map((memory) => (
-                                        <div key={memory._id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: theme === "light" ? "#f8fafc" : "#1e293b", position: "relative" }}>
+                                        <div key={memory.id} style={{ border: `1px solid ${t.border}`, borderRadius: "10px", overflow: "hidden", backgroundColor: theme === "light" ? "#f8fafc" : "#1e293b", position: "relative" }}>
                                             <div style={{ height: "160px", width: "100%" }}>
-                                                <img src={memory.imageUrl} alt={memory.altText} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                <img src={memory.image_url} alt={memory.alt_text} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                             </div>
                                             <div style={{ padding: "12px" }}>
-                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: t.textMain }}>{memory.altText}</p>
-                                                <p style={{ margin: "4px 0 0", fontSize: "11px", color: t.textSub }}>Added {new Date(memory.createdAt).toLocaleDateString()}</p>
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: t.textMain }}>{memory.alt_text}</p>
+                                                <p style={{ margin: "4px 0 0", fontSize: "11px", color: t.textSub }}>Added {new Date(memory.created_at).toLocaleDateString()}</p>
                                             </div>
                                             <button
-                                                onClick={() => handleDeleteMemory(memory._id)}
+                                                onClick={() => handleDeleteMemory(memory.id)}
                                                 style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.2)", zIndex: 10 }}
                                             >
                                                 <Trash2 size={16} />
@@ -5475,7 +5509,7 @@ function AdminHomePage() {
                                     <h2 style={{ fontSize: "20px", fontWeight: 700, color: t.textMain, margin: "0 0 4px 0" }}>Customer Ad Popups</h2>
                                     <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage cookie-based advertisement popups shown to customers on web and mobile</p>
                                 </div>
-                                <button onClick={() => { setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30 }); setAdPopupEditingId(null); setAdPopupImageFile(null); setShowAdPopupForm(true); }} style={{ background: "linear-gradient(135deg,#ec4899,#a855f7)", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 20px", fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <button onClick={() => { setAdPopupForm({ title: "", description: "", imageUrl: "", redirectUrl: "", redirectType: "url", redirectId: "", ctaText: "Book Now", bgColor: "", badgeText: "", isActive: true, showEveryMinutes: 30, sortOrder: 0 }); setAdPopupEditingId(null); setAdPopupImageFile(null); setShowAdPopupForm(true); }} style={{ background: "linear-gradient(135deg,#ec4899,#a855f7)", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 20px", fontWeight: 700, fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
                                     <Plus size={16} /> New Ad Popup
                                 </button>
                             </div>
@@ -5484,12 +5518,32 @@ function AdminHomePage() {
                                 <div style={{ background: t.cardBg, border: `1px solid ${t.border}`, borderRadius: "16px", padding: "24px", marginBottom: "24px" }}>
                                     <h3 style={{ fontSize: "16px", fontWeight: 700, color: t.textMain, marginBottom: "20px" }}>{adPopupEditingId ? "Edit Ad Popup" : "Create New Ad Popup"}</h3>
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                        {[{k:"title",l:"Title *",ph:"e.g. 🎉 Exclusive Offer"},{k:"description",l:"Description",ph:"Short promo text"},{k:"redirectUrl",l:"Redirect URL",ph:"https://..."},{k:"ctaText",l:"CTA Button Text",ph:"e.g. Book Now"},{k:"badgeText",l:"Badge Label",ph:"e.g. 🔥 Limited Offer"},{k:"bgColor",l:"Background Color",ph:"e.g. #f84464 or gradient CSS"}].map(({k,l,ph}) => (
+                                        {[{k:"title",l:"Title *",ph:"e.g. 🎉 Exclusive Offer"},{k:"description",l:"Description",ph:"Short promo text"},{k:"ctaText",l:"CTA Button Text",ph:"e.g. Book Now"},{k:"badgeText",l:"Badge Label",ph:"e.g. 🔥 Limited Offer"},{k:"bgColor",l:"Background Color",ph:"e.g. #f84464 or gradient CSS"}].map(({k,l,ph}) => (
                                             <div key={k} style={k==="description" || k==="bgColor" ? { gridColumn: "1 / -1" } : {}}>
                                                 <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>{l}</label>
                                                 <input value={adPopupForm[k]} onChange={e => setAdPopupForm({...adPopupForm, [k]: e.target.value})} placeholder={ph} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
                                             </div>
                                         ))}
+
+                                        <div>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Redirect Type</label>
+                                            <select value={adPopupForm.redirectType} onChange={e => setAdPopupForm({...adPopupForm, redirectType: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }}>
+                                                <option value="url">External URL</option>
+                                                <option value="event">Internal Event</option>
+                                                <option value="service">Internal Service</option>
+                                                <option value="turf">Internal Turf</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>{adPopupForm.redirectType === 'url' ? "URL" : "Item ID (UUID)"}</label>
+                                            <input value={adPopupForm.redirectId} onChange={e => setAdPopupForm({...adPopupForm, redirectId: e.target.value})} placeholder={adPopupForm.redirectType === 'url' ? "https://..." : "Paste ID here"} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
+                                        </div>
+                                        
+                                        <div style={{ gridColumn: "1 / -1" }}>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Legacy Redirect URL (Fallback)</label>
+                                            <input value={adPopupForm.redirectUrl} onChange={e => setAdPopupForm({...adPopupForm, redirectUrl: e.target.value})} placeholder="https://..." style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
+                                        </div>
 
                                         <div style={{ gridColumn: "1 / -1", background: t.sidebarBorder, padding: "16px", borderRadius: "8px", border: `1px dashed ${t.border}` }}>
                                             <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Image (URL or Upload)</label>
@@ -5503,6 +5557,10 @@ function AdminHomePage() {
                                         <div>
                                             <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Show Every (minutes)</label>
                                             <input type="number" min="1" value={adPopupForm.showEveryMinutes} onChange={e => setAdPopupForm({...adPopupForm, showEveryMinutes: Number(e.target.value)})} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: "13px", fontWeight: 600, color: t.textSub, display: "block", marginBottom: "6px" }}>Sort Order</label>
+                                            <input type="number" value={adPopupForm.sortOrder} onChange={e => setAdPopupForm({...adPopupForm, sortOrder: Number(e.target.value)})} style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, background: t.bg, color: t.textMain, fontSize: "14px", boxSizing: "border-box" }} />
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "22px" }}>
                                             <input type="checkbox" id="adactive" checked={adPopupForm.isActive} onChange={e => setAdPopupForm({...adPopupForm, isActive: e.target.checked})} />

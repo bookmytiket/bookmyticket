@@ -3,13 +3,17 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-
 import { useSupabaseQuery } from '../hooks/useSupabase';
 
 export default function BrandingHeader({ style }) {
-  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
-  const branding = brandingArr[0] || {
+  const queryResult = useSupabaseQuery('site_branding', (q) => q, [], { realtime: false });
+  const brandingArr = queryResult?.data || [];
+  
+  // Ensure we have a valid branding object even if data is null or empty
+  const brandingData = brandingArr && brandingArr[0];
+  const branding = brandingData || {
     powered_by_logo_url: "https://www.bookmyticket.net/logo.png",
     powered_by_link: "https://www.bookmyticket.net"
   };
 
-  if (!branding.powered_by_logo_url) return null;
+  if (!branding || !branding.powered_by_logo_url) return null;
 
   const handlePress = () => {
     if (branding.powered_by_link) {
