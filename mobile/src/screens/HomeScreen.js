@@ -16,6 +16,7 @@ import { parseEventDate } from '../utils/eventUtils';
 import { Ionicons } from '@expo/vector-icons';
 import CustomerAdPopup from '../components/CustomerAdPopup';
 import { SERVICE_CATEGORIES } from '../data/serviceCategories';
+import PublicReviewsBanner from '../components/PublicReviewsBanner';
 import { HERO_BANNER_SLIDES, BRAND_COUPONS } from '../data/homeEvents';
 
 
@@ -301,6 +302,9 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Community Trust: Public Reviews Banner */}
+        <PublicReviewsBanner />
+
         {/* 1) Video Hero Banner (Top) */}
         <SequentialVideoBanner />
 

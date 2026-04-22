@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { 
@@ -53,8 +54,43 @@ export default function ArtistProfilePage() {
         vendorProfile: rawData 
     } : null;
 
-    // Fetch vendor reviews with profile join
-    const { data: reviewsData = [] } = useSupabaseQuery('vendor_reviews', (q) => q.select('*, profiles(full_name, username)').eq('vendor_id', vendorId), [vendorId]);
+    // Fetch vendor reviews
+    const { data: reviewsRaw, refresh: refreshReviews } = useSupabaseQuery('vendor_reviews', (q) => 
+        q.select('*')
+         .eq('vendor_id', vendorId)
+         .order('created_at', { ascending: false })
+    , [vendorId]);
+
+    const [reviewsData, setReviewsData] = useState([]);
+
+    useEffect(() => {
+        if (!reviewsRaw) return;
+        if (reviewsRaw.length === 0) {
+            setReviewsData([]);
+            return;
+        }
+
+        async function fetchReviewProfiles() {
+            const userIds = [...new Set(reviewsRaw.map(r => r.user_id))];
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('id, full_name, username')
+                .in('id', userIds);
+            
+            if (profilesData) {
+                const merged = reviewsRaw.map(r => ({
+                    ...r,
+                    profiles: profilesData.find(p => p.id === r.user_id)
+                }));
+                setReviewsData(merged);
+            } else {
+                setReviewsData(reviewsRaw);
+            }
+        }
+
+        fetchReviewProfiles();
+    }, [reviewsRaw]);
+
     const reviews = Array.isArray(reviewsData) ? reviewsData : [];
     
     // Fetch relational packages
@@ -85,6 +121,20 @@ export default function ArtistProfilePage() {
 
     const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [reviewImage, setReviewImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                alert("File too large (Max 5MB)");
+                return;
+            }
+            setReviewImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleReviewSubmit = async (e) => {
         if (e) e.preventDefault();
@@ -96,18 +146,37 @@ export default function ArtistProfilePage() {
 
         setIsSubmittingReview(true);
         try {
+            let uploadedUrl = null;
+            if (reviewImage) {
+                const fileExt = reviewImage.name.split('.').pop();
+                const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('review-images')
+                    .upload(fileName, reviewImage);
+
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage
+                    .from('review-images')
+                    .getPublicUrl(fileName);
+                uploadedUrl = publicUrl;
+            }
+
             await submitReview({
                 vendor_id: vendorId,
                 user_id: user.id,
                 rating: reviewForm.rating,
-                comment: reviewForm.comment
+                comment: reviewForm.comment,
+                image_url: uploadedUrl
             });
             setReviewForm({ rating: 5, comment: "" });
-            // Feedback provided silently through UI state update
+            setReviewImage(null);
+            setImagePreview(null);
         } catch (err) {
             console.error(err);
+            alert("Failed to post reflection. Please try again.");
         } finally {
             setIsSubmittingReview(false);
+            refreshReviews();
         }
     };
 
@@ -326,41 +395,41 @@ export default function ArtistProfilePage() {
         }
 
         return (
-            <div className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-2xl relative z-[150] animate-in fade-in zoom-in-95 duration-300">
-                <div className="flex items-center justify-between mb-6">
+            <div className="bg-white border border-slate-100 rounded-[2rem] p-4 md:p-6 shadow-2xl relative z-[150] animate-in fade-in zoom-in-95 duration-300 w-full max-w-[340px] md:max-w-none mx-auto">
+                <div className="flex items-center justify-between mb-4 md:mb-6">
                     <div className="flex flex-col">
-                        <h4 className="font-black text-[13px] text-slate-900 uppercase tracking-widest">{monthNames[month]} {year}</h4>
+                        <h4 className="font-black text-[12px] md:text-[13px] text-slate-900 uppercase tracking-widest">{monthNames[month]} {year}</h4>
                         <div className="flex items-center gap-1.5 mt-1">
                             <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50"></span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Real-time Availability</span>
+                            <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Real-time Availability</span>
                         </div>
                     </div>
-                    <div className="flex gap-1.5">
-                        <button type="button" onClick={() => setViewDate(new Date(year, month - 1))} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronLeft size={16} /></button>
-                        <button type="button" onClick={() => setViewDate(new Date(year, month + 1))} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronRight size={16} /></button>
+                    <div className="flex gap-1">
+                        <button type="button" onClick={() => setViewDate(new Date(year, month - 1))} className="p-1.5 md:p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronLeft size={14} className="md:w-4 md:h-4" /></button>
+                        <button type="button" onClick={() => setViewDate(new Date(year, month + 1))} className="p-1.5 md:p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-100 transition-all active:scale-90"><ChevronRight size={14} className="md:w-4 md:h-4" /></button>
                     </div>
                 </div>
-                <div className="grid grid-cols-7 gap-1 mb-3">
+                <div className="grid grid-cols-7 gap-0.5 md:gap-1 mb-2 md:mb-3">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                        <div key={`${d}-${i}`} className="h-8 flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-tighter">{d}</div>
+                        <div key={`${d}-${i}`} className="h-6 md:h-8 flex items-center justify-center text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-tighter">{d}</div>
                     ))}
                 </div>
-                <div className="grid grid-cols-7 gap-1.5">
+                <div className="grid grid-cols-7 gap-1 md:gap-1.5">
                     {days}
                 </div>
-                <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-center">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-100"></div>
-                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Available</span>
+                <div className="mt-4 md:mt-6 pt-4 md:pt-5 border-t border-slate-50 flex items-center justify-center">
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-slate-100"></div>
+                            <span className="text-[7px] md:text-[8px] font-black text-slate-300 uppercase tracking-widest">Available</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-pink-500"></div>
-                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Today</span>
+                        <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-pink-500"></div>
+                            <span className="text-[7px] md:text-[8px] font-black text-slate-300 uppercase tracking-widest">Today</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Past</span>
+                        <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-slate-200"></div>
+                            <span className="text-[7px] md:text-[8px] font-black text-slate-300 uppercase tracking-widest">Past</span>
                         </div>
                     </div>
                 </div>
@@ -373,8 +442,49 @@ export default function ArtistProfilePage() {
         : "https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=1200";
 
     return (
-        <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24 text-[#111827]">
-            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-4">
+        <main className="min-h-screen bg-[#fafbfc] pb-24 text-[#111827]">
+            {/* Full-Width Hero Section */}
+            <div className="w-full h-[300px] md:h-[420px] relative overflow-hidden">
+                <img 
+                    src={coverPhoto} 
+                    className="absolute inset-0 w-full h-full object-cover scale-105" 
+                    alt="Service Cover" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                
+                {/* Floating Artist Info Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+                    <div className="max-w-[1100px] mx-auto">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3">
+                                <span className="px-3 py-1 bg-pink-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+                                    {vendorProfile?.category || organiser.category || 'Professional'}
+                                </span>
+                                <div className="flex items-center gap-1 px-2 py-1 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                                    <Star size={12} className="text-yellow-400" fill="currentColor" />
+                                    <span className="text-white text-[11px] font-black">{avgRating}</span>
+                                </div>
+                            </div>
+                            <h1 className="text-white text-[32px] md:text-[56px] font-black uppercase italic tracking-tighter leading-none mt-2">
+                                {organiser.business_name || organiser.name}
+                            </h1>
+                            <div className="flex items-center gap-4 mt-4 text-white/60">
+                                <div className="flex items-center gap-2">
+                                    <MapPin size={16} />
+                                    <span className="text-[12px] font-bold uppercase tracking-widest">{organiser.city || 'Available India'}</span>
+                                </div>
+                                <div className="h-1 w-1 rounded-full bg-white/30" />
+                                <div className="flex items-center gap-2">
+                                    <Sparkles size={16} />
+                                    <span className="text-[12px] font-bold uppercase tracking-widest">Verified Pro</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-12">
                 
                 {/* Header with Back Button */}
                 <div className="flex flex-col gap-6 mb-8">
@@ -416,7 +526,7 @@ export default function ArtistProfilePage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
                                     <div className="relative group">
@@ -478,7 +588,7 @@ export default function ArtistProfilePage() {
                                     </div>
 
                                     {isCalendarOpen && (
-                                        <div className="absolute top-[calc(100%+8px)] left-0 w-full z-[120] animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="absolute top-[calc(100%+8px)] left-0 md:left-auto md:right-0 w-full sm:w-[350px] z-[120] animate-in fade-in zoom-in-95 duration-200">
                                             {renderCalendar()}
                                         </div>
                                     )}
@@ -521,99 +631,7 @@ export default function ArtistProfilePage() {
                             </p>
                             <hr className="border-slate-100 mb-10" />
 
-                             {/* Reviews & Manual Feedback Section */}
-                             <div className="space-y-10">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-[20px] font-extrabold text-[#111827] tracking-tight">Customer Reflections</h3>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex text-yellow-400">
-                                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill={s <= Math.round(Number(avgRating)) ? "currentColor" : "none"} />)}
-                                        </div>
-                                        <span className="text-[12px] font-black text-slate-400 italic">({reviews.length} Validated)</span>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Submission Form */}
-                                    <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-8 space-y-6">
-                                        <div className="space-y-1">
-                                            <p className="text-[13px] font-black text-slate-900 uppercase italic tracking-wider">Leave a Reflection</p>
-                                            <p className="text-[10px] text-slate-400 font-medium leading-relaxed italic">Your manual feedback helps other organizers find the best artists.</p>
-                                        </div>
-                                        
-                                        <div className="flex items-center space-x-3">
-                                            {[1,2,3,4,5].map(s => (
-                                                <button 
-                                                    key={s} 
-                                                    onClick={() => setReviewForm({...reviewForm, rating: s})}
-                                                    className={`transition-transform hover:scale-110 ${s <= reviewForm.rating ? 'text-yellow-400' : 'text-slate-200'}`}
-                                                >
-                                                    <Star size={28} fill={s <= reviewForm.rating ? "currentColor" : "none"} strokeWidth={2.5} />
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <textarea 
-                                            value={reviewForm.comment}
-                                            onChange={e => setReviewForm({...reviewForm, comment: e.target.value})}
-                                            placeholder="Describe your the artist's professionalism and quality..."
-                                            className="w-full bg-white border border-slate-100 rounded-2xl p-5 text-[13px] font-medium text-slate-600 focus:border-[#FF5A5F] outline-none min-h-[140px] shadow-inner resize-none transition-all"
-                                        />
-
-                                        <button 
-                                            onClick={handleReviewSubmit}
-                                            disabled={isSubmittingReview || !reviewForm.comment.trim()}
-                                            className="w-full bg-slate-900 text-white rounded-2xl py-4 text-[10px] font-black uppercase tracking-[0.3em] italic hover:bg-pink-600 transition-all shadow-xl shadow-slate-900/10 disabled:opacity-50"
-                                        >
-                                            {isSubmittingReview ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Post Public Reflection"}
-                                        </button>
-                                    </div>
-
-                                    {/* Recent List */}
-                                    <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {reviews.length > 0 ? reviews.map((r, i) => {
-                                            const reviewerName = r.profiles?.full_name || r.profiles?.username || "Guest User";
-                                            return (
-                                                <div key={i} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-slate-200 transition-colors shadow-sm">
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 italic text-[14px]">
-                                                                {reviewerName[0].toUpperCase()}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[12px] font-black text-slate-900 tracking-tight lowercase">{reviewerName}</span>
-                                                                <div className="flex text-yellow-400">
-                                                                    {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= r.rating ? "currentColor" : "none"} />)}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{new Date(r.created_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                    <p className="text-[12px] text-slate-500 font-medium leading-relaxed italic">"{r.comment}"</p>
-                                                {r.response && (
-                                                    <div className="pt-4 mt-4 border-t border-slate-50">
-                                                        <p className="text-[9px] font-black text-pink-500 uppercase tracking-widest mb-1 items-center flex gap-1.5 italic">
-                                                            <CheckCircle2 size={10} />
-                                                            Artist's Response
-                                                        </p>
-                                                        <p className="text-[11px] text-slate-900 font-bold leading-relaxed italic bg-slate-50/50 p-3 rounded-xl border border-slate-50">
-                                                            {r.response}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                                </div>
-                                            );
-                                        }) : (
-                                            <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem] space-y-4">
-                                                <div className="w-16 h-16 bg-slate-50 rounded-full mx-auto flex items-center justify-center">
-                                                    <Star size={24} className="text-slate-100" />
-                                                </div>
-                                                <p className="text-[11px] font-black text-slate-200 uppercase tracking-widest italic">Digital Void of Reflection</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                             </div>
+                             <hr className="border-slate-100 mb-10" />
                         </div>
                     </div>
 
@@ -747,8 +765,168 @@ export default function ArtistProfilePage() {
                                 Professional artists verified by BookMyTicket for quality and reliability.
                             </p>
                         </div>
+
+                        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3 shadow-sm border-l-4 border-l-green-500">
+                            <CheckCircle2 size={18} className="text-green-500 shrink-0 mt-0.5" />
+                            <p className="text-[12px] font-medium text-slate-600 leading-relaxed">
+                                Professional artists verified by BookMyTicket for quality and reliability.
+                            </p>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+                {/* Bottom Landscape Reviews Section */}
+                <section className="w-full bg-slate-50/50 border-t border-slate-100 py-12 mt-12">
+                    <div className="container mx-auto px-6">
+                        <div className="max-w-6xl mx-auto space-y-10">
+                            <div className="text-center space-y-4">
+                                <h2 className="text-[32px] font-black text-[#111827] uppercase italic tracking-tighter leading-none">Customer Reflections</h2>
+                                <p className="text-[14px] text-slate-400 font-bold uppercase tracking-widest">Shared experiences from our global community</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                                {/* Submission Form Area (Landscape Style) */}
+                                <div className="lg:col-span-5 bg-white rounded-[1.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/30 space-y-6">
+                                    <div className="space-y-2">
+                                        <h3 className="text-[18px] font-black text-black uppercase italic tracking-tight">Leave your Mark</h3>
+                                        <p className="text-[12px] text-slate-400 font-medium italic leading-relaxed">Your honest feedback helps the community grow and artists improve.</p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            {[1,2,3,4,5].map(s => (
+                                                <button 
+                                                    key={s} 
+                                                    onClick={() => setReviewForm({...reviewForm, rating: s})}
+                                                    className={`transition-all duration-300 hover:scale-125 ${s <= reviewForm.rating ? 'text-yellow-400 drop-shadow-sm' : 'text-slate-100'}`}
+                                                >
+                                                    <Star size={28} fill={s <= reviewForm.rating ? "currentColor" : "none"} strokeWidth={2} />
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                            <textarea 
+                                                value={reviewForm.comment}
+                                                onChange={e => setReviewForm({...reviewForm, comment: e.target.value})}
+                                                placeholder="Tell us about the artist's professionalism, quality, and vibe..."
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-5 text-[13px] font-medium text-slate-600 focus:border-[#f844a4] outline-none min-h-[140px] shadow-inner resize-none transition-all focus:bg-white"
+                                            />
+
+                                        {/* Image Upload Area */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <label className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-[#f844a4] hover:bg-pink-50/20 transition-all group">
+                                                    <ImageIcon className="text-slate-300 group-hover:text-[#f844a4] transition-colors" size={20} />
+                                                    <span className="text-[12px] font-black text-slate-400 group-hover:text-[#f844a4] uppercase tracking-widest">
+                                                        {reviewImage ? "Change Photo" : "Add a Photo (Optional)"}
+                                                    </span>
+                                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                                </label>
+                                                {imagePreview && (
+                                                    <button 
+                                                        onClick={() => { setReviewImage(null); setImagePreview(null); }}
+                                                        className="p-4 bg-slate-100 text-slate-400 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all"
+                                                    >
+                                                        <ArrowLeft size={20} className="rotate-45" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {imagePreview && (
+                                                <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95">
+                                                    <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button 
+                                            onClick={handleReviewSubmit}
+                                            disabled={isSubmittingReview || !reviewForm.comment.trim()}
+                                            className="w-full bg-gradient-to-r from-[#f844a4] to-[#a855f7] text-white rounded-xl py-4 text-[11px] font-black uppercase tracking-[0.3em] italic hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-pink-200/50 disabled:opacity-50 disabled:scale-100"
+                                        >
+                                            {isSubmittingReview ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Post Public Reflection"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Display Area (Top 5 Reviews) */}
+                                <div className="lg:col-span-7 space-y-8">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h3 className="text-[14px] font-black text-slate-400 uppercase tracking-[0.3em]">Top 5 Featured Reviews</h3>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex text-yellow-400">
+                                                {[1,2,3,4,5].map(s => <Star key={s} size={14} fill={s <= Math.round(Number(avgRating)) ? "currentColor" : "none"} />)}
+                                            </div>
+                                            <span className="text-[12px] font-black text-slate-900 italic">({reviews.length} Validated)</span>
+                                        </div>
+                                    </div>
+                                    <hr className="border-slate-100" />
+
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {reviews.slice(0, 5).length > 0 ? reviews.slice(0, 5).map((r, i) => {
+                                            const reviewerName = r.profiles?.full_name || r.profiles?.username || "Verified Guest";
+                                            return (
+                                                <div key={i} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group overflow-hidden">
+                                                    <div className="flex flex-col md:flex-row gap-8">
+                                                        <div className="flex-1 space-y-5">
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center font-black text-slate-400 italic text-[16px] group-hover:bg-pink-50 group-hover:border-pink-100 group-hover:text-[#f844a4] transition-all">
+                                                                        {reviewerName[0].toUpperCase()}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[14px] font-black text-slate-900 tracking-tight lowercase">{reviewerName}</span>
+                                                                        <div className="flex text-yellow-400 mt-0.5">
+                                                                            {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= r.rating ? "currentColor" : "none"} />)}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest">{new Date(r.created_at).toLocaleDateString()}</span>
+                                                            </div>
+                                                            
+                                                            <p className="text-[15px] text-slate-600 font-medium leading-[1.8] italic group-hover:text-slate-900 transition-colors">
+                                                                "{r.comment}"
+                                                            </p>
+
+                                                            {r.response && (
+                                                                <div className="pt-5 mt-5 border-t border-slate-50">
+                                                                    <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                                                                        <p className="text-[9px] font-black text-[#f844a4] uppercase tracking-widest mb-1.5 flex items-center gap-2 italic">
+                                                                            <Send size={10} /> Artist's Appreciation
+                                                                        </p>
+                                                                        <p className="text-[12px] text-slate-900 font-bold leading-relaxed italic">
+                                                                            {r.response}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {r.image_url && (
+                                                            <div className="md:w-32 h-32 rounded-xl overflow-hidden border border-slate-100 shrink-0 shadow-inner">
+                                                                <img src={r.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="Review Media" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }) : (
+                                            <div className="py-32 text-center border-4 border-dashed border-slate-100 rounded-[3rem] space-y-6">
+                                                <div className="w-20 h-20 bg-slate-50 rounded-full mx-auto flex items-center justify-center">
+                                                    <Star size={32} className="text-slate-100" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <p className="text-[13px] font-black text-slate-300 uppercase tracking-[0.3em] italic">Digital Void of Reflection</p>
+                                                    <p className="text-[11px] text-slate-200 font-bold italic">No reviews found for this artist yet.</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </section>
 
                 {/* Success Full-Viewport Confirmation Screen */}
                 {showSuccess && confirmedDetails && (
@@ -880,7 +1058,6 @@ export default function ArtistProfilePage() {
                     `}</style>
                 </div>
                 )}
-            </div>
         </main>
     );
 }

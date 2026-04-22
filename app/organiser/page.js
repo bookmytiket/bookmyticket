@@ -1491,6 +1491,55 @@ function OrganiserPanel() {
             @media (max-width: 768px) {
                 .dashboard-overview-grid { grid-template-columns: repeat(2, 1fr); }
             }
+            .dashboard-charts-grid {
+                display: grid;
+                grid-template-columns: 1.5fr 1fr;
+                gap: 24px;
+            }
+            @media (max-width: 1024px) {
+                .dashboard-charts-grid { grid-template-columns: 1fr; }
+            }
+            .form-grid-4 {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+            }
+            @media (max-width: 1024px) {
+                .form-grid-4 { grid-template-columns: repeat(2, 1fr); }
+            }
+            @media (max-width: 640px) {
+                .form-grid-4 { grid-template-columns: 1fr; }
+            }
+            .form-grid-2 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            @media (max-width: 640px) {
+                .form-grid-2 { grid-template-columns: 1fr; }
+            }
+            .form-grid-5 {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 10px;
+            }
+            @media (max-width: 1200px) {
+                .form-grid-5 { grid-template-columns: repeat(3, 1fr); }
+            }
+            @media (max-width: 768px) {
+                .form-grid-5 { grid-template-columns: repeat(2, 1fr); }
+            }
+            @media (max-width: 480px) {
+                .form-grid-5 { grid-template-columns: 1fr; }
+            }
+            .detail-grid {
+                display: grid;
+                grid-template-columns: 1fr 400px;
+                gap: 24px;
+            }
+            @media (max-width: 1200px) {
+                .detail-grid { grid-template-columns: 1fr; }
+            }
             .overview-card {
                 background-color: #ffffff;
                 padding: 28px 20px;
@@ -2433,7 +2482,7 @@ function OrganiserPanel() {
                             </div>
 
                             {/* Charts Section - Compact Grid */}
-                            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px" }}>
+                            <div className="dashboard-charts-grid">
                                 {/* Revenue Flow Card */}
                                 <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
@@ -2740,7 +2789,7 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
+                                <div className="form-grid-5">
                                     {renderToggle("Date Type*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                                     {renderToggle("Countdown*", "countdownStatus", [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }])}
                                     {renderSelect("Status*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
@@ -2749,7 +2798,7 @@ function OrganiserPanel() {
                                 </div>
 
                                 {postEvent.dateType === "single" && (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
+                                    <div className="form-grid-4">
                                         {renderInput("Start Date*", "startDate", "date")}
                                         {renderInput("Start Time*", "startTime", "time")}
                                         {renderInput("End Date*", "endDate", "date")}
@@ -2757,7 +2806,7 @@ function OrganiserPanel() {
                                     </div>
                                 )}
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", alignItems: "end" }}>
+                                <div className="form-grid-4" style={{ alignItems: "end" }}>
                                     {renderToggle("Tickets*", "ticketLimitType", [{ label: "Unlimited", value: "unlimited" }, { label: "Limited", value: "limited" }])}
                                     <div style={{ marginBottom: "20px" }}>
                                         <label style={{ display: "block", fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: t.textSub }}>Price (INR) *</label>
@@ -2771,7 +2820,7 @@ function OrganiserPanel() {
                                     {renderToggle("Early Bird*", "earlyBirdDiscount", [{ label: "Off", value: "disable" }, { label: "On", value: "enable" }])}
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px", alignItems: "start" }}>
+                                <div className="form-grid-2" style={{ marginBottom: "16px", alignItems: "start" }}>
                                     <div style={{ flex: 1 }}>
                                         {renderToggle("Meeting Type*", "meetingType", [
                                             ...(internalMeetingPortalEnabled ? [{ label: "Platform Meeting", value: "internal" }] : []),
@@ -2796,7 +2845,7 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "12px" }}>
+                                <div className="form-grid-2" style={{ marginTop: "12px" }}>
                                     {renderInput("Event Title*", "title", "text", "Enter Event Name")}
                                     {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                                 </div>
@@ -2919,12 +2968,12 @@ function OrganiserPanel() {
                             </div>
                                 {/* Basic Info */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                                    <div className="form-grid-4">
                                         {renderToggle("Date Rendering*", "dateType", [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }])}
                                         {renderSelect("Visibility*", "eventStatus", [{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }])}
                                         {renderSelect("Featured*", "isFeature", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                     </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                    <div className="form-grid-2">
                                         {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                         {renderSelect("Environment*", "environment", [{ label: "Indoor", value: "Indoor" }, { label: "Outdoor", value: "Outdoor" }])}
                                     </div>
@@ -3084,7 +3133,7 @@ function OrganiserPanel() {
                             </div>
 
                             {postEvent.dateType === "single" ? (
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "16px" }}>
+                                <div className="form-grid-4" style={{ marginBottom: "16px" }}>
                                     {renderInput("Start Date*", "startDate", "date")}
                                     {renderInput("Start Time*", "startTime", "time")}
                                     {renderInput("End Date*", "endDate", "date")}
@@ -3116,12 +3165,12 @@ function OrganiserPanel() {
                                 </div>
                             )}
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                            <div className="form-grid-2">
                                 {renderInput("Event Title*", "title", "text", "Name of the event")}
                                 {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr auto", gap: "12px", alignItems: "end", marginBottom: "20px" }}>
+                            <div className="form-grid-4" style={{ alignItems: "end", marginBottom: "20px" }}>
                                 {renderInput("Venue Address*", "venue", "text", "Venue Name / Address")}
 
                                 {renderSelect("Country*", "country", Country.getAllCountries().map(c => ({ label: c.name, value: c.name })))}
@@ -3299,7 +3348,7 @@ function OrganiserPanel() {
                 case "wallet":
                 case "payout":
                     return (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "24px" }}>
+                        <div className="detail-grid">
                             <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "20px", border: `1px solid ${t.border}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
                                     <div>

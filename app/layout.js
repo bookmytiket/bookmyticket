@@ -7,12 +7,30 @@ import ConditionalLayoutWrapper from '@/components/ConditionalLayoutWrapper';
 import MobileBottomNav from '@/components/MobileBottomNav';
 
 export const metadata = {
-  title: 'BookMyTicket - Event Booking, Turf & Services Platform',
-  description: 'Book events, turf grounds, and professional services online with BookMyTicket. Easy, fast, and secure booking platform in India.',
-  keywords: 'event booking, ticket booking, turf booking, bookmyticket',
+  title: {
+    template: '%s | BookMyTicket - Online Event & Service Booking',
+    default: 'BookMyTicket - Best Event Ticketing, Turf & Service Booking Platform',
+  },
+  description: 'Book the latest events, sports turfs, and professional artists online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and more across India.',
+  keywords: [
+    'bookmyticket', 'event booking India', 'online ticket booking', 'book turfs online', 
+    'professional artist booking', 'concert tickets', 'comedy show tickets', 
+    'event management', 'venue booking', 'wedding services'
+  ],
   metadataBase: new URL('https://bookmyticket.net'),
   alternates: {
     canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -21,16 +39,16 @@ export const metadata = {
     title: 'BookMyTicket',
   },
   openGraph: {
-    title: 'BookMyTicket',
-    description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
+    title: 'BookMyTicket - Online Event & Service Booking',
+    description: 'Book events, turf grounds, and professional services online with BookMyTicket. Easy, fast, and secure.',
     url: 'https://bookmyticket.net',
     siteName: 'BookMyTicket',
     images: [
       {
-        url: '/logo.png',
-        width: 800,
-        height: 600,
-        alt: 'BookMyTicket Logo',
+        url: '/og-image.png', // Should be a high-quality brand image
+        width: 1200,
+        height: 630,
+        alt: 'BookMyTicket - Your Event Partner',
       },
     ],
     locale: 'en_IN',
@@ -40,7 +58,8 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'BookMyTicket',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
-    images: ['/logo.png'],
+    images: ['/og-image.png'],
+    creator: '@bookmyticket',
   },
 };
 
@@ -71,6 +90,32 @@ export default function RootLayout({ children }) {
         />
         <Script
           id="structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "BookMyTicket",
+              "url": "https://bookmyticket.net",
+              "logo": "https://bookmyticket.net/logo.png",
+              "description": "BookMyTicket is India's leading platform for event ticketing, turf bookings, and professional artist services.",
+              "sameAs": [
+                "https://facebook.com/bookmyticket",
+                "https://twitter.com/bookmyticket",
+                "https://instagram.com/bookmyticket"
+              ],
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+91-XXXXXXXXXX",
+                "contactType": "customer service",
+                "areaServed": "IN",
+                "availableLanguage": ["en", "hi"]
+              }
+            }),
+          }}
+        />
+        <Script
+          id="website-structured-data"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({

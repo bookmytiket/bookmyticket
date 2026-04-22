@@ -24,10 +24,13 @@ import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, BRAND_COUPONS } from
 import { eventMatchesCategory } from './utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
 import { Ticket, X } from 'lucide-react';
+
+const EMPTY_ARRAY = [];
 import TicketBookingDemo from '@/components/TicketBookingDemo';
 import DigitalTicket from '@/components/DigitalTicket';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
+import PublicReviewsBanner from '@/components/PublicReviewsBanner';
 
 function TicketCard({ event }) {
   return (
@@ -179,7 +182,7 @@ export default function Home() {
   }, [metaSettings]);
 
   const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
-  const supabaseEvents = useMemo(() => supabaseEventsRaw || [], [supabaseEventsRaw]);
+  const supabaseEvents = useMemo(() => supabaseEventsRaw || EMPTY_ARRAY, [supabaseEventsRaw]);
 
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
@@ -318,9 +321,9 @@ export default function Home() {
   const heroSlidesConfig = getConfigValue("admin_hero_slides");
   const eventPartnersConfig = getConfigValue("admin_event_partners");
   const { data: activeBannersRaw } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), []);
-  const activeBanners = useMemo(() => activeBannersRaw || [], [activeBannersRaw]);
+  const activeBanners = useMemo(() => activeBannersRaw || EMPTY_ARRAY, [activeBannersRaw]);
   const { data: homeCouponsRaw } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
-  const homeCoupons = useMemo(() => homeCouponsRaw || [], [homeCouponsRaw]);
+  const homeCoupons = useMemo(() => homeCouponsRaw || EMPTY_ARRAY, [homeCouponsRaw]);
   const allCoupons = useMemo(() => {
     // Merge Convex coupons with Static Partner deals
     return [...homeCoupons, ...BRAND_COUPONS.map(c => ({
@@ -401,6 +404,9 @@ export default function Home() {
   return (
     <>
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
+        
+        {/* Community Trust: Public Reviews Banner */}
+        <PublicReviewsBanner />
         
         {/* Connection Diagnostic Warning */}
         {typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_SUPABASE_URL && (

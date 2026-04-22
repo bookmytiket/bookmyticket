@@ -20,6 +20,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/Theme';
 import { useAuth } from '../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +40,7 @@ export default function ServiceDetailScreen() {
   
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
+  const [selectedImage, setSelectedImage] = useState(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   
   const { user } = useAuth();
@@ -76,13 +80,66 @@ export default function ServiceDetailScreen() {
   const { mutate: createBooking } = useSupabaseMutation((s, data) => s.from('vendor_bookings').insert(data));
 
   // Migrated to Supabase: Fetch reviews
-  const { data: reviews = [] } = useSupabaseQuery('vendor_reviews', (q) => 
-    vendorId ? q.select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false }) : q.select('*').limit(0),
+  const { data: reviewsRaw = [], refresh: refreshReviews } = useSupabaseQuery('vendor_reviews', (q) => 
+    vendorId 
+      ? q.select('*')
+         .eq('vendor_id', vendorId)
+         .order('created_at', { ascending: false }) 
+      : q.select('*').limit(0),
     [vendorId]
   );
 
+  const [reviews, setReviews] = useState([]);
+
+  React.useEffect(() => {
+    if (!reviewsRaw || reviewsRaw.length === 0) {
+      setReviews([]);
+      return;
+    }
+
+    const fetchProfiles = async () => {
+      const userIds = [...new Set(reviewsRaw.map(r => r.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, username')
+        .in('id', userIds);
+
+      if (profilesData) {
+        const merged = reviewsRaw.map(r => ({
+          ...r,
+          profiles: profilesData.find(p => p.id === r.user_id)
+        }));
+        setReviews(merged);
+      } else {
+        setReviews(reviewsRaw);
+      }
+    };
+
+    fetchProfiles();
+  }, [reviewsRaw]);
+
   // Migrated to Supabase: Submit review
   const { mutate: submitReview } = useSupabaseMutation((s, data) => s.from('vendor_reviews').insert(data));
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'We need access to your photos to upload review images.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+      base64: true
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0]);
+    }
+  };
 
   const handleReviewSubmit = async () => {
     if (!user) {
@@ -95,19 +152,45 @@ export default function ServiceDetailScreen() {
     }
     setIsSubmittingReview(true);
     try {
+      let uploadedUrl = null;
+
+      if (selectedImage) {
+        const fileExt = selectedImage.uri.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        // Use base64-arraybuffer to decode the base64 string from expo-image-picker
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('review-images')
+          .upload(fileName, decode(selectedImage.base64), {
+            contentType: `image/${fileExt}`
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('review-images')
+          .getPublicUrl(fileName);
+        
+        uploadedUrl = publicUrl;
+      }
+
       await submitReview({
         vendor_id: vendorId,
-        user_id: user.id, // Must be UUID
+        user_id: user.id,
         rating: reviewForm.rating,
-        comment: reviewForm.comment
+        comment: reviewForm.comment,
+        image_url: uploadedUrl
       });
       setIsReviewModalOpen(false);
       setReviewForm({ rating: 5, comment: "" });
+      setSelectedImage(null);
       Alert.alert("Thank You!", "Your reflection has been published.");
     } catch (err) {
-      Alert.alert("Error", "Failed to submit review.");
+      console.error("Upload error:", err);
+      Alert.alert("Error", "Failed to submit review. " + err.message);
     } finally {
       setIsSubmittingReview(false);
+      refreshReviews();
     }
   };
 
@@ -189,7 +272,7 @@ export default function ServiceDetailScreen() {
   const coverImage = (portfolio || [])?.[0]?.url || fullProfile?.image_url || 'https://images.unsplash.com/photo-1596704017254-9b1210630b65?w=800';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header Image */}
         <View style={styles.hero}>
@@ -450,7 +533,7 @@ export default function ServiceDetailScreen() {
           </View>
 
           {/* Reviews Section */}
-                          <View style={[styles.section, { borderBottomWidth: 0, paddingBottom: 100 }]}>
+          <View style={[styles.section, { borderBottomWidth: 0, paddingBottom: 60 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={styles.sectionTitle}>Reviews & Ratings</Text>
               <TouchableOpacity onPress={() => setIsReviewModalOpen(true)}>
@@ -462,9 +545,15 @@ export default function ServiceDetailScreen() {
               (reviews || []).map((r, i) => (
                 <View key={i} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
-                    <View style={styles.avatarMini}><Text style={styles.avatarText}>{r.user_id[0].toUpperCase()}</Text></View>
+                    <View style={styles.avatarMini}>
+                      <Text style={styles.avatarText}>
+                        {(r.profiles?.full_name || r.profiles?.username || 'G')[0].toUpperCase()}
+                      </Text>
+                    </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.reviewerName}>{r.user_id}</Text>
+                      <Text style={styles.reviewerName}>
+                        {r.profiles?.full_name || r.profiles?.username || 'Guest'}
+                      </Text>
                       <View style={{ flexDirection: 'row', gap: 2 }}>
                         {[1, 2, 3, 4, 5].map(s => (
                           <Ionicons key={s} name="star" size={10} color={s <= r.rating ? "#f59e0b" : "#e2e8f0"} />
@@ -474,6 +563,15 @@ export default function ServiceDetailScreen() {
                     <Text style={styles.reviewDate}>{new Date(r.created_at).toLocaleDateString()}</Text>
                   </View>
                   <Text style={styles.reviewText}>{r.comment}</Text>
+                  
+                  {r.image_url && (
+                    <Image 
+                      source={{ uri: r.image_url }} 
+                      style={styles.reviewImage} 
+                      resizeMode="cover"
+                    />
+                  )}
+
                   {r.response && (
                     <View style={styles.artistResponse}>
                       <Text style={styles.responseLabel}>Artist's Thought:</Text>
@@ -576,6 +674,26 @@ export default function ServiceDetailScreen() {
             />
 
             <TouchableOpacity 
+              style={styles.imagePickerBtn}
+              onPress={pickImage}
+            >
+              {selectedImage ? (
+                <View style={styles.previewContainer}>
+                  <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+                  <View style={styles.changeOverlay}>
+                    <Ionicons name="camera" size={20} color="#fff" />
+                    <Text style={styles.changeText}>Change Photo</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.pickerPlaceholder}>
+                  <Ionicons name="image-outline" size={24} color={Colors.secondary} />
+                  <Text style={styles.pickerText}>Add a Photo (Optional)</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
               style={[styles.bookBtn, { marginTop: 24, width: '100%', alignItems: 'center' }]}
               onPress={handleReviewSubmit}
               disabled={isSubmittingReview}
@@ -585,14 +703,14 @@ export default function ServiceDetailScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  hero: { width: '100%', height: 260, position: 'relative' },
+  hero: { width: '100%', height: 280, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
   backButton: { position: 'absolute', top: 50, left: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
@@ -692,7 +810,7 @@ const styles = StyleSheet.create({
   dayText: { fontSize: 14, fontWeight: '700', color: Colors.black },
   selectedDay: { backgroundColor: Colors.secondary },
   selectedDayText: { color: '#fff' },
-  reviewCard: { backgroundColor: '#fff', padding: 16, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: '#f1f5f9' },
+  reviewCard: { backgroundColor: '#fff', padding: 12, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#f1f5f9' },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   avatarMini: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 14, fontWeight: '900', color: Colors.secondary },
@@ -722,4 +840,12 @@ const styles = StyleSheet.create({
   optionName: { fontSize: 14, fontWeight: '900', color: Colors.black, textTransform: 'uppercase' },
   optionDesc: { fontSize: 11, color: '#64748b', marginTop: 4, lineHeight: 16 },
   optionPrice: { fontSize: 16, fontWeight: '900', color: Colors.secondary },
+  reviewImage: { width: '100%', height: 140, borderRadius: 12, marginTop: 12 },
+  imagePickerBtn: { marginTop: 16, borderRadius: 16, overflow: 'hidden', backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#f1f5f9', borderStyle: 'dashed' },
+  pickerPlaceholder: { height: 80, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  pickerText: { fontSize: 12, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
+  previewContainer: { height: 160, position: 'relative' },
+  previewImage: { width: '100%', height: '100%' },
+  changeOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  changeText: { color: '#fff', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
 });

@@ -98,7 +98,7 @@ export default function CalendarPicker({ value, onChange, placeholder = "dd/mm/y
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 4, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="absolute left-0 top-full z-[100] w-[280px] bg-white border border-slate-100 rounded-[2rem] shadow-2xl p-6 select-none overflow-hidden"
+                        className="absolute left-0 top-full z-[100] w-[280px] sm:w-[300px] bg-white border border-slate-100 rounded-[2rem] shadow-2xl p-6 select-none overflow-hidden"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between mb-6">
