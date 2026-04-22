@@ -30,7 +30,7 @@ export default function PublicReviewsBanner() {
                 Animated.timing(blinkAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
             ])
         ).start();
-    }, []);
+
         async function fetchReviews() {
             try {
                 const { data, error } = await supabase
