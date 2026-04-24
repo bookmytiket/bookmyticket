@@ -4,6 +4,7 @@ import { Ticket, Users, Briefcase, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { motion, animate } from "framer-motion";
+import Script from "next/script";
 
 const Counter = ({ value, suffix = "+" }) => {
   const [displayValue, setDisplayValue] = useState(0);
@@ -137,6 +138,23 @@ export default function VideoHeroBanner() {
         };
     }, []);
 
+    const videoSchema = {
+      "@context": "https://schema.org",
+      "@type": "VideoObject",
+      "name": "BookMyTicket - Your Event Partner",
+      "description": "Experience the best online event ticketing and service booking platform with BookMyTicket.",
+      "thumbnailUrl": "https://bookmyticket.net/og-image.png",
+      "uploadDate": "2024-01-01T08:00:00+08:00",
+      "duration": "PT0M30S",
+      "contentUrl": "https://bookmyticket.net/bookmyticket/videoplayback.mp4",
+      "embedUrl": "https://bookmyticket.net/",
+      "interactionStatistic": {
+        "@type": "InteractionCounter",
+        "interactionType": { "@type": "WatchAction" },
+        "userInteractionCount": 10000
+      }
+    };
+
     return (
         <section style={{
             position: "relative",
@@ -149,10 +167,16 @@ export default function VideoHeroBanner() {
             overflow: "hidden",
             fontFamily: "var(--font-body), sans-serif"
         }}>
+            <Script
+              id="video-schema"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }}
+            />
             {/* Background Video */}
             <video
                 ref={videoRef}
                 src="/bookmyticket/videoplayback.mp4"
+                poster="/og-image.png"
                 autoPlay
                 loop
                 muted
@@ -207,14 +231,14 @@ export default function VideoHeroBanner() {
                     letterSpacing: "-0.04em"
                   }}
                 >
-                    Discover Your Next <br />
+                    Book Your Next <br />
                     <span style={{
                         background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
                         display: "inline-block"
                     }}>
-                        Unforgettable Experience
+                        Experience on BookMyTicket
                     </span>
                 </motion.h1>
 

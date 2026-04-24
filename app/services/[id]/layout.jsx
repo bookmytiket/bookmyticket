@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Script from 'next/script';
+import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
     const { id } = params;
@@ -34,12 +35,15 @@ export async function generateMetadata({ params }) {
 
 export default async function ServiceLayout({ children, params }) {
     const { id } = params;
+    if (!id) notFound();
     
     const { data: service } = await supabase
         .from('service_providers')
         .select('*')
         .eq('id', id)
         .maybeSingle();
+
+    if (!service) notFound();
 
     const jsonLd = service ? {
         "@context": "https://schema.org",

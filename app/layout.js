@@ -9,18 +9,16 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 export const metadata = {
   title: {
     template: '%s | BookMyTicket - Online Event & Service Booking',
-    default: 'BookMyTicket - Best Event Ticketing, Turf & Service Booking Platform',
+    default: 'BookMyTicket - Best Online Event Ticketing, Turf & Service Booking Platform',
   },
-  description: 'Book the latest events, sports turfs, and professional artists online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and more across India.',
+  description: 'Book the latest events, sports turfs, and professional services online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and specialized services across India.',
   keywords: [
     'bookmyticket', 'event booking India', 'online ticket booking', 'book turfs online', 
     'professional artist booking', 'concert tickets', 'comedy show tickets', 
-    'event management', 'venue booking', 'wedding services'
+    'event management', 'venue booking', 'wedding services', 'mehendi artist booking',
+    'cricket turf booking', 'football turf booking', 'live events India'
   ],
   metadataBase: new URL('https://bookmyticket.net'),
-  alternates: {
-    canonical: '/',
-  },
   robots: {
     index: true,
     follow: true,
@@ -39,13 +37,13 @@ export const metadata = {
     title: 'BookMyTicket',
   },
   openGraph: {
-    title: 'BookMyTicket - Online Event & Service Booking',
+    title: 'BookMyTicket - Best Online Event Ticketing & Service Booking',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket. Easy, fast, and secure.',
     url: 'https://bookmyticket.net',
     siteName: 'BookMyTicket',
     images: [
       {
-        url: '/og-image.png', // Should be a high-quality brand image
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'BookMyTicket - Your Event Partner',
@@ -56,7 +54,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BookMyTicket',
+    title: 'BookMyTicket - Online Ticketing Hub',
     description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
     images: ['/og-image.png'],
     creator: '@bookmyticket',
@@ -88,6 +86,26 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
+        {/* Google Analytics (GA4) Placeholder - Replace G-XXXXXXXXXX with actual ID */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XXXXXXXXXX', {
+              page_path: window.location.pathname,
+            });
+          `}
+        </Script>
+        {/* Social Media Integration Tags */}
+        <meta property="og:site_name" content="BookMyTicket" />
+        <meta name="twitter:site" content="@bookmyticket" />
+        <meta name="twitter:card" content="summary_large_image" />
+        
         <Script
           id="structured-data"
           type="application/ld+json"

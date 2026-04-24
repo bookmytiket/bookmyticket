@@ -632,6 +632,59 @@ export default function Home() {
               <Sponsors />
             </div>
 
+            {/* SEO Content: About BookMyTicket */}
+            <section style={{ width: '100%', backgroundColor: '#f8fafc', padding: '60px 20px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '16px', letterSpacing: '-0.04em' }}>
+                    Your One-Stop Platform for <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Events & Services</span>
+                  </h2>
+                  <p style={{ color: '#64748b', fontSize: '16px', maxWidth: '800px', margin: '0 auto', lineHeight: 1.6 }}>
+                    BookMyTicket is India's fastest-growing platform for discovering and booking unique experiences. From live concerts and comedy shows to sports turfs and professional artist services, we bring the best of your city to your fingertips.
+                  </p>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
+                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Online Event Ticketing</h3>
+                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
+                      Never miss out on the latest events in your city. Whether it's a high-energy music concert, a hilarious stand-up comedy special, or a local community festival, BookMyTicket offers a seamless and secure ticket booking experience.
+                    </p>
+                  </div>
+                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Sports Turf Booking</h3>
+                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
+                      Love sports? Easily find and book cricket, football, and badminton turfs near you. Check availability in real-time, view amenities, and secure your slot instantly. BookMyTicket makes it easy to stay active and play with your friends.
+                    </p>
+                  </div>
+                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Professional Service Partners</h3>
+                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
+                      Looking for a professional Mehendi artist, a wedding planner, or a creative studio? Our curated list of verified service providers ensures you get top-quality service for your special occasions. Browse portfolios and book directly through our platform.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '50px', textAlign: 'center' }}>
+                  <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '20px' }}>Serving Cities Across India</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '15px' }}>
+                    {['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'].map(city => (
+                      <Link key={city} href={`/events/in/${city.toLowerCase()}`} style={{ 
+                        fontSize: '13px', fontWeight: 700, color: '#64748b', textDecoration: 'none',
+                        padding: '8px 16px', background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#f84464'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                      >
+                        Events in {city}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* Subscription Banner before Footer */}
             <BrandCouponsSection coupons={allCoupons} />
             <SubscriptionBanner />

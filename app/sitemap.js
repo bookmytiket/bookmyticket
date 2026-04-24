@@ -9,9 +9,7 @@ export default async function sitemap() {
   // 1. Core routes (Priority: 1.0 - 0.8)
   const coreRoutes = [
     '',
-    '/events',
     '/services',
-    '/advertise',
     '/branding',
     '/profile',
   ].map((route) => ({
@@ -37,55 +35,75 @@ export default async function sitemap() {
     priority: 0.7,
   }));
 
-  // If supabase is not initialized (e.g. during build without env vars), return only core routes
+  // 3b. City Event routes (Priority: 0.8)
+  const cityRoutes = ['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'].map((city) => ({
+    url: `${baseUrl}/events/in/${city.toLowerCase()}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: 'daily',
+    priority: 0.8,
+  }));
+
   if (!supabase) {
     return [
       ...coreRoutes,
       ...serviceCategoryRoutes,
-      ...eventCategoryRoutes
+      ...eventCategoryRoutes,
+      ...cityRoutes
     ];
   }
 
-  // 4. Dynamic Event routes (Priority: 0.9)
-  const { data: events = [] } = await supabase.from('events').select('id');
-  const eventRoutes = (events || []).map((event) => ({
-    url: `${baseUrl}/events/detail?id=${event.id}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'always',
-    priority: 0.9,
-  }));
+  try {
+    // 4. Dynamic Event routes (Priority: 0.9)
+    const { data: events = [] } = await supabase.from('events').select('id, updated_at').limit(500);
+    const eventRoutes = (events || []).map((event) => ({
+      url: `${baseUrl}/events/detail?id=${event.id}`,
+      lastModified: event.updated_at || new Date().toISOString(),
+      changeFrequency: 'always',
+      priority: 0.9,
+    }));
 
-  // 5. Dynamic Professional Service routes (Priority: 0.9)
-  const { data: vendors = [] } = await supabase
-    .from('service_providers')
-    .select('id, status, category');
-  
-  const activeVendors = (vendors || []).filter(v => 
-    v.category && 
-    (v.status === 'KYC Completed' || v.status === 'Active' || v.status === 'Approved')
-  );
-  const vendorRoutes = activeVendors.map((vendor) => ({
-    url: `${baseUrl}/services/${vendor.id}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly',
-    priority: 0.9,
-  }));
+    // 5. Dynamic Professional Service routes (Priority: 0.9)
+    const { data: vendors = [] } = await supabase
+      .from('service_providers')
+      .select('id, updated_at, status, category')
+      .limit(500);
+    
+    const activeVendors = (vendors || []).filter(v => 
+      v.category && 
+      (v.status === 'KYC Completed' || v.status === 'Active' || v.status === 'Approved')
+    );
+    const vendorRoutes = activeVendors.map((vendor) => ({
+      url: `${baseUrl}/services/${vendor.id}`,
+      lastModified: vendor.updated_at || new Date().toISOString(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    }));
 
-  // 6. Dynamic Turf routes (Priority: 0.9)
-  const { data: turfs = [] } = await supabase.from('turfs').select('id');
-  const turfRoutes = (turfs || []).map((turf) => ({
-    url: `${baseUrl}/turfs/${turf.id}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly',
-    priority: 0.9,
-  }));
+    // 6. Dynamic Turf routes (Priority: 0.9)
+    const { data: turfs = [] } = await supabase.from('turfs').select('id, updated_at').limit(500);
+    const turfRoutes = (turfs || []).map((turf) => ({
+      url: `${baseUrl}/turfs/${turf.id}`,
+      lastModified: turf.updated_at || new Date().toISOString(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    }));
 
-  return [
-    ...coreRoutes, 
-    ...serviceCategoryRoutes, 
-    ...eventCategoryRoutes, 
-    ...eventRoutes, 
-    ...vendorRoutes, 
-    ...turfRoutes
-  ];
+    return [
+      ...coreRoutes, 
+      ...serviceCategoryRoutes, 
+      ...eventCategoryRoutes, 
+      ...cityRoutes,
+      ...eventRoutes, 
+      ...vendorRoutes, 
+      ...turfRoutes
+    ];
+  } catch (e) {
+    console.error('Sitemap generation error:', e);
+    return [
+      ...coreRoutes,
+      ...serviceCategoryRoutes,
+      ...eventCategoryRoutes,
+      ...cityRoutes
+    ];
+  }
 }

@@ -1,9 +1,14 @@
 export const metadata = {
-    title: 'Professional Artist & Service Booking',
-    description: 'Book verified professional services for your events. Photographers, Mehendi artists, Makeup artists, and Sports Turfs all in one place.',
-    keywords: ['artist booking', 'event services', 'book photographers India', 'mehendi artist booking', 'makeup artist India'],
+  title: 'Professional Services - Hire Top Artists & Experts | BookMyTicket',
+  description: 'Discover and book top professional services including Mehendi artists, Wedding planners, Turfs, and more. Direct booking with verified experts across India.',
+  keywords: ['hire artists', 'book turfs', 'wedding planners India', 'professional services online', 'mehendi artists', 'cricket turf booking'],
+  openGraph: {
+    title: 'Professional Services Hub - BookMyTicket',
+    description: 'Find and book the best professional services for your events and sports needs.',
+    url: 'https://bookmyticket.net/services',
+  },
 };
 
-export default function ServicesListingLayout({ children }) {
-    return <>{children}</>;
+export default function ServicesLayout({ children }) {
+  return <>{children}</>;
 }

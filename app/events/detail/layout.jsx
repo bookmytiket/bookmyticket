@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Script from 'next/script';
+import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ searchParams }) {
     const id = searchParams?.id;
@@ -29,12 +30,15 @@ export async function generateMetadata({ searchParams }) {
 
 export default async function EventDetailLayout({ children, searchParams }) {
     const id = searchParams?.id;
+    if (!id) notFound();
     
     const { data: event } = await supabase
         .from('events')
         .select('*')
         .eq('id', id)
         .maybeSingle();
+
+    if (!event) notFound();
 
     const jsonLd = event ? {
         "@context": "https://schema.org",
