@@ -435,15 +435,19 @@ export default function SignInPage() {
     };
 
     
-    // ── SSO Login Handler (Mock) ──
+    // ── SSO Login Handler ──
     const handleSSOLogin = async (provider) => {
         setLoading(true);
         setLoginError("");
         try {
+            // Build the callback URL, passing the desired final destination as a query parameter
+            const nextUrl = redirectPath ? encodeURIComponent(redirectPath) : encodeURIComponent('/');
+            const callbackUrl = `${window.location.origin}/auth/callback?next=${nextUrl}`;
+            
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: provider,
                 options: {
-                    redirectTo: `${window.location.origin}${redirectPath || '/'}`
+                    redirectTo: callbackUrl
                 }
             });
             if (error) throw error;

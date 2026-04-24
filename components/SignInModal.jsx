@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-
+import { supabase } from "@/lib/supabase";
 
 const COUNTRIES = [
     { code: "+91", flag: "https://flagcdn.com/w20/in.png", name: "India", len: 10 },
@@ -75,7 +75,23 @@ export default function SignInModal({ isOpen, onClose }) {
                 }}>Get Started</h2>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <button className="auth-btn">
+                    <button 
+                        className="auth-btn"
+                        onClick={async () => {
+                            try {
+                                const { error } = await supabase.auth.signInWithOAuth({
+                                    provider: 'google',
+                                    options: {
+                                        redirectTo: `${window.location.origin}/auth/callback`
+                                    }
+                                });
+                                if (error) throw error;
+                            } catch (error) {
+                                console.error("Google login error:", error);
+                                alert("Failed to log in with Google.");
+                            }
+                        }}
+                    >
                         <img src="https://lh3.googleusercontent.com/COxitqgJr1sICpeqCu7IFH0LqJD9mi_SS9BW9Xm73Yp3eX9XvMSh5AR9Lp5rdKCAd3pXW18mI73R199Xp4G1fG3WvOT5xvBy2P5p" alt="Google" style={{ width: "20px" }} />
                         <span>Continue with Google</span>
                     </button>
