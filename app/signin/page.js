@@ -186,12 +186,25 @@ export default function SignInPage() {
     const [signupOtpSending, setSignupOtpSending] = useState(false);
     const [otpEnabled, setOtpEnabled] = useState(false);
 
+    // SSO configurations fetched from system settings
+    const [ssoConfigs, setSsoConfigs] = useState({ facebook: false, google: false });
+
     useEffect(() => {
-        const checkOTPConfig = async () => {
-            const { data } = await supabase.from('communicationSettings').select('value').eq('key', 'otp_settings').maybeSingle();
-            if (data?.value?.enabled) setOtpEnabled(true);
+        const checkConfigs = async () => {
+            // Check OTP
+            const { data: otpData } = await supabase.from('communicationSettings').select('value').eq('key', 'otp_settings').maybeSingle();
+            if (otpData?.value?.enabled) setOtpEnabled(true);
+
+            // Check SSO
+            const { data: ssoData } = await supabase.from('sso_settings').select('*').maybeSingle();
+            if (ssoData) {
+                setSsoConfigs({
+                    google: !!ssoData.google_enabled,
+                    facebook: !!ssoData.facebook_enabled
+                });
+            }
         };
-        checkOTPConfig();
+        checkConfigs();
     }, []);
 
     // Forgot Password
@@ -205,9 +218,6 @@ export default function SignInPage() {
     const [otpPurpose, setOtpPurpose] = useState(""); // "login" | "signup"
     const [otpError, setOtpError] = useState("");
     const [pendingSignupData, setPendingSignupData] = useState(null);
-
-    // SSO configurations - static for now or fetched from profiles/system_config
-    const [ssoConfigs, setSsoConfigs] = useState({ facebook: true, google: true });
 
     const handleLogin = async (e) => {
         e.preventDefault();

@@ -272,6 +272,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     await AsyncStorage.removeItem('user');
+    global.bmtPromotionShownThisAppLaunch = false;
     setUser(null);
   }, []);
 

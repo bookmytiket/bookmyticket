@@ -6,34 +6,67 @@
  * @returns {object} { url: string, isExternal: boolean, route: string, params: object }
  */
 export function resolveMobileBannerRedirect(type, id) {
-  if (!type || !id) return { url: null, isExternal: false };
+  const fallbackHome = { 
+    url: null, 
+    isExternal: false, 
+    route: 'MainTabs', 
+    params: { screen: 'Home' } 
+  };
 
-  switch (type.toLowerCase()) {
-    case 'event':
-      return { 
-        url: `bookmyticket://events/detail?id=${id}`, 
-        isExternal: false, 
-        route: 'EventDetail', 
-        params: { eventId: String(id) } 
-      };
-    case 'service':
-      return { 
-        url: `bookmyticket://services/detail?id=${id}`, 
-        isExternal: false, 
-        route: 'ServiceDetail', 
-        params: { vendorId: String(id) } 
-      };
-    case 'turf':
-      return { 
-        url: `bookmyticket://turf/detail?id=${id}`, 
-        isExternal: false, 
-        route: 'TurfDetail', 
-        params: { turfId: String(id) } 
-      };
-    case 'url':
-      const fullUrl = id.startsWith('http') ? id : `https://${id}`;
-      return { url: fullUrl, isExternal: true };
-    default:
-      return { url: null, isExternal: false };
+  if (!type) return fallbackHome;
+  
+  const cleanType = String(type).toLowerCase();
+  const cleanId = String(id || '').trim();
+
+  if (cleanType.includes('event')) {
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') return fallbackHome;
+    return { 
+      url: `bookmyticket://events/detail?id=${cleanId}`, 
+      isExternal: false, 
+      route: 'EventDetail', 
+      params: { eventId: cleanId } 
+    };
   }
+
+  if (cleanType.includes('service') || cleanType.includes('vendor') || cleanType.includes('provider') || cleanType.includes('artist')) {
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') return fallbackHome;
+    return { 
+      url: `bookmyticket://services/detail?id=${cleanId}`, 
+      isExternal: false, 
+      route: 'ServiceDetail', 
+      params: { vendorId: cleanId } 
+    };
+  }
+
+  if (cleanType.includes('turf')) {
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') return fallbackHome;
+    return { 
+      url: `bookmyticket://turf/detail?id=${cleanId}`, 
+      isExternal: false, 
+      route: 'TurfDetail', 
+      params: { turfId: cleanId } 
+    };
+  }
+
+  if (cleanType === 'branding' || cleanType === 'url' || cleanType === 'link') {
+    // If no ID/URL, fallback to Home
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+      return { 
+        url: null, 
+        isExternal: false, 
+        route: 'Events', 
+        params: { category: 'All' } 
+      };
+    }
+    const fullUrl = cleanId.startsWith('http') ? cleanId : `https://${cleanId}`;
+    return { url: fullUrl, isExternal: true };
+  }
+
+  // Final fallback to Events list for any unknown type/ID combination
+  return { 
+    url: null, 
+    isExternal: false, 
+    route: 'Events', 
+    params: { category: 'All' } 
+  };
 }

@@ -64,7 +64,9 @@ export default function CustomerAdPopup() {
        badgeText: p.badge_text,
        bgColor: p.bg_color,
        showEveryMinutes: p.show_every_minutes,
-       redirectUrl: p.redirect_url
+       redirectUrl: p.redirect_url,
+       redirectType: p.redirect_type,
+       redirectId: p.redirect_id
     }));
   }, [activePopupsRaw, popupError]);
 

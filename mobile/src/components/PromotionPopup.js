@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Easing,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSupabaseQuery } from '../hooks/useSupabase';
+import { resolveMobileBannerRedirect } from '../utils/bannerHelper';
 import { Colors } from '../theme/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -25,31 +27,13 @@ const ROTATION_DURATION = 5000; // 5s for each rotating banner
 
 export default function PromotionPopup({ onFinish }) {
   const navigation = useNavigation();
-  const [visible, setVisible] = useState(!global.bmtPromotionShownThisSession);
+  const [visible, setVisible] = useState(false);
   
-  useEffect(() => {
-    if (!global.bmtPromotionShownThisSession) {
-      global.bmtPromotionShownThisSession = true;
-    } else if (visible) {
-      setVisible(false);
-      if (onFinish) onFinish();
-    }
-  }, []);
   const [step, setStep] = useState(0); // 0: Initial Branding, 1: Rotating Banners
   const [currentIndex, setCurrentIndex] = useState(0);
   const [canClose, setCanClose] = useState(false);
   const [timeLeft, setTimeLeft] = useState(BRANDING_DURATION / 1000);
   
-  // Coordination: Don't show if ad is active
-  useEffect(() => {
-    if (visible) {
-      global.bmtPromotionActive = true;
-    } else {
-      global.bmtPromotionActive = false;
-    }
-    return () => { global.bmtPromotionActive = false; };
-  }, [visible]);
-
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -79,16 +63,115 @@ export default function PromotionPopup({ onFinish }) {
   const topTurfs = turfsRes?.data || [];
 
   const banners = useMemo(() => {
-    return [
-      // Step 0: Branding Only
-      {
-        type: 'branding',
-        title: branding.title || 'BookMyTicket',
-        image: branding.mobile_splash_url || branding.powered_by_logo_url,
-        description: 'Your premium gateway to events and services.',
-      },
-    ].filter(b => b.image);
-  }, [branding]);
+    const list = [];
+
+    // Add Branding (Splash) - Always First
+    list.push({
+        ...branding,
+        type: branding.redirect_type || 'branding',
+        displayType: 'Welcome',
+        id: branding.redirect_id || branding.id || branding.redirect_url || branding.site_url || '',
+        title: branding.name || 'BookMyTicket',
+        image: branding.mobile_splash_url || "https://yayrfycnmbpeeintfcvf.supabase.co/storage/v1/object/public/system-assets/branding_popup.png",
+        description: 'Discover and book the best events and services in your city.'
+    });
+
+    // Add Events
+    latestEvents.forEach(e => {
+      list.push({
+        ...e,
+        type: 'event', // Force type for redirect helper
+        displayType: e.type || 'Event',
+        id: e.id || e._id,
+        title: e.title,
+        image: e.image_url,
+        description: e.description,
+        date: e.date,
+        price: e.price
+      });
+    });
+
+    // Add Services
+    topServices.forEach(s => {
+      list.push({
+        ...s,
+        type: 'service', // Force type for redirect helper
+        displayType: s.category || 'Service',
+        id: s.id || s._id,
+        title: s.service_name || s.profiles?.full_name,
+        image: s.image_url || s.profiles?.avatar_url,
+        description: s.description || 'Professional services for your events.'
+      });
+    });
+
+    // Add Turfs
+    topTurfs.forEach(t => {
+      list.push({
+        ...t,
+        type: 'turf', // Force type for redirect helper
+        displayType: 'Turf',
+        id: t.id || t._id,
+        title: t.name,
+        image: t.image_url,
+        description: t.description
+      });
+    });
+
+    return list.filter(b => b.image);
+  }, [branding, latestEvents, topServices, topTurfs]);
+
+  useEffect(() => {
+    // Only attempt to show if not already shown in this app session
+    if (!global.bmtPromotionShownThisAppLaunch) {
+      // Wait for banners to be ready before showing
+      if (banners.length > 0) {
+        setVisible(true);
+        global.bmtPromotionShownThisAppLaunch = true;
+      }
+    } else {
+      // Already shown this session, just trigger finish for next popups
+      if (onFinish) onFinish();
+    }
+  }, [banners.length]); // Re-run when banners load
+
+  // Coordination: Don't show if ad is active
+  useEffect(() => {
+    if (visible) {
+      global.bmtPromotionActive = true;
+    } else {
+      global.bmtPromotionActive = false;
+    }
+    return () => { global.bmtPromotionActive = false; };
+  }, [visible]);
+
+    // Initial visible check and rotation
+    // Initial visible check and rotation
+    useEffect(() => {
+        const getIndex = async () => {
+            if (banners.length > 0 && visible) {
+                try {
+                    const storedIndex = await AsyncStorage.getItem('bmt_promotion_last_index');
+                    let lastIdx = storedIndex ? parseInt(storedIndex, 10) : -1;
+                    
+                    // Increment for next time
+                    const nextIdx = (lastIdx + 1) % banners.length;
+                    
+                    // Use nextIdx for current display
+                    setCurrentIndex(nextIdx);
+                    
+                    // Save for the NEXT app launch
+                    await AsyncStorage.setItem('bmt_promotion_last_index', String(nextIdx));
+                } catch (err) {
+                    console.error('[Promotion] Rotation error:', err);
+                    setCurrentIndex(0);
+                }
+            }
+        };
+        
+        if (visible && banners.length > 0) {
+            getIndex();
+        }
+    }, [visible, banners.length]);
 
   // Timer and Rotation Logic
   useEffect(() => {
@@ -141,18 +224,43 @@ export default function PromotionPopup({ onFinish }) {
     if (onFinish) onFinish();
   };
 
-  const handleCTA = () => {
-    const current = banners[currentIndex];
+  const handleCTA = (banner) => {
+    if (!visible) return;
+    
+    const current = banner || banners[currentIndex];
+    if (!current) return;
+    
+    const { route, params, url, isExternal } = resolveMobileBannerRedirect(
+      current.type,
+      current.id
+    );
+
+    console.log('[Promotion] Redirection Resolved:', { route, params, url });
+
+    // Close Modal FIRST for better stability
     setVisible(false);
     if (onFinish) onFinish();
-    if (current.type === 'event') {
-      navigation.navigate('EventDetail', { eventId: String(current.id), event: current });
-    } else if (current.type === 'service') {
-      navigation.navigate('ServiceDetail', { vendorId: String(current.id) });
-    } else if (current.type === 'turf') {
-      navigation.navigate('TurfDetail', { turfId: String(current.id) });
+
+    if (isExternal && url) {
+      setTimeout(() => {
+        require('react-native').Linking.openURL(url).catch(err => {
+            require('react-native').Alert.alert("Error", "Could not open: " + url);
+        });
+      }, 250);
+    } else if (route) {
+      setTimeout(() => {
+        try {
+          navigation.navigate(route, params);
+        } catch (err) {
+          console.error("Navigation Error:", err);
+          navigation.navigate('Events', { category: 'All' });
+        }
+      }, 250);
     } else {
-      navigation.navigate('MainTabs', { screen: 'Home' });
+      // Default fallback
+      setTimeout(() => {
+        navigation.navigate('Events', { category: 'All' });
+      }, 250);
     }
   };
 
@@ -186,7 +294,7 @@ export default function PromotionPopup({ onFinish }) {
           <View style={styles.infoContainer}>
             {currentBanner.type !== 'branding' && (
                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{currentBanner.type.toUpperCase()}</Text>
+                  <Text style={styles.badgeText}>{(currentBanner.displayType || currentBanner.type).toUpperCase()}</Text>
                </View>
             )}
             <Text style={styles.title}>{currentBanner.title}</Text>
@@ -200,12 +308,12 @@ export default function PromotionPopup({ onFinish }) {
               </View>
             )}
 
-            <TouchableOpacity style={styles.ctaBtn} onPress={handleCTA}>
+            <TouchableOpacity style={styles.ctaButton} onPress={() => handleCTA(currentBanner)}>
               <LinearGradient
                 colors={Colors.gradient}
                 style={styles.ctaGradient}
               >
-                <Text style={styles.ctaText}>Book Now</Text>
+                <Text style={styles.ctaText}>BOOK NOW</Text>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
               </LinearGradient>
             </TouchableOpacity>
@@ -306,7 +414,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 6,
   },
-  ctaBtn: {
+  ctaButton: {
     borderRadius: 16,
     overflow: 'hidden',
     width: '100%',

@@ -643,8 +643,8 @@ function AdminHomePage() {
     const { data: policiesArr = [] } = useSupabaseQuery('policies', q => q, [], { realtime: false });
     const [updatePolicies] = useSupabaseMutation('policies', 'update', (q, p) => q.eq('id', p.id));
 
-    const { data: ssoSettingsArr = [] } = useSupabaseQuery('sso_settings', q => q, [], { realtime: false });
-    const [updateSsoSettings] = useSupabaseMutation('sso_settings', 'update', (q, p) => q.eq('id', p.id));
+    const { data: ssoSettingsArr = [] } = useSupabaseQuery('sso_settings', q => q, [], { realtime: true });
+    const [updateSsoSettings] = useSupabaseMutation('sso_settings', 'upsert');
 
     const { data: homeCategoriesArr = [] } = useSupabaseQuery('categories');
     const [addCategory] = useSupabaseMutation('categories', 'insert');
@@ -694,7 +694,7 @@ function AdminHomePage() {
     const { data: homeSectionsArr = [] } = useSupabaseQuery('home_sections');
     const { data: supportTicketsArr = [] } = useSupabaseQuery('support_tickets');
     const { data: usersArr = [] } = useSupabaseQuery('profiles');
-    const { data: adminsArr = [] } = useSupabaseQuery('admins');
+    const { data: adminsArr = [] } = useSupabaseQuery('admins', q => q.select('*, profiles:id (full_name, email, username)'));
     const { data: allAdPopups = [] } = useSupabaseQuery('ad_popups', q => q.order('sort_order', { ascending: true }), [], { realtime: false });
     const { data: eventsArr = [] } = useSupabaseQuery('events', (q) => q.order('created_at', { ascending: false }));
     const { data: bookingsArr = [] } = useSupabaseQuery('bookings');
@@ -847,7 +847,9 @@ function AdminHomePage() {
 
     const ssoConfigs = useMemo(() => ({
         facebook: !!ssoSettingsArr[0]?.facebook_enabled,
-        google: !!ssoSettingsArr[0]?.google_enabled
+        google: !!ssoSettingsArr[0]?.google_enabled,
+        facebookConfig: ssoSettingsArr[0]?.facebook_config || {},
+        googleConfig: ssoSettingsArr[0]?.google_config || {}
     }), [ssoSettingsArr]);
 
     const handleBrandingUpload = async (file, type) => {
@@ -1177,6 +1179,7 @@ function AdminHomePage() {
     });
     const [brandingPricing, setBrandingPricing] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
 
+    // Sync Pricing Config
     useEffect(() => {
         if (brandingPricingConfig) {
             setBrandingPricing(prev => {
@@ -1188,6 +1191,20 @@ function AdminHomePage() {
             });
         }
     }, [brandingPricingConfig]);
+
+    // Auto-expire events on Admin Login/Load
+    useEffect(() => {
+        const triggerAutoExpire = async () => {
+            try {
+                // Call the Postgres RPC function we created in the migration
+                await supabase.rpc('run_auto_expire');
+                console.log('[Admin] Event expiration check completed');
+            } catch (err) {
+                console.warn('[Admin] Auto-expire trigger warning (expected if migration not yet applied):', err.message);
+            }
+        };
+        triggerAutoExpire();
+    }, []);
 
     const handleSaveBrandingPricing = async () => {
         try {
@@ -2309,14 +2326,83 @@ function AdminHomePage() {
                                                 </td>
                                                 <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>{ev.source === "organiser" ? "Organiser" : "Homepage"}</td>
                                                 <td style={{ padding: "12px" }}>
-                                                    <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>
+                                                    {(() => {
+                                                        const eventDateStr = ev.date;
+                                                        const eventTimeStr = ev.time || "23:59";
+                                                        let isExpired = false;
+                                                        try {
+                                                            const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
+                                                            isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
+                                                        } catch (e) {
+                                                            isExpired = false;
+                                                        }
+                                                        
+                                                        if (isExpired || ev.status === 'expired') {
+                                                            return <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#ef444415", color: "#ef4444" }}>EXPIRED</span>;
+                                                        }
+                                                        return <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>;
+                                                    })()}
                                                 </td>
                                                 <td style={{ padding: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
                                                     {ev.source === "organiser" && (
                                                         <>
-                                                            <button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Edit</button>
-                                                            <button onClick={() => setEvents(events.map(x => x.id === ev.id ? { ...x, archived: true } : x))} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}><Archive size={14} /> Archive</button>
-                                                            <button style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    window.location.href = `/organiser?tab=events&editId=${ev.id}`;
+                                                                }}
+                                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await updateEvent({ id: ev.id, archived: true });
+                                                                        showToast("Event archived successfully", "success");
+                                                                    } catch (err) {
+                                                                        showToast("Error archiving event", "error");
+                                                                    }
+                                                                }} 
+                                                                style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
+                                                            >
+                                                                <Archive size={14} /> Archive
+                                                            </button>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    const confirmed = await confirm("Cancel Event", `Are you sure you want to cancel "${ev.title}"?`, { confirmText: "YES, CANCEL", type: "warning" });
+                                                                    if (confirmed) {
+                                                                        try {
+                                                                            await updateEvent({ id: ev.id, status: 'cancelled' });
+                                                                            showToast("Event cancelled", "info");
+                                                                        } catch (err) {
+                                                                            showToast("Error cancelling event", "error");
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                style={{ color: "#f59e0b", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    const confirmed = await confirm(
+                                                                        "Delete Event",
+                                                                        `Are you sure you want to PERMANENTLY DELETE "${ev.title}"? This action cannot be undone and will fail if there are active bookings.`,
+                                                                        { confirmText: "DELETE", type: "danger" }
+                                                                    );
+                                                                    if (confirmed) {
+                                                                        try {
+                                                                            await deleteEvent({ id: ev.id });
+                                                                            showToast("Event deleted permanently", "success");
+                                                                        } catch (err) {
+                                                                            showToast("Error: " + (err.message || "Could not delete event. It may have active bookings."), "error");
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}
+                                                            >
+                                                                Delete
+                                                            </button>
                                                         </>
                                                     )}
                                                     {ev.source === "home" && (
@@ -2593,7 +2679,7 @@ function AdminHomePage() {
                         return (
                             <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
                                 <p style={{ fontSize: "13px", color: t.textSub, marginBottom: "16px" }}>Changes here (status, notes) are saved to the same data the Organiser panel uses. Refreshing or reopening Support Tickets in the Organiser panel will show updates. Status changes trigger an email notification to the organiser (hook ready for SMTP).</p>
-                                {supportTickets.length === 0 ? (
+                                {mappedSupportTickets.length === 0 ? (
                                     <p style={{ fontSize: "14px", color: t.textSub }}>No support tickets yet. Organisers create tickets from their dashboard.</p>
                                 ) : (
                                     <div style={{ overflowX: "auto" }}>
@@ -5469,17 +5555,17 @@ function AdminHomePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(Array.isArray(admins) ? admins : []).map((adm) => (
-                                            <tr key={adm._id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{adm.fullName}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{adm.username}</td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>{adm.email}</td>
+                                        {(Array.isArray(adminsArr) ? adminsArr : []).map((adm) => (
+                                            <tr key={adm.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>{adm.profiles?.full_name || "—"}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px", color: t.textSub }}>{adm.profiles?.username || "—"}</td>
+                                                <td style={{ padding: "12px", fontSize: "13px" }}>{adm.profiles?.email || "—"}</td>
                                                 <td style={{ padding: "12px" }}>
                                                     <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6", fontWeight: 600 }}>{adm.role.toUpperCase()}</span>
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
                                                     <button 
-                                                        onClick={() => updateAdminStatusMutation({ id: adm._id, status: adm.status === "Active" ? "Inactive" : "Active" })}
+                                                        onClick={() => updateAdminStatus({ id: adm.id, status: adm.status === "Active" ? "Inactive" : "Active" })}
                                                         style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: adm.status === "Active" ? "#22c55e15" : "#f1f5f9", color: adm.status === "Active" ? "#22c55e" : "#64748b", border: "none", cursor: "pointer", fontWeight: 600 }}
                                                     >
                                                         {adm.status?.toUpperCase() || "ACTIVE"}
@@ -5489,11 +5575,11 @@ function AdminHomePage() {
                                                     {adm.lastLogin ? new Date(adm.lastLogin).toLocaleString() : "Never logged in"}
                                                 </td>
                                                 <td style={{ padding: "12px" }}>
-                                                    <button onClick={async () => { deleteAdminMutation({ id: adm.id || adm._id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
+                                                    <button onClick={async () => { deleteAdmin({ id: adm.id }) }} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", opacity: 0.7 }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.7}><Trash2 size={16} /></button>
                                                 </td>
                                             </tr>
                                         ))}
-                                        {admins.length === 0 && (
+                                        {adminsArr.length === 0 && (
                                             <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No administrative accounts found.</td></tr>
                                         )}
                                     </tbody>

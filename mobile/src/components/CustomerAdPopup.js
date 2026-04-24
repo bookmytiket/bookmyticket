@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import { useSupabaseQuery } from '../hooks/useSupabase';
 import { resolveMobileBannerRedirect } from '../utils/bannerHelper';
 import { Colors } from '../theme/Theme';
@@ -48,6 +49,7 @@ async function updateLastIndex(index) {
 }
 
 export default function CustomerAdPopup() {
+  const navigation = useNavigation();
   const { data: activePopups } = useSupabaseQuery('ad_popups', (q) => q.select('*').eq('is_active', true));
   const [currentPopup, setCurrentPopup] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -154,14 +156,17 @@ export default function CustomerAdPopup() {
 
 
   const handleCTA = useCallback(async () => {
-    const { url, isExternal } = resolveMobileBannerRedirect(
+    const { url, isExternal, route, params } = resolveMobileBannerRedirect(
       currentPopup?.redirect_type,
       currentPopup?.redirect_id
     );
 
     const finalUrl = url || currentPopup?.redirect_url;
 
-    if (finalUrl) {
+    if (route) {
+      // Use internal navigation if route is resolved
+      navigation.navigate(route, params);
+    } else if (finalUrl) {
       if (isExternal || finalUrl.startsWith('http')) {
         const canOpen = await Linking.canOpenURL(finalUrl).catch(() => false);
         if (canOpen) {
@@ -171,16 +176,10 @@ export default function CustomerAdPopup() {
         } else {
           Alert.alert('Error', 'Could not open the link.');
         }
-      } else {
-        // Handle internal navigation if needed
-        // For now, we can try to open it as a deep link
-        Linking.openURL(finalUrl).catch(() =>
-          Alert.alert('Error', 'Internal navigation failed.')
-        );
       }
     }
     handleClose();
-  }, [currentPopup, handleClose]);
+  }, [currentPopup, handleClose, navigation]);
 
   if (!currentPopup || !visible) return null;
 

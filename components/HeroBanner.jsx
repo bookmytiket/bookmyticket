@@ -165,13 +165,29 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
                             <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             {showDetails && (
-                                <div style={{ position: "absolute", bottom: isMobile ? "15%" : "10%", left: isMobile ? "20px" : "40px", right: isMobile ? "20px" : "40px", zIndex: 2, color: "#fff", pointerEvents: "none" }}>
+                                <div style={{ position: "absolute", bottom: "10%", left: "5%", right: "5%", zIndex: 2, pointerEvents: "none" }}>
                                     <h2 style={{ fontSize: isMobile ? "28px" : "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
                                         {slide.title || "Live Events & Experiences"}
                                     </h2>
-                                    <p style={{ fontSize: isMobile ? "15px" : "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.95)", fontWeight: 600, margin: 0, textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+                                    <p style={{ fontSize: isMobile ? "15px" : "clamp(14px, 2vw, 20px)", color: "rgba(255,255,255,0.95)", fontWeight: 600, marginBottom: "20px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                                         {slide.subtitle || slide.alt || "Book tickets for concerts, sports & more"}
                                     </p>
+                                    <div style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        padding: "12px 32px",
+                                        borderRadius: "50px",
+                                        background: "linear-gradient(90deg, #f84464, #c026d3)",
+                                        color: "#fff",
+                                        fontSize: "14px",
+                                        fontWeight: 800,
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1px",
+                                        boxShadow: "0 8px 24px rgba(248,68,100,0.4)",
+                                        pointerEvents: "auto"
+                                    }}>
+                                        Book Now
+                                    </div>
                                 </div>
                             )}
                         </div>

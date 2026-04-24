@@ -17,10 +17,16 @@ export default function ConfirmDialog({
 
     const colors = {
         danger: {
-            bg: "bg-red-500",
-            text: "text-red-500",
-            border: "border-red-500/20",
-            shadow: "shadow-red-500/20"
+            bg: "bg-gradient-to-r from-[#f84464] to-[#c026d3]",
+            text: "text-[#f84464]",
+            border: "border-[#f84464]/20",
+            shadow: "shadow-[#f84464]/20"
+        },
+        branding: {
+            bg: "bg-gradient-to-r from-[#f84464] to-[#c026d3]",
+            text: "text-[#f84464]",
+            border: "border-[#f84464]/20",
+            shadow: "shadow-[#f84464]/20"
         },
         warning: {
             bg: "bg-amber-500",

@@ -395,17 +395,33 @@ function OrganiserPanel() {
     }, []);
 
     useEffect(() => {
-        if (!loading && mounted) {
+        if (loading || !mounted) return;
+
+        const checkAuth = async () => {
             if (!user) {
-                router.push("/signin?redirect=/organiser");
+                // If it's a deep-link for editing, check if we have a session at all
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    console.log("OrganiserPanel: Session exists but user context still loading. Waiting...");
+                    return; 
+                }
+
+                const params = new URLSearchParams(window.location.search);
+                if (params.get("editId")) {
+                    console.log("OrganiserPanel: editId detected, but no session. Waiting...");
+                    return; 
+                }
+                router.push("/signin?redirect=" + encodeURIComponent(window.location.pathname + window.location.search));
             } else if (user.role === "staff") {
                 router.push("/pwa-scan");
-            } else if (user.role !== "organiser" && user.role !== "admin") {
+            } else if (user.role !== "organiser" && user.role !== "admin" && user.role !== "super_admin") {
                 // If a regular user tries to access organiser panel, redirect to profile
                 console.log("OrganiserPanel: unauthorized role", user.role, "- redirecting to profile");
                 router.push("/profile");
             }
-        }
+        };
+
+        checkAuth();
     }, [user, loading, router, mounted]);
 
     // Loading State UI Component
@@ -441,19 +457,32 @@ function OrganiserPanel() {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const tab = params.get("tab");
+        const editId = params.get("editId");
         
-        if (user?.role === "staff") {
-            const allowedStaffTabs = ["pwa_scanner"];
-            if (!tab || !allowedStaffTabs.includes(tab)) {
-                setActiveTab("pwa_scanner");
+        if (editId && eventsData && eventsData.length > 0) {
+            const ev = eventsData.find(e => String(e.id) === String(editId));
+            if (ev) {
+                console.log("OrganiserPanel: Found event to edit:", ev.title);
+                setEditingEvent(ev);
+                setPostEvent({
+                    ...getInitialPostEvent(),
+                    ...ev,
+                    id: ev.id,
+                    bannerPreview: ev.img || ev.banner_preview || ev.bannerPreview,
+                    seatingEnabled: ev.seating_enabled !== false,
+                    isFeature: ev.is_featured ? "Yes" : "No",
+                    isExclusive: ev.is_exclusive ? "Yes" : "No",
+                    eventStatus: ev.status || "published"
+                });
+                setActiveTab("post_event");
+                setAddEventStep("form");
             } else {
-                setActiveTab(tab);
+                console.warn("OrganiserPanel: editId present but event not found in current dataset.");
             }
-        } else if (tab) {
-            setActiveTab(tab);
+        } else if (params.get("tab")) {
+            setActiveTab(params.get("tab"));
         }
-    }, [user, activeTab]);
+    }, [eventsData, user?.role]);
     const [theme, setTheme] = useState("light");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState({
@@ -714,9 +743,12 @@ function OrganiserPanel() {
     const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
         "events",
         (q) => {
-            const baseQuery = q.select('*');
-            if (user?.role === "admin") return baseQuery;
-            return baseQuery.eq("organiser_id", organiserData?.id || user?.id);
+            // Admin/Super Admin can see all events
+            if (user?.role === "admin" || user?.role === "super_admin") {
+                return q.select('*').order('created_at', { ascending: false });
+            }
+            // Regular organisers only see their own
+            return q.select('*').eq("organiser_id", organiserData?.id || user?.id).order('created_at', { ascending: false });
         },
         [organiserData?.id, user?.id, user?.role]
     );
