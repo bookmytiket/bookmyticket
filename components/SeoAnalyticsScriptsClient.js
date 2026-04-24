@@ -9,12 +9,22 @@ export default function SeoAnalyticsScripts({ gaId, gaEnabled, customScripts }) 
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Disable tracking for Admin and Organiser portals
+    if (pathname.startsWith('/admin') || pathname.startsWith('/organiser')) {
+      return;
+    }
+
     if (gaEnabled && gaId && typeof window.gtag === 'function') {
       window.gtag('config', gaId, {
         page_path: pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''),
       });
     }
   }, [pathname, searchParams, gaId, gaEnabled]);
+
+  // Don't render tracking scripts on Admin/Organiser routes
+  if (pathname.startsWith('/admin') || pathname.startsWith('/organiser')) {
+    return null;
+  }
 
   if (!gaEnabled || !gaId || gaId === "G-XXXXXXXXXX") {
     return (
