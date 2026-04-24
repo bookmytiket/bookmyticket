@@ -291,11 +291,35 @@ const AdminMeetingsTable = ({ t, router }) => {
     );
 };
 
-const TurfsTable = ({ t }) => {
+const TurfsTable = ({ t, statusFilter = "all", setActiveTab }) => {
     const { data: turfs = [], loading } = useSupabaseQuery('turfs', (q) => q.order('created_at', { ascending: false }));
+    const [updateTurf] = useSupabaseMutation('turfs', 'update', (q, p) => q.eq('id', p.id));
+    const [deleteTurf] = useSupabaseMutation('turfs', 'delete', (q, p) => q.eq('id', p.id));
 
     if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading turfs...</div>;
-    if (turfs.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No turfs found.</div>;
+
+    const filteredTurfs = turfs.filter(turf => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "active") return turf.status === "active" || !turf.status;
+        if (statusFilter === "banned") return turf.status === "banned";
+        return true;
+    });
+
+    if (filteredTurfs.length === 0) return (
+        <div style={{ padding: "60px 40px", textAlign: "center", backgroundColor: "#f8fafc", borderRadius: "16px", border: "2px dashed #e2e8f0" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "20px", backgroundColor: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#94a3b8", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
+                <ImageIcon size={32} strokeWidth={1.5} />
+            </div>
+            <p style={{ fontSize: "16px", fontWeight: 800, color: t.textMain, marginBottom: "8px" }}>No facilities detected</p>
+            <p style={{ fontSize: "13px", color: t.textSub, maxWidth: "300px", margin: "0 auto 20px", lineHeight: 1.6 }}>Approved partners must add their turf facilities in their vendor portal before they appear here.</p>
+            <button 
+                onClick={() => setActiveTab("turf_partners")}
+                style={{ padding: "10px 20px", borderRadius: "10px", background: "#fff", border: "1px solid #e2e8f0", color: "#3b82f6", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all" }}
+            >
+                View Approved Partners
+            </button>
+        </div>
+    );
 
     return (
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
@@ -306,10 +330,11 @@ const TurfsTable = ({ t }) => {
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Price Model</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Amenities</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                {turfs.map((turf) => (
+                {filteredTurfs.map((turf) => (
                     <tr key={turf.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                         <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -345,17 +370,45 @@ const TurfsTable = ({ t }) => {
                                 {turf.amenities?.length > 2 && <span style={{ fontSize: "10px", color: t.textSub }}>+{turf.amenities.length - 2}</span>}
                             </div>
                         </td>
-                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                        <td style={{ padding: "16px" }}>
                             <span style={{ 
                                 padding: "4px 10px", 
                                 borderRadius: "100px", 
                                 fontSize: "11px", 
                                 fontWeight: 800, 
-                                backgroundColor: "#22c55e20",
-                                color: "#22c55e"
+                                backgroundColor: turf.status === 'banned' ? "#ef444420" : "#22c55e20",
+                                color: turf.status === 'banned' ? "#ef4444" : "#22c55e"
                             }}>
-                                ACTIVE
+                                {(turf.status || 'ACTIVE').toUpperCase()}
                             </span>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                {turf.status === 'banned' ? (
+                                    <button 
+                                        onClick={() => updateTurf({ id: turf.id, status: 'active' })}
+                                        style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", padding: "6px", borderRadius: "6px", cursor: "pointer" }}
+                                        title="Activate Turf"
+                                    >
+                                        <CheckCircle size={16} />
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => updateTurf({ id: turf.id, status: 'banned' })}
+                                        style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "6px", borderRadius: "6px", cursor: "pointer" }}
+                                        title="Ban Turf"
+                                    >
+                                        <Ban size={16} />
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => { if(confirm("Are you sure?")) deleteTurf({ id: turf.id }); }}
+                                    style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", padding: "6px", borderRadius: "6px", cursor: "pointer" }}
+                                    title="Delete Turf"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 ))}
@@ -1004,6 +1057,13 @@ function AdminHomePage() {
         }
         return filtered;
     }, [serviceProvidersArr, serviceCategoryFilter]);
+
+    const turfPartners = useMemo(() => {
+        return serviceProvidersArr.filter(o => 
+            (o.category === "Turf Partner" || (o.kyc_details?.category === "Turf Partner")) &&
+            (o.kyc_status === "Active" || o.kyc_status === "Approved" || o.is_approved === true)
+        );
+    }, [serviceProvidersArr]);
 
     const serviceBanned = useMemo(() => {
         let filtered = serviceProvidersArr.filter(o => 
@@ -1860,7 +1920,10 @@ function AdminHomePage() {
                                 {isServicesOpen && (
                                     <div className="space-y-0.5">
                                         {[
+                                            { label: "Turf Partners", id: "turf_partners" },
                                             { label: "All Turfs", id: "all_turfs" },
+                                            { label: "Active Turfs", id: "turf_active" },
+                                            { label: "Banned Turfs", id: "turf_banned" },
                                             { label: "Turf Bookings", id: "turf_bookings" },
                                             { label: "Active Professionals", id: "service_active" },
                                             { label: "Banned Professionals", id: "service_banned" },
@@ -2460,18 +2523,91 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "all_turfs" && (
+                    {activeTab === "turf_partners" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Turf Facility Management</h3>
-                                <div style={{ display: "flex", gap: "12px" }}>
-                                    <button style={{ padding: "8px 16px", borderRadius: "8px", background: "#f1f5f9", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-                                        Add New Turf
-                                    </button>
-                                </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Approved Turf Partners</h3>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: t.textSub }}>{turfPartners.length} Partners</div>
                             </div>
                             <div className="table-container">
-                                <TurfsTable t={t} />
+                                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                    <thead>
+                                        <tr style={{ textAlign: "left" }}>
+                                            <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Partner</th>
+                                            <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Contact</th>
+                                            <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Location</th>
+                                            <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                                            <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {turfPartners.length > 0 ? turfPartners.map((org) => (
+                                            <tr key={org.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                                <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#3b82f6" }}>
+                                                            {org.business_name?.charAt(0) || org.username?.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>{org.business_name || org.username}</p>
+                                                            <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{org.category}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ fontSize: "13px", color: t.textMain }}>{org.email}</div>
+                                                    <div style={{ fontSize: "11px", color: t.textSub }}>{org.phone || "No phone"}</div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <div style={{ fontSize: "13px", color: t.textMain }}>{org.kyc_details?.city || "Global"}</div>
+                                                </td>
+                                                <td style={{ padding: "16px" }}>
+                                                    <span style={{ padding: "4px 10px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>
+                                                        ACTIVE
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                    <button onClick={() => { setActiveTab("service_active"); }} style={{ padding: "6px 12px", borderRadius: "6px", background: "#f1f5f9", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>Manage</button>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No approved turf partners yet.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "all_turfs" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>All Turf Facilities</h3>
+                            </div>
+                            <div className="table-container">
+                                <TurfsTable t={t} statusFilter="all" setActiveTab={setActiveTab} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "turf_active" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Active Turfs</h3>
+                            </div>
+                            <div className="table-container">
+                                <TurfsTable t={t} statusFilter="active" setActiveTab={setActiveTab} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "turf_banned" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Banned Turfs</h3>
+                            </div>
+                            <div className="table-container">
+                                <TurfsTable t={t} statusFilter="banned" setActiveTab={setActiveTab} />
                             </div>
                         </div>
                     )}
@@ -5723,7 +5859,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "turf_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

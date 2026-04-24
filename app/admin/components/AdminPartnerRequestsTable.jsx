@@ -330,7 +330,17 @@ export default function AdminPartnerRequestsTable({ t, theme }) {
                                                 </button>
                                             )}
 
-                                            {hasRequestId && (req.status === "KYC Completed" || req.status === "KYC Pending") && (
+                                             {hasRequestId && (
+                                                <button 
+                                                    onClick={() => handleViewKyc(req)} 
+                                                    title="View Partner Details"
+                                                    style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", backgroundColor: "#6366f115", color: "#6366f1", cursor: "pointer" }}
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                            )}
+
+                                             {hasRequestId && (req.status === "KYC Completed" || req.status === "KYC Pending") && (
                                                 <button 
                                                     onClick={() => handleViewKyc(req)} 
                                                     title="View KYC Documents"

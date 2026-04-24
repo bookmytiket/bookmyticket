@@ -31,7 +31,7 @@ export default class VendorErrorBoundary extends React.Component {
     if (this.state.error) {
       const msg =
         this.state.error?.message ||
-        "Vendor data could not be loaded. Check Convex deploy and that vendor APIs exist.";
+        "Vendor data could not be loaded. Please refresh the page or check your connection.";
       return (
         <div className="max-w-lg mx-auto rounded-[2rem] border border-red-500/30 bg-red-500/10 p-10 text-center space-y-6">
           <div className="text-red-400 text-sm font-bold uppercase tracking-widest">
@@ -39,10 +39,7 @@ export default class VendorErrorBoundary extends React.Component {
           </div>
           <p className="text-slate-300 text-sm leading-relaxed">{msg}</p>
           <p className="text-slate-500 text-xs">
-            If you just added vendor tables, run{" "}
-            <code className="text-pink-400">npx convex dev</code> or deploy so{" "}
-            <code className="text-pink-400">vendors</code> /{" "}
-            <code className="text-pink-400">vendorBookings</code> queries are on your backend.
+            This module is powered by our real-time database. If the issue persists, please contact support or try again later.
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch sm:items-center">
             <button
