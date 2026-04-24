@@ -26,11 +26,64 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
     const ticketRef = React.useRef(null);
     const [downloading, setDownloading] = React.useState(false);
     const [isCapturing, setIsCapturing] = React.useState(false);
+    const [isRevealed, setIsRevealed] = React.useState(false);
+    const [isTabActive, setIsTabActive] = React.useState(true);
+
+    // Security: Tab Visibility Detection
+    React.useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsTabActive(!document.hidden);
+        };
+        const handleFocus = () => setIsTabActive(true);
+        const handleBlur = () => setIsTabActive(false);
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleFocus);
+        window.addEventListener("blur", handleBlur);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+            window.removeEventListener("blur", handleBlur);
+        };
+    }, []);
+
+    // Security: Prevent Right-click and Print
+    React.useEffect(() => {
+        const preventActions = (e) => {
+            // Prevent Right Click
+            if (e.type === "contextmenu") {
+                e.preventDefault();
+                return false;
+            }
+            // Prevent Ctrl+P
+            if (e.ctrlKey && (e.key === "p" || e.keyCode === 80)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                alert("Printing is restricted for security reasons.");
+                return false;
+            }
+            // Prevent Ctrl+S
+            if (e.ctrlKey && (e.key === "s" || e.keyCode === 83)) {
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        window.addEventListener("contextmenu", preventActions);
+        window.addEventListener("keydown", preventActions);
+
+        return () => {
+            window.removeEventListener("contextmenu", preventActions);
+            window.removeEventListener("keydown", preventActions);
+        };
+    }, []);
 
     if (!booking || !event) return null;
     const isScanned = booking.scanned || booking.status === "Scanned";
     const bookingId = booking._id || booking.id;
     const shortId = bookingId?.slice(-8).toUpperCase();
+    const customerName = booking.customer_name || "Valued Customer";
 
     // Robust helper to convert image to base64 with canvas fallback
     const toBase64 = async (imgElement) => {
@@ -64,6 +117,11 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
 
     const downloadTicket = async () => {
         if (!ticketRef.current) return;
+        
+        // Ensure ticket is revealed before capturing
+        const originalRevealed = isRevealed;
+        setIsRevealed(true);
+        
         setDownloading(true);
         setIsCapturing(true);
 
@@ -119,6 +177,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
             for (let item of originalSrcs) {
                 item.img.src = item.src;
             }
+            setIsRevealed(originalRevealed);
             setIsCapturing(false);
             setDownloading(false);
         }
@@ -147,131 +206,168 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
         fontFamily: "'Inter', sans-serif",
         position: "relative",
         border: isCapturing ? "none" : "1px solid #e2e8f0",
+        filter: (!isTabActive && !isCapturing) ? "blur(15px)" : "none",
+        transition: "filter 0.3s ease",
+        userSelect: "none",
     };
 
     return (
-        <div className="flex flex-col items-center w-full">
-            <div className="digital-ticket-container" style={containerStyle} ref={ticketRef}>
-            <div className="flex flex-col md:flex-row w-full">
-                {/* Left Section: Event Image */}
-                <div className="w-full md:w-[30%] relative min-h-[160px] md:min-h-[240px]">
-                    <img 
-                        src={getFinalSrc(event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87")} 
-                        alt={event.title}
-                        crossOrigin="anonymous"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
+        <div className="flex flex-col items-center w-full relative">
+            {/* Security Warning for Mobile/Web */}
+            {!isCapturing && !isTabActive && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none">
+                    <div className="bg-slate-900/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 animate-pulse">
+                        <ShieldCheck className="text-pink-500" size={24} />
+                        <p className="text-white font-black uppercase italic tracking-widest text-xs">Security Protocol Active</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="digital-ticket-container select-none" style={containerStyle} ref={ticketRef}>
+                {/* Watermark Overlays */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03] flex flex-wrap gap-20 p-20 rotate-[-25deg] z-0">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className="text-4xl font-black whitespace-nowrap uppercase italic tracking-tighter">
+                            {customerName} • {shortId}
+                        </div>
+                    ))}
                 </div>
 
-                {/* Middle Section: Event Details */}
-                <div className="w-full md:w-[45%] p-4 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative text-center md:text-left">
-                    {/* Branding Header integrated here */}
-                    <div className="mb-4 md:mb-6 w-full flex justify-center items-center">
-                        <BrandingHeader />
+                <div className="flex flex-col md:flex-row w-full relative z-10">
+                    {/* Left Section: Event Image */}
+                    <div className="w-full md:w-[30%] relative min-h-[160px] md:min-h-[240px]">
+                        <img 
+                            src={getFinalSrc(event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87")} 
+                            alt={event.title}
+                            crossOrigin="anonymous"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
                     </div>
 
-                    <div>
-                        <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
-                            {event.title}
-                        </h2>
+                    {/* Middle Section: Event Details */}
+                    <div className="w-full md:w-[45%] p-4 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative text-center md:text-left">
+                        {/* Branding Header integrated here */}
+                        <div className="mb-4 md:mb-6 w-full flex justify-center items-center">
+                            <BrandingHeader />
+                        </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                    <Calendar size={12} className="text-rose-500" /> Date
-                                </p>
-                                <p className="text-sm font-extrabold text-slate-800">{event.date}</p>
+                        <div>
+                            <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
+                                {event.title}
+                            </h2>
+
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
+                                        <Calendar size={12} className="text-rose-500" /> Date
+                                    </p>
+                                    <p className="text-sm font-extrabold text-slate-800">{event.date}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
+                                        <Clock size={12} className="text-rose-500" /> Time
+                                    </p>
+                                    <p className="text-sm font-extrabold text-slate-800">{event.time || "TBA"}</p>
+                                </div>
                             </div>
-                            <div className="space-y-1">
+
+                            <div className="space-y-1 mb-6">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                    <Clock size={12} className="text-rose-500" /> Time
+                                    <MapPin size={12} className="text-rose-500" /> Venue
                                 </p>
-                                <p className="text-sm font-extrabold text-slate-800">{event.time || "TBA"}</p>
+                                <p className="text-sm font-extrabold text-slate-800 line-clamp-1">{event.location}</p>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="space-y-1 mb-6">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                <MapPin size={12} className="text-rose-500" /> Venue
-                            </p>
-                            <p className="text-sm font-extrabold text-slate-800 line-clamp-1">{event.location}</p>
+                    {/* Right Section: QR & ID */}
+                    <div className="w-full md:w-[25%] bg-slate-50/50 p-4 md:p-8 flex flex-col items-center justify-center text-center">
+                        <div className={`mb-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm ${
+                            isScanned 
+                            ? "bg-rose-100 text-rose-600 border border-rose-200" 
+                            : "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                        }`}>
+                            {isScanned ? "Used" : "Active"}
                         </div>
-                    </div>
-                </div>
 
-                {/* Right Section: QR & ID */}
-                <div className="w-full md:w-[25%] bg-slate-50/50 p-4 md:p-8 flex flex-col items-center justify-center text-center">
-                    <div className={`mb-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm ${
-                        isScanned 
-                        ? "bg-rose-100 text-rose-600 border border-rose-200" 
-                        : "bg-emerald-100 text-emerald-600 border border-emerald-200"
-                    }`}>
-                        {isScanned ? "Used" : "Active"}
-                    </div>
-
-                    <div className="w-full max-w-[140px] bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col items-center">
-                        <div className="p-4 flex items-center justify-center w-full">
-                            <QRCodeSVG 
-                                value={bookingId} 
-                                size={100} 
-                                level="H" 
-                                fgColor={isScanned ? "#cbd5e1" : "#0f172a"} 
-                            />
-                        </div>
-                        <div className="w-full bg-slate-900 py-2 px-1">
-                            <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Booking ID</p>
-                            <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{shortId}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Normal UI Footer Bar */}
-            {!isCapturing && (
-                <div className="bg-slate-900 px-8 py-3 flex items-center justify-between text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
-                    <div className="flex items-center gap-3">
-                        <span className="text-rose-500">Security:</span>
-                        <span>Valid ID Required</span>
-                    </div>
-                    
-                    {/* Centered Logo - UI Size */}
-                    <div className="flex-1 flex justify-center">
-                        <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
-                    </div>
-
-                    {showDownload && (
-                        <button 
-                            onClick={downloadTicket}
-                            disabled={downloading}
-                            className="download-button-exclude flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-all"
-                            style={{ border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
+                        <div 
+                            className="w-full max-w-[140px] bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col items-center cursor-pointer relative group"
+                            onClick={() => setIsRevealed(!isRevealed)}
                         >
-                            {downloading ? <Loader2 size={12} className="animate-spin text-white" /> : <Download size={12} className="text-white" />}
-                            <span style={{ color: '#fff' }}>{downloading ? 'Preparing Image...' : 'Save as Image'}</span>
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {/* Capture-only Branding Watermark */}
-            {isCapturing && (
-                <div style={{ 
-                    backgroundColor: '#111827', 
-                    padding: '30px 30px', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '12px',
-                    borderTop: '1px solid rgba(255,255,255,0.1)'
-                }}>
-                    <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
-                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>
-                        This ticket is verified by BookMyTicket
+                            {!isRevealed && !isCapturing && (
+                                <div className="absolute inset-0 z-20 bg-slate-900/40 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all group-hover:bg-slate-900/50">
+                                    <ShieldCheck className="text-white mb-2" size={24} />
+                                    <p className="text-[8px] font-black text-white uppercase tracking-widest leading-tight">Tap to<br/>Reveal QR</p>
+                                </div>
+                            )}
+                            
+                            <div className={`p-4 flex items-center justify-center w-full transition-all duration-500 ${!isRevealed && !isCapturing ? 'blur-xl scale-90 opacity-20' : 'blur-0 scale-100 opacity-100'}`}>
+                                <QRCodeSVG 
+                                    value={bookingId} 
+                                    size={100} 
+                                    level="H" 
+                                    fgColor={isScanned ? "#cbd5e1" : "#0f172a"} 
+                                />
+                            </div>
+                            <div className="w-full bg-slate-900 py-2 px-1">
+                                <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Booking ID</p>
+                                <div className={`transition-all duration-500 ${!isRevealed && !isCapturing ? 'blur-md opacity-20' : 'blur-0 opacity-100'}`}>
+                                    <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{shortId}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            {isRevealed ? "Tap to Hide" : "Secure Information"}
+                        </p>
                     </div>
                 </div>
-            )}
+
+                {/* Normal UI Footer Bar */}
+                {!isCapturing && (
+                    <div className="bg-slate-900 px-8 py-3 flex items-center justify-between text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] relative z-10">
+                        <div className="flex items-center gap-3">
+                            <span className="text-rose-500">Security:</span>
+                            <span>Screenshots Restricted</span>
+                        </div>
+                        
+                        {/* Centered Logo - UI Size */}
+                        <div className="flex-1 flex justify-center">
+                            <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                        </div>
+
+                        {showDownload && (
+                            <button 
+                                onClick={downloadTicket}
+                                disabled={downloading}
+                                className="download-button-exclude flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-all"
+                                style={{ border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
+                            >
+                                {downloading ? <Loader2 size={12} className="animate-spin text-white" /> : <Download size={12} className="text-white" />}
+                                <span style={{ color: '#fff' }}>{downloading ? 'Preparing...' : 'Save Ticket'}</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Capture-only Branding Watermark */}
+                {isCapturing && (
+                    <div style={{ 
+                        backgroundColor: '#111827', 
+                        padding: '30px 30px', 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px',
+                        borderTop: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                        <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>
+                            Authorized Digital Ticket • BookMyTicket
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
     );
 }

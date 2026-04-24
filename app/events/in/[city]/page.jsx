@@ -18,6 +18,29 @@ const parseEventDate = (dateStr, timeStr) => {
   } catch (e) { return null; }
 };
 
+export async function generateMetadata({ params }) {
+  const { city } = params;
+  const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);
+  
+  // Fetch SEO config
+  const { data } = await supabase
+    .from('system_config')
+    .select('value')
+    .eq('key', 'seo_analytics')
+    .single();
+  
+  const config = data?.value || {};
+  const override = config.city_seo_overrides?.[city.toLowerCase()];
+
+  return {
+    title: override?.title || `Best Events in ${capitalizedCity} | Upcoming Shows & Tickets - BookMyTicket`,
+    description: override?.description || `Discover and book the best events in ${capitalizedCity}. Explore upcoming concerts, workshops, sports, and cultural festivals in ${capitalizedCity} with BookMyTicket.`,
+    alternates: {
+      canonical: `https://bookmyticket.net/events/in/${city.toLowerCase()}`,
+    }
+  };
+}
+
 export default async function CityEventsPage({ params }) {
   const { city } = params;
   const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);

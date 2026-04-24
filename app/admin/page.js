@@ -11,6 +11,8 @@ import MobileBannersAdmin from "@/app/admin/components/MobileBannersAdmin";
 import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerRequestsTable";
 import BrandingHeader from "@/components/BrandingHeader";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
+import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
+
 
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
@@ -583,6 +585,15 @@ function AdminHomePage() {
         key: 'maintenance_mode',
         maintenance_mode: false,
         maintenance_message: "We're upgrading your experience. Please check back soon!"
+    });
+
+    const [seoAnalyticsConfig, setSeoAnalyticsConfig] = useSupabaseConfig("system_config", {
+        key: 'seo_analytics',
+        ga_id: "G-XXXXXXXXXX",
+        ga_enabled: false,
+        city_seo_overrides: {},
+        backlink_tracking: [],
+        sitemap_last_ping: null
     });
 
 
@@ -1886,7 +1897,7 @@ function AdminHomePage() {
                                             { label: "Meeting Settings", id: "meeting_settings" },
                                             { label: "Maintenance Mode", id: "maintenance" }
                                         ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
                                         ))}
                                     </div>
                                 )}
@@ -1911,7 +1922,7 @@ function AdminHomePage() {
                                             { label: "Pending Setup", id: "kyc_pending" },
                                             { label: "Restricted", id: "banned_org" },
                                         ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
                                         ))}
                                     </div>
                                 )}
@@ -1928,7 +1939,7 @@ function AdminHomePage() {
                                             { label: "Active Professionals", id: "service_active" },
                                             { label: "Banned Professionals", id: "service_banned" },
                                         ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
                                         ))}
                                     </div>
                                 )}
@@ -1943,7 +1954,7 @@ function AdminHomePage() {
                                             { label: "Email Broadcast", id: "email_templates" },
 
                                         ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
                                         ))}
                                     </div>
                                 )}
@@ -1970,13 +1981,13 @@ function AdminHomePage() {
                                             { label: "SMS & WhatsApp", id: "comm_hub" },
                                             { label: "Payments", id: "payment_settings" },
                                             { label: "Emails", id: "email_settings" },
-                                            { label: "SEO & Meta", id: "meta_management" },
+                                            { label: "SEO & Analytics", id: "seo_settings", onClick: () => router.push('/admin/settings/seo') },
                                             { label: "Email Templates", id: "email_templates" },
                                             { label: "Disclaimers", id: "disclaimer_settings" },
                                             { label: "SSO Config", id: "sso_settings" },
                                             { label: "Tickets & Notifs", id: "ticket_settings" }
                                         ].map(sub => (
-                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
                                         ))}
                                     </div>
                                 )}
@@ -5385,162 +5396,14 @@ function AdminHomePage() {
                     )}
 
                     {activeTab === "meta_management" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                                    <Globe size={20} color="#3b82f6" />
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Global SEO & Meta Ads</h3>
-                                </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Site Title</label>
-                                            <input
-                                                type="text"
-                                                value={metaSettings.global.title}
-                                                onChange={(e) => updateSeoSettings({
-                                                    ...seoSettingsArr[0],
-                                                    global_title: e.target.value,
-                                                    global_keywords: seoSettingsArr[0]?.global_keywords || "",
-                                                    global_description: seoSettingsArr[0]?.global_description || "",
-                                                    meta_ads_code: seoSettingsArr[0]?.meta_ads_code || ""
-                                                })}
-                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Keywords (Comma separated)</label>
-                                            <textarea
-                                                value={metaSettings.global.keywords}
-                                                onChange={(e) => updateSeoSettings({
-                                                    ...seoSettingsArr[0],
-                                                    global_keywords: e.target.value,
-                                                    global_title: seoSettingsArr[0]?.global_title || "",
-                                                    global_description: seoSettingsArr[0]?.global_description || "",
-                                                    meta_ads_code: seoSettingsArr[0]?.meta_ads_code || ""
-                                                })}
-                                                rows={3}
-                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Global Meta Description</label>
-                                            <textarea
-                                                value={metaSettings.global.description}
-                                                onChange={(e) => updateSeoSettings({
-                                                    ...seoSettingsArr[0],
-                                                    global_description: e.target.value,
-                                                    global_title: seoSettingsArr[0]?.global_title || "",
-                                                    global_keywords: seoSettingsArr[0]?.global_keywords || "",
-                                                    meta_ads_code: seoSettingsArr[0]?.meta_ads_code || ""
-                                                })}
-                                                rows={3}
-                                                style={{ width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "14px", fontWeight: 600, marginBottom: "8px" }}>Meta Ads / Tracking Pixels (Head Scripts)</label>
-                                        <textarea
-                                            value={metaSettings.global.metaAdsCode}
-                                            onChange={(e) => updateSeoSettings({
-                                                ...seoSettingsArr[0],
-                                                meta_ads_code: e.target.value,
-                                                global_title: seoSettingsArr[0]?.global_title || "",
-                                                global_keywords: seoSettingsArr[0]?.global_keywords || "",
-                                                global_description: seoSettingsArr[0]?.global_description || ""
-                                            })}
-                                            rows={12}
-                                            style={{ width: "100%", padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontFamily: "monospace", fontSize: "12px" }}
-                                            placeholder="Paste your Meta Pixel or Ad scripts here..."
-                                        />
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        updateSeoSettings({
-                                            id: seoSettingsArr[0]?.id,
-                                            global_title: metaSettings.global.title,
-                                            global_keywords: metaSettings.global.keywords,
-                                            global_description: metaSettings.global.description,
-                                            meta_ads_code: metaSettings.global.metaAdsCode
-                                        });
-                                        showToast("Global Meta Settings Saved!", "success");
-                                    }}
-                                    style={{ marginTop: "20px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "10px 24px", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}>
-                                    Save Global Settings
-                                </button>
-                            </div>
-
-                            <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                                    <Megaphone size={20} color="#f97316" />
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Event-Specific Meta Ads Management</h3>
-                                </div>
-                                <div style={{ overflowX: "auto" }}>
-                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event Title</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Meta Keywords</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Meta Ad ID / Tracking</th>
-                                                <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {allEvents.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: t.textSub, fontSize: "14px" }}>No events yet. Add events on the Homepage data or create them in the Organiser panel.</td>
-                                                </tr>
-                                            ) : allEvents.map((ev) => {
-                                                const isOrganiser = ev.source === "organiser";
-                                                const keywords = isOrganiser ? (ev.meta?.keywords ?? "") : (eventMetaOverrides[ev.id]?.keywords ?? "");
-                                                const adsId = isOrganiser ? (ev.meta?.adsId ?? "") : (eventMetaOverrides[ev.id]?.adsId ?? "");
-                                                return (
-                                                    <tr key={(ev.id ?? "") + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                        <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
-                                                        <td style={{ padding: "12px" }}>
-                                                            <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6" }}>{ev.category || "—"}</span>
-                                                        </td>
-                                                        <td style={{ padding: "12px" }}>
-                                                            <input
-                                                                type="text"
-                                                                value={keywords}
-                                                                onChange={(e) => isOrganiser
-                                                                    ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), keywords: e.target.value } } : event))
-                                                                    : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), keywords: e.target.value } }))}
-                                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
-                                                                placeholder="Keywords for SEO/ads"
-                                                            />
-                                                        </td>
-                                                        <td style={{ padding: "12px" }}>
-                                                            <input
-                                                                type="text"
-                                                                value={adsId}
-                                                                onChange={(e) => isOrganiser
-                                                                    ? setEvents(events.map(event => event.id === ev.id ? { ...event, meta: { ...(event.meta || {}), adsId: e.target.value } } : event))
-                                                                    : setEventMetaOverrides(prev => ({ ...prev, [ev.id]: { ...(prev[ev.id] || {}), adsId: e.target.value } }))}
-                                                                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontSize: "12px" }}
-                                                                placeholder="Pixel ID or Ad Set ID"
-                                                            />
-                                                        </td>
-                                                        <td style={{ padding: "12px" }}>
-                                            <button
-                                                onClick={() => showToast(`Meta Ads updated for ${ev.title}`, "success")}
-                                                style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>
-                                                Update
-                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                        <SeoAnalyticsAdmin 
+                            t={t} 
+                            theme={theme} 
+                            config={seoAnalyticsConfig} 
+                            setConfig={setSeoAnalyticsConfig} 
+                        />
                     )}
+
 
                     {activeTab === "gst" && (
                         <GstPortal t={t} theme={theme} />

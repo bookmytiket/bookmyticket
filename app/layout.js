@@ -1,65 +1,100 @@
 import { Suspense } from 'react';
 import Script from 'next/script';
+import SeoAnalyticsScripts from '@/components/SeoAnalyticsScripts';
 import './globals.css';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import CustomerAdPopup from '@/components/CustomerAdPopup';
 import ConditionalLayoutWrapper from '@/components/ConditionalLayoutWrapper';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import { supabase } from '@/lib/supabase';
+import { AuthProvider } from '@/components/AuthContext';
+import MaintenanceGuard from '@/components/MaintenanceGuard';
+import { ToastProvider } from '@/context/ToastContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
+import ToastContainer from '@/components/ui/ToastContainer';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
-export const metadata = {
-  title: {
-    template: '%s | BookMyTicket - Online Event & Service Booking',
-    default: 'BookMyTicket - Best Online Event Ticketing, Turf & Service Booking Platform',
-  },
-  description: 'Book the latest events, sports turfs, and professional services online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and specialized services across India.',
-  keywords: [
+export async function generateMetadata() {
+  const baseUrl = 'https://bookmyticket.net';
+  
+  let title = 'BookMyTicket - Best Online Event Ticketing, Turf & Service Booking Platform';
+  let description = 'Book the latest events, sports turfs, and professional services online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and specialized services across India.';
+  let keywords = [
     'bookmyticket', 'event booking India', 'online ticket booking', 'book turfs online', 
     'professional artist booking', 'concert tickets', 'comedy show tickets', 
     'event management', 'venue booking', 'wedding services', 'mehendi artist booking',
     'cricket turf booking', 'football turf booking', 'live events India'
-  ],
-  metadataBase: new URL('https://bookmyticket.net'),
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+  ];
+
+  try {
+    const { data } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'seo_analytics')
+      .single();
+
+    if (data?.value) {
+      if (data.value.global_title) title = data.value.global_title;
+      if (data.value.global_description) description = data.value.global_description;
+      if (data.value.global_keywords) {
+        const k = data.value.global_keywords;
+        keywords = k.includes(',') ? k.split(',').map(s => s.trim()) : [k];
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching dynamic metadata:", error);
+  }
+
+  return {
+    title: {
+      template: `%s | ${title}`,
+      default: title,
+    },
+    description,
+    keywords,
+    metadataBase: new URL(baseUrl),
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'BookMyTicket',
-  },
-  openGraph: {
-    title: 'BookMyTicket - Best Online Event Ticketing & Service Booking',
-    description: 'Book events, turf grounds, and professional services online with BookMyTicket. Easy, fast, and secure.',
-    url: 'https://bookmyticket.net',
-    siteName: 'BookMyTicket',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'BookMyTicket - Your Event Partner',
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
       },
-    ],
-    locale: 'en_IN',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'BookMyTicket - Online Ticketing Hub',
-    description: 'Book events, turf grounds, and professional services online with BookMyTicket.',
-    images: ['/og-image.png'],
-    creator: '@bookmyticket',
-  },
-};
+    },
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'BookMyTicket',
+    },
+    openGraph: {
+      title: title,
+      description: description,
+      url: baseUrl,
+      siteName: 'BookMyTicket',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'BookMyTicket - Your Event Partner',
+        },
+      ],
+      locale: 'en_IN',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: title,
+      description: description,
+      images: ['/og-image.png'],
+      creator: '@bookmyticket',
+    },
+  };
+}
 
 export const viewport = {
   themeColor: '#000000',
@@ -68,13 +103,6 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
 };
-
-import { AuthProvider } from '@/components/AuthContext';
-import MaintenanceGuard from '@/components/MaintenanceGuard';
-import { ToastProvider } from '@/context/ToastContext';
-import { ConfirmProvider } from '@/context/ConfirmContext';
-import ToastContainer from '@/components/ui/ToastContainer';
-import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 export default function RootLayout({ children }) {
   return (
@@ -86,22 +114,6 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        {/* Google Analytics (GA4) Placeholder - Replace G-XXXXXXXXXX with actual ID */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-XXXXXXXXXX', {
-              page_path: window.location.pathname,
-            });
-          `}
-        </Script>
-        {/* Social Media Integration Tags */}
         <meta property="og:site_name" content="BookMyTicket" />
         <meta name="twitter:site" content="@bookmyticket" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -156,6 +168,7 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <MaintenanceGuard>
                 <Suspense fallback={null}>
+                  <SeoAnalyticsScripts />
                   <ConditionalNavbar />
                   <CustomerAdPopup />
                   <ToastContainer />
@@ -163,6 +176,7 @@ export default function RootLayout({ children }) {
                   <ConditionalLayoutWrapper>
                     {children}
                   </ConditionalLayoutWrapper>
+                  <MobileBottomNav />
                 </Suspense>
               </MaintenanceGuard>
             </AuthProvider>

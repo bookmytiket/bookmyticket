@@ -36,7 +36,25 @@ export default async function sitemap() {
   }));
 
   // 3b. City Event routes (Priority: 0.8)
-  const cityRoutes = ['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'].map((city) => ({
+  const defaultCities = ['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'];
+  
+  let dynamicCities = [...defaultCities];
+  try {
+    const { data: configData } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'seo_analytics')
+      .single();
+    
+    if (configData?.value?.city_seo_overrides) {
+      const extraCities = Object.keys(configData.value.city_seo_overrides).map(c => c.charAt(0).toUpperCase() + c.slice(1));
+      dynamicCities = Array.from(new Set([...defaultCities, ...extraCities]));
+    }
+  } catch (err) {
+    console.error("Error fetching city overrides for sitemap:", err);
+  }
+
+  const cityRoutes = dynamicCities.map((city) => ({
     url: `${baseUrl}/events/in/${city.toLowerCase()}`,
     lastModified: new Date().toISOString(),
     changeFrequency: 'daily',

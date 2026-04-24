@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Save, ShieldCheck, MessageSquare, Smartphone, Zap, Loader2, Link } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AdminDashboardLayout from "@/app/admin/components/AdminDashboardLayout";
 
 export default function CommunicationSettings() {
     const [settings, setSettings] = useState([]);
@@ -52,7 +53,7 @@ export default function CommunicationSettings() {
     const otp = settings.find(s => s.key === 'otp_settings')?.value || {};
 
     return (
-        <div className="max-w-4xl mx-auto p-10">
+        <AdminDashboardLayout activeTab="comm_hub">
             <div className="flex items-center justify-between mb-10">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Communication Hub</h1>
@@ -159,6 +160,6 @@ export default function CommunicationSettings() {
                     </div>
                 </div>
             </div>
-        </div>
+        </AdminDashboardLayout>
     );
 }
