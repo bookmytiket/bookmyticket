@@ -33,8 +33,8 @@ export async function generateMetadata({ params }) {
   const override = config.city_seo_overrides?.[city.toLowerCase()];
 
   return {
-    title: override?.title || `Best Events in ${capitalizedCity} | Upcoming Shows & Tickets - BookMyTicket`,
-    description: override?.description || `Discover and book the best events in ${capitalizedCity}. Explore upcoming concerts, workshops, sports, and cultural festivals in ${capitalizedCity} with BookMyTicket.`,
+    title: override?.title || `Events, Movies, Plays, Sports & Activities in ${capitalizedCity} - BookMyTicket ${capitalizedCity}`,
+    description: override?.description || `BookMyTicket offers upcoming events, showtimes, concert tickets, and cultural activities near ${capitalizedCity}. Explore promotional offers and book tickets online for the best experiences in ${capitalizedCity}.`,
     alternates: {
       canonical: `https://bookmyticket.net/events/in/${city.toLowerCase()}`,
     }
@@ -45,6 +45,16 @@ export default async function CityEventsPage({ params }) {
   const { city } = params;
   const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);
   
+  // Fetch SEO config
+  const { data: configData } = await supabase
+    .from('system_config')
+    .select('value')
+    .eq('key', 'seo_analytics')
+    .single();
+  
+  const config = configData?.value || {};
+  const override = config.city_seo_overrides?.[city.toLowerCase()];
+
   // Fetch events from Supabase
   const { data: events = [] } = await supabase
     .from('events')
@@ -61,16 +71,47 @@ export default async function CityEventsPage({ params }) {
 
   return (
     <div style={{ backgroundColor: '#fafafa', minHeight: '100vh' }}>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://bookmyticket.net"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Events",
+                "item": "https://bookmyticket.net/events"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": capitalizedCity,
+                "item": `https://bookmyticket.net/events/in/${city.toLowerCase()}`
+              }
+            ]
+          })
+        }}
+      />
+      
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '120px 20px 60px' }}>
         <div style={{ marginBottom: '40px' }}>
           <Link href="/" style={{ fontSize: '14px', color: '#64748b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
             ← Back to Home
           </Link>
           <h1 style={{ fontSize: '42px', fontWeight: 900, color: '#111827', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
-            Exciting Events in <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{capitalizedCity}</span>
+            {override?.h1 || <>Exciting Events in <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{capitalizedCity}</span></>}
           </h1>
           <p style={{ fontSize: '18px', color: '#64748b', marginTop: '12px', maxWidth: '600px' }}>
-            Showing {activeEvents.length} upcoming events happening in {capitalizedCity}. Book your tickets now for the best experiences.
+            {override?.subheading || `Showing ${activeEvents.length} upcoming events happening in ${capitalizedCity}. Book your tickets now for the best experiences.`}
           </p>
         </div>
 
@@ -129,13 +170,24 @@ export default async function CityEventsPage({ params }) {
 
         {/* Local SEO Content */}
         <section style={{ marginTop: '80px', borderTop: '1px solid #e2e8f0', paddingTop: '40px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '20px' }}>Discover the Best Experiences in {capitalizedCity}</h2>
-          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, marginBottom: '20px' }}>
-            {capitalizedCity} is a vibrant city with a rich cultural scene and a wide variety of activities. From international music tours and local theatrical performances to high-adrenaline sports and networking workshops, there is always something happening in the heart of {capitalizedCity}.
-          </p>
-          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8 }}>
-            At BookMyTicket, we make it our mission to connect you with the most memorable events in {capitalizedCity}. Our platform provides a secure and easy way to browse upcoming schedules, compare ticket prices, and secure your spot at the most anticipated shows in town. Whether you're a resident or just visiting, explore {capitalizedCity} like never before with BookMyTicket.
-          </p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '20px' }}>
+            {override?.about_title || `Discover the Best Experiences in ${capitalizedCity}`}
+          </h2>
+          {override?.about_content ? (
+            <div 
+              style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8 }}
+              dangerouslySetInnerHTML={{ __html: override.about_content }} 
+            />
+          ) : (
+            <>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, marginBottom: '20px' }}>
+                {capitalizedCity} is a vibrant city with a rich cultural scene and a wide variety of activities. From international music tours and local theatrical performances to high-adrenaline sports and networking workshops, there is always something happening in the heart of {capitalizedCity}.
+              </p>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8 }}>
+                At BookMyTicket, we make it our mission to connect you with the most memorable events in {capitalizedCity}. Our platform provides a secure and easy way to browse upcoming schedules, compare ticket prices, and secure your spot at the most anticipated shows in town. Whether you're a resident or just visiting, explore {capitalizedCity} like never before with BookMyTicket.
+              </p>
+            </>
+          )}
         </section>
       </main>
       <Footer />

@@ -1,11 +1,43 @@
-"use client";
-import React, { use } from 'react';
+import React from 'react';
 import EventDetailClient from '../components/EventDetailClient';
-import { useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-export default function EventDetailPage() {
-    const searchParams = useSearchParams();
-    const id = searchParams.get('id');
+export async function generateMetadata({ searchParams }) {
+    const id = searchParams.id;
+    if (!id) return {};
+
+    try {
+        const { data: event } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (!event) return { title: 'Event Not Found | BookMyTicket' };
+
+        const title = `${event.title} Tickets | ${event.city || event.location} | BookMyTicket`;
+        const description = `Book tickets for ${event.title} in ${event.city || event.location}. ${event.description?.slice(0, 150)}... Book online at the best prices on BookMyTicket.`;
+
+        return {
+            title,
+            description,
+            openGraph: {
+                title,
+                description,
+                images: [event.img || '/og-image.png'],
+                type: 'article',
+            },
+            alternates: {
+                canonical: `https://bookmyticket.net/events/detail?id=${id}`,
+            }
+        };
+    } catch (e) {
+        return { title: 'Event Details | BookMyTicket' };
+    }
+}
+
+export default async function EventDetailPage({ searchParams }) {
+    const id = searchParams.id;
     
     if (!id) {
         return (
@@ -15,5 +47,57 @@ export default function EventDetailPage() {
         );
     }
 
-    return <EventDetailClient id={id} />;
+    // Fetch event for schema
+    const { data: event } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    return (
+        <>
+            {event && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "Event",
+                            "name": event.title,
+                            "startDate": event.date,
+                            "endDate": event.date,
+                            "eventAttendanceMode": event.virtual ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+                            "eventStatus": "https://schema.org/EventScheduled",
+                            "location": {
+                                "@type": event.virtual ? "VirtualLocation" : "Place",
+                                "name": event.venue || event.location,
+                                "address": {
+                                    "@type": "PostalAddress",
+                                    "addressLocality": event.city || event.location,
+                                    "addressRegion": "IN",
+                                    "addressCountry": "IN"
+                                }
+                            },
+                            "image": [event.img],
+                            "description": event.description,
+                            "offers": {
+                                "@type": "Offer",
+                                "url": `https://bookmyticket.net/events/detail?id=${id}`,
+                                "price": event.price || 0,
+                                "priceCurrency": "INR",
+                                "availability": "https://schema.org/InStock",
+                                "validFrom": event.created_at
+                            },
+                            "organizer": {
+                                "@type": "Organization",
+                                "name": "BookMyTicket",
+                                "url": "https://bookmyticket.net"
+                            }
+                        })
+                    }}
+                />
+            )}
+            <EventDetailClient id={id} />
+        </>
+    );
 }
