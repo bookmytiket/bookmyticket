@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(request) {
+export function proxy(request) {
   return NextResponse.next();
 }
-
 
 export const config = {
   matcher: [
