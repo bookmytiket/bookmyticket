@@ -39,7 +39,7 @@ export default function TurfDetailScreen() {
 
   // Migrated to Supabase: Fetch slots
   const { data: slots = [] } = useSupabaseQuery('turf_slots', (q) => 
-    q.select('*').eq('turf_id', turfId).eq('status', 'active'),
+    q.select('*').eq('turf_id', turfId).eq('is_active', true),
     [turfId]
   );
 
@@ -63,7 +63,7 @@ export default function TurfDetailScreen() {
   }
 
   const currentDayOfWeek = new Date(selectedDate).getDay();
-  const daySlots = (slots || []).filter(s => s.day_of_week === currentDayOfWeek).sort((a,b) => a.start_time.localeCompare(b.start_time));
+  const daySlots = (slots || []).filter(s => Number(s.day_of_week) === currentDayOfWeek).sort((a,b) => (a.start_time || "").localeCompare(b.start_time || ""));
 
   const calculateTotal = () => {
     if (!selectedSlot || !turf) return 0;

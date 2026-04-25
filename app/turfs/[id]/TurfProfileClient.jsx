@@ -241,7 +241,7 @@ export default function TurfProfileClient({ id: turfId }) {
 
                         <div>
                              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4">Available Slots</p>
-                             <div className="flex flex-wrap gap-3 max-h-[180px] overflow-y-auto custom-scrollbar">
+                             <div className="flex flex-nowrap gap-4 overflow-x-auto pb-6 pt-2 px-2 -mx-2 custom-scrollbar">
                                  {daySlots.map((slot) => {
                                      const isBooked = bookedSlots.includes(slot.start_time);
                                      const isSelected = selectedSlot?.id === slot.id;
@@ -251,25 +251,25 @@ export default function TurfProfileClient({ id: turfId }) {
                                              key={slot.id} 
                                              disabled={isBooked}
                                              onClick={() => setSelectedSlot(slot)} 
-                                             className={`px-5 py-2.5 rounded-xl border transition-all text-center group flex-1 md:flex-none min-w-[90px] 
+                                             className={`px-8 py-4 rounded-2xl border transition-all text-center group min-w-[140px] shrink-0
                                                  ${isBooked ? 'bg-slate-800/40 border-slate-700/50 cursor-not-allowed opacity-50' 
-                                                 : isSelected ? 'bg-blue-600 border-blue-500 shadow-xl scale-105' 
-                                                 : 'bg-white/5 border-emerald-500/50 hover:bg-emerald-500/10 hover:border-emerald-400'}
+                                                 : isSelected ? 'bg-blue-600 border-blue-500 shadow-2xl scale-110 z-10' 
+                                                 : 'bg-white/5 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-400/50'}
                                              `}
                                          >
-                                             <p className={`text-sm font-black ${isBooked ? 'text-slate-500 line-through' : isSelected ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-300'}`}>
+                                             <p className={`text-lg font-black italic ${isBooked ? 'text-slate-500 line-through' : isSelected ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-300'}`}>
                                                 {format12Hour(slot.start_time)}
                                              </p>
-                                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isBooked ? 'text-slate-600' : 'opacity-60 text-white'}`}>
+                                             <p className={`text-[10px] font-black uppercase tracking-widest mt-1.5 ${isBooked ? 'text-slate-600' : 'opacity-60 text-white'}`}>
                                                 {isBooked ? 'Booked' : `₹${slot.price_override || turf.price_per_hour || 1000}`}
                                              </p>
                                          </button>
                                      )
                                  })}
                                  {daySlots.length === 0 && (
-                                     <div className="w-full py-10 flex flex-col items-center justify-center bg-white/5 border border-dashed border-white/10 rounded-[2rem] space-y-3">
+                                     <div className="w-full py-10 flex flex-col items-center justify-center bg-white/5 border border-dashed border-white/10 rounded-[2rem] space-y-3 shrink-0">
                                          <Clock className="text-white/20" size={32} />
-                                         <div className="text-center">
+                                         <div className="text-center px-10">
                                              <p className="text-white/40 font-black uppercase tracking-widest text-[12px]">No sessions mapped for this day</p>
                                              <p className="text-[10px] text-white/20 font-bold uppercase tracking-tight mt-1">Try selecting another date from the carousel above</p>
                                          </div>
