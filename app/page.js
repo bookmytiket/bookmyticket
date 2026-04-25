@@ -407,7 +407,8 @@ export default function Home() {
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
         
         {/* Community Trust: Public Reviews Banner */}
-        <PublicReviewsBanner />
+        {/* Moved PublicReviewsBanner below for better flow */}
+
         
         {/* Connection Diagnostic Warning */}
         {typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_SUPABASE_URL && (
@@ -665,22 +666,76 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '50px', textAlign: 'center' }}>
-                  <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '20px' }}>Serving Cities Across India</h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '15px' }}>
-                    {['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'].map(city => (
-                      <Link key={city} href={`/events/in/${city.toLowerCase()}`} style={{ 
-                        fontSize: '13px', fontWeight: 700, color: '#64748b', textDecoration: 'none',
-                        padding: '8px 16px', background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#f84464'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-                      >
-                        Events in {city}
-                      </Link>
-                    ))}
+                <div style={{ width: '100%', maxWidth: '1240px', margin: '60px auto 0' }}>
+                  <PublicReviewsBanner />
+                </div>
+
+                <div style={{ marginTop: '30px', textAlign: 'center', overflow: 'hidden', padding: '20px 0' }}>
+
+                  <h4 style={{ fontSize: '14px', fontWeight: 900, color: '#f84464', marginBottom: '30px', textTransform: 'uppercase', letterSpacing: '4px' }}>Serving Cities Across India</h4>
+                  
+                  <div className="city-marquee-container" style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+                    <div style={{
+                      display: 'flex',
+                      gap: '30px',
+                      width: 'max-content',
+                      animation: 'cityMarquee 30s linear infinite',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.animationPlayState = 'paused'}
+                    onMouseLeave={e => e.currentTarget.style.animationPlayState = 'running'}
+                    >
+                      {[...Array(4)].map((_, i) => (
+                        <React.Fragment key={i}>
+                          {[
+                            { name: 'Coimbatore', code: 'CBE', img: 'https://images.unsplash.com/photo-1623582854588-d60de57fa33f?q=80&w=400&auto=format' },
+                            { name: 'Bengaluru', code: 'BLR', img: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?q=80&w=400&auto=format' },
+                            { name: 'Chennai', code: 'MAA', img: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&auto=format' },
+                            { name: 'Mumbai', code: 'BOM', img: 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=400&auto=format' },
+                            { name: 'Kochi', code: 'COK', img: 'https://images.pexels.com/photos/10557457/pexels-photo-10557457.jpeg?auto=compress&cs=tinysrgb&w=400' },
+                            { name: 'Delhi', code: 'DEL', img: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&auto=format' },
+                            { name: 'Hyderabad', code: 'HYD', img: 'https://images.unsplash.com/photo-1572445271230-a78b5944a659?w=400&auto=format' },
+                            { name: 'Pune', code: 'PNQ', img: 'https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=400&auto=format' },
+                            { name: 'Ahmedabad', code: 'AMD', img: 'https://images.unsplash.com/photo-1593181629936-11c609b8db9b?w=400&auto=format' },
+                            { name: 'Kolkata', code: 'CCU', img: 'https://images.pexels.com/photos/14101851/pexels-photo-14101851.jpeg?auto=compress&cs=tinysrgb&w=400' }
+                          ].map(city => (
+                            <div key={city.name + i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', width: '120px' }}>
+                              <div style={{
+                                width: '100px', height: '100px', borderRadius: '50%',
+                                overflow: 'hidden', border: '4px solid #fff',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                                background: '#f1f5f9',
+                                transition: 'all 0.4s ease'
+                              }}
+                              className="city-img-circle"
+                              >
+                                <img 
+                                  src={city.img} 
+                                  alt={city.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = `https://ui-avatars.com/api/?name=${city.code}&background=f84464&color=fff&size=100&bold=true`;
+                                  }}
+                                />
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px' }}>{city.name}</span>
+                            </div>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   </div>
+
+                  <style>{`
+                    @keyframes cityMarquee {
+                      0% { transform: translateX(0); }
+                      100% { transform: translateX(-25%); }
+                    }
+                    .city-img-circle:hover {
+                      transform: scale(1.15) rotate(5deg);
+                      border-color: #f84464 !important;
+                      box-shadow: 0 15px 35px rgba(248, 68, 100, 0.3) !important;
+                    }
+                  `}</style>
                 </div>
               </div>
             </section>

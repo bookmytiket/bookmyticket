@@ -195,12 +195,12 @@ export default function TurfProfileClient({ id: turfId }) {
                 <div className="absolute bottom-12 left-12 right-12 max-w-7xl mx-auto">
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                            <span className="px-4 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">Premium Facility</span>
+                            <span className="px-4 py-1.5 bg-gradient-to-r from-[#f84464] to-[#a855f7] text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-[#f84464]/20">Premium Facility</span>
                             {turf.status === 'active' && <span className="px-4 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">Operational</span>}
                         </div>
                         <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl">{turf.name}</h1>
                         <div className="flex items-center gap-6 text-white/80">
-                            <div className="flex items-center gap-2 text-sm font-bold"><MapPin size={18} className="text-blue-400" />{turf.location}</div>
+                            <div className="flex items-center gap-2 text-sm font-bold"><MapPin size={18} className="text-[#f84464]" />{turf.location}</div>
                             <div className="flex items-center gap-2 text-sm font-bold"><Star size={18} className="text-yellow-400 fill-yellow-400" />4.9 (120 Reviews)</div>
                         </div>
                     </div>
@@ -208,18 +208,18 @@ export default function TurfProfileClient({ id: turfId }) {
             </div>
 
             <div className="max-w-7xl mx-auto px-12 -mt-10 relative z-10">
-                <div className="bg-slate-900 rounded-[1.5rem] p-5 lg:p-6 text-white shadow-2xl relative group mb-6">
+                <div className="bg-slate-900 rounded-[1.5rem] p-5 lg:p-6 text-white shadow-2xl relative group mb-6 border border-white/5">
                     <div className="space-y-4 relative z-10">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
-                                 <h3 className="text-xl font-black italic tracking-tight uppercase">Reserve Facility</h3>
+                                 <h3 className="text-xl font-black italic tracking-tight uppercase bg-gradient-to-r from-[#f84464] to-[#a855f7] bg-clip-text text-transparent">Reserve Facility</h3>
                                  <p className="text-[12px] font-medium text-white/50">Select your preferred date and slot to lock in.</p>
                             </div>
                             <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-3 rounded-2xl">
                                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Users:</span>
                                  <button onClick={() => setParticipantCount(Math.max(1, participantCount - 1))} className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all"><ChevronLeft size={16} /></button>
                                  <div className="text-center w-10"><span className="text-xl font-black italic tracking-tighter">{participantCount}</span></div>
-                                 <button onClick={() => setParticipantCount(Math.min(turf.maxCapacity || 100, participantCount + 1))} className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20"><ChevronRight size={16} /></button>
+                                 <button onClick={() => setParticipantCount(Math.min(turf.maxCapacity || 100, participantCount + 1))} className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#f84464] to-[#a855f7] flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-[#f84464]/20"><ChevronRight size={16} /></button>
                             </div>
                         </div>
 
@@ -229,7 +229,7 @@ export default function TurfProfileClient({ id: turfId }) {
                                      const isoString = date.toISOString().split('T')[0];
                                      const isSelected = selectedDate === isoString;
                                      return (
-                                         <button key={idx} onClick={() => { setSelectedDate(isoString); setSelectedSlot(null); }} className={`flex flex-col items-center justify-center min-w-[55px] py-2 rounded-xl border transition-all ${isSelected ? 'bg-blue-600 border-blue-500 text-white shadow-xl scale-105' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}>
+                                         <button key={idx} onClick={() => { setSelectedDate(isoString); setSelectedSlot(null); }} className={`flex flex-col items-center justify-center min-w-[55px] py-2 rounded-xl border transition-all ${isSelected ? 'bg-gradient-to-b from-[#f84464] to-[#a855f7] border-white/20 text-white shadow-xl scale-105' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}>
                                              <p className="text-[9px] font-black uppercase tracking-widest opacity-80">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
                                              <p className="text-lg font-black italic my-0.5">{date.getDate()}</p>
                                              <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">{date.toLocaleDateString('en-US', { month: 'short' })}</p>
@@ -240,7 +240,7 @@ export default function TurfProfileClient({ id: turfId }) {
                         </div>
 
                         <div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4">Available Slots</p>
+                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#f84464] mb-4">Available Slots</p>
                              <div className="flex flex-nowrap gap-4 overflow-x-auto pb-6 pt-2 px-2 -mx-2 custom-scrollbar">
                                  {daySlots.map((slot) => {
                                      const isBooked = bookedSlots.includes(slot.start_time);
@@ -253,7 +253,7 @@ export default function TurfProfileClient({ id: turfId }) {
                                              onClick={() => setSelectedSlot(slot)} 
                                              className={`px-8 py-4 rounded-2xl border transition-all text-center group min-w-[140px] shrink-0
                                                  ${isBooked ? 'bg-slate-800/40 border-slate-700/50 cursor-not-allowed opacity-50' 
-                                                 : isSelected ? 'bg-blue-600 border-blue-500 shadow-2xl scale-110 z-10' 
+                                                 : isSelected ? 'bg-gradient-to-br from-[#f84464] to-[#a855f7] border-white/20 shadow-2xl scale-110 z-10' 
                                                  : 'bg-white/5 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-400/50'}
                                              `}
                                          >
@@ -284,14 +284,14 @@ export default function TurfProfileClient({ id: turfId }) {
                                     <div className="flex items-center gap-8 w-full md:w-auto">
                                         <div>
                                             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Valuation</p>
-                                            <h4 className="text-3xl font-black italic tracking-tighter text-blue-400">₹{calculateTotal()}</h4>
+                                            <h4 className="text-3xl font-black italic tracking-tighter text-[#f84464]">₹{calculateTotal()}</h4>
                                         </div>
                                     </div>
                                     <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
                                         <button disabled={isBooking} onClick={() => handleBooking("advance")} className="px-6 py-4 bg-white text-slate-900 rounded-xl font-black text-[11px] uppercase tracking-[0.3em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/5 disabled:opacity-50 whitespace-nowrap">
                                             {isBooking ? "Processing..." : `Partial (₹${Math.ceil(calculateTotal() / participantCount)} / User)`}
                                         </button>
-                                        <button disabled={isBooking} onClick={() => handleBooking("full")} className="px-6 py-4 bg-blue-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.3em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 whitespace-nowrap">
+                                        <button disabled={isBooking} onClick={() => handleBooking("full")} className="px-6 py-4 bg-gradient-to-r from-[#f84464] to-[#a855f7] text-white rounded-xl font-black text-[11px] uppercase tracking-[0.3em] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-[#f84464]/20 disabled:opacity-50 whitespace-nowrap">
                                             {isBooking ? "Executing..." : "Full Acquisition"}
                                         </button>
                                     </div>

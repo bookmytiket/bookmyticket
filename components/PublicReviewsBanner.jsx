@@ -1,18 +1,18 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Star, MessageSquareQuote } from 'lucide-react';
+import { Star, Quote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PublicReviewsBanner() {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
         async function fetchReviews() {
             try {
-                // Fetch latest 10 reviews
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('vendor_reviews')
                     .select('*')
@@ -27,7 +27,6 @@ export default function PublicReviewsBanner() {
                     return;
                 }
 
-                // Fetch profiles for these reviews
                 const userIds = [...new Set(reviewsData.map(r => r.user_id))];
                 const { data: profilesData, error: profilesError } = await supabase
                     .from('profiles')
@@ -37,7 +36,6 @@ export default function PublicReviewsBanner() {
                 if (profilesError) throw profilesError;
                 if (!isMounted) return;
 
-                // Merge data
                 const merged = reviewsData.map(r => ({
                     ...r,
                     profiles: profilesData?.find(p => p.id === r.user_id)
@@ -55,133 +53,136 @@ export default function PublicReviewsBanner() {
         return () => { isMounted = false; };
     }, []);
 
+    useEffect(() => {
+        if (reviews.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentIndex(prev => (prev + 1) % reviews.length);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [reviews]);
+
     if (loading || reviews.length === 0) return null;
 
+    const currentReview = reviews[currentIndex];
+
     return (
-        <section style={{ 
-            width: '100%', 
-            background: '#ffffff', 
-            borderBottom: '1px solid #f1f5f9', 
-            overflow: 'hidden',
-            height: '52px',
-            display: 'flex',
-            alignItems: 'center',
-            position: 'relative',
-            zIndex: 40
+        <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            width: '100%',
+            padding: '20px 0'
         }}>
-            <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%', padding: '0 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', paddingRight: '24px', borderRight: '2px solid #f1f5f9', height: '28px', background: '#fff', zIndex: 5 }}>
-                        <div className="pulse-icon" style={{ 
-                            background: '#fdf2f8', 
-                            padding: '6px', 
-                            borderRadius: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1.5px solid #fce7f3',
-                            boxShadow: '0 0 10px rgba(248, 68, 100, 0.1)'
-                        }}>
-                            <MessageSquareQuote size={14} className="text-[#f84464]" />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: '#0f172a', letterSpacing: '1px', lineHeight: 1 }}>Feedback</span>
-                            <span className="blink-text" style={{ fontSize: '7px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>Live Pulse</span>
-                        </div>
-                    </div>
-                    
-                    <div className="reviews-scroll-container" style={{ flex: 1, overflow: 'hidden', position: 'relative', height: '100%' }}>
-                        <div className="reviews-marquee" style={{ 
-                            display: 'flex', 
-                            gap: '60px', 
-                            animation: 'marquee 50s linear infinite',
-                            width: 'max-content',
-                            paddingRight: '60px'
-                        }}>
-                            {[...reviews, ...reviews].map((review, idx) => (
-                                <Link 
-                                    key={idx} 
-                                    href={`/services/${review.vendor_id}`}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', transition: 'opacity 0.2s' }}
-                                    className="review-item"
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#111827' }}>
-                                            {review.profiles?.full_name || review.profiles?.username || 'Verified User'}
-                                        </span>
-                                        <div style={{ display: 'flex', color: '#fbbf24' }}>
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} size={11} fill={i < review.rating ? 'currentColor' : 'none'} strokeWidth={3} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <span style={{ fontSize: '13px', color: '#475569', fontStyle: 'italic', fontWeight: 500 }}>
-                                        "{review.comment?.length > 70 ? review.comment.substring(0, 67) + '...' : review.comment}"
+            <div style={{ 
+                width: '100%',
+                maxWidth: '600px',
+                background: '#ffffff', 
+                borderRadius: '24px',
+                border: '1px solid #f1f5f9', 
+                padding: '24px',
+                position: 'relative',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.04)',
+                textAlign: 'center',
+                overflow: 'hidden'
+            }}>
+                {/* Branding Badge */}
+                <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    background: '#fdf2f8', 
+                    padding: '6px 16px', 
+                    borderRadius: '100px',
+                    border: '1px solid #fce7f3',
+                    marginBottom: '20px'
+                }}>
+                    <div className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f84464' }}></div>
+                    <span style={{ fontSize: '10px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Live Pulse Feedback</span>
+                </div>
+
+                <div style={{ position: 'relative', height: '120px' }}>
+                    <div key={currentIndex} className="flip-card-content">
+                        <Link 
+                            href={`/services/${currentReview.vendor_id}`}
+                            style={{ textDecoration: 'none', display: 'block' }}
+                        >
+                            <Quote size={24} style={{ color: '#f1f5f9', position: 'absolute', top: '-10px', left: '0' }} />
+                            
+                            <p style={{ 
+                                fontSize: '18px', 
+                                color: '#1e293b', 
+                                fontWeight: 600, 
+                                lineHeight: 1.6,
+                                margin: '0 0 20px',
+                                fontStyle: 'italic',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                            }}>
+                                "{currentReview.comment}"
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
+                                        {currentReview.profiles?.full_name || currentReview.profiles?.username || 'Verified User'}
                                     </span>
-                                    <div style={{ 
-                                        fontSize: '10px', 
-                                        fontWeight: 900, 
-                                        color: '#f84464', 
-                                        background: 'linear-gradient(135deg, #fdf2f8 0%, #fae8ff 100%)', 
-                                        padding: '3px 10px', 
-                                        borderRadius: '8px',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.8px',
-                                        border: '1px solid #fce7f3'
-                                    }}>
-                                        Artist Review
+                                    <div style={{ display: 'flex', color: '#fbbf24' }}>
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star key={i} size={12} fill={i < currentReview.rating ? 'currentColor' : 'none'} strokeWidth={3} />
+                                        ))}
                                     </div>
-                                </Link>
-                            ))}
-                        </div>
+                                </div>
+                                <div style={{ 
+                                    fontSize: '9px', 
+                                    fontWeight: 900, 
+                                    color: '#64748b',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px',
+                                    background: '#f8fafc',
+                                    padding: '4px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #f1f5f9'
+                                }}>
+                                    Verified Artist Review
+                                </div>
+                            </div>
+                        </Link>
                     </div>
                 </div>
+
+                {/* Progress Indicator */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '10px' }}>
+                    {reviews.map((_, i) => (
+                        <div key={i} style={{ 
+                            width: i === currentIndex ? '20px' : '6px', 
+                            height: '6px', 
+                            borderRadius: '3px', 
+                            background: i === currentIndex ? '#f84464' : '#e2e8f0',
+                            transition: 'all 0.3s ease'
+                        }}></div>
+                    ))}
+                </div>
             </div>
+
             <style jsx>{`
-                @keyframes marquee {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
-                }
-                @keyframes pulse {
+                @keyframes pulseDot {
                     0% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.1); opacity: 0.8; }
+                    50% { transform: scale(1.5); opacity: 0.5; }
                     100% { transform: scale(1); opacity: 1; }
                 }
-                @keyframes blink {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.3; }
+                @keyframes flipCardIn {
+                    0% { transform: translateY(30px) rotateX(-45deg); opacity: 0; }
+                    100% { transform: translateY(0) rotateX(0deg); opacity: 1; }
                 }
-                .pulse-icon {
-                    animation: pulse 2s ease-in-out infinite;
+                .pulse-dot {
+                    animation: pulseDot 2s ease-in-out infinite;
                 }
-                .blink-text {
-                    animation: blink 1.5s ease-in-out infinite;
-                }
-                .reviews-marquee:hover {
-                    animation-play-state: paused;
-                }
-                .review-item:hover {
-                    opacity: 0.7;
-                }
-                .reviews-scroll-container::before,
-                .reviews-scroll-container::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    width: 80px;
-                    height: 100%;
-                    z-index: 2;
-                    pointer-events: none;
-                }
-                .reviews-scroll-container::before {
-                    left: 0;
-                    background: linear-gradient(to right, #fff, transparent);
-                }
-                .reviews-scroll-container::after {
-                    right: 0;
-                    background: linear-gradient(to left, #fff, transparent);
+                .flip-card-content {
+                    animation: flipCardIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+                    perspective: 1000px;
                 }
             `}</style>
-        </section>
+        </div>
     );
 }

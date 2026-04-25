@@ -238,29 +238,7 @@ export default function ServicesPage() {
               : `${totalItems} result${totalItems !== 1 ? "s" : ""} ready to serve you`}
           </p>
 
-          {category === "Turf Booking" && (
-            <div style={{ marginTop: "24px", overflowX: "auto", paddingBottom: "10px" }} className="hide-scrollbar">
-                <div style={{ display: "flex", gap: "10px" }}>
-                    {Array.from({ length: 7 }, (_, i) => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + i);
-                        const iso = d.toISOString().split('T')[0];
-                        const isSelected = false; // Add state if needed, for now just UI
-                        return (
-                            <div key={i} style={{
-                                minWidth: "70px", padding: "12px", borderRadius: "16px",
-                                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                                textAlign: "center", cursor: "pointer"
-                            }}>
-                                <div style={{ fontSize: "9px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase" }}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                <div style={{ fontSize: "18px", fontWeight: 900, color: "#fff", margin: "4px 0" }}>{d.getDate()}</div>
-                                <div style={{ fontSize: "8px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>{d.toLocaleDateString('en-US', { month: 'short' })}</div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-          )}
+
         </div>
       </div>
 

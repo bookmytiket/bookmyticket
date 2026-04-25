@@ -3,7 +3,7 @@ import Script from 'next/script';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
-    const { id } = params;
+    const { id } = await params;
     
     const { data: turf } = await supabase
         .from('turfs')
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function TurfLayout({ children, params }) {
-    const { id } = params;
+    const { id } = await params;
     if (!id) notFound();
     
     const { data: turf } = await supabase

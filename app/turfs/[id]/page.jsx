@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import TurfProfileClient from "./TurfProfileClient";
 
 export async function generateMetadata({ params }) {
-    const id = params.id;
+    const { id } = await params;
     if (!id) return {};
 
     try {
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function TurfProfilePage({ params }) {
-    const turfId = params.id;
+    const { id: turfId } = await params;
 
     const { data: turf } = await supabase.from('turfs').select('*').eq('id', turfId).maybeSingle();
 
