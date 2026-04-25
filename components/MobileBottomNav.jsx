@@ -18,6 +18,14 @@ export default function MobileBottomNav() {
   const { user } = useAuth();
 
   const handleBookNow = () => {
+    if (pathname.includes('/turfs/')) {
+      const section = document.getElementById('booking-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+
     if (!user) {
       router.push(`/signin?redirect=${encodeURIComponent(pathname)}`);
     } else {

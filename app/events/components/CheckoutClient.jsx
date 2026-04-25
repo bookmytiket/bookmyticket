@@ -103,12 +103,20 @@ export default function CheckoutClient({ id }) {
         if (!event || !user) return;
         try {
             const isFree = total === 0;
+            const breakdown = getFeeBreakdown(baseAmount, feeSettings);
+            
             const { data: booking, error } = await supabase
                 .from('bookings')
                 .insert([{
                     event_id: String(event.id),
                     user_id: user.id,
                     ticket_count: qty,
+                    base_amount: breakdown.baseAmount,
+                    platform_charge: breakdown.convenienceFee,
+                    gst_amount: breakdown.gst,
+                    partner_bonus: breakdown.partnerBonus,
+                    platform_revenue: breakdown.platformRevenue,
+                    partner_total: breakdown.partnerTotal,
                     total_price: total,
                     status: isFree ? 'Confirmed' : 'Pending',
                     scanned: false,

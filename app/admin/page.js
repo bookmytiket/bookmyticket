@@ -432,7 +432,7 @@ const TurfBookingsTable = ({ t }) => {
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Turf / Facility</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Customer</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Slot</th>
-                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Payment</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Finance</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
                 </tr>
             </thead>
@@ -460,17 +460,8 @@ const TurfBookingsTable = ({ t }) => {
                         <td style={{ padding: "16px" }}>
                             <div>
                                 <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>₹{booking.total_amount}</p>
-                                <span style={{ 
-                                    fontSize: "10px", 
-                                    padding: "2px 6px", 
-                                    borderRadius: "4px", 
-                                    backgroundColor: booking.payment_type === 'full' ? "#3b82f620" : "#8b5cf620",
-                                    color: booking.payment_type === 'full' ? "#3b82f6" : "#8b5cf6",
-                                    fontWeight: 800,
-                                    textTransform: "uppercase"
-                                }}>
-                                    {booking.payment_type === 'full' ? "Full Pay" : "Advance Pay"}
-                                </span>
+                                <p style={{ fontSize: "10px", color: "#22c55e", fontWeight: 700, margin: "2px 0 0" }}>Rev: ₹{Number(booking.platform_revenue || 0).toFixed(2)}</p>
+                                <p style={{ fontSize: "10px", color: "#3b82f6", fontWeight: 700, margin: 0 }}>GST: ₹{Number(booking.gst_amount || 0).toFixed(2)}</p>
                             </div>
                         </td>
                         <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
@@ -516,7 +507,8 @@ const PoolBookingsTable = ({ t }) => {
                 <tr style={{ textAlign: "left" }}>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Pool Facility</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Customer</th>
-                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date / Details</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Details</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Finance</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
                     <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
                 </tr>
@@ -539,7 +531,12 @@ const PoolBookingsTable = ({ t }) => {
                         <td style={{ padding: "16px" }}>
                             <div>
                                 <p style={{ fontWeight: 700, margin: 0, fontSize: "13px", color: t.textMain }}>{new Date(booking.booking_date).toLocaleDateString()}</p>
-                                <p style={{ fontSize: "11px", color: t.textSub, margin: "4px 0 0", fontStyle: "italic" }}>{booking.notes || "No notes"}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>₹{Number(booking.price_paid || 0).toFixed(2)}</p>
+                                <p style={{ fontSize: "10px", color: "#22c55e", fontWeight: 700, margin: "2px 0 0" }}>Rev: ₹{Number(booking.platform_revenue || 0).toFixed(2)}</p>
                             </div>
                         </td>
                         <td style={{ padding: "16px" }}>
@@ -658,7 +655,7 @@ function AdminHomePage() {
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     const [events, setEvents] = useState([]);
     const [bookings, setBookings] = useState([]);
-    // Payment gateways: which config modal is open + saved configs per gateway
+    const [turfBookings, setTurfBookings] = useState([]);
     const [paymentGatewayConfig, setPaymentGatewayConfig] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingOrg, setEditingOrg] = useState(null);
@@ -698,6 +695,14 @@ function AdminHomePage() {
     const [addPaymentGateway] = useSupabaseMutation('payment_gateways', 'insert');
     const [patchPaymentGateway] = useSupabaseMutation('payment_gateways', 'update', (q, p) => q.eq('id', p.id));
     const [removePaymentGateway] = useSupabaseMutation('payment_gateways', 'delete', (q, p) => q.eq('id', p.id));
+
+    // Sync turf bookings from Supabase
+    const { data: turfBookingsArr = [] } = useSupabaseQuery('turf_bookings', q => q, [], { realtime: false });
+    useEffect(() => {
+        if (turfBookingsArr.length > 0) {
+            setTurfBookings(turfBookingsArr);
+        }
+    }, [turfBookingsArr]);
 
     // Seed default gateways if empty
     useEffect(() => {
@@ -2862,10 +2867,25 @@ function AdminHomePage() {
                                 <button onClick={() => window.print()} style={{ padding: "12px 24px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 10px 24px rgba(236,72,153,0.14)" }}><FileText size={18} /> Export PDF (print)</button>
                             </div>
                             <div style={{ marginTop: "24px", padding: "20px", border: `1px solid ${t.border}`, borderRadius: "10px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a" }}>
-                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>Summary</h4>
-                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total events: <strong>{allEvents.length}</strong></p>
-                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total bookings: <strong>{bookings.length}</strong></p>
-                                <p style={{ margin: "4px 0", fontSize: "14px" }}>Total revenue (sample): <strong>₹0</strong></p>
+                                <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: t.textSub }}>Financial Summary</h4>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "20px" }}>
+                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Bookings</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>{bookings.length + turfBookings.length}</p>
+                                    </div>
+                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#22c55e", textTransform: "uppercase" }}>Platform Revenue</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{turfBookings.reduce((sum, b) => sum + (b.platform_revenue || 0), 0).toFixed(2)}</p>
+                                    </div>
+                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#3b82f6", textTransform: "uppercase" }}>GST Collected</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{turfBookings.reduce((sum, b) => sum + (b.gst_amount || 0), 0).toFixed(2)}</p>
+                                    </div>
+                                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                        <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Gross</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0) + turfBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0)).toLocaleString()}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

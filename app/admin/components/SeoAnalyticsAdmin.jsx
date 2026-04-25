@@ -243,7 +243,62 @@ export default function SeoAnalyticsAdmin({ t, theme, config, setConfig }) {
         </button>
       </div>
 
-      {/* 2. Google Search Console Recrawl & Indexing */}
+      {/* 1c. Keyword Strategy & Insights */}
+      <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+          <Search size={20} color="#10b981" />
+          <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Keyword Strategy & Insights (Organic)</h3>
+        </div>
+        
+        <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "20px" }}>
+          Targeting high-volume competitor terms and intent-based keywords to capture organic traffic.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "20px" }}>
+          {[
+            { tag: "bookmyshow hyderabad", vol: "1M+", cat: "Regional" },
+            { tag: "bookmyshow bangalore", vol: "1M+", cat: "Regional" },
+            { tag: "book my show madurai", vol: "1M+", cat: "Regional" },
+            { tag: "book my show raipur", vol: "1M+", cat: "Regional" },
+            { tag: "bookmyshow visakhapatnam", vol: "1M+", cat: "Regional" },
+            { tag: "amazon pay movie tickets", vol: "1K+", cat: "Offers" },
+            { tag: "bookmyshow coupon code", vol: "10K+", cat: "Offers" },
+            { tag: "axis bank movie offer", vol: "1K+", cat: "Offers" },
+            { tag: "movie ticket discounts", vol: "1K+", cat: "Offers" },
+            { tag: "event ticketing platforms", vol: "1K+", cat: "Platform" },
+            { tag: "sell event tickets online", vol: "1K+", cat: "Platform" },
+            { tag: "ticket selling platforms", vol: "1K+", cat: "Platform" }
+          ].map((item, i) => (
+            <div key={i} style={{ 
+              padding: "12px", 
+              borderRadius: "10px", 
+              backgroundColor: theme === 'light' ? '#f0fdf4' : '#064e3b20', 
+              border: `1px solid ${theme === 'light' ? '#bcf0da' : '#064e3b'}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div>
+                <div style={{ fontSize: "10px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "2px" }}>{item.cat}</div>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: theme === 'light' ? '#065f46' : '#34d399' }}>{item.tag}</div>
+                <div style={{ fontSize: "10px", color: t.textSub }}>Vol: {item.vol}</div>
+              </div>
+              <button 
+                onClick={() => {
+                  const current = config.global_keywords || "";
+                  if (!current.includes(item.tag)) {
+                    setConfig(prev => ({ ...prev, global_keywords: current ? `${current}, ${item.tag}` : item.tag }));
+                    showToast(`Added ${item.tag} to global keywords`, "success");
+                  }
+                }}
+                style={{ background: "none", border: "none", color: "#10b981", cursor: "pointer", padding: "4px" }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
       <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

@@ -35,19 +35,19 @@ function SlotManager() {
     useEffect(() => { refreshSlots(); }, [turfId]);
 
     const [newSlot, setNewSlot] = useState({
-        dayOfWeek: 1,
-        startTime: "06:00",
-        endTime: "07:00",
-        priceOverride: undefined
+        day_of_week: 1,
+        start_time: "06:00",
+        end_time: "07:00",
+        price_override: undefined
     });
 
     const handleAddSlot = async () => {
         if (!turfId) return;
         try {
             await supabase.from('turf_slots').insert({ ...newSlot, turf_id: turfId, is_active: true });
-            const [h, m] = newSlot.endTime.split(':').map(Number);
+            const [h, m] = newSlot.end_time.split(':').map(Number);
             const nextH = String((h + 1) % 24).padStart(2, '0');
-            setNewSlot({ ...newSlot, startTime: newSlot.endTime, endTime: `${nextH}:${String(m).padStart(2, '0')}` });
+            setNewSlot({ ...newSlot, start_time: newSlot.end_time, end_time: `${nextH}:${String(m).padStart(2, '0')}` });
             refreshSlots();
         } catch (err) { alert(err.message); }
     };
@@ -90,8 +90,8 @@ function SlotManager() {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Day of Week</label>
                                 <select 
                                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                    value={newSlot.dayOfWeek}
-                                    onChange={(e) => setNewSlot({...newSlot, dayOfWeek: parseInt(e.target.value)})}
+                                    value={newSlot.day_of_week}
+                                    onChange={(e) => setNewSlot({...newSlot, day_of_week: parseInt(e.target.value)})}
                                 >
                                     {DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}
                                 </select>
@@ -103,8 +103,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                        value={newSlot.startTime}
-                                        onChange={(e) => setNewSlot({...newSlot, startTime: e.target.value})}
+                                        value={newSlot.start_time}
+                                        onChange={(e) => setNewSlot({...newSlot, start_time: e.target.value})}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -112,8 +112,8 @@ function SlotManager() {
                                     <input 
                                         type="time"
                                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                        value={newSlot.endTime}
-                                        onChange={(e) => setNewSlot({...newSlot, endTime: e.target.value})}
+                                        value={newSlot.end_time}
+                                        onChange={(e) => setNewSlot({...newSlot, end_time: e.target.value})}
                                     />
                                 </div>
                             </div>
@@ -124,8 +124,8 @@ function SlotManager() {
                                     type="number"
                                     placeholder={`Default: ₹${turf?.pricePerHour || 0}`}
                                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
-                                    value={newSlot.priceOverride || ""}
-                                    onChange={(e) => setNewSlot({...newSlot, priceOverride: e.target.value ? parseInt(e.target.value) : undefined})}
+                                    value={newSlot.price_override || ""}
+                                    onChange={(e) => setNewSlot({...newSlot, price_override: e.target.value ? parseInt(e.target.value) : undefined})}
                                 />
                             </div>
 
@@ -153,7 +153,7 @@ function SlotManager() {
                 {/* Slot Display Area */}
                 <div className="lg:col-span-2 space-y-8">
                     {DAYS.map((dayName, dayIndex) => {
-                        const daySlots = slots.filter(s => s.dayOfWeek === dayIndex).sort((a,b) => a.startTime.localeCompare(b.startTime));
+                        const daySlots = slots.filter(s => s.day_of_week === dayIndex).sort((a,b) => a.start_time.localeCompare(b.start_time));
                         return (
                             <div key={dayName} className="space-y-4">
                                 <div className="flex items-center gap-4 px-2">
@@ -173,9 +173,9 @@ function SlotManager() {
                                                     <Clock size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-black text-slate-900">{slot.startTime} - {slot.endTime}</p>
+                                                    <p className="text-sm font-black text-slate-900">{slot.start_time} - {slot.end_time}</p>
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                        {slot.priceOverride ? `₹${slot.priceOverride}` : `Default Rate`}
+                                                        {slot.price_override ? `₹${slot.price_override}` : `Default Rate`}
                                                     </p>
                                                 </div>
                                             </div>

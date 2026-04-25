@@ -406,6 +406,11 @@ export default function Home() {
     <>
       <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
         
+        {/* SEO: Primary Heading (Hidden visually, visible to search engines) */}
+        <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }}>
+          BookMyTicket - Best Online Event Ticketing, Turf & Service Booking Platform India
+        </h1>
+        
         {/* Community Trust: Public Reviews Banner */}
         {/* Moved PublicReviewsBanner below for better flow */}
 
@@ -641,7 +646,7 @@ export default function Home() {
                     Your One-Stop Platform for <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Events & Services</span>
                   </h2>
                   <p style={{ color: '#64748b', fontSize: '16px', maxWidth: '800px', margin: '0 auto', lineHeight: 1.6 }}>
-                    BookMyTicket is India's fastest-growing platform for discovering and booking unique experiences. From live concerts and comedy shows to sports turfs and professional artist services, we bring the best of your city to your fingertips.
+                    BookMyTicket is India's fastest-growing platform for discovering and booking unique experiences. From live <strong>concerts near me</strong> and comedy shows to sports turfs and <strong>best place to buy tickets</strong> for professional artist services, we bring the best of your city to your fingertips with <strong>no service fees</strong>.
                   </p>
                 </div>
                 
@@ -649,20 +654,41 @@ export default function Home() {
                   <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Online Event Ticketing</h3>
                     <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      Never miss out on the latest events in your city. Whether it's a high-energy music concert, a hilarious stand-up comedy special, or a local community festival, BookMyTicket offers a seamless and secure ticket booking experience.
+                      Never miss out on the latest <strong>shows and events near me</strong>. Whether it's a high-energy music concert, a hilarious stand-up comedy special, or a local community festival, BookMyTicket offers a seamless and secure <strong>online ticketing system</strong> experience.
                     </p>
                   </div>
                   <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Sports Turf Booking</h3>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Sell Tickets Online</h3>
                     <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      Love sports? Easily find and book cricket, football, and badminton turfs near you. Check availability in real-time, view amenities, and secure your slot instantly. BookMyTicket makes it easy to stay active and play with your friends.
+                      Looking for the <strong>best way to sell tickets online</strong>? Our <strong>event ticketing software</strong> allows organisers to <strong>sell event tickets online free</strong> of upfront costs. Manage <strong>ticket sales</strong>, track registrations, and get your event live in minutes.
                     </p>
                   </div>
                   <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Professional Service Partners</h3>
                     <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      Looking for a professional Mehendi artist, a wedding planner, or a creative studio? Our curated list of verified service providers ensures you get top-quality service for your special occasions. Browse portfolios and book directly through our platform.
+                      From Mehendi artists to <strong>event management ticketing systems</strong>, our curated list of verified service providers ensures top-quality service. Browse portfolios and <strong>buy event tickets</strong> or book services directly through our platform.
                     </p>
+                  </div>
+                </div>
+
+                {/* Why Book With BookMyTicket? (Competitor Pattern Optimization) */}
+                <div style={{ marginTop: '80px', textAlign: 'center' }}>
+                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '40px', letterSpacing: '-0.04em' }}>
+                    Why Book with <span style={{ color: '#f84464' }}>BookMyTicket?</span>
+                  </h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
+                    {[
+                      { title: "Lowest Platform Fees", icon: "💎", sub: "Save more on every ticket with our transparent pricing." },
+                      { title: "Verified Services", icon: "🛡️", sub: "All turfs and artists are handpicked and verified by our team." },
+                      { title: "Instant E-Tickets", icon: "⚡", sub: "Get your digital ticket instantly via email and your dashboard." },
+                      { title: "24/7 Support", icon: "💬", sub: "Our dedicated team is always here to help with your bookings." }
+                    ].map((feature, i) => (
+                      <div key={i} style={{ padding: '24px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', transition: 'transform 0.2s' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '16px' }}>{feature.icon}</div>
+                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{feature.title}</h4>
+                        <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>{feature.sub}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

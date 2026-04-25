@@ -12,11 +12,15 @@ export default async function sitemap() {
     '/services',
     '/branding',
     '/profile',
+    '/advertise',
+    '/events',
+    '/signin',
+    '/auth/signup',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
-    changeFrequency: 'daily',
-    priority: route === '' ? 1 : 0.8,
+    changeFrequency: route === '' ? 'always' : 'daily',
+    priority: route === '' ? 1.0 : 0.8,
   }));
 
   // 2. Service Category routes (Priority: 0.7)
@@ -72,12 +76,13 @@ export default async function sitemap() {
 
   try {
     // 4. Dynamic Event routes (Priority: 0.9)
-    const { data: events = [] } = await supabase.from('events').select('id, updated_at').limit(500);
+    const { data: events = [] } = await supabase.from('events').select('id, updated_at, img').limit(500);
     const eventRoutes = (events || []).map((event) => ({
       url: `${baseUrl}/events/detail?id=${event.id}`,
       lastModified: event.updated_at || new Date().toISOString(),
       changeFrequency: 'always',
       priority: 0.9,
+      images: event.img ? [event.img] : [],
     }));
 
     // 5. Dynamic Professional Service routes (Priority: 0.9)
@@ -98,12 +103,13 @@ export default async function sitemap() {
     }));
 
     // 6. Dynamic Turf routes (Priority: 0.9)
-    const { data: turfs = [] } = await supabase.from('turfs').select('id, updated_at').limit(500);
+    const { data: turfs = [] } = await supabase.from('turfs').select('id, updated_at, images').limit(500);
     const turfRoutes = (turfs || []).map((turf) => ({
       url: `${baseUrl}/turfs/${turf.id}`,
       lastModified: turf.updated_at || new Date().toISOString(),
       changeFrequency: 'weekly',
       priority: 0.9,
+      images: Array.isArray(turf.images) ? turf.images.slice(0, 5) : [],
     }));
 
     return [

@@ -104,12 +104,41 @@ export default function TurfProfileClient({ id: turfId }) {
         }
     }, [slots]);
 
-    const calculateTotal = () => {
-        if (!selectedSlot || !turf) return 0;
-        let basePrice = selectedSlot.price_override || turf.price_per_hour || 1000;
-        if (turf.pricing_type === "per_person") return (turf.price_per_person || basePrice) * participantCount;
-        return basePrice;
+    const calculatePricing = () => {
+        if (!selectedSlot || !turf) return { base: 0, platform: 0, gst: 0, total: 0, partner_bonus: 0, platform_revenue: 0, partner_total: 0 };
+        
+        // Step 0: Base Amount
+        let baseAmount = selectedSlot.price_override || turf.price_per_hour || 1000;
+        if (turf.pricing_type === "per_person") {
+            baseAmount = (turf.price_per_person || baseAmount) * participantCount;
+        }
+
+        // Step 1: Platform Charge (7%)
+        const platformCharge = baseAmount * 0.07;
+
+        // Step 2: GST on Platform Charge (18%)
+        const gstAmount = platformCharge * 0.18;
+
+        // Step 3: Partner Share from Platform Charge (2% of base)
+        const partnerBonus = baseAmount * 0.02;
+
+        // Step 4: Final Calculations
+        const totalAmount = baseAmount + platformCharge + gstAmount;
+        const platformRevenue = platformCharge - partnerBonus;
+        const partnerTotal = baseAmount + partnerBonus;
+
+        return {
+            base: baseAmount,
+            platform: platformCharge,
+            gst: gstAmount,
+            total: totalAmount,
+            partner_bonus: partnerBonus,
+            platform_revenue: platformRevenue,
+            partner_total: partnerTotal
+        };
     };
+
+    const calculateTotal = () => calculatePricing().total;
 
     const [year, month, day] = selectedDate.split('-').map(Number);
     const currentDayOfWeek = new Date(year, month - 1, day).getDay();
@@ -147,6 +176,8 @@ export default function TurfProfileClient({ id: turfId }) {
 
         setIsBooking(true);
         try {
+            const pricing = calculatePricing();
+            
             // Instant booking execution for demo/live flow
             const { error } = await supabase.from('turf_bookings').insert({
                 turf_id: turfId,
@@ -156,7 +187,13 @@ export default function TurfProfileClient({ id: turfId }) {
                 start_time: selectedSlot.start_time,
                 end_time: selectedSlot.end_time,
                 turf_name: turf.name,
-                total_amount: calculateTotal(),
+                base_amount: pricing.base,
+                platform_charge: pricing.platform,
+                gst_amount: pricing.gst,
+                partner_bonus: pricing.partner_bonus,
+                platform_revenue: pricing.platform_revenue,
+                partner_total: pricing.partner_total,
+                total_amount: pricing.total,
                 status: 'confirmed',
                 payment_status: 'fully_paid',
                 customer_details: {
@@ -185,7 +222,7 @@ export default function TurfProfileClient({ id: turfId }) {
     if (!turf) return <div className="min-h-screen flex items-center justify-center font-black uppercase text-slate-400">Turf Not Found</div>;
 
     return (
-        <main className="min-h-screen bg-[#f8fafc] pb-24">
+        <main className="min-h-screen bg-[#f8fafc] pb-40">
             <div className="h-[40vh] relative overflow-hidden group">
                 <img src={turf.images?.[0] || "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200q=80"} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt={turf.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
@@ -207,8 +244,8 @@ export default function TurfProfileClient({ id: turfId }) {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-12 -mt-10 relative z-10">
-                <div className="bg-slate-900 rounded-[1.5rem] p-5 lg:p-6 text-white shadow-2xl relative group mb-6 border border-white/5">
+            <div className="max-w-7xl mx-auto px-4 md:px-12 -mt-10 relative z-10">
+                <div id="booking-section" className="bg-slate-900 rounded-[1.5rem] p-5 lg:p-6 text-white shadow-2xl relative group mb-6 border border-white/5">
                     <div className="space-y-4 relative z-10">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
@@ -241,7 +278,7 @@ export default function TurfProfileClient({ id: turfId }) {
 
                         <div>
                              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#f84464] mb-4">Available Slots</p>
-                             <div className="flex flex-nowrap gap-4 overflow-x-auto pb-6 pt-2 px-2 -mx-2 custom-scrollbar">
+                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-6 pt-2">
                                  {daySlots.map((slot) => {
                                      const isBooked = bookedSlots.includes(slot.start_time);
                                      const isSelected = selectedSlot?.id === slot.id;
@@ -251,23 +288,23 @@ export default function TurfProfileClient({ id: turfId }) {
                                              key={slot.id} 
                                              disabled={isBooked}
                                              onClick={() => setSelectedSlot(slot)} 
-                                             className={`px-8 py-4 rounded-2xl border transition-all text-center group min-w-[140px] shrink-0
+                                             className={`px-4 py-4 rounded-2xl border transition-all text-center group flex flex-col items-center justify-center
                                                  ${isBooked ? 'bg-slate-800/40 border-slate-700/50 cursor-not-allowed opacity-50' 
-                                                 : isSelected ? 'bg-gradient-to-br from-[#f84464] to-[#a855f7] border-white/20 shadow-2xl scale-110 z-10' 
-                                                 : 'bg-white/5 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-400/50'}
+                                                 : isSelected ? 'bg-gradient-to-br from-[#f84464] to-[#a855f7] border-white/20 shadow-2xl scale-105 z-10' 
+                                                 : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-emerald-400/50'}
                                              `}
                                          >
-                                             <p className={`text-lg font-black italic ${isBooked ? 'text-slate-500 line-through' : isSelected ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-300'}`}>
+                                             <p className={`text-sm md:text-lg font-black italic ${isBooked ? 'text-slate-500 line-through' : isSelected ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-300'}`}>
                                                 {format12Hour(slot.start_time)}
                                              </p>
-                                             <p className={`text-[10px] font-black uppercase tracking-widest mt-1.5 ${isBooked ? 'text-slate-600' : 'opacity-60 text-white'}`}>
+                                             <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest mt-1 ${isBooked ? 'text-slate-600' : 'opacity-60 text-white'}`}>
                                                 {isBooked ? 'Booked' : `₹${slot.price_override || turf.price_per_hour || 1000}`}
                                              </p>
                                          </button>
                                      )
                                  })}
                                  {daySlots.length === 0 && (
-                                     <div className="w-full py-10 flex flex-col items-center justify-center bg-white/5 border border-dashed border-white/10 rounded-[2rem] space-y-3 shrink-0">
+                                     <div className="col-span-full py-10 flex flex-col items-center justify-center bg-white/5 border border-dashed border-white/10 rounded-[2rem] space-y-3">
                                          <Clock className="text-white/20" size={32} />
                                          <div className="text-center px-10">
                                              <p className="text-white/40 font-black uppercase tracking-widest text-[12px]">No sessions mapped for this day</p>
@@ -281,10 +318,15 @@ export default function TurfProfileClient({ id: turfId }) {
                         <AnimatePresence>
                             {selectedSlot && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 origin-top">
-                                    <div className="flex items-center gap-8 w-full md:w-auto">
-                                        <div>
+                                    <div className="flex flex-col gap-2 w-full md:w-auto">
+                                        <div className="flex flex-col">
                                             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Valuation</p>
-                                            <h4 className="text-3xl font-black italic tracking-tighter text-[#f84464]">₹{calculateTotal()}</h4>
+                                            <h4 className="text-3xl font-black italic tracking-tighter text-[#f84464]">₹{calculatePricing().total.toFixed(2)}</h4>
+                                        </div>
+                                        <div className="flex gap-4 text-[9px] font-bold text-white/40 uppercase tracking-tight">
+                                            <span>Base: ₹{calculatePricing().base}</span>
+                                            <span>Fee (7%): ₹{calculatePricing().platform.toFixed(2)}</span>
+                                            <span>GST (18%): ₹{calculatePricing().gst.toFixed(2)}</span>
                                         </div>
                                     </div>
                                     <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
@@ -303,7 +345,7 @@ export default function TurfProfileClient({ id: turfId }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     <div className="lg:col-span-8 flex flex-col gap-10">
-                        <div className="bg-white rounded-[2.5rem] p-12 shadow-xl border border-slate-100 space-y-10">
+                        <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-12 shadow-xl border border-slate-100 space-y-10">
                             <div className="space-y-4">
                                 <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">About the Facility</h2>
                                 <p className="text-slate-500 leading-relaxed font-medium">{turf.description || "Experience top-tier sporting action at our premium facility."}</p>

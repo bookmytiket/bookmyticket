@@ -41,11 +41,11 @@ export default function TurfBookings() {
     const [search, setSearch] = useState("");
 
     const filteredBookings = bookings.filter(b => {
-        const matchesFilter = filter === "all" || b.bookingStatus === filter || b.paymentStatus === filter;
-        const matchesSearch = b.customerDetails?.name?.toLowerCase().includes(search.toLowerCase()) || 
-                              b.turfName?.toLowerCase().includes(search.toLowerCase());
+        const matchesFilter = filter === "all" || b.booking_status === filter || b.payment_status === filter;
+        const matchesSearch = b.customer_details?.name?.toLowerCase().includes(search.toLowerCase()) || 
+                              b.turf_name?.toLowerCase().includes(search.toLowerCase());
         return matchesFilter && matchesSearch;
-    }).sort((a, b) => b.createdAt - a.createdAt);
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
@@ -98,22 +98,22 @@ export default function TurfBookings() {
                             {/* Customer & Turf Info */}
                             <div className="flex items-center gap-6 flex-1 min-w-0">
                                 <div className="w-16 h-16 rounded-2xl bg-blue-50/50 text-blue-600 border border-blue-100 flex items-center justify-center text-2xl font-black italic shadow-inner shrink-0">
-                                    {booking.customerDetails?.name?.charAt(0) || "U"}
+                                    {booking.customer_details?.name?.charAt(0) || "U"}
                                 </div>
                                 <div className="space-y-1 flex-1 min-w-0">
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-xl font-black text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors truncate">
-                                            {booking.customerDetails?.name || "Client"}
+                                            {booking.customer_details?.name || "Client"}
                                         </h3>
                                         <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                                            booking.bookingStatus === 'confirmed' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-amber-50 text-amber-500 border-amber-100'
+                                            booking.booking_status === 'confirmed' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'bg-amber-50 text-amber-500 border-amber-100'
                                         }`}>
-                                            {booking.bookingStatus}
+                                            {booking.booking_status}
                                         </div>
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                         <Activity size={12} className="text-blue-500" />
-                                        Facility: <span className="text-slate-900">{booking.turfName}</span>
+                                        Facility: <span className="text-slate-900">{booking.turf_name}</span>
                                     </p>
                                 </div>
                             </div>
@@ -131,31 +131,39 @@ export default function TurfBookings() {
                                     <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Temporal Window</p>
                                     <div className="flex items-center gap-2">
                                         <Clock size={14} className="text-emerald-500" />
-                                        <span className="text-[11px] font-bold text-slate-700">{booking.startTime} - {booking.endTime}</span>
+                                        <span className="text-[11px] font-bold text-slate-700">{booking.start_time} - {booking.end_time}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Acquisition Type</p>
                                     <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight italic bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                                        {booking.paymentType} Allocation
+                                        {booking.payment_type} Allocation
                                     </span>
                                 </div>
                             </div>
 
                             {/* Financial Summary */}
-                            <div className="flex items-center gap-8 min-w-[200px] justify-between xl:justify-end">
+                            <div className="flex items-center gap-8 min-w-[300px] justify-between xl:justify-end">
                                 <div className="text-right space-y-1">
-                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Financial Yield</p>
-                                    <p className="text-2xl font-black text-slate-900 tracking-tighter italic">₹{booking.totalAmount}</p>
-                                    <p className={`text-[9px] font-black uppercase tracking-widest ${
-                                        booking.paymentStatus === 'fully_paid' ? 'text-emerald-500' : 
-                                        booking.paymentStatus === 'advance_paid' ? 'text-blue-500' : 'text-amber-500'
+                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Base Yield</p>
+                                    <p className="text-sm font-black text-slate-600">₹{booking.base_amount || booking.total_amount}</p>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-emerald-500">Extra Yield (2%)</p>
+                                    <p className="text-sm font-black text-emerald-600">+₹{booking.partner_bonus || 0}</p>
+                                </div>
+                                <div className="text-right space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Net Revenue</p>
+                                    <p className="text-xl font-black text-slate-900 tracking-tighter italic">₹{booking.partner_total || (booking.total_amount)}</p>
+                                    <p className={`text-[8px] font-black uppercase tracking-widest ${
+                                        booking.payment_status === 'fully_paid' ? 'text-emerald-500' : 
+                                        booking.payment_status === 'advance_paid' ? 'text-blue-500' : 'text-amber-500'
                                     }`}>
-                                        {booking.paymentStatus.replace('_', ' ')}
+                                        {booking.payment_status?.replace('_', ' ')}
                                     </p>
                                 </div>
                                 <div className="h-10 w-[1px] bg-slate-100 hidden xl:block"></div>
-                                <button className="p-4 bg-slate-50 hover:bg-blue-600 text-slate-300 hover:text-white rounded-2xl transition-all shadow-sm">
+                                <button className="p-4 bg-white hover:bg-blue-600 text-slate-300 hover:text-white rounded-2xl transition-all shadow-sm border border-slate-100">
                                     <ArrowUpRight size={20} />
                                 </button>
                             </div>

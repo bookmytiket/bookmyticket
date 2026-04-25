@@ -35,6 +35,7 @@ export async function generateMetadata({ params }) {
   return {
     title: override?.title || `Events, Movies, Plays, Sports & Activities in ${capitalizedCity} - BookMyTicket ${capitalizedCity}`,
     description: override?.description || `BookMyTicket offers upcoming events, showtimes, concert tickets, and cultural activities near ${capitalizedCity}. Explore promotional offers and book tickets online for the best experiences in ${capitalizedCity}.`,
+    keywords: override?.keywords || `events in ${city}, movie tickets ${city}, bookmyshow ${city}, movie ticket discounts ${city}, bookmyticket ${city}`,
     alternates: {
       canonical: `https://bookmyticket.net/events/in/${city.toLowerCase()}`,
     }

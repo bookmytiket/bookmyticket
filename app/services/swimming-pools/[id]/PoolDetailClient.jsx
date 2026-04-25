@@ -47,6 +47,37 @@ export default function PoolDetailClient({ id: poolId }) {
         return () => supabase.removeChannel(channel);
     }, [poolId]);
 
+    const calculatePricing = () => {
+        if (!pool) return { base: 0, platform: 0, gst: 0, total: 0, partner_bonus: 0, platform_revenue: 0, partner_total: 0 };
+        
+        // Step 0: Base Amount
+        const baseAmount = pool.price_per_hour || 0;
+
+        // Step 1: Platform Charge (7%)
+        const platformCharge = baseAmount * 0.07;
+
+        // Step 2: GST on Platform Charge (18%)
+        const gstAmount = platformCharge * 0.18;
+
+        // Step 3: Partner Share from Platform Charge (2% of base)
+        const partnerBonus = baseAmount * 0.02;
+
+        // Step 4: Final Calculations
+        const totalAmount = baseAmount + platformCharge + gstAmount;
+        const platformRevenue = platformCharge - partnerBonus;
+        const partnerTotal = baseAmount + partnerBonus;
+
+        return {
+            base: baseAmount,
+            platform: platformCharge,
+            gst: gstAmount,
+            total: totalAmount,
+            partner_bonus: partnerBonus,
+            platform_revenue: platformRevenue,
+            partner_total: partnerTotal
+        };
+    };
+
     const availableSlots = useMemo(() => {
         return slots.map(slot => {
             const bookedCount = bookings.filter(b => b.slot_id === slot.id).length;
@@ -64,6 +95,7 @@ export default function PoolDetailClient({ id: poolId }) {
 
         setIsBooking(true);
         try {
+            const pricing = calculatePricing();
             const { error } = await supabase.from('pool_bookings').insert([{
                 pool_id: poolId,
                 user_id: user.id,
@@ -71,7 +103,13 @@ export default function PoolDetailClient({ id: poolId }) {
                 slot_id: selectedSlot.id,
                 status: 'Pending',
                 notes: notes,
-                price_paid: pool.price_per_hour
+                base_amount: pricing.base,
+                platform_charge: pricing.platform,
+                gst_amount: pricing.gst,
+                partner_bonus: pricing.partner_bonus,
+                platform_revenue: pricing.platform_revenue,
+                partner_total: pricing.partner_total,
+                price_paid: pricing.total
             }]);
 
             if (error) throw error;
@@ -139,8 +177,9 @@ export default function PoolDetailClient({ id: poolId }) {
                                 <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>{pool.contact_details || "+91 98765 43210"}</div>
                             </div>
                             <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "16px" }}>
-                                <div style={{ fontSize: "11px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", marginBottom: "4px" }}>Pricing</div>
-                                <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>₹{pool.price_per_hour}/hr</div>
+                                <div style={{ fontSize: "11px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", marginBottom: "4px" }}>Total Price</div>
+                                <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>₹{calculatePricing().total.toFixed(2)}</div>
+                                <div style={{ fontSize: "9px", color: "#94a3b8", marginTop: "2px" }}>Incl. Platform Fee & GST</div>
                             </div>
                         </div>
                     </section>

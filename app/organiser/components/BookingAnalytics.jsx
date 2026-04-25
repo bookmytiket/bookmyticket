@@ -78,8 +78,10 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
             return matchesEvent && statusOk;
         });
 
-        const totalRevenue = filteredBookings.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
-        const totalTickets = filteredBookings.reduce((sum, b) => sum + (Number(b.ticket_count) || 0), 0);
+        const totalRevenue = filteredBookings.reduce((sum, b) => sum + (Number(b.partner_total || b.total_price || b.total_amount) || 0), 0);
+        const totalGross = filteredBookings.reduce((sum, b) => sum + (Number(b.total_price || b.total_amount) || 0), 0);
+        const totalBonus = filteredBookings.reduce((sum, b) => sum + (Number(b.partner_bonus) || 0), 0);
+        const totalTickets = filteredBookings.reduce((sum, b) => sum + (Number(b.ticket_count || 1) || 0), 0);
         
         const currentEvents = selectedEventId === 'all' ? events : events.filter(e => String(e.id) === String(selectedEventId));
         const activeEventsCount = currentEvents.filter(e => e.status?.toLowerCase() === 'published' || e.status?.toLowerCase() === 'active').length;
@@ -97,7 +99,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
         filteredBookings.forEach(b => {
             const date = new Date(b.created_at).toISOString().split('T')[0];
             if (trendMap[date] !== undefined) {
-                trendMap[date] += Number(b.total_price) || 0;
+                trendMap[date] += Number(b.partner_total || b.total_price || b.total_amount) || 0;
             }
         });
 
@@ -108,17 +110,19 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
         const eventPerfMap = {};
         filteredBookings.forEach(b => {
-            const event = events.find(e => String(e.id) === String(b.event_id));
-            const name = event?.title || 'Unknown Event';
+            const event = events.find(e => String(e.id) === String(b.event_id || b.turf_id));
+            const name = event?.title || event?.name || 'Unknown Facility';
             if (!eventPerfMap[name]) eventPerfMap[name] = { name, revenue: 0, tickets: 0 };
-            eventPerfMap[name].revenue += Number(b.total_price) || 0;
-            eventPerfMap[name].tickets += Number(b.ticket_count) || 0;
+            eventPerfMap[name].revenue += Number(b.partner_total || b.total_price || b.total_amount) || 0;
+            eventPerfMap[name].tickets += Number(b.ticket_count || 1) || 0;
         });
 
         const eventData = Object.values(eventPerfMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
         return {
             totalRevenue,
+            totalGross,
+            totalBonus,
             totalTickets,
             activeEventsCount,
             salesTrendData,
@@ -302,7 +306,7 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
                 <MetricCard 
-                    title="Gross Revenue" 
+                    title="Partner Net Yield" 
                     value={`₹${stats.totalRevenue.toLocaleString()}`} 
                     icon={DollarSign} 
                     trend="up" 
@@ -311,11 +315,16 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                     isDark={isDark}
                 />
                 <MetricCard 
-                    title="Tickets Issued" 
-                    value={stats.totalTickets.toLocaleString()} 
-                    icon={Ticket} 
-                    trend="up" 
-                    trendValue="8.2%" 
+                    title="Extra Yield (2%)" 
+                    value={`₹${stats.totalBonus.toLocaleString()}`} 
+                    icon={Sparkles} 
+                    color="#10b981"
+                    isDark={isDark}
+                />
+                <MetricCard 
+                    title="Gross User Paid" 
+                    value={`₹${stats.totalGross.toLocaleString()}`} 
+                    icon={Activity} 
                     color="#8b5cf6"
                     isDark={isDark}
                 />
@@ -324,15 +333,6 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                     value={stats.activeEventsCount} 
                     icon={Calendar} 
                     color="#ec4899"
-                    isDark={isDark}
-                />
-                <MetricCard 
-                    title="Average Order" 
-                    value={`₹${stats.averageOrderValue.toFixed(0)}`} 
-                    icon={TrendingUp} 
-                    trend="up" 
-                    trendValue="4.1%" 
-                    color="#10b981"
                     isDark={isDark}
                 />
             </div>
