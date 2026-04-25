@@ -31,9 +31,9 @@ export async function POST(request) {
       const html = `
         <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; padding: 40px 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-            <!-- Header Banner -->
-            <div style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); padding: 40px; text-align: center;">
-              <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.025em; text-transform: uppercase;">BookMyTicket</h1>
+            <!-- Header Banner - Pink & Purple Gradient -->
+            <div style="background: linear-gradient(135deg, #FF1493 0%, #8A2BE2 100%); padding: 40px; text-align: center;">
+              <img src="https://bookmyticket.net/logo.png" alt="BookMyTicket" style="height: 50px; width: auto; filter: brightness(0) invert(1);" />
             </div>
             
             <div style="padding: 40px;">
@@ -42,9 +42,9 @@ export async function POST(request) {
                 Thanks for subscribing to our newsletter! You'll now be the first to know about the most exciting events, exclusive deals, and premium turf bookings happening near you.
               </p>
               
-              <div style="background-color: #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
-                <h3 style="color: #334155; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">What to expect:</h3>
-                <ul style="color: #475569; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.8;">
+              <div style="background-color: #fdf2f8; border-radius: 16px; padding: 24px; margin-bottom: 32px; border: 1px solid #fbcfe8;">
+                <h3 style="color: #9d174d; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">What to expect:</h3>
+                <ul style="color: #be185d; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.8;">
                   <li>Early access to popular concert tickets</li>
                   <li>Flash sales on professional services</li>
                   <li>Exclusive rewards for active members</li>
@@ -52,7 +52,7 @@ export async function POST(request) {
               </div>
               
               <div style="text-align: center;">
-                <a href="https://bookmyticket.net" style="display: inline-block; background-color: #f43f5e; color: #ffffff; padding: 16px 32px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: background-color 0.2s;">
+                <a href="https://bookmyticket.net" style="display: inline-block; background: linear-gradient(135deg, #FF1493 0%, #C71585 100%); color: #ffffff; padding: 16px 32px; border-radius: 12px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(255, 20, 147, 0.2);">
                   Explore Trending Events
                 </a>
               </div>
