@@ -3,13 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/emailService";
 import { parseEmailTemplate } from "@/lib/templateParser";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin = (supabaseUrl && supabaseServiceKey) 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
 export async function POST(req) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ success: false, error: "Supabase credentials missing" }, { status: 500 });
+    }
     const { templateId, target, filter, customSubject, customBody } = await req.json();
 
     // 1. Fetch Template
