@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Image, Dimensions, ActivityIndicator, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSupabaseQuery } from '../hooks/useSupabase';
+import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/Theme';
 import { HERO_BANNER_SLIDES } from '../data/homeEvents';
@@ -13,9 +15,28 @@ const { width } = Dimensions.get('window');
 
 export default function SignInScreen() {
   console.log('!!!!!!! [CRITICAL] SIGN IN SCREEN LOADED - VERSION 8 !!!!!!!');
-  const { login, verifyLoginOTP, selectedCity } = useAuth();
+  const { user, login, verifyLoginOTP, selectedCity } = useAuth();
   const navigation = useNavigation();
   const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+
+  useEffect(() => {
+    console.log('[SignInScreen] useEffect checking user:', !!user);
+    if (user) {
+      console.log('[SignInScreen] User exists! Attempting navigation...');
+      if (!selectedCity) {
+        console.log('[SignInScreen] Navigating to Location');
+        navigation.reset({ index: 0, routes: [{ name: 'Location' }] });
+      } else {
+        if (navigation.canGoBack()) {
+          console.log('[SignInScreen] Navigating goBack');
+          navigation.goBack();
+        } else {
+          console.log('[SignInScreen] Navigating to MainTabs');
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+        }
+      }
+    }
+  }, [user, navigation, selectedCity]);
 
   const [mode, setMode] = useState('signin');
   const [identifier, setIdentifier] = useState('');
@@ -96,50 +117,105 @@ export default function SignInScreen() {
         if (res.needsOtp) {
           setLoginEmail(res.email);
           setLoginStep(2);
-          return;
-        }
-
-        if (res.role === 'staff') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'MainTabs', params: { screen: 'Dashboard' } }],
-          });
-          return;
-        } 
-
-        if (res.role === 'vendor' || res.role === 'admin' || res.role === 'organiser') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Management' }],
-          });
-          return;
-        }
-        
-        if (!selectedCity) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Location' }],
-          });
         } else {
-          // If they came from a specific page (e.g. checkout), go back. 
-          // Otherwise, go to MainTabs.
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          } else {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'MainTabs' }],
-            });
-          }
+          // Note: navigation happens via useEffect when user state changes!
         }
-        return;
+      } else {
+        setError(res.error);
       }
-      setError(res.error);
     } catch (err) {
       console.error(err);
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSSO = async () => {
+    console.log('[handleGoogleSSO] Started');
+    try {
+      setLoading(true);
+      setError('');
+      const redirectUrl = 'bookmyticket://auth/callback'; // App deep link
+      console.log('[handleGoogleSSO] Opening browser');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true, // we handle the browser ourselves
+        }
+      });
+      if (error) {
+        console.log('[handleGoogleSSO] OAuth error:', error);
+        throw error;
+      }
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        console.log('[handleGoogleSSO] Browser result:', result.type);
+        if (result.type === 'success' && result.url) {
+          console.log("OAuth Success URL:", result.url);
+          
+          const extractParam = (url, param) => {
+            const match = url.match(new RegExp(`[#&]${param}=([^&]+)`));
+            return match ? match[1] : null;
+          };
+          
+          const access_token = extractParam(result.url, 'access_token');
+          const refresh_token = extractParam(result.url, 'refresh_token');
+          console.log('[handleGoogleSSO] Parsed tokens:', !!access_token, !!refresh_token);
+          
+          if (access_token && refresh_token) {
+            console.log('[handleGoogleSSO] Bridge resuming, waiting 500ms...');
+            
+            setTimeout(async () => {
+              try {
+                console.log('[handleGoogleSSO] Setting session now...');
+                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({ 
+                  access_token, 
+                  refresh_token 
+                });
+                
+                if (sessionError) {
+                  console.log('[handleGoogleSSO] Session error:', sessionError);
+                  setError('Failed to save session. Please try again.');
+                  setLoading(false);
+                  return;
+                }
+                
+                console.log('[handleGoogleSSO] Session set successfully!', !!sessionData);
+                
+                // Navigate the user to the correct screen based on city selection
+                if (!selectedCity) {
+                  navigation.reset({ index: 0, routes: [{ name: 'Location' }] });
+                } else {
+                  if (navigation.canGoBack()) {
+                    navigation.goBack();
+                  } else {
+                    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+                  }
+                }
+              } catch (asyncErr) {
+                console.error('[handleGoogleSSO] Async error:', asyncErr);
+                setLoading(false);
+              }
+            }, 500);
+            
+            // Return early so finally block doesn't set loading to false before timeout finishes
+            return;
+          } else {
+            console.log('[handleGoogleSSO] Tokens were null');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[handleGoogleSSO] Catch block error:', err);
+      setError('Google Login failed. Please try again.');
+    } finally {
+      // Only run this if we didn't return early for the setTimeout
+      if (loading) {
+        console.log('[handleGoogleSSO] Finally block. Setting loading false.');
+        setLoading(false);
+      }
     }
   };
 
@@ -345,6 +421,21 @@ export default function SignInScreen() {
                   <LinearGradient colors={Colors.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
                     <Text style={styles.btnText}>{loading ? 'Checking…' : 'Log in'}</Text>
                   </LinearGradient>
+                </TouchableOpacity>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+                  <Text style={{ marginHorizontal: 10, color: '#9ca3af', fontWeight: '600' }}>OR</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.googleBtn} 
+                  onPress={handleGoogleSSO} 
+                  disabled={loading}
+                >
+                  <Image source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }} style={{ width: 24, height: 24, marginRight: 12 }} />
+                  <Text style={styles.googleBtnText}>Continue with Google</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -573,6 +664,8 @@ const styles = StyleSheet.create({
   success: { color: Colors.success, fontSize: 14, marginBottom: 16, textAlign: 'center', fontWeight: '600' },
   btn: { padding: 18, borderRadius: 14, alignItems: 'center', marginBottom: 20 },
   btnText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
+  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 20 },
+  googleBtnText: { color: '#374151', fontSize: 16, fontWeight: '700' },
   link: { color: Colors.secondary, fontSize: 15, textAlign: 'center', fontWeight: '600' },
   stepTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 12, textAlign: 'center' },
   infoText: { fontSize: 14, color: '#64748b', marginBottom: 20, textAlign: 'center' },

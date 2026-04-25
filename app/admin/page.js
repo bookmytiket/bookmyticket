@@ -597,14 +597,14 @@ function AdminHomePage() {
     });
 
 
-    const { data: rawPaymentGateways = [] } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: false });
+    const { data: rawPaymentGateways = [], loading: gatewaysLoading } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: false });
     const [addPaymentGateway] = useSupabaseMutation('payment_gateways', 'insert');
     const [patchPaymentGateway] = useSupabaseMutation('payment_gateways', 'update', (q, p) => q.eq('id', p.id));
     const [removePaymentGateway] = useSupabaseMutation('payment_gateways', 'delete', (q, p) => q.eq('id', p.id));
 
     // Seed default gateways if empty
     useEffect(() => {
-        if (rawPaymentGateways !== undefined && rawPaymentGateways.length === 0) {
+        if (!gatewaysLoading && rawPaymentGateways.length === 0) {
             const defaults = [
                 { name: "Stripe", is_enabled: true, config: { apiKey: "", secret_key: "", webhook_secret: "", mode: "test" }, test_mode: true },
                 { name: "PayPal", is_enabled: false, config: { apiKey: "", secret_key: "", mode: "test" }, test_mode: true },
@@ -613,9 +613,9 @@ function AdminHomePage() {
                 { name: "PhonePe", is_enabled: false, config: { apiKey: "", secret_key: "", mode: "test" }, test_mode: true },
                 { name: "Paytm", is_enabled: false, config: { apiKey: "", secret_key: "", mode: "test" }, test_mode: true }
             ];
-            defaults.forEach(d => addPaymentGateway(d));
+            defaults.forEach(d => addPaymentGateway(d).catch(e => console.log('Gateway seed skipped:', e.message)));
         }
-    }, [rawPaymentGateways]);
+    }, [rawPaymentGateways, gatewaysLoading]);
 
     // Fee Settings
     const { data: feeSettingsArr = [] } = useSupabaseQuery('fee_settings', q => q, [], { realtime: false });

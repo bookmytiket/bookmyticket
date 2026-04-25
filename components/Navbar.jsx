@@ -263,13 +263,24 @@ export default function Navbar() {
     }
   };
 
+  const [brandingLogo, setBrandingLogo] = useState("/logo.png");
+
+  useEffect(() => {
+    fetch('/api/branding')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo_url) setBrandingLogo(data.logo_url);
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between' }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
-            <img src="/logo.png" alt="Logo" style={{ height: scrolled ? "45px" : "65px", width: "auto", display: "block", transition: "all 0.3s ease" }} />
+            <img src={brandingLogo} alt="Logo" style={{ height: scrolled ? "45px" : "65px", width: "auto", display: "block", transition: "all 0.3s ease" }} />
           </Link>
 
 

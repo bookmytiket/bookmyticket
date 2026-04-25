@@ -61,8 +61,8 @@ export default function JoinNowButton({ eventId, className = "" }) {
         );
     }
 
-    // Don't show anything if it's not a virtual event
-    if (access.status === "not_virtual") return null;
+    // Don't show anything if it's not a virtual event or if the event doesn't exist
+    if (access.status === "not_virtual" || access.status === "not_found") return null;
 
     const handleAction = (e) => {
         e.preventDefault();

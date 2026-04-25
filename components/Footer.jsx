@@ -44,6 +44,17 @@ export default function Footer() {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
+    const [brandingLogo, setBrandingLogo] = React.useState("/logo.png");
+
+    React.useEffect(() => {
+        fetch('/api/branding')
+          .then(res => res.json())
+          .then(data => {
+            if (data.logo_url) setBrandingLogo(data.logo_url);
+          })
+          .catch(console.error);
+    }, []);
+
     const copyright = (() => {
         if (rawCopyright == null) return DEFAULT_COPYRIGHT;
         try {
@@ -92,7 +103,7 @@ export default function Footer() {
                     {/* Col 1 — Brand */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "center" : "flex-start" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "42px", width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
+                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "42px", width: "auto", display: "block" }} />
                         </div>
                         <p style={{ 
                             fontSize: "13.5px", 

@@ -99,17 +99,27 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Sign in to manage your account</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+      <View style={styles.unauthContainer}>
+        <BrandingHeader style={{ marginTop: 24, marginBottom: 20 }} />
+        <View style={styles.unauthCard}>
+          <View style={styles.unauthIconContainer}>
+             <Ionicons name="person-circle-outline" size={80} color={Colors.primary} />
+          </View>
+          <Text style={styles.unauthTitle}>Your Profile</Text>
+          <Text style={styles.unauthSub}>Sign in or create an account to view your bookings, manage tickets, and access the professional hub.</Text>
+          
+          <TouchableOpacity 
+            style={styles.unauthBtnWrapper}
+            onPress={() => navigation.navigate('SignIn')}
+          >
             <LinearGradient
               colors={Colors.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.btn}
+              style={styles.unauthBtn}
             >
-              <Text style={styles.btnText}>Sign In</Text>
+              <Text style={styles.unauthBtnText}>Sign In / Register</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -740,4 +750,65 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
   },
   title: { fontSize: 18, color: Colors.textMuted, marginBottom: 28, textAlign: 'center', fontWeight: '600' },
+  unauthContainer: { flex: 1, backgroundColor: '#f8fafc', padding: 20 },
+  unauthCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    marginTop: 20,
+  },
+  unauthIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  unauthTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1e293b',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  unauthSub: {
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+    fontWeight: '500',
+  },
+  unauthBtnWrapper: {
+    width: '100%',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  unauthBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    width: '100%',
+  },
+  unauthBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
 });

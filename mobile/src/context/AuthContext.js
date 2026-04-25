@@ -27,32 +27,45 @@ export function AuthProvider({ children }) {
     loadStoredUser();
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[AuthContext] onAuthStateChange event: ${event}, session exists: ${!!session}`);
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        const role = (profile?.role || 'user').toLowerCase();
+        try {
+          console.log(`[AuthContext] Fetching profile for user: ${session.user.id}`);
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
 
-        // Security check for organiser on auth state change: 
-        // We allow them to stay logged in for public features, but skip setting professional state
-        if (role === 'organiser') {
-           // We used to sign out here, but it caused login loops. 
-           // Now we just let them stay as a user but blocks professional screens later.
-        }
+          console.log(`[AuthContext] Profile fetch complete. Error: ${error?.message}, Profile exists: ${!!profile}`);
+          const role = (profile?.role || 'user').toLowerCase();
+
+          const authUser = {
+            id: session.user.id,
+            identifier: session.user.email,
+            email: session.user.email,
+            name: profile?.full_name || profile?.name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: role === 'user' ? 'public' : role,
+            ...(profile || {}),
+          };
           
-        const authUser = {
-          id: session.user.id,
-          identifier: session.user.email,
-          email: session.user.email,
-          name: profile?.full_name || profile?.name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          role: role === 'user' ? 'public' : role,
-          ...(profile || {}),
-        };
-        setUser(authUser);
-        await AsyncStorage.setItem('user', JSON.stringify(authUser));
+          console.log('[AuthContext] Setting user state...');
+          setUser(authUser);
+          await AsyncStorage.setItem('user', JSON.stringify(authUser));
+          console.log('[AuthContext] User state and AsyncStorage set successfully.');
+        } catch (err) {
+          console.error("[AuthContext] Error setting user profile in AuthContext:", err);
+          // Fallback if db fails, still log them in
+          const authUser = {
+            id: session.user.id,
+            identifier: session.user.email,
+            email: session.user.email,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            role: 'public',
+          };
+          setUser(authUser);
+          await AsyncStorage.setItem('user', JSON.stringify(authUser));
+        }
       } else {
         setUser(null);
         await AsyncStorage.removeItem('user');

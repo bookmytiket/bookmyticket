@@ -20,9 +20,14 @@ import * as htmlToImage from 'html-to-image';
 import jsPDF from 'jspdf';
 
 export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
-  // Fetch branding for Powered By logo
-  const { data: brandingArr = [] } = useSupabaseQuery('site_branding', q => q, [], { realtime: true });
-  const branding = (brandingArr && brandingArr[0] && brandingArr[0].powered_by_logo_url) ? brandingArr[0] : { powered_by_logo_url: '/logo.png' };
+  // Fetch branding for Powered By logo via API to bypass RLS
+  const [branding, setBranding] = React.useState({ powered_by_logo_url: '/logo.png' });
+  React.useEffect(() => {
+      fetch('/api/branding')
+          .then(res => res.json())
+          .then(data => { if (data.powered_by_logo_url) setBranding(data); })
+          .catch(console.error);
+  }, []);
     const ticketRef = React.useRef(null);
     const [downloading, setDownloading] = React.useState(false);
     const [isCapturing, setIsCapturing] = React.useState(false);
@@ -185,7 +190,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
 
     const cacheBuster = `v=${Date.now()}`;
     const getFinalSrc = (src) => {
-        if (!src) return src;
+        if (!src || src === "undefined" || src === "null") return "https://images.unsplash.com/photo-1540575467063-178a50c2df87";
         if (src.startsWith('data:')) return src;
         // Only add cache buster to internal or supabase URLs
         if (src.includes('bookmyticket') || src.startsWith('/')) {
@@ -224,20 +229,11 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
             )}
 
             <div className="digital-ticket-container select-none" style={containerStyle} ref={ticketRef}>
-                {/* Watermark Overlays */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03] flex flex-wrap gap-20 p-20 rotate-[-25deg] z-0">
-                    {Array.from({ length: 12 }).map((_, i) => (
-                        <div key={i} className="text-4xl font-black whitespace-nowrap uppercase italic tracking-tighter">
-                            {customerName} • {shortId}
-                        </div>
-                    ))}
-                </div>
-
                 <div className="flex flex-col md:flex-row w-full relative z-10">
                     {/* Left Section: Event Image */}
                     <div className="w-full md:w-[30%] relative min-h-[160px] md:min-h-[240px]">
                         <img 
-                            src={getFinalSrc(event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87")} 
+                            src={getFinalSrc(event?.img)} 
                             alt={event.title}
                             crossOrigin="anonymous"
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -333,7 +329,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                         
                         {/* Centered Logo - UI Size */}
                         <div className="flex-1 flex justify-center">
-                            <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                            <img src={getFinalSrc(branding.logo_url || "/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
                         </div>
 
                         {showDownload && (
@@ -361,7 +357,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                         gap: '12px',
                         borderTop: '1px solid rgba(255,255,255,0.1)'
                     }}>
-                        <img src={getFinalSrc(branding.powered_by_logo_url)} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
+                        <img src={getFinalSrc(branding.logo_url || "/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
                         <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>
                             Authorized Digital Ticket • BookMyTicket
                         </div>
