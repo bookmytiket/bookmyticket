@@ -74,84 +74,154 @@ export default function Footer() {
     const quickLinks = allLinks.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
 
     return (
-        <footer style={{ width: "100%", position: "relative" }}>
-            {/* Main footer with background image */}
-            <div style={{
-                position: "relative",
-                backgroundImage: "url('/bottom.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundAttachment: "fixed",
-            }}>
-                {/* Dark overlay */}
-                <div style={{
-                    position: "absolute", inset: 0,
-                    background: "rgba(10, 10, 20, 0.88)",
-                }} />
-
-                {/* Footer content */}
-                <div style={{
-                    position: "relative", zIndex: 1,
-                    maxWidth: "1240px", margin: "0 auto",
-                    padding: isMobile ? "40px 20px" : "60px 20px 40px",
-                    display: "grid",
-                    gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1.3fr",
-                    gap: isMobile ? "30px" : "40px",
-                    textAlign: isMobile ? "center" : "left",
+        <footer style={{ width: "100%", position: "relative", background: "#000000", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ maxWidth: "1240px", margin: "0 auto", padding: isMobile ? "40px 20px" : "40px 20px 20px" }}>
+                
+                {/* Upper Footer: Branding & Apps */}
+                <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr", 
+                    gap: "40px",
+                    marginBottom: "40px"
                 }}>
-
-                    {/* Col 1 — Brand */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "center" : "flex-start" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "42px", width: "auto", display: "block" }} />
+                    {/* Brand & Get the App */}
+                    <div>
+                        <div style={{ marginBottom: "32px" }}>
+                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "60px", width: "auto", display: "block", filter: "invert(1) brightness(2)" }} />
                         </div>
-                        <p style={{ 
-                            fontSize: "13.5px", 
-                            color: "rgba(255,255,255,0.6)", 
-                            lineHeight: 1.75, 
-                            margin: "0 0 24px", 
-                            maxWidth: isMobile ? "100%" : "240px" 
-                        }}>
-                            We are committed to creating a platform where business leaders, innovators, and professionals can come together to exchange ideas and experience unforgettable events.
+                        
+                        <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "16px", textTransform: "uppercase" }}>
+                            Get the App
+                        </h4>
+                        <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.6)", lineHeight: 1.6, marginBottom: "24px", maxWidth: "400px" }}>
+                            Book tickets faster and enjoy a seamless event experience on our mobile app.
                         </p>
-                        {/* Social Icons */}
-                        <div style={{ display: "flex", gap: "10px", justifyContent: isMobile ? "center" : "flex-start" }}>
-                            {SOCIALS.map((s, i) => (
-                                <button key={i} style={{
-                                    width: "36px", height: "36px", borderRadius: "50%",
-                                    background: "rgba(255,255,255,0.1)",
-                                    border: "1px solid rgba(255,255,255,0.15)",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    cursor: "pointer", transition: "all 0.25s ease",
-                                }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "#6366f1"; e.currentTarget.style.borderColor = "#6366f1"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-                                >
-                                    <svg width="15" height="15" viewBox={s.viewBox} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d={s.d} />
+                        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "40px" }}>
+                            {/* Google Play White Badge */}
+                            <a href="#" style={{ transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                                <div style={{ 
+                                    width: "140px", 
+                                    height: "42px", 
+                                    background: "#ffffff", 
+                                    borderRadius: "8px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    padding: "0 12px",
+                                    gap: "8px"
+                                }}>
+                                    <img src="https://img.icons8.com/color/48/google-play.png" alt="Google" style={{ width: "24px", height: "24px" }} />
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span style={{ color: "#000000", fontSize: "7px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>GET IT ON</span>
+                                        <span style={{ color: "#000000", fontSize: "14px", fontWeight: 800, lineHeight: 1.2 }}>Google Play</span>
+                                    </div>
+                                </div>
+                            </a>
+                            
+                            {/* App Store White Badge */}
+                            <a href="#" style={{ transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                                <div style={{ 
+                                    width: "140px", 
+                                    height: "42px", 
+                                    background: "#ffffff", 
+                                    borderRadius: "8px", 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    padding: "0 12px",
+                                    gap: "8px"
+                                }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M17.0571 11.2386C17.042 9.07345 18.8251 8.02641 18.9059 7.97341C17.8931 6.49502 16.3195 6.27533 15.7613 6.25263C14.4179 6.11633 13.1368 7.0522 12.4537 7.0522C11.7707 7.0522 10.7107 6.27041 9.5857 6.29132C8.10648 6.31302 6.75168 7.15545 5.9899 8.47953C4.45096 11.1554 5.59604 15.1118 7.08643 17.2662C7.81523 18.3182 8.67895 19.4975 9.81938 19.4542C10.9171 19.4109 11.331 18.7461 12.656 18.7461C13.981 18.7461 14.3541 19.4542 15.5133 19.4316C16.7118 19.4109 17.464 18.3752 18.1895 17.3115C19.03 16.084 19.3789 14.897 19.3975 14.841C19.3582 14.825 17.0819 13.9515 17.0571 11.2386ZM14.9362 4.49883C15.5458 3.76106 15.9554 2.73523 15.8427 1.7094C14.9592 1.74542 13.8893 2.30058 13.2543 3.03835C12.6868 3.68943 12.1906 4.73712 12.323 5.74106C13.3101 5.81734 14.3267 5.2366 14.9362 4.49883Z" fill="black"/>
                                     </svg>
-                                </button>
-                            ))}
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span style={{ color: "#000000", fontSize: "7px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>Download on the</span>
+                                        <span style={{ color: "#000000", fontSize: "14px", fontWeight: 800, lineHeight: 1.2 }}>App Store</span>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {/* Payment Options - Restored Grid Style */}
+                        <div style={{ 
+                            display: "grid", 
+                            gridTemplateColumns: "repeat(2, 1fr)", 
+                            gap: "30px 20px",
+                            maxWidth: "500px"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ color: "#ffffff", fontSize: "15px", fontWeight: 700 }}>UPI</span>
+                                <div style={{ display: "flex", gap: "-4px" }}>
+                                    {[
+                                        "https://img.icons8.com/color/48/google-pay.png",
+                                        "https://img.icons8.com/color/48/phone-pe.png",
+                                        "https://img.icons8.com/color/48/paytm.png"
+                                    ].map((url, i) => (
+                                        <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                            <img src={url} alt="UPI" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ color: "#ffffff", fontSize: "15px", fontWeight: 700 }}>CARD</span>
+                                <div style={{ display: "flex", gap: "-4px" }}>
+                                    {[
+                                        "https://img.icons8.com/color/48/visa.png",
+                                        "https://img.icons8.com/color/48/mastercard.png",
+                                        "https://img.icons8.com/color/48/amex.png"
+                                    ].map((url, i) => (
+                                        <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                            <img src={url} alt="Card" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ color: "#ffffff", fontSize: "15px", fontWeight: 700 }}>BANK</span>
+                                <div style={{ display: "flex", gap: "-4px" }}>
+                                    {[
+                                        "https://img.icons8.com/fluency/48/bank.png",
+                                        "https://img.icons8.com/fluency/48/museum.png",
+                                        "https://img.icons8.com/fluency/48/library.png"
+                                    ].map((url, i) => (
+                                        <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                            <img src={url} alt="Bank" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ color: "#ffffff", fontSize: "15px", fontWeight: 700 }}>WALLET</span>
+                                <div style={{ display: "flex", gap: "-4px" }}>
+                                    {[
+                                        "https://img.icons8.com/fluency/48/safe.png",
+                                        "https://img.icons8.com/color/48/wallet--v1.png",
+                                        "https://img.icons8.com/color/48/phone-pe.png"
+                                    ].map((url, i) => (
+                                        <div key={i} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                            <img src={url} alt="Wallet" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Col 2 — Quick Links */}
+                    {/* Quick Links */}
                     <div>
-                        <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#ffffff", margin: "0 0 20px", letterSpacing: "0.01em" }}>
-                            Quick Links
+                        <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "24px", textTransform: "uppercase" }}>
+                            Company
                         </h4>
-                        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
                             {quickLinks.map(page => (
                                 <li key={page.title}>
                                     <a href={page.slug === "#" ? "#" : `/p/${page.slug}`} style={{
-                                        fontSize: "14px", color: "rgba(255,255,255,0.6)",
-                                        textDecoration: "none", transition: "color 0.2s",
-                                        display: "flex", alignItems: "center", justifyContent: isMobile ? "center" : "flex-start", gap: "6px",
+                                        fontSize: "14px", color: "rgba(255,255,255,0.5)",
+                                        textDecoration: "none", transition: "all 0.2s",
+                                        fontWeight: 500,
+                                        display: "inline-block"
                                     }}
-                                        onMouseEnter={e => e.currentTarget.style.color = "#a5b4fc"}
-                                        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
+                                        onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                                        onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
                                     >
-                                        <span style={{ color: "#6366f1", fontSize: "10px" }}>▶</span>
                                         {page.title}
                                     </a>
                                 </li>
@@ -159,48 +229,81 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* Col 3 — Contact */}
+                    {/* Contact */}
                     <div>
-                        <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#ffffff", margin: "0 0 20px" }}>
-                            Contact Us
+                        <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "24px", textTransform: "uppercase" }}>
+                            Connect
                         </h4>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            {[
-                                { icon: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z", text: "+91 98765 43210" },
-                                { icon: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", text: "Coimbatore, Tamil Nadu, India" },
-                                { icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6", text: "hello@bookmyticket.net" },
-                                { icon: "M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z", text: "bookmyticket.net" },
-                            ].map((item, i) => (
-                                <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: isMobile ? "center" : "flex-start", gap: "10px" }}>
-                                    <div style={{ flexShrink: 0, marginTop: "2px" }}>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d={item.icon} />
-                                        </svg>
-                                    </div>
-                                    <span style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.65)", lineHeight: 1.5, textAlign: "left" }}>{item.text}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.5)", lineHeight: 1.8 }}>
+                            Coimbatore, Tamil Nadu<br />
+                            India<br /><br />
+                            <a href="mailto:hello@bookmyticket.net" style={{ color: "#ffffff", textDecoration: "none" }}>hello@bookmyticket.net</a>
+                        </p>
                     </div>
-
-
                 </div>
 
-                {/* Divider */}
-                <div style={{ position: "relative", zIndex: 1, borderTop: "1px solid rgba(255,255,255,0.08)", margin: "0 20px" }} />
+                <div style={{ 
+                    marginTop: "20px",
+                    position: "relative"
+                }}>
+                    {/* Back to Top Button */}
+                    <button 
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        style={{
+                            position: "absolute",
+                            right: "0",
+                            top: "30px",
+                            width: "60px",
+                            height: "60px",
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
+                            border: "none",
+                            cursor: "pointer",
+                            display: isMobile ? "none" : "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 10px 20px rgba(248, 68, 100, 0.3)",
+                            transition: "transform 0.3s ease"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "translateY(-50%) scale(1.1)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "translateY(-50%) scale(1)"}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                    </button>
+                </div>
 
-                {/* Copyright bar — managed from Admin > Home Page > Copyright & Footer */}
-                <div style={{
-                    position: "relative", zIndex: 1,
-                    textAlign: "center", padding: "20px",
-                    color: "rgba(255,255,255,0.45)", fontSize: "13px",
+                {/* Bottom Bar: Socials & Copyright */}
+                <div style={{ 
+                    paddingTop: "40px", 
+                    borderTop: "1px solid rgba(255,255,255,0.08)",
                     display: "flex",
                     flexDirection: isMobile ? "column" : "row",
                     alignItems: "center",
-                    justifyContent: "center",
-                    gap: isMobile ? "10px" : "0",
+                    justifyContent: "space-between",
+                    gap: "30px"
                 }}>
-                    {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
+                    <div style={{ display: "flex", gap: "24px" }}>
+                        {SOCIALS.map((s, i) => (
+                            <a key={i} href="#" style={{
+                                color: "rgba(255,255,255,0.6)",
+                                transition: "all 0.2s ease",
+                                textDecoration: "none"
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
+                            >
+                                <svg width="20" height="20" viewBox={s.viewBox} fill="currentColor">
+                                    <path d={s.d} />
+                                </svg>
+                            </a>
+                        ))}
+                    </div>
+
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px" }}>
+                        {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
+                    </div>
                 </div>
             </div>
         </footer>

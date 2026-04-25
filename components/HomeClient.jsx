@@ -37,47 +37,78 @@ function TicketCard({ event }) {
   return (
     <div style={{ 
       backgroundColor: "#fff", 
-      borderRadius: "12px", 
+      borderRadius: "20px", 
       overflow: "hidden", 
-      border: "1px solid #e2e8f0", 
-      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      border: "1px solid #f1f5f9", 
+      boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
       height: '100%',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      cursor: 'pointer'
     }}>
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '2.3/3' }}>
-        <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', backgroundColor: '#f8fafc' }}>
+        <img 
+          src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=660&fit=crop"} 
+          alt={event.title} 
+          style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+        />
+        <div style={{ 
+          position: 'absolute', 
+          top: '12px', 
+          left: '12px', 
+          background: 'rgba(0,0,0,0.6)', 
+          backdropFilter: 'blur(4px)',
+          color: '#fff', 
+          fontSize: '10px', 
+          fontWeight: 800, 
+          padding: '4px 12px', 
+          borderRadius: '20px', 
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+          {event.category || 'Featured'}
+        </div>
       </div>
-      <div style={{ padding: "10px", flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', marginBottom: '6px' }}>
+      
+      <div style={{ padding: "16px", flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <h3 style={{ 
-            fontSize: "14px", 
-            fontWeight: 700, 
+            fontSize: "16px", 
+            fontWeight: 800, 
             margin: 0, 
             lineHeight: '1.2',
             color: '#111827',
             flex: 1,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden"
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>{event.title}</h3>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0, marginTop: '2px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#1d9bf0" style={{ flexShrink: 0 }}>
             <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.1 14.5l-4.2-4.2 1.4-1.4 2.8 2.8 6.1-6.1 1.4 1.4-7.5 7.5z" />
           </svg>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>{event.location || event.city || "TBA"}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{event.location || event.city || "TBA"}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>{event.date}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 700 }}>{event.date}</span>
           </div>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#111827' }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
+          <span style={{ 
+            fontSize: '12px', 
+            fontWeight: 800, 
+            color: '#111827',
+            background: '#f1f5f9',
+            padding: '2px 8px',
+            borderRadius: '6px'
+          }}>
+            {isFreeEvent(event) ? "FREE" : "PAID"}
+          </span>
         </div>
       </div>
     </div>
@@ -116,7 +147,194 @@ const parseEventDate = (dateStr, timeStr) => {
   }
 };
 
-export default function Home() {
+const WhyChooseUs = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const features = [
+    { 
+      title: "Lowest Platform Fees", 
+      icon: "💎", 
+      sub: "Save more on every ticket with our transparent pricing.",
+      details: "We believe in fair pricing. BookMyTicket offers the industry's lowest convenience fees, ensuring you and your fans get the best value for every rupee spent.",
+      color: "#f84464"
+    },
+    { 
+      title: "Verified Services", 
+      icon: "🛡️", 
+      sub: "All turfs and artists are handpicked and verified by our team.",
+      details: "Quality you can trust. Every sports turf and professional artist listed on our platform undergoes a rigorous 5-point verification check for your peace of mind.",
+      color: "#8b5cf6"
+    },
+    { 
+      title: "Instant E-Tickets", 
+      icon: "⚡", 
+      sub: "Get your digital ticket instantly via email and your dashboard.",
+      details: "No more waiting. Once your payment is confirmed, your secure QR-coded digital ticket is generated instantly and sent to your registered email and WhatsApp.",
+      color: "#fb923c"
+    },
+    { 
+      title: "24/7 Priority Support", 
+      icon: "💬", 
+      sub: "Our dedicated team is always here to help with your bookings.",
+      details: "We're here for you around the clock. Whether it's a booking query or a venue issue, our priority support team is just a call or chat away, 24 hours a day.",
+      color: "#22c55e"
+    }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          setActiveTab((curr) => (curr + 1) % features.length);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 50); // 5 seconds total (100 * 50ms)
+
+    return () => clearInterval(interval);
+  }, [features.length]);
+
+  const handleTabClick = (index) => {
+    setActiveTab(index);
+    setProgress(0);
+  };
+
+  return (
+    <div style={{ marginTop: '100px', padding: '0 20px' }}>
+      <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
+        <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, marginBottom: '24px', letterSpacing: '-0.04em', textAlign: 'center' }}>
+          <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Why Book with BookMyTicket?
+          </span>
+        </h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '60px', alignItems: 'center' }}>
+          {/* Left Side: Auto-Clicking Items */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {features.map((f, i) => (
+              <div 
+                key={i} 
+                onClick={() => handleTabClick(i)}
+                style={{ 
+                  padding: '24px', 
+                  borderRadius: '24px', 
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === i ? '#fff' : 'transparent',
+                  border: '1px solid',
+                  borderColor: activeTab === i ? '#e2e8f0' : 'transparent',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: activeTab === i ? '0 10px 25px rgba(0,0,0,0.05)' : 'none'
+                }}
+              >
+                {/* Progress Bar (Visible when active) */}
+                {activeTab === i && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    bottom: 0, 
+                    left: 0, 
+                    height: '3px', 
+                    width: `${progress}%`, 
+                    backgroundColor: f.color,
+                    transition: 'width 0.05s linear'
+                  }}></div>
+                )}
+                
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                  <div style={{ 
+                    fontSize: '28px', 
+                    width: '56px', 
+                    height: '56px', 
+                    borderRadius: '16px', 
+                    backgroundColor: activeTab === i ? `${f.color}15` : '#f1f5f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {f.icon}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800, color: activeTab === i ? '#0f172a' : '#64748b' }}>{f.title}</h4>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>{f.sub}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Side: Dynamic Visual Display */}
+          <div style={{ position: 'relative', minHeight: '400px' }}>
+            <div style={{
+              background: '#fff',
+              borderRadius: '40px',
+              padding: '60px 40px',
+              border: '1px solid #f1f5f9',
+              boxShadow: '0 30px 60px rgba(0,0,0,0.06)',
+              position: 'relative',
+              zIndex: 2,
+              animation: 'fadeInUp 0.5s ease-out'
+            }}>
+              <div style={{ 
+                fontSize: '64px', 
+                marginBottom: '32px',
+                width: '120px',
+                height: '120px',
+                borderRadius: '32px',
+                backgroundColor: `${features[activeTab].color}10`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {features[activeTab].icon}
+              </div>
+              <h3 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.02em' }}>
+                {features[activeTab].title}
+              </h3>
+              <p style={{ fontSize: '18px', color: '#64748b', lineHeight: 1.8, margin: 0 }}>
+                {features[activeTab].details}
+              </p>
+              
+              <div style={{ marginTop: '40px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#22c55e20', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Verified & Recommended Platform</span>
+              </div>
+            </div>
+            
+            {/* Background Glow */}
+            <div style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              left: '50%', 
+              transform: 'translate(-50%, -50%)',
+              width: '80%', 
+              height: '80%', 
+              backgroundColor: features[activeTab].color,
+              filter: 'blur(100px)',
+              opacity: 0.1,
+              zIndex: 1,
+              transition: 'background-color 0.5s ease'
+            }}></div>
+          </div>
+        </div>
+      </div>
+      
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+function HomeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCat = searchParams.get("category");
@@ -473,13 +691,14 @@ export default function Home() {
           }
         `}</style>
 
-        {/* 0) Hero Banners */}
-        <div style={{ width: '100%', paddingTop: isMobile ? '0' : '20px' }}>
-          <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
-        </div>
-        
-        <div style={{ width: '100%', paddingTop: isMobile ? '20px' : '40px' }}>
+        {/* 0) Top Video Hero (Primary) */}
+        <div style={{ width: '100%', paddingTop: isMobile ? '0' : '0' }}>
           <VideoHeroBanner />
+        </div>
+
+        {/* 1) Hero Image Sliders (Promotional) */}
+        <div style={{ width: '100%', paddingTop: isMobile ? '20px' : '40px' }}>
+          <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
         </div>
 
         <SubnavMarquee />
@@ -633,59 +852,96 @@ export default function Home() {
               <Sponsors />
             </div>
 
-            {/* SEO Content: About BookMyTicket */}
-            <section style={{ width: '100%', backgroundColor: '#f8fafc', padding: '60px 20px', borderTop: '1px solid #e2e8f0' }}>
-              <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '16px', letterSpacing: '-0.04em' }}>
-                    Your One-Stop Platform for <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Events & Services</span>
+            {/* Promotional Image Hero Banners moved to bottom for better flow */}
+
+            {/* DYNAMIC UI SECTION: About BookMyTicket */}
+            <section style={{ width: '100%', backgroundColor: '#ffffff', padding: '100px 20px', position: 'relative', overflow: 'hidden' }}>
+              {/* Decorative Background Elements */}
+              <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(248,68,100,0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
+              <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(192,38,211,0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
+
+              <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+                <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+                  <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
+                    Your One-Stop Platform for <br />
+                    <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      Events & Professional Services
+                    </span>
                   </h2>
-                  <p style={{ color: '#64748b', fontSize: '16px', maxWidth: '800px', margin: '0 auto', lineHeight: 1.6 }}>
-                    BookMyTicket is India's fastest-growing platform for discovering and booking unique experiences. From live <strong>concerts near me</strong> and comedy shows to sports turfs and <strong>best place to buy tickets</strong> for professional artist services, we bring the best of your city to your fingertips with <strong>no service fees</strong>.
+                  <p style={{ color: '#64748b', fontSize: '18px', maxWidth: '850px', margin: '0 auto', lineHeight: 1.8, fontWeight: 500 }}>
+                    BookMyTicket is India's fastest-growing destination for discovering unique experiences. 
+                    From live concerts and sports turfs to verified expert services, we bring your city to your fingertips.
                   </p>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
-                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Online Event Ticketing</h3>
-                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      Never miss out on the latest <strong>shows and events near me</strong>. Whether it's a high-energy music concert, a hilarious stand-up comedy special, or a local community festival, BookMyTicket offers a seamless and secure <strong>online ticketing system</strong> experience.
-                    </p>
-                  </div>
-                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Sell Tickets Online</h3>
-                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      Looking for the <strong>best way to sell tickets online</strong>? Our <strong>event ticketing software</strong> allows organisers to <strong>sell event tickets online free</strong> of upfront costs. Manage <strong>ticket sales</strong>, track registrations, and get your event live in minutes.
-                    </p>
-                  </div>
-                  <div style={{ background: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Professional Service Partners</h3>
-                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-                      From Mehendi artists to <strong>event management ticketing systems</strong>, our curated list of verified service providers ensures top-quality service. Browse portfolios and <strong>buy event tickets</strong> or book services directly through our platform.
-                    </p>
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px' }}>
+                  {[
+                    {
+                      title: "Online Event Ticketing",
+                      icon: "🎟️",
+                      color: "#f84464",
+                      desc: "Discover the latest **shows and events near me**. From music concerts to community festivals, enjoy a seamless and secure **online ticketing system**."
+                    },
+                    {
+                      title: "Sell Tickets Online",
+                      icon: "🚀",
+                      color: "#8b5cf6",
+                      desc: "The **best way to sell tickets online**. Our **event ticketing software** allows organisers to sell tickets free of upfront costs with advanced tracking."
+                    },
+                    {
+                      title: "Professional Partners",
+                      icon: "🤝",
+                      color: "#c026d3",
+                      desc: "Connect with verified Mehendi artists, photographers, and planners. Browse portfolios and **book services** directly through our platform."
+                    }
+                  ].map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      className="dynamic-card"
+                      style={{ 
+                        background: '#fff', 
+                        padding: '48px 40px', 
+                        borderRadius: '32px', 
+                        border: '1px solid #f1f5f9',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
+                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '20px'
+                      }}
+                    >
+                      <div style={{ 
+                        width: '64px', 
+                        height: '64px', 
+                        borderRadius: '18px', 
+                        background: `${item.color}10`, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontSize: '32px',
+                        marginBottom: '10px'
+                      }}>
+                        {item.icon}
+                      </div>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>{item.title}</h3>
+                      <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>
+                        {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#334155', fontWeight: 700 }}>{part}</strong> : part)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Why Book With BookMyTicket? (Competitor Pattern Optimization) */}
-                <div style={{ marginTop: '80px', textAlign: 'center' }}>
-                  <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '40px', letterSpacing: '-0.04em' }}>
-                    Why Book with <span style={{ color: '#f84464' }}>BookMyTicket?</span>
-                  </h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
-                    {[
-                      { title: "Lowest Platform Fees", icon: "💎", sub: "Save more on every ticket with our transparent pricing." },
-                      { title: "Verified Services", icon: "🛡️", sub: "All turfs and artists are handpicked and verified by our team." },
-                      { title: "Instant E-Tickets", icon: "⚡", sub: "Get your digital ticket instantly via email and your dashboard." },
-                      { title: "24/7 Support", icon: "💬", sub: "Our dedicated team is always here to help with your bookings." }
-                    ].map((feature, i) => (
-                      <div key={i} style={{ padding: '24px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', transition: 'transform 0.2s' }}>
-                        <div style={{ fontSize: '32px', marginBottom: '16px' }}>{feature.icon}</div>
-                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{feature.title}</h4>
-                        <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>{feature.sub}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <style>{`
+                  .dynamic-card:hover {
+                    transform: translateY(-12px);
+                    border-color: rgba(248,68,100,0.2);
+                    box-shadow: 0 30px 60px rgba(0,0,0,0.08);
+                    background: linear-gradient(to bottom right, #ffffff, #fdf2f8);
+                  }
+                `}</style>
+
+                {/* DYNAMIC UI SECTION: Why Book With BookMyTicket? */}
+                <WhyChooseUs />
 
                 {/* Content Expansion for Text-to-Code Ratio Improvement */}
                 <div style={{ marginTop: '100px', backgroundColor: '#f8fafc', padding: '60px 40px', borderRadius: '32px', border: '1px solid #e2e8f0' }}>
@@ -791,14 +1047,11 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Subscription Banner before Footer */}
-            <BrandCouponsSection coupons={allCoupons} />
-            <SubscriptionBanner />
+            {/* Image Banner removed from here - moved to top under video */}
           </div>
         )}
       </main>
-      <Footer />
-      <DemoToggle demoVisible={true} />
+
 
       {/* Digital Ticket Modal */}
       {viewTicketModal && (
@@ -840,101 +1093,7 @@ export default function Home() {
 }
 
 function DemoToggle() {
-  const [minimized, setMinimized] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinimized(true);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isMobile) return null;
-
-  if (minimized) {
-    return (
-      <div 
-        onClick={() => setMinimized(false)}
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 1000,
-          background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: '18px',
-          boxShadow: '0 10px 30px rgba(248, 68, 100, 0.4)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontWeight: 700,
-          fontSize: '13px',
-          animation: 'slideUp 0.5s ease-out'
-        }}
-      >
-        <Ticket size={16} />
-        Live Demo
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      style={{
-        position: 'fixed',
-        bottom: '30px',
-        right: '40px',
-        zIndex: 1000,
-        width: '204px', // 340 * 0.6
-        height: '420px', // 700 * 0.6
-        animation: 'slideUp 0.8s ease-out',
-        transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-      }}
-    >
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
-      
-      {/* Minimize Button */}
-      <button 
-        onClick={(e) => { e.stopPropagation(); setMinimized(true); }}
-        style={{
-          position: 'absolute',
-          top: '-10px',
-          right: '-10px',
-          width: '32px',
-          height: '32px',
-          borderRadius: '16px',
-          background: '#fff',
-          border: '2px solid #f84464',
-          color: '#f84464',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 1100,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}
-      >
-        <X size={16} strokeWidth={3} />
-      </button>
-
-      {/* Scaled Phone Demo */}
-      <TicketBookingDemo scale={0.6} />
-    </div>
-  );
+  return null;
 }
+
+export default HomeClient;
