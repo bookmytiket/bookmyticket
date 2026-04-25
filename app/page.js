@@ -745,6 +745,13 @@ function DemoToggle() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinimized(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (isMobile) return null;
 
   if (minimized) {
