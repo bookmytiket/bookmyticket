@@ -28,9 +28,9 @@ function PromoSlide({ isMobile }) {
             {/* Left: heading */}
             <div className="promo-heading-wrap" style={{ flex: isMobile ? "1" : "unset" }}>
                 <p style={{ margin: "0 0 4px", fontSize: isMobile ? "13px" : "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
-                <h1 className="promo-title" style={{ fontSize: isMobile ? "42px" : "clamp(32px, 5vw, 64px)" }}>
+                <h2 className="promo-title" style={{ fontSize: isMobile ? "42px" : "clamp(32px, 5vw, 64px)" }}>
                     ROCK<br />Events
-                </h1>
+                </h2>
                 <p style={{ margin: "6px 0 0", fontStyle: "italic", fontSize: isMobile ? "18px" : "16px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
             </div>
 

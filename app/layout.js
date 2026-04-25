@@ -30,8 +30,8 @@ const spaceGrotesk = Space_Grotesk({
 export async function generateMetadata() {
   const baseUrl = 'https://bookmyticket.net';
   
-  let title = 'BookMyTicket | Discover, Book & Experience Live Events & Services';
-  let description = 'Your gateway to incredible experiences. Book tickets for concerts, sports turfs, and professional services. Explore trending shows and create unforgettable memories on BookMyTicket.';
+  let title = 'BookMyTicket – Event Booking, Turf & Services in India';
+  let description = 'Book tickets for events, sports turf, and professional services near you. Discover trending shows and trusted providers on BookMyTicket.';
   let keywords = [
     'bookmyticket', 'event booking India', 'online ticket booking', 'book turfs online', 
     'professional artist booking', 'concert tickets', 'comedy show tickets', 
@@ -145,7 +145,7 @@ export default function RootLayout({ children }) {
               "name": "BookMyTicket",
               "url": "https://bookmyticket.net",
               "logo": "https://bookmyticket.net/logo.png",
-              "description": "BookMyTicket is India's leading platform for event ticketing, turf bookings, and professional artist services. Find movie ticket discounts, bookmyshow alternatives, and event tickets in Hyderabad, Bangalore, Mumbai, Chennai, Madurai, and more. Online ticket sales and best movie ticket booking app experience.",
+              "description": "BookMyTicket is the best platform for event booking, turf reservations, and professional artist services in India.",
               "keywords": "bookmyshow hyderabad, bookmyshow bangalore, bookmyshow mumbai, bookmyshow chennai, movie ticket discounts, movie coupons, event tickets India, online tickets for events, event ticketing platforms, buy tickets online, ticket selling platforms",
               "sameAs": [
                 "https://facebook.com/bookmyticket",
