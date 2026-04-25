@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { Figtree, Space_Grotesk } from 'next/font/google';
 import Script from 'next/script';
 import SeoAnalyticsScripts from '@/components/SeoAnalyticsScripts';
 import './globals.css';
@@ -14,11 +15,23 @@ import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 
+const figtree = Figtree({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-heading',
+});
+
 export async function generateMetadata() {
   const baseUrl = 'https://bookmyticket.net';
   
-  let title = 'BookMyTicket - Best Online Event Ticketing, Turf & Service Booking Platform';
-  let description = 'Book the latest events, sports turfs, and professional services online with BookMyTicket. Secure, fast, and easy booking for concerts, comedy shows, and specialized services across India.';
+  let title = 'BookMyTicket | Discover, Book & Experience Live Events & Services';
+  let description = 'Your gateway to incredible experiences. Book tickets for concerts, sports turfs, and professional services. Explore trending shows and create unforgettable memories on BookMyTicket.';
   let keywords = [
     'bookmyticket', 'event booking India', 'online ticket booking', 'book turfs online', 
     'professional artist booking', 'concert tickets', 'comedy show tickets', 
@@ -118,12 +131,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <meta property="og:site_name" content="BookMyTicket" />
         <meta name="twitter:site" content="@bookmyticket" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -173,7 +180,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body style={{ ['--font-heading']: '"Space Grotesk", sans-serif', ['--font-body']: '"Figtree", sans-serif' }} suppressHydrationWarning>
+      <body className={`${figtree.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
         <ToastProvider>
           <ConfirmProvider>
             <AuthProvider>

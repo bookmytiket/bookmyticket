@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { resolveBannerRedirect } from "@/lib/bannerHelper";
 
 const FEATURES = [
@@ -27,9 +28,9 @@ function PromoSlide({ isMobile }) {
             {/* Left: heading */}
             <div className="promo-heading-wrap" style={{ flex: isMobile ? "1" : "unset" }}>
                 <p style={{ margin: "0 0 4px", fontSize: isMobile ? "13px" : "11px", fontWeight: 800, letterSpacing: "3px", color: "#f84464", textTransform: "uppercase" }}>It's time to</p>
-                <h2 className="promo-title" style={{ fontSize: isMobile ? "42px" : "clamp(32px, 5vw, 64px)" }}>
+                <h1 className="promo-title" style={{ fontSize: isMobile ? "42px" : "clamp(32px, 5vw, 64px)" }}>
                     ROCK<br />Events
-                </h2>
+                </h1>
                 <p style={{ margin: "6px 0 0", fontStyle: "italic", fontSize: isMobile ? "18px" : "16px", fontWeight: 700, color: "#e2a0ff" }}>Calendar</p>
             </div>
 
@@ -163,7 +164,14 @@ export default function HeroBanner({ slides: propSlides, showDetails = true, sho
                             style={{ width: "100%", height: "100%", cursor: (slide.url || (slide.redirect_type && slide.redirect_id)) ? "pointer" : "default", position: "relative" }}
                         >
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)", zIndex: 1, pointerEvents: "none" }} />
-                            <img src={slide.image} alt={slide.alt} draggable={false} crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            <Image 
+                                src={slide.image} 
+                                alt={slide.alt} 
+                                fill
+                                priority={current === 0}
+                                quality={75}
+                                style={{ objectFit: "cover" }}
+                            />
                             {showDetails && (
                                 <div style={{ position: "absolute", bottom: "10%", left: "5%", right: "5%", zIndex: 2, pointerEvents: "none" }}>
                                     <h2 style={{ fontSize: isMobile ? "28px" : "clamp(24px, 4vw, 48px)", fontWeight: 800, marginBottom: "8px", lineHeight: 1.1, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>

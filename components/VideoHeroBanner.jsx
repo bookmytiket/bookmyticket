@@ -176,6 +176,7 @@ export default function VideoHeroBanner() {
             <video
                 ref={videoRef}
                 src="/bookmyticket/videoplayback.mp4"
+                preload="metadata"
                 poster="/og-image.png"
                 autoPlay
                 loop
@@ -217,7 +218,7 @@ export default function VideoHeroBanner() {
                 justifyContent: "center",
                 alignItems: "flex-start"
             }}>
-                <motion.h1 
+                <motion.h2 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8 }}
@@ -240,7 +241,7 @@ export default function VideoHeroBanner() {
                     }}>
                         Experience on BookMyTicket
                     </span>
-                </motion.h1>
+                </motion.h2>
 
                 <motion.p 
                   initial={{ opacity: 0, x: -20 }}
