@@ -25,7 +25,7 @@ export default function ServicesPage() {
   }, [category]);
 
   // Fetch all active turfs
-  const { data: turfsRaw = [], loading: turfsLoading } = useSupabaseQuery('turfs', (q) => q.eq('status', 'Active'), []);
+  const { data: turfsRaw = [], loading: turfsLoading } = useSupabaseQuery('turfs', (q) => q.eq('status', 'active'), []);
 
   // Normalize and merge data
   const mergedItems = useMemo(() => {
@@ -34,9 +34,10 @@ export default function ServicesPage() {
       id: t.id,
       name: t.name,
       category: "Turf Booking",
+      city: t.city || "",
       bio: t.description || "Premium sports facility with great amenities.",
-      portfolio: t.images?.map(img => ({ url: img, type: "image" })) || [],
-      pricing: [{ name: "Standard", price: t.pricePerHour || 0 }],
+      portfolio: (Array.isArray(t.images) ? t.images : [t.images]).filter(Boolean).map(img => ({ url: img, type: "image" })) || [],
+      pricing: [{ name: "Standard", price: t.price_per_hour || 0 }],
       rating: 5.0, // Placeholder
       reviewsCount: 0,
       isTurf: true
@@ -236,6 +237,30 @@ export default function ServicesPage() {
               ? "Loading experts..."
               : `${totalItems} result${totalItems !== 1 ? "s" : ""} ready to serve you`}
           </p>
+
+          {category === "Turf Booking" && (
+            <div style={{ marginTop: "24px", overflowX: "auto", paddingBottom: "10px" }} className="hide-scrollbar">
+                <div style={{ display: "flex", gap: "10px" }}>
+                    {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + i);
+                        const iso = d.toISOString().split('T')[0];
+                        const isSelected = false; // Add state if needed, for now just UI
+                        return (
+                            <div key={i} style={{
+                                minWidth: "70px", padding: "12px", borderRadius: "16px",
+                                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                                textAlign: "center", cursor: "pointer"
+                            }}>
+                                <div style={{ fontSize: "9px", fontWeight: 800, color: "#94a3b8", textTransform: "uppercase" }}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                <div style={{ fontSize: "18px", fontWeight: 900, color: "#fff", margin: "4px 0" }}>{d.getDate()}</div>
+                                <div style={{ fontSize: "8px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>{d.toLocaleDateString('en-US', { month: 'short' })}</div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -19,6 +19,15 @@ import Link from "next/link";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+const format12Hour = (timeStr) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
 function SlotManager() {
     const searchParams = useSearchParams();
     const turfId = searchParams.get("turfId");
@@ -226,7 +235,7 @@ function SlotManager() {
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">{block.date}</p>
-                                                <p className="text-sm font-black text-slate-900">{block.start_time} - {block.end_time}</p>
+                                                <p className="text-sm font-black text-slate-900">{format12Hour(block.start_time)} - {format12Hour(block.end_time)}</p>
                                             </div>
                                         </div>
                                         <button 
@@ -264,7 +273,7 @@ function SlotManager() {
                                                         <Clock size={16} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black text-slate-900">{slot.start_time} - {slot.end_time}</p>
+                                                        <p className="text-xs font-black text-slate-900">{format12Hour(slot.start_time)} - {format12Hour(slot.end_time)}</p>
                                                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                                             {slot.price_override ? `₹${slot.price_override}` : `Base Yield`}
                                                         </p>

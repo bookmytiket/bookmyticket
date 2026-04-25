@@ -12,6 +12,15 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 
+const format12Hour = (timeStr) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
 const StaticMap = dynamic(() => import("@/components/StaticMap"), { ssr: false });
 
 export default function TurfProfileClient({ id: turfId }) {
@@ -25,6 +34,7 @@ export default function TurfProfileClient({ id: turfId }) {
     const [participantCount, setParticipantCount] = useState(1);
     const [showCalendar, setShowCalendar] = useState(false);
     const [isBooking, setIsBooking] = useState(false);
+    const [bookedSlots, setBookedSlots] = useState([]);
 
     // Calendar state
     const today = new Date();
@@ -41,15 +51,69 @@ export default function TurfProfileClient({ id: turfId }) {
             .then(({ data }) => setSlots(data || []));
     }, [turfId]);
 
+    useEffect(() => {
+        if (!turfId || !selectedDate) return;
+
+        const fetchBookings = async () => {
+            const { data, error } = await supabase
+                .from('turf_bookings')
+                .select('start_time, status')
+                .eq('turf_id', turfId)
+                .eq('date', selectedDate)
+                .in('status', ['confirmed', 'pending', 'completed']);
+            
+            if (data) {
+                setBookedSlots(data.map(b => b.start_time));
+            } else if (error) {
+                console.error("Error fetching bookings:", error);
+            }
+        };
+
+        fetchBookings();
+
+        const channel = supabase
+            .channel('bookings_channel')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'turf_bookings',
+                    filter: `turf_id=eq.${turfId}`
+                },
+                (payload) => {
+                    fetchBookings();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [turfId, selectedDate]);
+
+    useEffect(() => {
+        if (slots.length > 0 && daySlots.length === 0) {
+            const firstDateWithSlots = dateOptions.find(d => {
+                const dow = d.getDay();
+                return slots.some(s => Number(s.day_of_week) === dow);
+            });
+            if (firstDateWithSlots) {
+                setSelectedDate(firstDateWithSlots.toISOString().split('T')[0]);
+            }
+        }
+    }, [slots]);
+
     const calculateTotal = () => {
         if (!selectedSlot || !turf) return 0;
-        let basePrice = selectedSlot.priceOverride || turf.pricePerHour;
-        if (turf.pricingType === "per_person") return (turf.pricePerPerson || basePrice) * participantCount;
+        let basePrice = selectedSlot.price_override || turf.price_per_hour || 1000;
+        if (turf.pricing_type === "per_person") return (turf.price_per_person || basePrice) * participantCount;
         return basePrice;
     };
 
-    const currentDayOfWeek = new Date(selectedDate).getDay();
-    const daySlots = slots.filter(s => s.dayOfWeek === currentDayOfWeek).sort((a,b) => a.startTime.localeCompare(b.startTime));
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const currentDayOfWeek = new Date(year, month - 1, day).getDay();
+    const daySlots = slots.filter(s => Number(s.day_of_week) === currentDayOfWeek).sort((a,b) => (a.start_time || "").localeCompare(b.start_time || ""));
 
     const getUpcomingDates = () => {
         const dates = [];
@@ -79,10 +143,42 @@ export default function TurfProfileClient({ id: turfId }) {
             return;
         }
         if (!selectedSlot) return alert("Please select a time slot.");
+        if (bookedSlots.includes(selectedSlot.start_time)) return alert("Slot already booked!");
+
         setIsBooking(true);
-        // Payment logic... (mocked for brevity in this refactor step, should ideally match original)
-        alert("Payment integration would trigger here.");
-        setIsBooking(false);
+        try {
+            // Instant booking execution for demo/live flow
+            const { error } = await supabase.from('turf_bookings').insert({
+                turf_id: turfId,
+                organiser_id: turf.organiser_id,
+                user_id: user.id,
+                date: selectedDate,
+                start_time: selectedSlot.start_time,
+                end_time: selectedSlot.end_time,
+                turf_name: turf.name,
+                total_amount: calculateTotal(),
+                status: 'confirmed',
+                payment_status: 'fully_paid',
+                customer_details: {
+                    name: user.name || "Verified User",
+                    email: user.email || "",
+                    phone: user.phone || ""
+                }
+            });
+
+            if (error) {
+                if (error.code === '23505') throw new Error("This slot was just booked by someone else!");
+                throw error;
+            }
+
+            alert("Slot Booked Successfully! Real-time sync triggered.");
+            setSelectedSlot(null);
+        } catch (err) {
+            console.error("Booking failed:", err);
+            alert(err.message || "Failed to confirm booking.");
+        } finally {
+            setIsBooking(false);
+        }
     };
 
     if (turf === undefined) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
@@ -146,13 +242,39 @@ export default function TurfProfileClient({ id: turfId }) {
                         <div>
                              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-4">Available Slots</p>
                              <div className="flex flex-wrap gap-3 max-h-[180px] overflow-y-auto custom-scrollbar">
-                                 {daySlots.map((slot) => (
-                                     <button key={slot.id} onClick={() => setSelectedSlot(slot)} className={`px-5 py-2.5 rounded-xl border transition-all text-center group flex-1 md:flex-none min-w-[90px] ${selectedSlot?.id === slot.id ? 'bg-blue-600 border-blue-500 shadow-xl scale-105' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-                                         <p className="text-sm font-black">{slot.startTime}</p>
-                                         <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">₹{slot.priceOverride || turf.pricePerHour}</p>
-                                     </button>
-                                 ))}
-                                 {daySlots.length === 0 && <div className="w-full py-6 text-left text-white/40 font-black uppercase tracking-widest text-[12px]">No slots mapped for this day</div>}
+                                 {daySlots.map((slot) => {
+                                     const isBooked = bookedSlots.includes(slot.start_time);
+                                     const isSelected = selectedSlot?.id === slot.id;
+
+                                     return (
+                                         <button 
+                                             key={slot.id} 
+                                             disabled={isBooked}
+                                             onClick={() => setSelectedSlot(slot)} 
+                                             className={`px-5 py-2.5 rounded-xl border transition-all text-center group flex-1 md:flex-none min-w-[90px] 
+                                                 ${isBooked ? 'bg-slate-800/40 border-slate-700/50 cursor-not-allowed opacity-50' 
+                                                 : isSelected ? 'bg-blue-600 border-blue-500 shadow-xl scale-105' 
+                                                 : 'bg-white/5 border-emerald-500/50 hover:bg-emerald-500/10 hover:border-emerald-400'}
+                                             `}
+                                         >
+                                             <p className={`text-sm font-black ${isBooked ? 'text-slate-500 line-through' : isSelected ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-300'}`}>
+                                                {format12Hour(slot.start_time)}
+                                             </p>
+                                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isBooked ? 'text-slate-600' : 'opacity-60 text-white'}`}>
+                                                {isBooked ? 'Booked' : `₹${slot.price_override || turf.price_per_hour || 1000}`}
+                                             </p>
+                                         </button>
+                                     )
+                                 })}
+                                 {daySlots.length === 0 && (
+                                     <div className="w-full py-10 flex flex-col items-center justify-center bg-white/5 border border-dashed border-white/10 rounded-[2rem] space-y-3">
+                                         <Clock className="text-white/20" size={32} />
+                                         <div className="text-center">
+                                             <p className="text-white/40 font-black uppercase tracking-widest text-[12px]">No sessions mapped for this day</p>
+                                             <p className="text-[10px] text-white/20 font-bold uppercase tracking-tight mt-1">Try selecting another date from the carousel above</p>
+                                         </div>
+                                     </div>
+                                 )}
                              </div>
                         </div>
 

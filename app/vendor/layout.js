@@ -68,7 +68,7 @@ export default function VendorLayout({ children }) {
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex">
+        <div className="h-screen overflow-hidden bg-[#f8fafc] text-slate-900 flex">
             {/* Backdrop for mobile */}
             {isSidebarOpen && (
                 <div 
@@ -79,11 +79,11 @@ export default function VendorLayout({ children }) {
 
             {/* Sidebar */}
             <aside 
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
+                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static shadow-2xl lg:shadow-none flex flex-col h-full shrink-0`}
             >
-                <div className="flex flex-col h-full font-figtree">
+                <div className="flex flex-col h-full font-figtree w-full">
                     {/* Header */}
-                    <div className="h-20 flex items-center justify-center px-6 border-b border-slate-50 bg-white relative">
+                    <div className="h-20 shrink-0 flex items-center justify-center px-6 border-b border-slate-50 bg-white relative">
                         <Link href="/" className="flex items-center">
                             <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
                         </Link>
@@ -95,7 +95,7 @@ export default function VendorLayout({ children }) {
                         </button>
                     </div>
                     {/* Side Sub-Header (Service Role) */}
-                    <div className="px-6 py-6 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
+                    <div className="px-6 py-6 shrink-0 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
                             <Sparkles size={40} className="text-pink-500" />
                         </div>
@@ -107,7 +107,7 @@ export default function VendorLayout({ children }) {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                    <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar min-h-0">
                         {navigation.map((item) => {
                             const isActive = pathname === item.href;
                             return (
@@ -132,7 +132,7 @@ export default function VendorLayout({ children }) {
                     </nav>
 
                     {/* Footer - Profile Minimal */}
-                    <div className="p-4 border-t border-slate-50 bg-slate-50/50 mt-auto">
+                    <div className="p-4 shrink-0 border-t border-slate-50 bg-slate-50/50">
                         <div className="bg-white rounded-2xl p-3 mb-3 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner shrink-0">
                                 {user?.name?.charAt(0) || "V"}
@@ -154,9 +154,9 @@ export default function VendorLayout({ children }) {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 font-figtree lg:h-screen">
+            <div className="flex-1 flex flex-col min-w-0 font-figtree h-full">
                 {/* Top Header - Glassmorphism Light */}
-                <header className="h-16 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
+                <header className="h-16 shrink-0 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
                     <div className="flex items-center space-x-4 lg:space-x-6">
                         <button 
                             onClick={toggleSidebar}
@@ -201,7 +201,7 @@ export default function VendorLayout({ children }) {
                 {/* Page Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
                     <VendorErrorBoundary>
-                        <div className="max-w-[1400px] mx-auto">
+                        <div className="w-full">
                             {children}
                         </div>
                     </VendorErrorBoundary>

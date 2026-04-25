@@ -38,7 +38,9 @@ export default function ServicesPage() {
 
     const profile = profileArr && !Array.isArray(profileArr) ? profileArr : null;
 
-    const isTurfVendor = user?.role === "turf_organiser" || profile?.category?.toLowerCase().includes("turf");
+    const isTurfVendor = user?.role === "turf_organiser" || 
+                         user?.category?.toLowerCase().includes("turf") || 
+                         profile?.category?.toLowerCase().includes("turf");
 
     if (isTurfVendor) {
         return <TurfServiceManagement user={user} vendorId={vendorId} profile={profile} />;
@@ -48,7 +50,7 @@ export default function ServicesPage() {
 }
 
 function TurfServiceManagement({ user, vendorId, profile }) {
-    const { addToast } = useToast();
+    const { showToast } = useToast();
     const { data: turfs = [] } = useSupabaseQuery('turfs', (q) => 
         q.eq('organiser_id', vendorId)
     , [vendorId]);
@@ -65,6 +67,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
         name: "",
         description: "",
         location: "",
+        city: "",
         address: "",
         price_per_hour: 1000,
         advance_amount: 200,
@@ -80,7 +83,10 @@ function TurfServiceManagement({ user, vendorId, profile }) {
 
         images: [""],
         amenities: [],
-        status: "active"
+        status: "active",
+
+        // Manual Slot Builder (Day to Day)
+        manual_slots: []
     };
 
     const [formData, setFormData] = useState(initialForm);
@@ -90,28 +96,58 @@ function TurfServiceManagement({ user, vendorId, profile }) {
         "CCTV", "First Aid", "Seating Area", "Power Backup", "Refreshments"
     ];
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleSave = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        
+        setIsSaving(true);
         try {
-            const data = {
-                ...formData,
+            // Filter out UI-only state before database insertion
+            const { manual_slots, temp_selected_days, entry_mode, ...dbData } = formData;
+            
+            const payload = {
+                ...dbData,
                 images: formData.images.filter(img => img.trim() !== ""),
                 organiser_id: vendorId,
             };
 
+            let newTurfId = selectedTurf?.id;
+
             if (selectedTurf?.id) {
-                await updateTurf({ ...data, id: selectedTurf.id });
+                await updateTurf({ ...payload, id: selectedTurf.id });
             } else {
-                await createTurf(data);
+                const result = await createTurf(payload);
+                if (!result.success) throw result.error || new Error("Deployment failed");
+                // Handle both array and single object returns
+                newTurfId = Array.isArray(result.data) ? result.data[0]?.id : result.data?.id;
+
+                // Insert manual slots if any (Quantum Timeline Batch)
+                if (newTurfId && manual_slots?.length > 0) {
+                    const slotsToInsert = manual_slots.map(s => ({
+                        turf_id: newTurfId,
+                        day_of_week: s.day_of_week,
+                        start_time: s.start_time,
+                        end_time: s.end_time,
+                        price_override: s.price_override,
+                        is_active: true
+                    }));
+                    
+                    const { error: slotErr } = await supabase.from('turf_slots').insert(slotsToInsert);
+                    if (slotErr) console.error("Slot initialization error:", slotErr);
+                }
             }
 
             setShowAddModal(false);
             setFormData(initialForm);
             setSelectedTurf(null);
-            addToast("Facility saved successfully!", "success");
+            showToast(selectedTurf ? "Configuration updated!" : "Facility deployed successfully!", "success");
         } catch (err) {
-            console.error("Save error:", err);
-            addToast(err.message || "Failed to save facility", "error");
+            console.error("Deployment error:", err);
+            showToast(err.message || "Quantum deployment failed", "error");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -119,9 +155,9 @@ function TurfServiceManagement({ user, vendorId, profile }) {
         if (confirm("Are you sure you want to delete this facility? This will also remove all scheduled patterns.")) {
             try {
                 await deleteTurf({ id });
-                addToast("Facility deleted", "info");
+                showToast("Facility deleted", "info");
             } catch (err) {
-                addToast("Failed to delete facility", "error");
+                showToast("Failed to delete facility", "error");
             }
         }
     };
@@ -132,6 +168,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
             name: turf.name,
             description: turf.description || "",
             location: turf.location || "",
+            city: turf.city || "",
             address: turf.address || "",
             price_per_hour: turf.price_per_hour,
             advance_amount: turf.advance_amount || 0,
@@ -246,7 +283,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                 <div className="flex flex-wrap gap-4">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                         <MapPin size={12} className="text-blue-500" />
-                                        {turf.location || "Coordinates not set"}
+                                        {turf.city ? `${turf.location}, ${turf.city}` : turf.location || "Coordinates not set"}
                                     </p>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                         <Users size={12} className="text-purple-500" />
@@ -332,152 +369,392 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                 <button type="button" onClick={() => setShowAddModal(false)} className="p-4 rounded-2xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-all">
                                     <X size={20} />
                                 </button>
-                            </div>
-
-                            {/* Modal Content - 3 Column Layout */}
+                            </div>                            {/* Modal Content - Landscape Stacked Layout */}
                             <div className="flex-1 overflow-y-auto p-10 pt-6 custom-scrollbar">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                                <div className="space-y-12">
                                     
-                                    {/* Column 1: Core Definitions */}
-                                    <div className="space-y-8">
-                                        <div className="flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black italic">01</div>
-                                             <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Facility Identity</h4>
+                                    {/* Section 01: Facility Identity */}
+                                    <div className="space-y-8 p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100">
+                                        <div className="flex items-center gap-4">
+                                             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black italic shadow-lg shadow-blue-500/20">01</div>
+                                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Facility Identity</h4>
                                         </div>
                                         
-                                        <div className="space-y-6">
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Designation</label>
-                                                <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="e.g. Arena Uno" />
-                                            </div>
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Infrastructure Description</label>
-                                                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-blue-500/10 outline-none h-32 resize-none" placeholder="Define pitch quality..." />
-                                            </div>
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Operational Zone</label>
-                                                <input required value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="e.g. Sector 12, North Side" />
-                                            </div>
-                                            <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Address Specifications</label>
-                                                <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="Detailed structural location" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Column 2: Assets & Imagery */}
-                                    <div className="space-y-8">
-                                        <div className="flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black italic">02</div>
-                                             <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Visual Assets & Perks</h4>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between px-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facility Imagery</label>
-                                                    <button type="button" onClick={addImageField} className="text-[9px] font-black text-blue-600 uppercase tracking-widest">+ Add URL</button>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                            <div className="space-y-6">
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Designation</label>
+                                                    <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="e.g. Arena Uno" />
                                                 </div>
-                                                <div className="space-y-2">
-                                                    {formData.images.map((img, idx) => (
-                                                        <div key={idx} className="flex gap-2">
-                                                            <input value={img} onChange={(e) => updateImageField(idx, e.target.value)} className="flex-1 px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-blue-600 outline-none" placeholder="Image URL" />
-                                                            <button type="button" onClick={() => removeImageField(idx)} className="p-3 bg-slate-50 text-slate-300 hover:text-red-500 rounded-xl"><X size={14} /></button>
-                                                        </div>
-                                                    ))}
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Infrastructure Description</label>
+                                                    <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-blue-500/10 outline-none h-40 resize-none" placeholder="Define pitch quality..." />
                                                 </div>
                                             </div>
-
-                                            <div className="space-y-3 pt-4">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Available Amenities</label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {AMENITIES_LIST.map((amenity) => (
-                                                        <button 
-                                                            key={amenity}
-                                                            type="button"
-                                                            onClick={() => toggleAmenity(amenity)}
-                                                            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter border transition-all ${
-                                                                formData.amenities.includes(amenity) ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
-                                                            }`}
-                                                        >
-                                                            {amenity}
-                                                        </button>
-                                                    ))}
+                                            <div className="space-y-6">
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Operational Zone</label>
+                                                    <input required value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="e.g. Sector 12, North Side" />
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Column 3: Yield & Dynamic Pricing */}
-                                    <div className="space-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
-                                        <div className="flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black italic">03</div>
-                                             <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Yield Logic</h4>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Rate (₹)</label>
-                                                    <input required type="number" value={formData.price_per_hour} onChange={(e) => setFormData({...formData, price_per_hour: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advance (₹)</label>
-                                                    <input required type="number" value={formData.advance_amount} onChange={(e) => setFormData({...formData, advance_amount: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing Type</label>
-                                                <select value={formData.pricing_type} onChange={(e) => setFormData({...formData, pricing_type: e.target.value})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none">
-                                                    <option value="flat">Standard Flat Rate</option>
-                                                    <option value="per_person">Per User Pricing</option>
-                                                    <option value="tiered">Tiered Group Pricing</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facility Capacity</label>
-                                                <input type="number" value={formData.max_capacity} onChange={(e) => setFormData({...formData, max_capacity: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-xs font-black text-slate-900 outline-none" placeholder="Maximum participants" />
-                                            </div>
-
-                                            {/* Conditional Pricing Fields */}
-                                            {formData.pricing_type === "per_person" && (
-                                                <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-3 animate-in fade-in slide-in-from-top-2">
-                                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Rate Per Person (₹)</label>
-                                                    <input type="number" value={formData.price_per_person} onChange={(e) => setFormData({...formData, price_per_person: parseInt(e.target.value)})} className="w-full px-5 py-3 bg-white border border-blue-200 rounded-xl text-xs font-black text-blue-600 outline-none" />
-                                                </div>
-                                            )}
-
-                                            {formData.pricing_type === "tiered" && (
-                                                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Groups/Tiers</label>
-                                                        <button type="button" onClick={addTier} className="text-[9px] font-black text-purple-600 uppercase tracking-widest">+ New Tier</button>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-3">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">City / District</label>
+                                                        <select required value={formData.city || ""} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none">
+                                                            <option value="" disabled>Select...</option>
+                                                            <option value="Coimbatore">Coimbatore</option>
+                                                            <option value="Bengaluru">Bengaluru</option>
+                                                            <option value="Chennai">Chennai</option>
+                                                        </select>
                                                     </div>
-                                                    <div className="space-y-3 h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                                        {(formData.pricing_tiers || []).map((tier, idx) => (
-                                                            <div key={idx} className="p-4 bg-white rounded-2xl border border-purple-100 space-y-3 relative group">
-                                                                <button type="button" onClick={() => removeTier(idx)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Min - Max</span>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <input type="number" value={tier.min} onChange={(e) => updateTier(idx, 'min', parseInt(e.target.value))} className="w-full p-2 bg-slate-50 rounded-lg text-[10px] font-black text-center" />
-                                                                            <span className="text-slate-300">-</span>
-                                                                            <input type="number" value={tier.max} onChange={(e) => updateTier(idx, 'max', parseInt(e.target.value))} className="w-full p-2 bg-slate-50 rounded-lg text-[10px] font-black text-center" />
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Price (₹)</span>
-                                                                        <input type="number" value={tier.price} onChange={(e) => updateTier(idx, 'price', parseInt(e.target.value))} className="w-full p-2 bg-purple-50 text-purple-600 rounded-lg text-xs font-black text-center border border-purple-100" />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                    <div className="space-y-3">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Address Spec</label>
+                                                        <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 02: Assets & Imagery */}
+                                    <div className="space-y-8 p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100">
+                                        <div className="flex items-center gap-4">
+                                             <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black italic shadow-lg shadow-emerald-500/20">02</div>
+                                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Visual Assets & Perks</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                                            <div className="lg:col-span-4 space-y-6">
+                                                <div className="space-y-4">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Available Amenities</label>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {AMENITIES_LIST.map((amenity) => (
+                                                            <button 
+                                                                key={amenity}
+                                                                type="button"
+                                                                onClick={() => toggleAmenity(amenity)}
+                                                                className={`px-3 py-3 rounded-xl text-[9px] font-black uppercase tracking-tighter border transition-all ${
+                                                                    formData.amenities.includes(amenity) ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
+                                                                }`}
+                                                            >
+                                                                {amenity}
+                                                            </button>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
+                                            </div>
+
+                                            <div className="lg:col-span-8">
+                                                {/* Manual Day-to-Day Slot Builder */}
+                                                <div className="space-y-6 p-8 bg-white rounded-[3rem] border border-slate-200 shadow-xl relative overflow-hidden group">
+                                                    {/* Background Glow */}
+                                                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-all duration-1000" />
+                                                    
+                                                    <div className="flex items-center justify-between relative z-10">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                                                <Clock size={20} />
+                                                            </div>
+                                                            <h5 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Manual Slot Builder</h5>
+                                                        </div>
+                                                        <div className="flex bg-slate-100 rounded-full p-1 border border-slate-200">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => setFormData({...formData, entry_mode: 'single'})}
+                                                                className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${(!formData.entry_mode || formData.entry_mode === 'single') ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                                            >
+                                                                Manual
+                                                            </button>
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => setFormData({...formData, entry_mode: 'range'})}
+                                                                className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${formData.entry_mode === 'range' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                                            >
+                                                                Range
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                                                        <div className="space-y-6">
+                                                            <div>
+                                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1 block mb-4">Target Days</label>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => {
+                                                                        const isSelected = (formData.temp_selected_days || [0]).includes(i);
+                                                                        return (
+                                                                            <button 
+                                                                                key={i}
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    const current = formData.temp_selected_days || [0];
+                                                                                    const updated = current.includes(i) ? current.filter(day => day !== i) : [...current, i];
+                                                                                    setFormData({ ...formData, temp_selected_days: updated.length ? updated : [i] });
+                                                                                }}
+                                                                                className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all border-2 ${
+                                                                                    isSelected ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-400'
+                                                                                }`}
+                                                                            >
+                                                                                {d}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+
+                                                            {formData.entry_mode === 'range' ? (
+                                                                <div className="space-y-4">
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div className="space-y-2">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Start Cycle</label>
+                                                                            <select id="range_start" defaultValue="6" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                                                {[...Array(24)].map((_, i) => (
+                                                                                    <option key={i} value={i}>{i % 12 || 12} {i >= 12 ? 'PM' : 'AM'}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">End Cycle</label>
+                                                                            <select id="range_end" defaultValue="22" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                                                {[...Array(24)].map((_, i) => (
+                                                                                    <option key={i} value={i}>{i % 12 || 12} {i >= 12 ? 'PM' : 'AM'}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const days = formData.temp_selected_days || [0];
+                                                                            const start = parseInt(document.getElementById('range_start').value);
+                                                                            const end = parseInt(document.getElementById('range_end').value);
+                                                                            if (start >= end) return showToast("Invalid Range", "error");
+                                                                            const newSlots = [];
+                                                                            for(let day of days) {
+                                                                                for(let h = start; h < end; h++) {
+                                                                                    newSlots.push({ day_of_week: day, start_time: `${h.toString().padStart(2, '0')}:00`, end_time: `${(h+1).toString().padStart(2, '0')}:00`, price_override: null });
+                                                                                }
+                                                                            }
+                                                                            setFormData({ ...formData, manual_slots: [...(formData.manual_slots || []), ...newSlots] });
+                                                                            showToast(`Generated ${newSlots.length} slots`, "success");
+                                                                        }}
+                                                                        className="w-full py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                                                                    >
+                                                                        Generate Sequence
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-4">
+                                                                    <div className="grid grid-cols-2 gap-6">
+                                                                        {/* Manual Start */}
+                                                                        <div className="space-y-2">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Start Time</label>
+                                                                            <div className="flex gap-1">
+                                                                                <select id="m_s_h" className="flex-1 px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                                                    {[...Array(12)].map((_, i) => <option key={i+1} value={i+1}>{i+1}</option>)}
+                                                                                </select>
+                                                                                <select id="m_s_m" className="flex-1 px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                                                    {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                                                </select>
+                                                                                <select id="m_s_p" className="px-2 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black outline-none">
+                                                                                    <option value="AM">AM</option>
+                                                                                    <option value="PM">PM</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                        {/* Manual End */}
+                                                                        <div className="space-y-2">
+                                                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">End Time</label>
+                                                                            <div className="flex gap-1">
+                                                                                <select id="m_e_h" className="flex-1 px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none" defaultValue="7">
+                                                                                    {[...Array(12)].map((_, i) => <option key={i+1} value={i+1}>{i+1}</option>)}
+                                                                                </select>
+                                                                                <select id="m_e_m" className="flex-1 px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none">
+                                                                                    {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                                                </select>
+                                                                                <select id="m_e_p" className="px-2 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black outline-none">
+                                                                                    <option value="AM">AM</option>
+                                                                                    <option value="PM">PM</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const days = formData.temp_selected_days || [0];
+                                                                            
+                                                                            const to24 = (h, m, p) => {
+                                                                                let hh = parseInt(h);
+                                                                                if(p === 'PM' && hh < 12) hh += 12;
+                                                                                if(p === 'AM' && hh === 12) hh = 0;
+                                                                                return `${hh.toString().padStart(2, '0')}:${m}`;
+                                                                            };
+
+                                                                            const start = to24(
+                                                                                document.getElementById('m_s_h').value,
+                                                                                document.getElementById('m_s_m').value,
+                                                                                document.getElementById('m_s_p').value
+                                                                            );
+                                                                            const end = to24(
+                                                                                document.getElementById('m_e_h').value,
+                                                                                document.getElementById('m_e_m').value,
+                                                                                document.getElementById('m_e_p').value
+                                                                            );
+
+                                                                            const newSlots = days.map(day => ({ day_of_week: day, start_time: start, end_time: end, price_override: null }));
+                                                                            setFormData({ ...formData, manual_slots: [...(formData.manual_slots || []), ...newSlots] });
+                                                                            showToast(`Added slots`, "success");
+                                                                        }}
+                                                                        className="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                                    >
+                                                                        Commit Slot
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-3 border-l border-slate-100 pl-8">
+                                                            {(() => {
+                                                                const grouped = (formData.manual_slots || []).reduce((acc, slot) => {
+                                                                    const day = slot.day_of_week;
+                                                                    if (!acc[day]) acc[day] = [];
+                                                                    acc[day].push(slot);
+                                                                    return acc;
+                                                                }, {});
+
+                                                                const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+
+                                                                return Object.keys(grouped).sort().map(dayIdx => (
+                                                                    <div key={dayIdx} className="space-y-2 animate-in fade-in slide-in-from-right-4">
+                                                                        <div className="flex items-center gap-3 px-2">
+                                                                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">{dayNames[dayIdx]}</span>
+                                                                            <div className="flex-1 h-[1px] bg-blue-100" />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            {grouped[dayIdx].sort((a,b) => a.start_time.localeCompare(b.start_time)).map((slot, sIdx) => (
+                                                                                <div key={sIdx} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 group hover:border-blue-500/30 transition-all hover:shadow-md">
+                                                                                    <div className="flex items-center gap-4">
+                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                                                                        <p className="text-sm font-black text-slate-900 italic tracking-tight">
+                                                                                            {(() => {
+                                                                                                const f = (t) => {
+                                                                                                    if(!t) return t;
+                                                                                                    const [h,m] = t.split(':');
+                                                                                                    const hh = parseInt(h);
+                                                                                                    return `${hh % 12 || 12}:${m} ${hh >= 12 ? 'PM' : 'AM'}`;
+                                                                                                };
+                                                                                                return `${f(slot.start_time)} - ${f(slot.end_time)}`;
+                                                                                            })()}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <button 
+                                                                                        type="button" 
+                                                                                        onClick={() => {
+                                                                                            const newSlots = [...formData.manual_slots];
+                                                                                            const actualIdx = formData.manual_slots.findIndex(s => s === slot);
+                                                                                            newSlots.splice(actualIdx, 1);
+                                                                                            setFormData({ ...formData, manual_slots: newSlots });
+                                                                                        }} 
+                                                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                                                                    >
+                                                                                        <Trash2 size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ));
+                                                            })()}
+                                                            
+                                                            {formData.manual_slots?.length === 0 && (
+                                                                <div className="py-24 text-center opacity-30 flex flex-col items-center">
+                                                                    <div className="w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center border border-slate-100 mb-4">
+                                                                        <Clock className="text-slate-400" size={32} />
+                                                                    </div>
+                                                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Timeline Empty</p>
+                                                                    <p className="text-[8px] font-medium text-slate-400 mt-2">Initialize channels to start deployment</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 03: Yield Logic */}
+                                    <div className="space-y-8 p-10 bg-slate-50/50 rounded-[3rem] border border-slate-100">
+                                        <div className="flex items-center gap-4">
+                                             <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-black italic shadow-lg shadow-purple-500/20">03</div>
+                                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Yield Logic</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div className="space-y-3">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Rate (₹)</label>
+                                                        <input required type="number" value={formData.price_per_hour} onChange={(e) => setFormData({...formData, price_per_hour: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advance (₹)</label>
+                                                        <input required type="number" value={formData.advance_amount} onChange={(e) => setFormData({...formData, advance_amount: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-black text-slate-900 outline-none focus:ring-4 focus:ring-purple-500/10" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing Strategy</label>
+                                                    <select value={formData.pricing_type} onChange={(e) => setFormData({...formData, pricing_type: e.target.value})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-black text-slate-900 outline-none">
+                                                        <option value="flat">Standard Flat Rate</option>
+                                                        <option value="per_person">Per User Pricing</option>
+                                                        <option value="tiered">Tiered Group Pricing</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-6">
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facility Capacity</label>
+                                                    <input type="number" value={formData.max_capacity} onChange={(e) => setFormData({...formData, max_capacity: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-xs font-black text-slate-900 outline-none" placeholder="Maximum participants" />
+                                                </div>
+
+                                                {/* Conditional Pricing Strategy Layouts */}
+                                                {formData.pricing_type === "per_person" && (
+                                                    <div className="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                        <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Rate Per Person (₹)</label>
+                                                        <input type="number" value={formData.price_per_person} onChange={(e) => setFormData({...formData, price_per_person: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-white border border-blue-200 rounded-xl text-xs font-black text-blue-600 outline-none" />
+                                                    </div>
+                                                )}
+
+                                                {formData.pricing_type === "tiered" && (
+                                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                        <div className="flex items-center justify-between px-2">
+                                                            <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Groups/Tiers</label>
+                                                            <button type="button" onClick={addTier} className="text-[9px] font-black text-purple-600 uppercase tracking-widest hover:underline">+ Add New Tier</button>
+                                                        </div>
+                                                        <div className="space-y-3 h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                                            {(formData.pricing_tiers || []).map((tier, idx) => (
+                                                                <div key={idx} className="p-5 bg-white rounded-2xl border border-purple-100 space-y-4 relative group hover:border-purple-300 transition-all shadow-sm">
+                                                                    <button type="button" onClick={() => removeTier(idx)} className="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-red-500 transition-colors"><X size={14} /></button>
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div className="space-y-2">
+                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Headcount Range</span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input type="number" value={tier.min} onChange={(e) => updateTier(idx, 'min', parseInt(e.target.value))} className="w-full p-2.5 bg-slate-50 rounded-xl text-[10px] font-black text-center" />
+                                                                                <span className="text-slate-300">-</span>
+                                                                                <input type="number" value={tier.max} onChange={(e) => updateTier(idx, 'max', parseInt(e.target.value))} className="w-full p-2.5 bg-slate-50 rounded-xl text-[10px] font-black text-center" />
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Fixed Price (₹)</span>
+                                                                            <input type="number" value={tier.price} onChange={(e) => updateTier(idx, 'price', parseInt(e.target.value))} className="w-full p-2.5 bg-purple-50 text-purple-600 rounded-xl text-xs font-black text-center border border-purple-100" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -487,7 +764,20 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                             {/* Modal Footer */}
                             <div className="p-10 pt-6 border-t border-slate-50 bg-white flex items-center gap-6">
                                 <button type="button" onClick={() => setShowAddModal(false)} className="px-10 py-5 bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-100 transition-all">Cancel Project</button>
-                                <button type="submit" className="flex-1 py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.01] active:scale-95 transition-all shadow-2xl shadow-pink-500/20">Initialize Deployment</button>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSaving}
+                                    className="flex-1 py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.01] active:scale-95 transition-all shadow-2xl shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                            <span>Deploying...</span>
+                                        </>
+                                    ) : (
+                                        "Initialize Deployment"
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -507,7 +797,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
     );
 }
 function ArtistServiceManagement({ user, vendorId, profile }) {
-    const { addToast } = useToast();
+    const { showToast } = useToast();
     const [updateProfile] = useSupabaseMutation('service_providers', 'update', (q, p) => q.eq('id', p.id));
 
     const [pricing, setPricing] = useState([]);
@@ -580,7 +870,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
     const handleSave = async () => {
         const targetId = profile?.id || vendorId;
         if (!targetId) {
-            addToast("Authentication error: No vendor ID found", "error");
+            showToast("Authentication error: No vendor ID found", "error");
             return;
         }
 
@@ -620,10 +910,10 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                 if (pkgError) throw pkgError;
             }
 
-            addToast("Settings and packages saved successfully!", "success");
+            showToast("Settings and packages saved successfully!", "success");
         } catch (error) {
             console.error("Failed to save services:", error);
-            addToast(error.message || "Failed to save packages", "error");
+            showToast(error.message || "Failed to save packages", "error");
         } finally {
             setIsSaving(false);
         }

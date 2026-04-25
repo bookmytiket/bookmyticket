@@ -80,7 +80,7 @@ export default function TurfLayout({ children }) {
                              </div>
                         </div>
 
-                        <nav className="flex-1 px-4 py-8 space-y-2">
+                        <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto">
                             {navigation.map((item) => {
                                 const isActive = pathname === item.href;
                                 return (
@@ -100,7 +100,7 @@ export default function TurfLayout({ children }) {
                             })}
                         </nav>
 
-                        <div className="p-6 border-t border-slate-50 mt-auto">
+                        <div className="p-6 border-t border-slate-50 mt-auto bg-white relative z-10">
                             <button 
                                 onClick={logout}
                                 className="w-full flex items-center justify-center space-x-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all font-black text-[10px] uppercase tracking-widest"
@@ -125,6 +125,13 @@ export default function TurfLayout({ children }) {
                         </div>
                         
                         <div className="flex items-center space-x-4">
+                            <button 
+                                onClick={logout} 
+                                className="p-2 text-slate-400 hover:text-red-500 transition-colors lg:hidden bg-slate-50 rounded-lg" 
+                                title="Sign Out"
+                            >
+                                <LogOut size={18} />
+                            </button>
                             <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200">
                                 {user?.name?.charAt(0) || "T"}
                             </div>

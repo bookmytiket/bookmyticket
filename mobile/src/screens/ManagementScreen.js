@@ -107,6 +107,8 @@ export default function ManagementScreen() {
     [user?.id]
   );
 
+  const isTurfVendor = user?.category?.toLowerCase().includes("turf") || vendorProfile?.category?.toLowerCase().includes("turf");
+
   const { data: scans = [] } = useSupabaseQuery('pwa_scans', (q) => 
     q.select('*, event:event_id(*)').eq('organiser_id', user?.id),
     [user?.id]
@@ -571,17 +573,19 @@ export default function ManagementScreen() {
                     placeholderTextColor="#94a3b8"
                   />
                   
-                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                    {['Bridal', 'Arabic', 'Minimal', 'Trad.'].map(cat => (
-                      <TouchableOpacity 
-                        key={cat}
-                        onPress={() => setPortfolioMeta({ ...portfolioMeta, category: cat })}
-                        style={[styles.miniChip, portfolioMeta.category === cat && styles.miniChipActive]}
-                      >
-                        <Text style={[styles.miniChipText, portfolioMeta.category === cat && styles.miniChipTextActive]}>{cat}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  {!isTurfVendor && (
+                    <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                      {['Bridal', 'Arabic', 'Minimal', 'Trad.'].map(cat => (
+                        <TouchableOpacity 
+                          key={cat}
+                          onPress={() => setPortfolioMeta({ ...portfolioMeta, category: cat })}
+                          style={[styles.miniChip, portfolioMeta.category === cat && styles.miniChipActive]}
+                        >
+                          <Text style={[styles.miniChipText, portfolioMeta.category === cat && styles.miniChipTextActive]}>{cat}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
 
                   <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
                     <TouchableOpacity 

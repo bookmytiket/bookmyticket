@@ -146,7 +146,8 @@ export default function PortfolioPage() {
         ? portfolio 
         : portfolio.filter(item => item.category === filter);
 
-    const categories = ["Bridal", "Arabic", "Minimal", "Traditional"];
+    const isTurfVendor = user?.category?.toLowerCase().includes("turf") || profile?.category?.toLowerCase().includes("turf");
+    const categories = isTurfVendor ? ["Pitch", "Infrastructure", "Amenities"] : ["Bridal", "Arabic", "Minimal", "Traditional"];
 
     const handleFileSelect = (e) => {
         const files = Array.from(e.target.files);
@@ -250,21 +251,23 @@ export default function PortfolioPage() {
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
             <div className="flex flex-col space-y-10">
                 {/* Filters */}
-                <div className="flex items-center space-x-3 overflow-x-auto pb-6 scrollbar-hide">
-                    {["All", ...categories].map((cat) => (
-                        <button
-                            key={cat}
-                            onClick={() => setFilter(cat)}
-                            className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all whitespace-nowrap border shadow-xl shadow-slate-200/20 ${
-                                filter === cat 
-                                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400' 
-                                    : 'bg-white text-slate-400 border-slate-100 hover:text-slate-900 hover:border-pink-200'
-                            }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
+                {!isTurfVendor && (
+                    <div className="flex items-center space-x-3 overflow-x-auto pb-6 scrollbar-hide">
+                        {["All", ...categories].map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => setFilter(cat)}
+                                className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all whitespace-nowrap border shadow-xl shadow-slate-200/20 ${
+                                    filter === cat 
+                                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400' 
+                                        : 'bg-white text-slate-400 border-slate-100 hover:text-slate-900 hover:border-pink-200'
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4 border-b border-slate-200">
                     <div className="space-y-4">
@@ -321,56 +324,60 @@ export default function PortfolioPage() {
                         </div>
 
                         <div className="space-y-8">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Classification</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {categories.map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setUploadConfig({...uploadConfig, category: cat})}
-                                            className={`p-5 rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-between ${
-                                                uploadConfig.category === cat 
-                                                    ? 'bg-pink-50 border-pink-500 text-pink-500 shadow-inner' 
-                                                    : 'bg-white border-slate-50 text-slate-400 hover:border-pink-200 hover:text-slate-900'
-                                            }`}
-                                        >
-                                            {cat}
-                                            {uploadConfig.category === cat && <Check size={16} strokeWidth={3} />}
-                                        </button>
-                                    ))}
+                            {!isTurfVendor && (
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Classification</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {categories.map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setUploadConfig({...uploadConfig, category: cat})}
+                                                className={`p-5 rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all flex items-center justify-between ${
+                                                    uploadConfig.category === cat 
+                                                        ? 'bg-pink-50 border-pink-500 text-pink-500 shadow-inner' 
+                                                        : 'bg-white border-slate-50 text-slate-400 hover:border-pink-200 hover:text-slate-900'
+                                                }`}
+                                            >
+                                                {cat}
+                                                {uploadConfig.category === cat && <Check size={16} strokeWidth={3} />}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Style Metadata</label>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {['Arabic', 'Rajasthani', 'Minimalist', 'Traditionalist', 'Floral', 'Portraiture'].map(tag => (
-                                        <button 
-                                            key={tag}
-                                            type="button"
-                                            onClick={() => {
-                                                const currentTags = uploadConfig.tags.split(',').map(t => t.trim()).filter(Boolean);
-                                                if (!currentTags.includes(tag)) {
-                                                    setUploadConfig({...uploadConfig, tags: [...currentTags, tag].join(', ')});
-                                                }
-                                            }}
-                                            className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-slate-50 hover:bg-pink-500 text-slate-400 hover:text-white border border-slate-100 hover:border-pink-400 shadow-sm"
-                                        >
-                                            + {tag}
-                                        </button>
-                                    ))}
+                            {!isTurfVendor && (
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Style Metadata</label>
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {['Arabic', 'Rajasthani', 'Minimalist', 'Traditionalist', 'Floral', 'Portraiture'].map(tag => (
+                                            <button 
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentTags = uploadConfig.tags.split(',').map(t => t.trim()).filter(Boolean);
+                                                    if (!currentTags.includes(tag)) {
+                                                        setUploadConfig({...uploadConfig, tags: [...currentTags, tag].join(', ')});
+                                                    }
+                                                }}
+                                                className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-slate-50 hover:bg-pink-500 text-slate-400 hover:text-white border border-slate-100 hover:border-pink-400 shadow-sm"
+                                            >
+                                                + {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="relative group">
+                                        <Tag size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-pink-500 transition-all font-black" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Add custom keywords..."
+                                            value={uploadConfig.tags}
+                                            onChange={(e) => setUploadConfig({...uploadConfig, tags: e.target.value})}
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4.5 pl-14 pr-6 text-sm font-bold text-slate-900 transition-all outline-none focus:bg-white focus:border-pink-500 placeholder:text-slate-200"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="relative group">
-                                    <Tag size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-pink-500 transition-all font-black" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Add custom keywords..."
-                                        value={uploadConfig.tags}
-                                        onChange={(e) => setUploadConfig({...uploadConfig, tags: e.target.value})}
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4.5 pl-14 pr-6 text-sm font-bold text-slate-900 transition-all outline-none focus:bg-white focus:border-pink-500 placeholder:text-slate-200"
-                                    />
-                                </div>
-                            </div>
+                            )}
 
                             <div className="flex items-center gap-6">
                                 <label className="flex-1 flex items-center gap-4 p-5 rounded-3xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-white hover:border-pink-200 group transition-all">
