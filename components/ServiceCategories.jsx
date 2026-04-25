@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Camera, Palette, Sparkles, Users, ArrowUpRight } from "lucide-react";
+import { Camera, Palette, Sparkles, Users, ArrowUpRight, Waves } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORIES = [
@@ -35,6 +35,14 @@ const CATEGORIES = [
     color: "#22c55e",
     gradient: "linear-gradient(135deg, #22c55e 0%, #10b981 100%)",
     image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80"
+  },
+  {
+    name: "Swimming Pool",
+    icon: <Waves size={24} />,
+    description: "Find and book premium swimming pools with real-time slot updates.",
+    color: "#0ea5e9",
+    gradient: "linear-gradient(135deg, #0ea5e9 0%, #0c4a6e 100%)",
+    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?q=80&w=800&auto=format&fit=crop"
   }
 ];
 

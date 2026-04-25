@@ -492,6 +492,103 @@ const TurfBookingsTable = ({ t }) => {
     );
 };
 
+const PoolBookingsTable = ({ t }) => {
+    const { data: bookings = [], loading, refetch } = useSupabaseQuery('pool_bookings', (q) => q.select('*, swimming_pools(name, city), profiles:user_id(full_name, phone)').order('created_at', { ascending: false }));
+    const [updateStatus] = useSupabaseMutation('pool_bookings', 'update', (q, p) => q.eq('id', p.id));
+    const { showToast } = useToast();
+
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading pool requests...</div>;
+    if (bookings.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No pool service requests found.</div>;
+
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await updateStatus({ id, status: newStatus });
+            showToast(`Request ${newStatus.toLowerCase()} successfully`, "success");
+            refetch();
+        } catch (err) {
+            showToast("Error updating status: " + err.message, "error");
+        }
+    };
+
+    return (
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+            <thead>
+                <tr style={{ textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Pool Facility</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Customer</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Date / Details</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {bookings.map((booking) => (
+                    <tr key={booking.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
+                            <div>
+                                <p style={{ fontWeight: 800, margin: 0, fontSize: "14px", color: t.textMain }}>{booking.swimming_pools?.name}</p>
+                                <p style={{ fontSize: "12px", color: t.textSub, margin: "2px 0 0" }}>{booking.swimming_pools?.city}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 600, margin: 0, fontSize: "13px", color: t.textMain }}>{booking.profiles?.full_name || 'User'}</p>
+                                <p style={{ fontSize: "11px", color: t.textSub, margin: 0 }}>{booking.profiles?.phone}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <div>
+                                <p style={{ fontWeight: 700, margin: 0, fontSize: "13px", color: t.textMain }}>{new Date(booking.booking_date).toLocaleDateString()}</p>
+                                <p style={{ fontSize: "11px", color: t.textSub, margin: "4px 0 0", fontStyle: "italic" }}>{booking.notes || "No notes"}</p>
+                            </div>
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                            <span style={{ 
+                                padding: "4px 10px", 
+                                borderRadius: "100px", 
+                                fontSize: "11px", 
+                                fontWeight: 800, 
+                                backgroundColor: booking.status === 'Approved' ? "#22c55e20" : (booking.status === 'Pending' ? "#f59e0b20" : "#ef444420"),
+                                color: booking.status === 'Approved' ? "#22c55e" : (booking.status === 'Pending' ? "#f59e0b" : "#ef4444")
+                            }}>
+                                {booking.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                {booking.status === 'Pending' && (
+                                    <>
+                                        <button 
+                                            onClick={() => handleStatusChange(booking.id, 'Approved')}
+                                            style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", padding: "6px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                                        >
+                                            Approve
+                                        </button>
+                                        <button 
+                                            onClick={() => handleStatusChange(booking.id, 'Rejected')}
+                                            style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "6px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                                        >
+                                            Reject
+                                        </button>
+                                    </>
+                                )}
+                                {booking.status === 'Approved' && (
+                                    <button 
+                                        onClick={() => handleStatusChange(booking.id, 'Completed')}
+                                        style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", padding: "6px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                                    >
+                                        Mark Completed
+                                    </button>
+                                )}
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 const MapPin = ({ size, style }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -524,7 +621,7 @@ function AdminHomePage() {
     useEffect(() => {
         const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance"];
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
-        const serviceTabs = ["all_turfs", "turf_bookings", "service_active", "service_banned"];
+        const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "comm_hub"];
         const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub"];
 
@@ -1936,6 +2033,7 @@ function AdminHomePage() {
                                             { label: "Active Turfs", id: "turf_active" },
                                             { label: "Banned Turfs", id: "turf_banned" },
                                             { label: "Turf Bookings", id: "turf_bookings" },
+                                            { label: "Pool Requests", id: "pool_bookings" },
                                             { label: "Active Professionals", id: "service_active" },
                                             { label: "Banned Professionals", id: "service_banned" },
                                         ].map(sub => (
@@ -2635,6 +2733,22 @@ function AdminHomePage() {
                             </div>
                             <div className="table-container">
                                 <TurfBookingsTable t={t} />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "pool_bookings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Swimming Pool Service Requests</h3>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button style={{ padding: "8px 16px", borderRadius: "8px", background: "#f1f5f9", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Archive size={14} /> Export CSV
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="table-container">
+                                <PoolBookingsTable t={t} />
                             </div>
                         </div>
                     )}
@@ -5722,7 +5836,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>

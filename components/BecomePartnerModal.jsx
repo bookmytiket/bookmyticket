@@ -11,7 +11,7 @@ const PARTNER_TYPES = [
 
 const CATEGORIES_BY_TYPE = {
     event_organiser: ["Sports", "Comedy", "Music", "Festival", "Corporate Events", "Workshops"],
-    professional_service: ["Mehendi Artist", "Photographer", "Makeup Artist", "Turf Partner", "Decorator", "Catering Service"]
+    professional_service: ["Mehendi Artist", "Photographer", "Makeup Artist", "Turf Partner", "Swimming Pool", "Decorator", "Catering Service"]
 };
 
 

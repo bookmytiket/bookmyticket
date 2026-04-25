@@ -288,10 +288,15 @@ export async function POST(request) {
         try {
           await sendM365Email(m365Config, fromEmail, email, subject, emailContent);
           console.log(`[approve-partner] ✅ Credentials email sent to ${email}`);
-          await supabaseAdmin.from('notifications_log').insert({
-            user_id: newUserId, type: 'Email', recipient: email,
-            subject, content: "Approval Credentials Sent", status: 'Sent'
-          }).catch(() => {});
+          const { error: logError } = await supabaseAdmin.from('notifications_log').insert({
+            user_id: newUserId, 
+            type: 'Email', 
+            recipient: email,
+            subject, 
+            content: "Approval Credentials Sent", 
+            status: 'Sent'
+          });
+          if (logError) console.error("[approve-partner] ⚠️ Failed to log notification:", logError.message);
         } catch (emailErr) {
           console.error("[approve-partner] ❌ Failed to send credentials email:", emailErr.message);
         }

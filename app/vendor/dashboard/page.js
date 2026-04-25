@@ -21,7 +21,8 @@ import {
     Briefcase,
     Share,
     Package,
-    Plus
+    Plus,
+    Waves
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,7 @@ export default function DashboardPage() {
     }, [user, loading, router, mounted]);
 
     const isTurfVendor = user?.category?.toLowerCase().includes("turf");
+    const isPoolVendor = user?.category?.toLowerCase().includes("swimming");
 
     // Common Profile Query
     const { data: profileArr = [], loading: profileLoading } = useSupabaseQuery('service_providers', (q) => 
@@ -57,6 +59,10 @@ export default function DashboardPage() {
 
     if (isTurfVendor) {
         return <TurfDashboardContent user={user} vendorId={vendorId} promoteProfileModal={promoteProfileModal} setPromoteProfileModal={setPromoteProfileModal} />;
+    }
+
+    if (isPoolVendor) {
+        return <PoolDashboardContent user={user} vendorId={vendorId} promoteProfileModal={promoteProfileModal} setPromoteProfileModal={setPromoteProfileModal} />;
     }
 
     return <ArtistDashboardContent user={user} vendorId={vendorId} profile={profile} promoteProfileModal={promoteProfileModal} setPromoteProfileModal={setPromoteProfileModal} />;
@@ -281,6 +287,176 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                 type="Service"
                 bookingUrl={typeof window !== "undefined" && vendorId ? `${window.location.origin}/services/${vendorId}` : ""}
             />
+        </div>
+    );
+}
+
+function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteProfileModal }) {
+    const { data: pools = [] } = useSupabaseQuery('swimming_pools', (q) => q.eq('vendor_id', vendorId || ""), [vendorId]);
+    const { data: bookings = [] } = useSupabaseQuery('pool_bookings', (q) => q.eq('pool_id', pools?.[0]?.id || "").order('created_at', { ascending: false }), [pools]);
+    
+    const stats = {
+        totalPools: pools?.length || 0,
+        totalRequests: bookings.length,
+        approvedRequests: bookings.filter(b => b.status === "Approved" || b.status === "Completed").length,
+        pendingRequests: bookings.filter(b => b.status === "Pending").length,
+    };
+
+    const statCards = [
+        { name: "Total Pools", value: stats.totalPools, icon: Waves, color: "text-sky-500", bg: "bg-sky-50", trend: "Inventory Live", trendUp: true },
+        { name: "Total Requests", value: stats.totalRequests, icon: Clock, color: "text-blue-500", bg: "bg-blue-50", trend: "Customer Leads", trendUp: true },
+        { name: "Approved", value: stats.approvedRequests, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50", trend: "Revenue Source", trendUp: true },
+        { name: "Pending Approval", value: stats.pendingRequests, icon: Star, color: "text-amber-500", bg: "bg-amber-50", trend: "Needs Attention", trendUp: false },
+    ];
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-12">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-sky-500 rounded-xl text-white shadow-lg shadow-sky-500/20">
+                            <Waves size={20} strokeWidth={2.5} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
+                            Pool Operations
+                        </h2>
+                    </div>
+                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
+                        Management hub for your swimming facilities
+                    </p>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setPromoteProfileModal(true)}
+                        className="group bg-sky-50 border border-sky-200 px-6 py-2.5 rounded-xl text-sky-600 font-black text-[9px] shadow-sm hover:shadow-xl hover:bg-sky-100 transition-all flex items-center gap-2 uppercase tracking-widest"
+                    >
+                        <Share size={14} />
+                        Promote
+                    </button>
+                    <Link 
+                        href="/vendor/swimming-pool"
+                        className="group bg-slate-900 border border-slate-800 px-6 py-2.5 rounded-xl text-white font-black text-[9px] shadow-sm hover:shadow-xl hover:bg-slate-800 transition-all flex items-center gap-2 uppercase tracking-widest"
+                    >
+                        <Plus size={14} className="text-sky-400 group-hover:rotate-90 transition-transform" />
+                        Pool Manager
+                    </Link>
+                </div>
+            </div>
+
+            {/* Stat Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {statCards.map((stat, i) => (
+                    <div 
+                        key={stat.name}
+                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-sky-500/20 transition-all duration-500 shadow-xl shadow-slate-200/40 overflow-hidden"
+                    >
+                        <div className="flex items-center justify-between relative z-10">
+                            <div className={`p-3 rounded-xl bg-slate-50 border border-slate-100 ${stat.color} shadow-inner group-hover:bg-white transition-colors`}>
+                                <stat.icon size={18} strokeWidth={2.5} />
+                            </div>
+                            <div className={`text-[8px] font-black tracking-widest px-2.5 py-1 rounded-full border uppercase ${stat.trendUp ? 'text-emerald-500 bg-emerald-50 border-emerald-100' : 'text-amber-500 bg-amber-50 border-amber-100'}`}>
+                                {stat.trend}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 relative z-10">
+                            <h3 className="text-slate-400 text-[8px] font-black uppercase tracking-widest">{stat.name}</h3>
+                            <div className="text-2xl font-black text-slate-900 mt-1 tracking-tighter italic">
+                                {stat.value}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Recent Bookings */}
+                <div className="xl:col-span-2 space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-3">
+                            <div className="w-1 h-5 bg-sky-600 rounded-full"></div>
+                            <h3 className="text-lg font-black text-slate-900 italic tracking-tighter uppercase">Recent Inquiries</h3>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {bookings.length > 0 ? bookings.slice(0, 5).map((booking) => (
+                            <div 
+                                key={booking.id}
+                                className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-sky-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-sky-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
+                                        P
+                                    </div>
+                                    
+                                    <div className="space-y-0.5">
+                                        <h4 className="text-lg font-black text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors truncate">
+                                            Request for {booking.booking_date}
+                                        </h4>
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                <CalendarIcon size={10} className="text-sky-500" />
+                                                {booking.booking_date}
+                                            </span>
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                <Clock size={10} className="text-emerald-500" />
+                                                {booking.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                                    <Link 
+                                        href="/vendor/swimming-pool"
+                                        className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all text-center"
+                                    >
+                                        Manage
+                                    </Link>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="bg-white rounded-[2rem] p-16 border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-inner">
+                                    <CheckCircle size={32} strokeWidth={1} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">No Requests</h4>
+                                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">No active inquiries detected.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pool Overview */}
+                <div className="space-y-6">
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/30 space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-1 h-5 bg-sky-500 rounded-full"></div>
+                            <h3 className="text-base font-black text-slate-900 uppercase italic tracking-tighter">Facility Overview</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest italic">Active Pools</span>
+                                <span className="text-base font-black text-slate-900 italic">{stats.totalPools}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest italic">Pending Leads</span>
+                                <span className="text-base font-black text-slate-900 italic">{stats.pendingRequests}</span>
+                            </div>
+                        </div>
+
+                        <Link href="/vendor/swimming-pool" className="block w-full text-center text-[9px] font-black text-sky-600 hover:text-slate-900 transition-all uppercase tracking-[0.3em] pt-4 border-t border-slate-100">
+                            Configure Pools
+                        </Link>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

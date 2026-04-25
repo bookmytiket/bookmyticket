@@ -52,13 +52,18 @@ export default function VendorLayout({ children }) {
     }
 
     const isTurfVendor = user?.category?.toLowerCase().includes("turf");
+    const isPoolVendor = user?.category?.toLowerCase().includes("swimming");
 
     const navigation = [
         { name: "Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard },
         { name: "Bookings", href: "/vendor/bookings", icon: CheckCircle },
         { name: "Calendar", href: "/vendor/calendar", icon: Calendar },
-        { name: isTurfVendor ? "Turf Management" : "Services / Packages", href: "/vendor/services", icon: isTurfVendor ? Package : Sparkles },
-        { name: isTurfVendor ? "Facility Gallery" : "Portfolio", href: "/vendor/portfolio", icon: ImageIcon },
+        { 
+            name: isTurfVendor ? "Turf Management" : isPoolVendor ? "Pool Management" : "Services / Packages", 
+            href: isPoolVendor ? "/vendor/swimming-pool" : "/vendor/services", 
+            icon: (isTurfVendor || isPoolVendor) ? Package : Sparkles 
+        },
+        { name: isTurfVendor ? "Facility Gallery" : isPoolVendor ? "Pool Images" : "Portfolio", href: isPoolVendor ? "/vendor/swimming-pool" : "/vendor/portfolio", icon: ImageIcon },
         { name: "Messages", href: "/vendor/messages", icon: MessageSquare },
         { name: "Reviews", href: "/vendor/reviews", icon: Star },
         { name: "Earnings", href: "/vendor/earnings", icon: DollarSign },
@@ -99,7 +104,9 @@ export default function VendorLayout({ children }) {
                         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
                             <Sparkles size={40} className="text-pink-500" />
                         </div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">{isTurfVendor ? "Turf Portal" : "Artist Portal"}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">
+                            {isTurfVendor ? "Turf Portal" : isPoolVendor ? "Pool Portal" : "Artist Portal"}
+                        </p>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
                             <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">{user?.category || "Professional Artist"}</span>
@@ -171,7 +178,9 @@ export default function VendorLayout({ children }) {
                                     {navigation.find(n => n.href === pathname)?.name || "Dashboard"}
                                 </h1>
                             </div>
-                            <p className="text-[7px] lg:text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] xs:ml-3 truncate">{isTurfVendor ? "Turf Management Hub" : "Artist Management Hub"}</p>
+                            <p className="text-[7px] lg:text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] xs:ml-3 truncate">
+                                {isTurfVendor ? "Turf Management Hub" : isPoolVendor ? "Pool Management Hub" : "Artist Management Hub"}
+                            </p>
                         </div>
                     </div>
 
