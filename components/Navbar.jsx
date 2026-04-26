@@ -671,21 +671,21 @@ export default function Navbar() {
 
         {/* Mobile Search - Persistent */}
         <div className="show-mobile" style={{
-          padding: '10px 16px 16px',
+          padding: '4px 12px 10px',
           background: 'transparent'
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             backgroundColor: scrolled ? 'rgba(255,255,255,0.15)' : '#f1f5f9',
-            borderRadius: '12px',
-            padding: '4px 6px',
+            borderRadius: '10px',
+            padding: '2px 4px',
             border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
-              <Search size={16} color="#f844a4" />
+              <Search size={14} color="#f844a4" />
               <input
                 placeholder="Find events..."
                 value={search}
@@ -695,8 +695,8 @@ export default function Navbar() {
                   border: 'none',
                   outline: 'none',
                   background: 'transparent',
-                  padding: '8px 10px',
-                  fontSize: '14px',
+                  padding: '6px 8px',
+                  fontSize: '13px',
                   width: '100%',
                   color: scrolled ? '#fff' : '#1e293b'
                 }}
@@ -709,8 +709,8 @@ export default function Navbar() {
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
-                padding: '6px 12px',
-                fontSize: '12px',
+                padding: '5px 12px',
+                fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer'
               }}

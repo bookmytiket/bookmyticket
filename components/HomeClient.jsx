@@ -3,9 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { isVirtualEvent, isFreeEvent } from '@/app/utils/eventUtils';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import HeroBanner from '@/components/HeroBanner';
+import { motion, AnimatePresence } from 'framer-motion';
 import VideoHeroBanner from '@/components/VideoHeroBanner';
-import Spotlight from '@/components/Spotlight';
 import FeaturedOrganisers from '@/components/FeaturedOrganisers';
 import FeaturedEvents from '@/components/FeaturedEvents';
 import RecentlyViewedEvents from '@/components/RecentlyViewedEvents';
@@ -696,10 +695,7 @@ function HomeClient() {
           <VideoHeroBanner />
         </div>
 
-        {/* 1) Hero Image Sliders (Promotional) */}
-        <div style={{ width: '100%', paddingTop: isMobile ? '20px' : '40px' }}>
-          <HeroBanner slides={heroSlides.length > 0 ? heroSlides : HERO_BANNER_SLIDES} />
-        </div>
+        {/* Search & Category Filter Results Section */}
 
         <SubnavMarquee />
 
@@ -855,79 +851,98 @@ function HomeClient() {
             {/* Promotional Image Hero Banners moved to bottom for better flow */}
 
             {/* DYNAMIC UI SECTION: About BookMyTicket */}
-            <section style={{ width: '100%', backgroundColor: '#ffffff', padding: '100px 20px', position: 'relative', overflow: 'hidden' }}>
-              {/* Decorative Background Elements */}
-              <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(248,68,100,0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
-              <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(192,38,211,0.05) 0%, transparent 70%)', zIndex: 0 }}></div>
-
+            <section style={{ width: '100%', backgroundColor: '#ffffff', padding: '80px 20px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-                  <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
-                    Your One-Stop Platform for <br />
+                <motion.div 
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8 }}
+                  style={{ textAlign: 'left', marginBottom: '60px' }}
+                >
+                  <h2 id="platform-intro-heading" style={{ fontSize: 'clamp(42px, 5vw, 64px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                    BookMyTicket – <br />
                     <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                      Events & Professional Services
+                      Book Events, Turf & Services
                     </span>
                   </h2>
-                  <p style={{ color: '#64748b', fontSize: '18px', maxWidth: '850px', margin: '0 auto', lineHeight: 1.8, fontWeight: 500 }}>
-                    BookMyTicket is India's fastest-growing destination for discovering unique experiences. 
-                    From live concerts and sports turfs to verified expert services, we bring your city to your fingertips.
+                  <p style={{ color: '#475569', fontSize: '18px', maxWidth: '800px', margin: '0 0 40px', lineHeight: 1.6, fontWeight: 500 }}>
+                    BookMyTicket helps you discover and book live events, sports turf slots, and professional services near you. 
+                    Find concerts, local events, and trusted service providers easily in India's top cities.
                   </p>
-                </div>
+                </motion.div>
+
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '30px' }}>
+                {/* SLIDING UI SECTION: Features */}
+                <div className="sliding-features-wrap" style={{ 
+                  display: 'flex', 
+                  overflowX: 'auto', 
+                  gap: '32px', 
+                  paddingBottom: '20px',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
                   {[
                     {
                       title: "Online Event Ticketing",
                       icon: "🎟️",
                       color: "#f84464",
-                      desc: "Discover the latest **shows and events near me**. From music concerts to community festivals, enjoy a seamless and secure **online ticketing system**."
+                      desc: "BookMyTicket is the premier destination for **online ticket sales** in India. We help fans find the best **concerts near me**, live shows, and community events with the **lowest platform fees**. Sell tickets online free with our advanced **event ticketing software**.",
+                      sub: "Events in Coimbatore & Chennai",
+                      subDesc: "Discover regional theaters, local art exhibits, and sports matches. Whether it's a cricket tournament in Coimbatore or a music gala in Chennai, BookMyTicket is your trusted partner."
                     },
                     {
-                      title: "Sell Tickets Online",
-                      icon: "🚀",
+                      title: "Sports Turf Booking",
+                      icon: "⚽",
                       color: "#8b5cf6",
-                      desc: "The **best way to sell tickets online**. Our **event ticketing software** allows organisers to sell tickets free of upfront costs with advanced tracking."
+                      desc: "Looking to play? Our platform offers the easiest way to **book cricket turfs**, football grounds, and badminton courts. Get real-time availability and instant confirmation for the top sports venues in **Hyderabad, Bangalore, and Chennai**.",
+                      sub: "Best Sports Venues Near You",
+                      subDesc: "We partner with top-rated sports facilities across India to ensure you play on the best surfaces. From floodlit night matches to weekend morning drills, find the perfect slot today."
                     },
                     {
-                      title: "Professional Partners",
+                      title: "Professional Services",
                       icon: "🤝",
                       color: "#c026d3",
-                      desc: "Connect with verified Mehendi artists, photographers, and planners. Browse portfolios and **book services** directly through our platform."
+                      desc: "Beyond tickets, we connect you with **professional artist booking** services. Hire verified Mehendi artists, wedding photographers, and event planners. Browse portfolios and book experts directly on **BookMyTicket**.",
+                      sub: "Verified & Rated Providers",
+                      subDesc: "Every service provider on our platform undergoes a verification process. Read real reviews, browse portfolios, and book with confidence knowing you are getting the best talent in the industry."
                     }
                   ].map((item, idx) => (
-                    <div 
+                    <motion.div 
                       key={idx} 
-                      className="dynamic-card"
+                      className="sliding-card"
+                      whileHover={{ y: -10, boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}
+                      initial={{ opacity: 0, x: 50 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: idx * 0.1 }}
                       style={{ 
+                        flex: '0 0 380px',
                         background: '#fff', 
-                        padding: '48px 40px', 
+                        padding: '40px', 
                         borderRadius: '32px', 
                         border: '1px solid #f1f5f9',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '20px'
+                        gap: '24px',
+                        cursor: 'pointer'
                       }}
                     >
-                      <div style={{ 
-                        width: '64px', 
-                        height: '64px', 
-                        borderRadius: '18px', 
-                        background: `${item.color}10`, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        fontSize: '32px',
-                        marginBottom: '10px'
-                      }}>
-                        {item.icon}
+                      <div>
+                        <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>{item.title}</h3>
+                        <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>
+                          {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#334155', fontWeight: 700 }}>{part}</strong> : part)}
+                        </p>
                       </div>
-                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>{item.title}</h3>
-                      <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>
-                        {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#334155', fontWeight: 700 }}>{part}</strong> : part)}
-                      </p>
-                    </div>
+                      
+                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px' }}>
+                        <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>{item.sub}</h4>
+                        <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{item.subDesc}</p>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
 

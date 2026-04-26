@@ -36,35 +36,8 @@ export default function Home() {
               BookMyTicket helps you discover and book live events, sports turf slots, and professional services near you. 
               Find concerts, local events, and trusted service providers easily in India's top cities.
             </p>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {[
-                { name: 'Browse Events', url: '/events' },
-                { name: 'Find Services', url: '/services' },
-                { name: 'Events in Coimbatore', url: '/events/in/coimbatore' },
-                { name: 'Book Turf Slots', url: '/events?category=Sports' },
-                { name: 'Join Now', url: '/become-partner' }
-              ].map((link, i) => (
-                <a 
-                  key={i} 
-                  href={link.url} 
-                  style={{ 
-                    padding: '8px 20px', 
-                    borderRadius: '100px', 
-                    background: '#f1f5f9', 
-                    color: '#475569', 
-                    textDecoration: 'none', 
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    display: 'inline-block'
-                  }}
-                >
-                  {link.name}
-                </a>
-              ))}
-            </div>
           </div>
-
+          
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '60px' }}>
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginBottom: '20px' }}>Online Event Ticketing</h2>

@@ -21,7 +21,7 @@ const Counter = ({ value, suffix = "+" }) => {
   return <span>{displayValue}{suffix}</span>;
 };
 
-const StatBadge = ({ icon: Icon, label, value, suffix, color }) => (
+const StatBadge = ({ icon: Icon, label, value, suffix, color, isMobile }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -30,11 +30,12 @@ const StatBadge = ({ icon: Icon, label, value, suffix, color }) => (
       backdropFilter: 'blur(10px)',
       border: '1px solid rgba(255, 255, 255, 0.2)',
       borderRadius: '16px',
-      padding: '12px 20px',
+      padding: isMobile ? '10px 14px' : '12px 20px',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px',
-      minWidth: '160px'
+      gap: isMobile ? '8px' : '12px',
+      flex: isMobile ? '1 1 calc(50% - 8px)' : '0 0 auto',
+      minWidth: isMobile ? '120px' : '160px'
     }}
   >
     <div style={{
@@ -52,7 +53,7 @@ const StatBadge = ({ icon: Icon, label, value, suffix, color }) => (
     <div>
       <h4 style={{ 
         margin: 0, 
-        fontSize: '18px', 
+        fontSize: isMobile ? '16px' : '18px', 
         fontWeight: 800, 
         color: '#fff',
         lineHeight: 1
@@ -159,9 +160,11 @@ export default function VideoHeroBanner() {
         <section style={{
             position: "relative",
             width: "100%",
-            height: isMobile ? "50vh" : "70vh",
-            minHeight: isMobile ? "400px" : "600px",
-            maxHeight: "800px",
+            height: isMobile ? "auto" : "70vh",
+            minHeight: isMobile ? "520px" : "600px",
+            maxHeight: isMobile ? "none" : "800px",
+            paddingTop: isMobile ? "60px" : "0",
+            paddingBottom: isMobile ? "40px" : "0",
             display: "flex",
             alignItems: "center",
             overflow: "hidden",
@@ -218,16 +221,16 @@ export default function VideoHeroBanner() {
                 justifyContent: "center",
                 alignItems: "flex-start"
             }}>
-                <motion.h2 
+                <motion.h1 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8 }}
                   style={{
-                    fontSize: isMobile ? "36px" : "clamp(48px, 6vw, 72px)",
+                    fontSize: isMobile ? "30px" : "clamp(48px, 6vw, 72px)",
                     fontWeight: 900,
                     color: "#fff",
-                    lineHeight: 1.05,
-                    marginBottom: "20px",
+                    lineHeight: 1.1,
+                    marginBottom: isMobile ? "12px" : "20px",
                     fontFamily: "var(--font-heading), sans-serif",
                     letterSpacing: "-0.04em"
                   }}
@@ -241,30 +244,31 @@ export default function VideoHeroBanner() {
                     }}>
                         Experience on BookMyTicket
                     </span>
-                </motion.h2>
+                </motion.h1>
 
-                <motion.p 
+                <motion.h2 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.8, delay: 0.2 }}
                   style={{
-                    fontSize: isMobile ? "15px" : "18px",
+                    fontSize: isMobile ? "14px" : "18px",
                     color: "rgba(255, 255, 255, 0.8)",
                     fontWeight: 400,
-                    marginBottom: "48px",
+                    marginBottom: isMobile ? "24px" : "48px",
                     maxWidth: "600px",
                     lineHeight: 1.6
                   }}
                 >
-                    Explore concerts, shows, nightlife, and exclusive experiences happening around you. Join the fastest growing community.
-                </motion.p>
+                    Explore concerts, shows, nightlife, and exclusive experiences happening around you.
+                </motion.h2>
 
                 {/* Statisticsbadges Grid - The "Image Details" inside the banner */}
                 <div style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: "16px",
-                  width: "100%"
+                  gap: isMobile ? "12px" : "16px",
+                  width: "100%",
+                  justifyContent: isMobile ? "center" : "flex-start"
                 }}>
                   <StatBadge 
                     icon={Ticket} 
@@ -272,6 +276,7 @@ export default function VideoHeroBanner() {
                     value={stats.tickets} 
                     suffix="+" 
                     color="#f84464"
+                    isMobile={isMobile}
                   />
                   <StatBadge 
                     icon={Users} 
@@ -279,6 +284,7 @@ export default function VideoHeroBanner() {
                     value={stats.organisers} 
                     suffix="+" 
                     color="#8b5cf6"
+                    isMobile={isMobile}
                   />
                   <StatBadge 
                     icon={Briefcase} 
@@ -286,6 +292,7 @@ export default function VideoHeroBanner() {
                     value={stats.services} 
                     suffix="+" 
                     color="#c026d3"
+                    isMobile={isMobile}
                   />
                   {!isMobile && (
                     <StatBadge 
@@ -294,6 +301,7 @@ export default function VideoHeroBanner() {
                       value={98} 
                       suffix="%" 
                       color="#ec4899"
+                      isMobile={isMobile}
                     />
                   )}
                 </div>

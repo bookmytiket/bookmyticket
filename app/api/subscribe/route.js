@@ -31,9 +31,11 @@ export async function POST(request) {
       const html = `
         <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; padding: 40px 20px;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-            <!-- Header Banner - Pink & Purple Gradient -->
+            <!-- Header Banner - Pink & Purple Gradient with White Pod for Logo -->
             <div style="background: linear-gradient(135deg, #FF1493 0%, #8A2BE2 100%); padding: 40px; text-align: center;">
-              <img src="https://bookmyticket.net/logo.png" alt="BookMyTicket" style="height: 50px; width: auto; filter: brightness(0) invert(1);" />
+              <div style="background: #ffffff; display: inline-block; padding: 12px 24px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <img src="https://bookmyticket.net/logo.png" alt="BookMyTicket" style="height: 40px; width: auto; display: block;" />
+              </div>
             </div>
             
             <div style="padding: 40px;">

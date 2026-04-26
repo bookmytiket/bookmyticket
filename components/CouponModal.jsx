@@ -5,6 +5,8 @@ import {
     Copy, Check, Ticket, Calendar, ShieldCheck, 
     Gift, AlertTriangle, ChevronDown, ExternalLink, X
 } from "lucide-react";
+import { useAuth } from "./AuthContext";
+import MobileLoginPopup from "./MobileLoginPopup";
 
 const AccordionItem = ({ title, icon: Icon, iconColor, children }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -34,13 +36,19 @@ const AccordionItem = ({ title, icon: Icon, iconColor, children }) => {
 };
 
 export default function CouponModal({ coupon, onClose }) {
+    const { user } = useAuth();
     const [isRevealed, setIsRevealed] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showLoginPopup, setShowLoginPopup] = useState(false);
 
     if (!coupon) return null;
 
     const handleGetCode = () => {
+        if (!user) {
+            setShowLoginPopup(true);
+            return;
+        }
         setIsRevealed(true);
         setShowModal(true);
     };
@@ -159,7 +167,6 @@ export default function CouponModal({ coupon, onClose }) {
                     margin-top: auto;
                 }
                 
-                /* Action Box UI matching 2nd image */
                 .coupon-action-box {
                     background: #f8fafc;
                     border: none;
@@ -193,7 +200,6 @@ export default function CouponModal({ coupon, onClose }) {
                 }
                 .close-btn:hover { background: #e2e8f0; color: #1e293b; }
 
-                /* Accordion Styles */
                 .accordion-item { border-bottom: 1px solid #f1f5f9; }
                 .accordion-header {
                     width: 100%;
@@ -218,7 +224,6 @@ export default function CouponModal({ coupon, onClose }) {
                 .accordion-content.open { max-height: 160px; padding-bottom: 16px; }
                 .accordion-content p { font-size: 14px; color: #64748b; line-height: 1.6; padding-left: 28px; margin: 0; }
 
-                /* Action Styles */
                 .action-unrevealed-text {
                     display: flex; align-items: center; justify-content: center;
                     background: #e2e8f0; color: #94a3b8; padding: 10px 24px; border-radius: 9999px;
@@ -233,7 +238,7 @@ export default function CouponModal({ coupon, onClose }) {
                     background: #2563eb; color: #fff; border-radius: 9999px; padding: 10px 20px; font-size: 13px;
                     font-weight: 700; border: none; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px;
                 }
-                /* Confetti Animation */
+                
                 .confetti-container {
                     position: absolute;
                     top: -100px; left: -50px; right: -50px; bottom: 0;
@@ -280,7 +285,6 @@ export default function CouponModal({ coupon, onClose }) {
                     100% { transform: translateX(-50%) translateY(0) scale(1) rotate(0deg); opacity: 1; }
                 }
 
-                /* Redesigned Success Modal */
                 .success-modal {
                     background: #fff;
                     border-radius: 12px;
@@ -290,10 +294,9 @@ export default function CouponModal({ coupon, onClose }) {
                     width: 100%;
                     position: relative;
                     border-top: 6px solid #f43f5e;
-                    border-image: linear-gradient(to right, #f43f5e, #f97316) 1;
                 }
                 .success-coupon-box {
-                    border: 1px solid #fecdd3; /* pink border */
+                    border: 1px solid #fecdd3;
                     background: #fff;
                     border-radius: 8px;
                     padding: 16px 20px;
@@ -316,10 +319,8 @@ export default function CouponModal({ coupon, onClose }) {
                     justify-content: center;
                     gap: 8px;
                     font-size: 15px;
-                    transition: transform 0.2s, box-shadow 0.2s;
                     box-shadow: 0 8px 20px -6px rgba(244, 63, 94, 0.5);
                 }
-                .success-btn:active { transform: translateY(2px); }
             `}</style>
             
             {showModal && (
@@ -374,12 +375,21 @@ export default function CouponModal({ coupon, onClose }) {
                 </div>
             )}
 
+            {showLoginPopup && (
+                <MobileLoginPopup 
+                    onClose={() => setShowLoginPopup(false)} 
+                    onLoginSuccess={() => {
+                        setIsRevealed(true);
+                        setShowModal(true);
+                    }}
+                />
+            )}
+
             <div className="coupon-container">
                 <button onClick={onClose} className="close-btn">
                     <X size={20} />
                 </button>
 
-                {/* Left Section (Images & Details) */}
                 <div className="coupon-left">
                     {coupon.bannerUrl && (
                         <div className="coupon-banner">
@@ -419,7 +429,6 @@ export default function CouponModal({ coupon, onClose }) {
                     </div>
                 </div>
 
-                {/* Right Section (Code & Instructions) */}
                 <div className="coupon-right">
                     <div className="coupon-action-box">
                         <h3 style={{ fontSize: "12px", fontWeight: 600, color: "#64748b", marginBottom: "16px", margin: "0 0 16px", paddingLeft: "4px" }}>

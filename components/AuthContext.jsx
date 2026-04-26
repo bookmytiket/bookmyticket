@@ -267,6 +267,23 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const loginWithGoogle = async () => {
+        if (!supabase) return { success: false, error: "System not initialized." };
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+            if (error) throw error;
+            return { success: true };
+        } catch (err) {
+            console.error("Google Login error:", err);
+            return { success: false, error: err.message };
+        }
+    };
+
     const logout = async () => {
         localStorage.removeItem("user");
         setUser(null);
@@ -277,7 +294,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, selectedCity, updateCity, locationHierarchy }}>
+        <AuthContext.Provider value={{ user, login, logout, loginWithGoogle, loading, selectedCity, updateCity, locationHierarchy }}>
             {children}
         </AuthContext.Provider>
     );

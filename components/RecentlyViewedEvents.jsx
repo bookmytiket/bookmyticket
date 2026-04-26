@@ -104,7 +104,7 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
 
     const scroll = (dir) => {
         if (scrollRef.current) {
-            scrollRef.current.scrollBy({ left: dir === "left" ? -260 : 260, behavior: "smooth" });
+            scrollRef.current.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
         }
     };
 
@@ -201,7 +201,7 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                         >
                         <div
                                 style={{
-                                    width: isMobile ? "160px" : "231px",
+                                    width: isMobile ? "220px" : "280px",
                                     background: "#fff",
                                     borderRadius: "12px",
                                     overflow: "hidden",
@@ -225,7 +225,7 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                             >
                                 <div style={{
                                     width: "100%",
-                                    aspectRatio: isMobile ? "1 / 1" : "2.3 / 3",
+                                    aspectRatio: "16 / 9",
                                     overflow: "hidden",
                                     position: "relative",
                                     flexShrink: 0,
@@ -239,10 +239,10 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                                     />
                                 </div>
 
-                                <div style={{ padding: "12px 12px 14px", display: "flex", flexDirection: "column", flex: 1 }}>
+                                <div style={{ padding: "10px", display: "flex", flexDirection: "column", flex: 1 }}>
                                     <div style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginBottom: "8px" }}>
                                         <h3 style={{
-                                            fontSize: "15px",
+                                            fontSize: "14px",
                                             fontWeight: 700,
                                             color: "#111827",
                                             margin: 0,
