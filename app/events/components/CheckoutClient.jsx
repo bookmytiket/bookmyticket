@@ -271,7 +271,7 @@ export default function CheckoutClient({ id }) {
             <div className="max-w-[1100px] mx-auto px-6 lg:px-8 py-4">
                 
                 {/* Checkout Header */}
-                <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200">
                     <Link 
                         href={`/events/book?id=${id}`}
                         className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-bold px-4 py-2 hover:bg-slate-100 rounded-xl transition-all"
@@ -287,14 +287,14 @@ export default function CheckoutClient({ id }) {
                     {/* Left: Booking Details Form */}
                     <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
                         
-                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
-                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-1.5 rounded-2xl shadow-[0_4px_15px_-4px_rgba(253,224,71,0.2)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "50px", width: "auto" }} />
                             <span className="text-black/20 text-xl mx-3">|</span>
                             <span className="font-bold text-black text-[17px]">Safe Checkout</span>
                         </div>
 
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-8 md:p-10">
-                            <h2 className="text-[22px] font-extrabold text-[#111827] tracking-tight mb-8">Booking Confirmation</h2>
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-6 md:p-8">
+                            <h2 className="text-[20px] font-extrabold text-[#111827] tracking-tight mb-6">Booking Confirmation</h2>
                             
                             <form onSubmit={(e) => { e.preventDefault(); handleConfirmPay(); }} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -364,8 +364,8 @@ export default function CheckoutClient({ id }) {
 
                     {/* Right: Summary Card */}
                     <div className="lg:col-span-5 xl:col-span-4 space-y-4">
-                        <div className="bg-white rounded-[1rem] border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-5 md:p-6 pb-7">
-                            <div className="w-full h-[180px] bg-black rounded-lg overflow-hidden mb-6 relative">
+                        <div className="bg-white rounded-[1rem] border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-4 md:p-5 pb-6">
+                            <div className="w-full h-[140px] bg-black rounded-lg overflow-hidden mb-5 relative">
                                 <img src={event.img} className="w-full h-full object-cover" alt="Cover" />
                             </div>
                             

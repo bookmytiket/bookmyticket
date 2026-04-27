@@ -132,12 +132,12 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 </div>
             )}
 
-            <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-4 mt-8">
+            <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-2 mt-4">
                 {/* Banner with Event-style Info Bar */}
-                <div className="w-full h-[280px] md:h-[480px] rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl relative mb-6 border-4 border-white group">
+                <div className="w-full h-[220px] md:h-[360px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl relative mb-4 border-4 border-white group">
                     <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Service Cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-3">
                                 <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg">
@@ -148,7 +148,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                     <span>4.9 (24 Reviews)</span>
                                 </div>
                             </div>
-                            <h2 className="text-white text-[32px] md:text-[64px] font-bold uppercase tracking-tight leading-tight mt-2 drop-shadow-2xl">
+                            <h2 className="text-white text-[28px] md:text-[48px] font-bold uppercase tracking-tight leading-tight mt-1 drop-shadow-2xl">
                                 {organiser.business_name || organiser.name}
                             </h2>
                             <div className="flex items-center gap-6 text-white/80 mt-4 font-bold uppercase text-[13px] tracking-wide">
@@ -167,7 +167,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 </div>
 
                 {/* Info Bar below Banner */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 px-2">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 px-2">
                     <div className="flex flex-wrap items-center gap-8 text-[14px] font-bold text-slate-500 uppercase tracking-tight">
                         <div className="flex items-center gap-3"><Clock size={18} className="text-slate-400" /> Experience 5+ Yrs</div>
                         <div className="flex items-center gap-3"><Users size={18} className="text-slate-400" /> Professional Service</div>
@@ -179,20 +179,20 @@ export default function ArtistProfileClient({ id: vendorId }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     
                     {/* Left Column: Booking Form (RESTORED STYLE) */}
                     <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
                         
                         {/* Safe Checkout Banner */}
-                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
-                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-1.5 rounded-2xl shadow-[0_4px_15px_-4px_rgba(253,224,71,0.2)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "50px", width: "auto" }} />
                             <span className="text-black/20 text-xl mx-3">|</span>
                             <span className="font-bold text-black text-[17px]">Safe Checkout</span>
                         </div>
 
-                        <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-8 md:p-12 relative">
-                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-10 flex items-center gap-3">
+                        <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-6 md:p-10 relative">
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
                                  Booking Confirmation
                             </h3>
 
