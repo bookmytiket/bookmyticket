@@ -3,7 +3,7 @@ import Script from 'next/script';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ searchParams }) {
-    const id = searchParams?.id;
+    const { id } = await searchParams;
     if (!id) return { title: 'Event Details' };
     
     const { data: event } = await supabase
@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }) {
 }
 
 export default async function EventDetailLayout({ children, searchParams }) {
-    const id = searchParams?.id;
+    const { id } = await searchParams;
     if (!id) notFound();
     
     const { data: event } = await supabase

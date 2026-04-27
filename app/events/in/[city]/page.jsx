@@ -19,7 +19,7 @@ const parseEventDate = (dateStr, timeStr) => {
 };
 
 export async function generateMetadata({ params }) {
-  const { city } = params;
+  const { city } = await params;
   const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);
   
   // Fetch SEO config
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function CityEventsPage({ params }) {
-  const { city } = params;
+  const { city } = await params;
   const capitalizedCity = city.charAt(0).toUpperCase() + city.slice(1);
   
   // Fetch SEO config

@@ -3,7 +3,7 @@ import EventDetailClient from '../components/EventDetailClient';
 import { supabase } from '@/lib/supabase';
 
 export async function generateMetadata({ searchParams }) {
-    const id = searchParams.id;
+    const { id } = await searchParams;
     if (!id) return {};
 
     try {
@@ -37,7 +37,7 @@ export async function generateMetadata({ searchParams }) {
 }
 
 export default async function EventDetailPage({ searchParams }) {
-    const id = searchParams.id;
+    const { id } = await searchParams;
     
     if (!id) {
         return (

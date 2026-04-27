@@ -3,7 +3,7 @@ import Script from 'next/script';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ params }) {
-    const { id } = params;
+    const { id } = await params;
     
     const { data: service } = await supabase
         .from('service_providers')
@@ -34,8 +34,19 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ServiceLayout({ children, params }) {
-    const { id } = params;
-    if (!id) notFound();
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
+
+    if (!id) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="text-center">
+                    <h1 className="text-4xl font-black text-slate-900 mb-4">Debug: ID Missing</h1>
+                    <pre className="text-left bg-slate-50 p-4 rounded-xl text-xs">{JSON.stringify(resolvedParams, null, 2)}</pre>
+                </div>
+            </div>
+        );
+    }
     
     const { data: service } = await supabase
         .from('service_providers')
@@ -43,7 +54,17 @@ export default async function ServiceLayout({ children, params }) {
         .eq('id', id)
         .maybeSingle();
 
-    if (!service) notFound();
+    if (!service) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="text-center">
+                    <h1 className="text-4xl font-black text-slate-900 mb-4">Debug: Service Not Found</h1>
+                    <p className="text-slate-500">ID from params: {id}</p>
+                    <p className="text-slate-400 text-xs mt-2">Checking service_providers table...</p>
+                </div>
+            </div>
+        );
+    }
 
     const jsonLd = service ? {
         "@context": "https://schema.org",

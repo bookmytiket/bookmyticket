@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 import ArtistProfileClient from "./ArtistProfileClient";
 
 export async function generateMetadata({ params }) {
-    const id = decodeURIComponent(params.id);
+    const { id: rawId } = await params;
+    const id = decodeURIComponent(rawId);
     if (!id) return {};
 
     try {
@@ -36,13 +37,22 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ArtistProfilePage({ params }) {
-    const vendorId = decodeURIComponent(params.id);
-
-    const { data: service } = await supabase
+    const resolvedParams = await params;
+    const vendorId = decodeURIComponent(resolvedParams?.id || "");
+    
+    if (!vendorId) {
+         return <div>Debug: Missing Vendor ID in Page</div>;
+    }
+    
+    const { data: service, error } = await supabase
         .from('service_providers')
         .select('*')
         .eq('id', vendorId)
-        .single();
+        .maybeSingle();
+
+    if (error) {
+        return <div>Debug Query Error: {error.message}</div>;
+    }
 
     return (
         <>

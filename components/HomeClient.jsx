@@ -688,14 +688,15 @@ function HomeClient() {
             0% { transform: translateX(-30px); opacity: 0; }
             100% { transform: translateX(0); opacity: 1; }
           }
+          @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
         `}</style>
 
 
         {/* Search & Category Filter Results Section */}
-        {/* 0) Top Video Hero (Primary) */}
-        <div style={{ width: '100%', paddingTop: isMobile ? '0' : '0' }}>
-          <VideoHeroBanner />
-        </div>
 
         <SubnavMarquee />
 
@@ -852,6 +853,62 @@ function HomeClient() {
 
             {/* DYNAMIC UI SECTION: Features & Info */}
             <section style={{ width: '100%', backgroundColor: '#ffffff', padding: '80px 20px', position: 'relative', overflow: 'hidden' }}>
+              {/* Cinematic Aftereffects Background Blobs */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  x: [0, 100, 0],
+                  y: [0, 50, 0]
+                }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                style={{ 
+                  position: 'absolute', 
+                  top: '-10%', 
+                  left: '-5%', 
+                  width: '40%', 
+                  height: '60%', 
+                  background: 'radial-gradient(circle, rgba(248, 68, 100, 0.08) 0%, transparent 70%)', 
+                  filter: 'blur(80px)',
+                  zIndex: 0
+                }}
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1.2, 1, 1.2],
+                  x: [0, -150, 0],
+                  y: [0, 100, 0]
+                }}
+                transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                style={{ 
+                  position: 'absolute', 
+                  bottom: '-10%', 
+                  right: '5%', 
+                  width: '50%', 
+                  height: '70%', 
+                  background: 'radial-gradient(circle, rgba(192, 38, 211, 0.08) 0%, transparent 70%)', 
+                  filter: 'blur(100px)',
+                  zIndex: 0
+                }}
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.3, 1],
+                  x: [0, 50, 0],
+                  y: [0, -100, 0]
+                }}
+                transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                style={{ 
+                  position: 'absolute', 
+                  top: '20%', 
+                  right: '20%', 
+                  width: '30%', 
+                  height: '40%', 
+                  background: 'radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, transparent 70%)', 
+                  filter: 'blur(60px)',
+                  zIndex: 0
+                }}
+              />
+
               <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
                 
                 {/* DYNAMIC HEADING SECTION */}
@@ -914,35 +971,63 @@ function HomeClient() {
                     <motion.div 
                       key={idx} 
                       className="sliding-card"
-                      whileHover={{ y: -10, boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}
+                      whileHover={{ y: -12, scale: 1.02 }}
                       initial={{ opacity: 0, x: 50 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: idx * 0.1 }}
                       style={{ 
                         flex: '0 0 380px',
-                        background: '#fff', 
+                        background: 'rgba(255, 255, 255, 0.4)', 
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
                         padding: '40px', 
                         borderRadius: '32px', 
-                        border: '1px solid #f1f5f9',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
-                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '24px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = `0 20px 40px ${item.color}15`;
+                        e.currentTarget.style.borderColor = `${item.color}40`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.03)';
+                        e.currentTarget.style.borderColor = 'rgba(241, 245, 249, 0.8)';
                       }}
                     >
-                      <div>
+                      {/* Dynamic Background Glow on Hover */}
+                      <motion.div
+                        style={{
+                          position: 'absolute',
+                          top: '-50%',
+                          left: '-50%',
+                          width: '200%',
+                          height: '200%',
+                          background: `radial-gradient(circle, ${item.color}08 0%, transparent 70%)`,
+                          pointerEvents: 'none',
+                          zIndex: 0
+                        }}
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                      />
+
+                      <div style={{ position: 'relative', zIndex: 1 }}>
                         <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>{item.title}</h3>
-                        <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0 }}>
+                        <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0, userSelect: 'none', pointerEvents: 'none' }}>
                           {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#334155', fontWeight: 700 }}>{part}</strong> : part)}
                         </p>
                       </div>
                       
-                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px' }}>
-                        <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>{item.sub}</h4>
-                        <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{item.subDesc}</p>
+                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px', position: 'relative', zIndex: 1 }}>
+                        <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px', userSelect: 'none' }}>{item.sub}</h4>
+                        <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.6, margin: 0, userSelect: 'none', pointerEvents: 'none' }}>{item.subDesc}</p>
                       </div>
                     </motion.div>
                   ))}

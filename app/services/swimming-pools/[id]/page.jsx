@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 import PoolDetailClient from "./PoolDetailClient";
 
 export async function generateMetadata({ params }) {
-    const id = decodeURIComponent(params.id);
+    const { id: rawId } = await params;
+    const id = decodeURIComponent(rawId);
     if (!id) return {};
 
     try {
@@ -32,8 +33,9 @@ export async function generateMetadata({ params }) {
     }
 }
 
-export default function PoolDetailPage({ params }) {
-    const poolId = decodeURIComponent(params.id);
+export default async function PoolDetailPage({ params }) {
+    const { id: rawId } = await params;
+    const poolId = decodeURIComponent(rawId);
 
     return (
         <>
