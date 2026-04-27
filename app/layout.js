@@ -179,9 +179,11 @@ export default function RootLayout({ children }) {
           <ConfirmProvider>
             <AuthProvider>
               <MaintenanceGuard>
-                <SeoAnalyticsScripts />
-                <ConditionalNavbar />
-                <CustomerAdPopup />
+                <Suspense fallback={null}>
+                  <SeoAnalyticsScripts />
+                  <ConditionalNavbar />
+                  <CustomerAdPopup />
+                </Suspense>
                 <ToastContainer />
                 <ChangePasswordModal />
                 <Suspense fallback={<div className="min-h-screen bg-white" />}>
@@ -189,7 +191,6 @@ export default function RootLayout({ children }) {
                     {children}
                   </ConditionalLayoutWrapper>
                 </Suspense>
-                <MobileBottomNav />
               </MaintenanceGuard>
             </AuthProvider>
           </ConfirmProvider>

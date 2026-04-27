@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { 
     Star, MapPin, Sparkles, CheckCircle2, Clock, Users, Languages,
-    ArrowLeft, Send, Loader2, ChevronLeft, ChevronRight,
+    ArrowLeft, Send, Loader2, ChevronLeft, ChevronRight, ChevronDown,
     Calendar, ShieldCheck, User, Mail, Phone, Share2, Heart, Info, Warehouse
 } from "lucide-react";
 import { triggerNotification } from "@/lib/notificationHelper";
@@ -20,6 +20,9 @@ export default function ArtistProfileClient({ id: vendorId }) {
 
     const [activeTab, setActiveTab] = useState("portfolio");
     const [selectedPackage, setSelectedPackage] = useState(null);
+    const [isPackageDropdownOpen, setIsPackageDropdownOpen] = useState(false);
+    const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
     const [formData, setFormData] = useState({ 
         name: "", 
         email: "", 
@@ -130,7 +133,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
             )}
 
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-4 mt-8">
-                {/* Wide Banner Card */}
+                {/* Banner with Event-style Info Bar */}
                 <div className="w-full h-[280px] md:h-[480px] rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl relative mb-6 border-4 border-white group">
                     <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Service Cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -177,210 +180,435 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                    {/* Left Column: Details & Tabs */}
-                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-10">
-                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm p-10 md:p-14 overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/5 rounded-bl-full -z-0" />
-                            <div className="relative z-10">
-                                <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight mb-8 flex items-center gap-3">
-                                    <Sparkles className="text-pink-500" size={28} /> About the Artist
-                                </h3>
-                                <p className="text-[17px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-12">
-                                    {fullProfile.vendorProfile?.bio || "A dedicated professional committed to excellence. With years of experience and a passion for their craft, they bring unique creativity and skill to every project."}
-                                </p>
-                                
-                                <div className="flex items-center gap-2 border-b border-slate-200 mb-10">
-                                    {[
-                                        { id: 'portfolio', label: 'Portfolio', icon: <Sparkles size={18} /> },
-                                        { id: 'packages', label: 'Pricing & Packages', icon: <Clock size={18} /> },
-                                        { id: 'reviews', label: 'Reviews', icon: <Star size={18} /> }
-                                    ].map(tab => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`flex items-center gap-2 px-6 py-4 font-bold uppercase tracking-tight text-[13px] transition-all border-b-2 ${
-                                                activeTab === tab.id 
-                                                ? "border-pink-500 text-pink-500" 
-                                                : "border-transparent text-slate-400 hover:text-slate-600"
-                                            }`}
-                                        >
-                                            {tab.icon} {tab.label}
-                                        </button>
-                                    ))}
+                    
+                    {/* Left Column: Booking Form (RESTORED STYLE) */}
+                    <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-8">
+                        
+                        {/* Safe Checkout Banner */}
+                        <div className="flex items-center justify-center space-x-3 border-none bg-[#fde047] px-8 md:px-10 py-2 rounded-2xl shadow-[0_4px_20px_-4px_rgba(253,224,71,0.3)] w-full">
+                            <img src="/logo.png" alt="BookMyTicket" style={{ height: "68px", width: "auto" }} />
+                            <span className="text-black/20 text-xl mx-3">|</span>
+                            <span className="font-bold text-black text-[17px]">Safe Checkout</span>
+                        </div>
+
+                        <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-8 md:p-12 relative">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-10 flex items-center gap-3">
+                                 Booking Confirmation
+                            </h3>
+
+                            <form onSubmit={handleBooking} className="space-y-10">
+                                {/* Personal Details Grid */}
+                                <div className="space-y-6">
+                                    <label className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Personal Details</label>
+                                    
+                                    {/* Name & Email Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[13px] font-bold text-slate-600 block">Full Name <span className="text-pink-500">*</span></label>
+                                            <div className="relative">
+                                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    placeholder="Enter your name"
+                                                    className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-900 outline-none focus:border-pink-500 transition-all placeholder:text-slate-400 shadow-sm focus:shadow-md"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[13px] font-bold text-slate-600 block">Email Address <span className="text-pink-500">*</span></label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                <input 
+                                                    type="email" 
+                                                    required
+                                                    placeholder="example@gmail.com"
+                                                    className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-900 outline-none focus:border-pink-500 transition-all placeholder:text-slate-400 shadow-sm focus:shadow-md"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Phone & Date Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[13px] font-bold text-slate-600 block">WhatsApp Number <span className="text-pink-500">*</span></label>
+                                            <div className="flex">
+                                                <div className="flex items-center justify-center bg-slate-50 border border-slate-200 border-r-0 rounded-l-xl px-4 gap-2 shrink-0">
+                                                    <span className="text-[16px]">🇮🇳</span>
+                                                </div>
+                                                <div className="relative flex-1">
+                                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                    <input 
+                                                        type="tel" 
+                                                        required
+                                                        placeholder="10-digit number"
+                                                        className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-r-xl text-[14px] font-bold text-slate-900 outline-none focus:border-pink-500 transition-all placeholder:text-slate-400 shadow-sm focus:shadow-md"
+                                                        value={formData.phone}
+                                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 relative">
+                                            <label className="text-[13px] font-bold text-slate-600 block">Event Date <span className="text-pink-500">*</span></label>
+                                            <div className="relative">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                                                    className={`w-full pl-12 pr-10 py-3.5 bg-white border rounded-xl text-[14px] font-bold flex items-center justify-between text-left transition-all shadow-sm hover:shadow-md ${isDateDropdownOpen ? "border-pink-500 ring-2 ring-pink-500/10" : "border-slate-200 hover:border-pink-400"}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Calendar className={formData.date ? "text-green-500" : "text-pink-500"} size={18} />
+                                                        <span className={formData.date ? "text-slate-900" : "text-slate-400"}>
+                                                            {formData.date ? new Date(formData.date).toLocaleDateString('default', { day: '2-digit', month: 'short', year: 'numeric' }) : "Select Date"}
+                                                        </span>
+                                                    </div>
+                                                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isDateDropdownOpen ? "rotate-180" : ""}`} />
+                                                </button>
+
+                                                {/* Custom Date Dropdown Menu (OPENING ABOVE) */}
+                                                {isDateDropdownOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-40" onClick={() => setIsDateDropdownOpen(false)} />
+                                                        <div className="absolute bottom-[calc(100%+12px)] right-0 left-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 min-w-[280px]">
+                                                            {/* Calendar Header */}
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
+                                                                    className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+                                                                >
+                                                                    <ChevronLeft size={18} />
+                                                                </button>
+                                                                <h4 className="font-black text-[11px] uppercase tracking-widest text-slate-900">
+                                                                    {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                                                </h4>
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
+                                                                    className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+                                                                >
+                                                                    <ChevronRight size={18} />
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-7 mb-2 text-center">
+                                                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                                                                    <div key={day} className="text-[10px] font-black text-slate-300 uppercase">{day}</div>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="grid grid-cols-7 gap-0.5">
+                                                                {(() => {
+                                                                    const days = [];
+                                                                    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+                                                                    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+                                                                    const today = new Date();
+                                                                    today.setHours(0,0,0,0);
+
+                                                                    for (let i = 0; i < firstDay; i++) days.push(<div key={`pad-${i}`} />);
+
+                                                                    for (let d = 1; d <= daysInMonth; d++) {
+                                                                        const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                                                        const isSelected = formData.date === dateStr;
+                                                                        const isPast = new Date(dateStr) < today;
+
+                                                                        days.push(
+                                                                            <button
+                                                                                key={d}
+                                                                                type="button"
+                                                                                disabled={isPast}
+                                                                                onClick={() => {
+                                                                                    setFormData({...formData, date: dateStr});
+                                                                                    setIsDateDropdownOpen(false);
+                                                                                }}
+                                                                                className={`aspect-square flex items-center justify-center rounded-lg text-[11px] font-bold transition-all ${isPast ? "text-slate-200 cursor-not-allowed" : isSelected ? "bg-pink-500 text-white shadow-lg shadow-pink-500/30" : "hover:bg-pink-50 hover:text-pink-600 text-slate-600"}`}
+                                                                            >
+                                                                                {d}
+                                                                            </button>
+                                                                        );
+                                                                    }
+                                                                    return days;
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="min-h-[400px]">
-                                    {activeTab === 'portfolio' && (
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                            {portfolio.length > 0 ? portfolio.map((item, idx) => (
-                                                <div key={idx} className="aspect-[4/5] rounded-[32px] overflow-hidden group cursor-pointer border-2 border-transparent hover:border-pink-500 transition-all relative shadow-lg">
-                                                    <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={`Portfolio ${idx}`} />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <Sparkles className="text-white" size={32} />
-                                                    </div>
-                                                </div>
-                                            )) : (
-                                                <div className="col-span-full py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
-                                                    <p className="text-slate-400 font-bold uppercase tracking-widest">No portfolio items added yet</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                {/* Package Selection Area (CUSTOM PREMIUM DROPDOWN) */}
+                                <div className="space-y-6 relative">
+                                    <label className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Choose Your Package</label>
+                                    
+                                    {/* Custom Dropdown Trigger */}
+                                    <div className="relative">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setIsPackageDropdownOpen(!isPackageDropdownOpen)}
+                                            className={`w-full pl-14 pr-12 py-5 bg-white border-2 rounded-3xl font-bold transition-all text-[15px] flex items-center justify-between text-left shadow-sm ${isPackageDropdownOpen ? "border-pink-500 ring-4 ring-pink-500/10 shadow-lg" : "border-slate-100 hover:border-pink-400 hover:shadow-md"}`}
+                                        >
+                                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-pink-500">
+                                                <Sparkles size={20} />
+                                            </div>
+                                            <span className={selectedPackage ? "text-slate-900" : "text-slate-400"}>
+                                                {selectedPackage ? selectedPackage.title : "Select a service package..."}
+                                            </span>
+                                            <ChevronDown size={20} className={`text-slate-400 transition-transform duration-300 ${isPackageDropdownOpen ? "rotate-180" : ""}`} />
+                                        </button>
 
-                                    {activeTab === 'packages' && (
-                                        <PackageSelector 
-                                            packages={packages}
-                                            selectedPackage={selectedPackage}
-                                            onSelect={setSelectedPackage}
-                                            type="service"
-                                        />
-                                    )}
-
-                                    {activeTab === 'reviews' && (
-                                        <div className="space-y-6">
-                                            {reviews.length > 0 ? reviews.map((rev, idx) => (
-                                                <div key={idx} className="bg-slate-50 border border-slate-100 rounded-[32px] p-8 shadow-sm">
-                                                    <div className="flex justify-between items-start mb-6">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold uppercase shadow-md">
-                                                                {rev.reviewer_name?.[0] || <User size={24} />}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-slate-900 uppercase tracking-tight text-lg">{rev.reviewer_name || "Verified Customer"}</div>
-                                                                <div className="flex gap-1 mt-1">
-                                                                    {[...Array(5)].map((_, i) => (
-                                                                        <Star key={i} size={14} className={i < rev.rating ? "fill-yellow-400 text-yellow-400" : "text-slate-200"} />
-                                                                    ))}
+                                        {/* Custom Dropdown Menu */}
+                                        {isPackageDropdownOpen && (
+                                            <>
+                                                {/* Backdrop to close dropdown */}
+                                                <div 
+                                                    className="fixed inset-0 z-40" 
+                                                    onClick={() => setIsPackageDropdownOpen(false)}
+                                                />
+                                                <div className="absolute top-[calc(100%+12px)] left-0 right-0 bg-white border-2 border-slate-100 rounded-[32px] shadow-2xl py-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                                    <div className="max-h-[300px] overflow-y-auto px-2 custom-scrollbar">
+                                                        {packages.length > 0 ? packages.map((pkg) => (
+                                                            <div 
+                                                                key={pkg.id || pkg._id}
+                                                                onClick={() => {
+                                                                    setSelectedPackage(pkg);
+                                                                    setIsPackageDropdownOpen(false);
+                                                                }}
+                                                                className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all mb-1 ${selectedPackage?.id === (pkg.id || pkg._id) ? "bg-pink-50 text-pink-600" : "hover:bg-slate-50 text-slate-700"}`}
+                                                            >
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-black uppercase text-[13px] tracking-tight">{pkg.title}</span>
+                                                                    <span className="text-[11px] font-bold text-slate-400 mt-0.5 line-clamp-1">{pkg.description || "Premium service experience"}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-[14px]">₹{pkg.price.toLocaleString()}</span>
+                                                                    {selectedPackage?.id === (pkg.id || pkg._id) && <CheckCircle2 size={16} className="text-pink-500" />}
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                                            {new Date(rev.created_at).toLocaleDateString()}
-                                                        </div>
+                                                        )) : (
+                                                            <div className="p-4 text-center text-slate-400 font-bold uppercase text-[11px] tracking-widest">
+                                                                No packages available
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <p className="text-slate-600 font-medium leading-relaxed text-[16px]">{rev.comment}</p>
                                                 </div>
-                                            )) : (
-                                                <div className="py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
-                                                    <p className="text-slate-400 font-bold uppercase tracking-widest">No reviews yet. Be the first to book!</p>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Selected Package Details Preview */}
+                                    {selectedPackage && !isPackageDropdownOpen && (
+                                        <div className="mt-4 p-5 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm relative overflow-hidden">
+                                            <div className="absolute -right-4 -top-4 w-20 h-20 bg-pink-500/5 rounded-full" />
+                                            <div className="relative z-10">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <h4 className="font-black text-pink-600 uppercase text-[14px] tracking-tight flex items-center gap-2">
+                                                        <Sparkles size={14} /> {selectedPackage.title}
+                                                    </h4>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[16px] font-black text-slate-900">₹{selectedPackage.price.toLocaleString()}</span>
+                                                        <span className="text-[9px] font-black text-pink-400 uppercase tracking-widest">Best Value</span>
+                                                    </div>
                                                 </div>
-                                            )}
+                                                <p className="text-[13px] font-medium text-slate-500 leading-relaxed">
+                                                    {selectedPackage.description || "Comprehensive service package tailored to your needs. Includes all standard features and premium support."}
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
+
+                                <div className="pt-10 border-t border-slate-100">
+                                    <div className="flex items-start gap-4 cursor-pointer group" onClick={() => setAgreedToTerms(!agreedToTerms)}>
+                                        <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center shrink-0 mt-0.5 ${agreedToTerms ? "bg-pink-500 border-pink-500 shadow-lg shadow-pink-500/40" : "border-slate-300 group-hover:border-slate-400"}`}>
+                                            {agreedToTerms && <CheckCircle2 className="text-white" size={16} />}
+                                        </div>
+                                        <span className="text-[13px] font-bold text-slate-500 leading-tight">I have read and agreed to the <span className="text-pink-500 hover:underline">Service Policies and Terms & Conditions</span></span>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Tabs: Portfolio & Reviews (Moved below form on left) */}
+                        <div id="tabs-section" className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-10 md:p-14 overflow-hidden">
+                            <div className="flex items-center gap-2 border-b border-slate-200 mb-10">
+                                {[
+                                    { id: 'portfolio', label: 'Portfolio', icon: <Sparkles size={18} /> },
+                                    { id: 'reviews', label: 'Reviews', icon: <Star size={18} /> }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`flex items-center gap-2 px-6 py-4 font-bold uppercase tracking-tight text-[13px] transition-all border-b-2 ${
+                                            activeTab === tab.id 
+                                            ? "border-pink-500 text-pink-500" 
+                                            : "border-transparent text-slate-400 hover:text-slate-600"
+                                        }`}
+                                    >
+                                        {tab.icon} {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="min-h-[400px]">
+                                {activeTab === 'portfolio' && (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                                        {portfolio.length > 0 ? portfolio.map((item, idx) => (
+                                            <div key={idx} className="aspect-[4/5] rounded-[32px] overflow-hidden group cursor-pointer border-2 border-transparent hover:border-pink-500 transition-all relative shadow-lg">
+                                                <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={`Portfolio ${idx}`} />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Sparkles className="text-white" size={32} />
+                                                </div>
+                                            </div>
+                                        )) : (
+                                            <div className="col-span-full py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
+                                                <p className="text-slate-400 font-bold uppercase tracking-widest">No portfolio items added yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'reviews' && (
+                                    <div className="space-y-6">
+                                        {reviews.length > 0 ? reviews.map((rev, idx) => (
+                                            <div key={idx} className="bg-slate-50 border border-slate-100 rounded-[32px] p-8 shadow-sm">
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold uppercase shadow-md">
+                                                            {rev.reviewer_name?.[0] || <User size={24} />}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-900 uppercase tracking-tight text-lg">{rev.reviewer_name || "Verified Customer"}</div>
+                                                            <div className="flex gap-1 mt-1">
+                                                                {[...Array(5)].map((_, i) => (
+                                                                    <Star key={i} size={14} className={i < rev.rating ? "fill-yellow-400 text-yellow-400" : "text-slate-200"} />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        {new Date(rev.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                                <p className="text-slate-600 font-medium leading-relaxed text-[16px]">{rev.comment}</p>
+                                            </div>
+                                        )) : (
+                                            <div className="py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
+                                                <p className="text-slate-400 font-bold uppercase tracking-widest">No reviews yet. Be the first to book!</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column: Booking Widget */}
-                    <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-[120px]" id="booking-form">
-                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-xl p-10 pb-12 overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-900 rotate-45 translate-x-16 -translate-y-16" />
-                            <h3 className="text-2xl font-bold text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3 relative">
-                                 Secure Your Date
-                            </h3>
+                    {/* Right Column: Artist Profile Summary (RESTORED STYLE) */}
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-[120px]">
+                        {/* Summary Card */}
+                        <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-8">
+                            <div className="w-full aspect-[4/3] rounded-3xl overflow-hidden mb-8 relative">
+                                <img src={coverPhoto} className="w-full h-full object-cover" alt="Profile" />
+                                <div className="absolute top-4 left-4 px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black uppercase text-pink-500 shadow-lg">
+                                    Top Rated Artist
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2 mb-8">
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">
+                                    {organiser.business_name || organiser.name}
+                                </h3>
+                                <div className="flex items-center gap-2 text-[12px] font-bold text-slate-400 uppercase tracking-widest">
+                                    <MapPin size={14} className="text-pink-500" /> {fullProfile.vendorProfile?.city || "PAN India"}
+                                </div>
+                            </div>
 
-                            <form onSubmit={handleBooking} className="space-y-8">
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Personal Details</label>
-                                    <div className="space-y-4">
-                                        <div className="relative">
-                                            <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Full Name"
-                                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-3xl font-bold transition-all text-[15px] outline-none"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="relative">
-                                            <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                                            <input 
-                                                type="tel" 
-                                                placeholder="WhatsApp Number"
-                                                className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-3xl font-bold transition-all text-[15px] outline-none"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                                required
-                                            />
-                                        </div>
+                            <div className="space-y-4 mb-10 pt-8 border-t border-slate-100">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><Clock size={18} /></div>
+                                        <span className="text-[12px] font-bold text-slate-600 uppercase">Experience</span>
                                     </div>
+                                    <span className="text-[12px] font-black text-slate-900">5+ Years</span>
                                 </div>
-
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Event Schedule</label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setIsCalendarOpen(true)}
-                                        className="w-full pl-14 pr-6 py-5 bg-white border-2 border-slate-100 hover:border-slate-300 rounded-3xl font-bold transition-all text-[15px] outline-none uppercase flex items-center gap-4 text-left relative group"
-                                    >
-                                        <Calendar className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${formData.date ? "text-green-500" : "text-pink-500"}`} size={20} />
-                                        <span className={formData.date ? "text-slate-900" : "text-slate-400"}>
-                                            {formData.date ? new Date(formData.date).toLocaleDateString('default', { day: '2-digit', month: 'short', year: 'numeric' }) : "Select Event Date"}
-                                        </span>
-                                        {formData.date && <CheckCircle2 className="ml-auto text-green-500" size={20} />}
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Selected Package</label>
-                                    <div 
-                                        className="p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-between cursor-pointer hover:border-slate-400 transition-all"
-                                        onClick={() => setActiveTab('packages')}
-                                    >
-                                        {selectedPackage ? (
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-pink-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                                                    <Sparkles size={24} />
-                                                </div>
-                                                <div>
-                                                    <div className="text-[14px] font-bold uppercase text-slate-900">{selectedPackage.title}</div>
-                                                    <div className="text-[12px] font-bold text-pink-500">₹{selectedPackage.price.toLocaleString()}</div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-[14px] font-bold uppercase text-slate-400">Choose a package first</div>
-                                        )}
-                                        <ChevronRight className="text-slate-400" size={24} />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><Star size={18} /></div>
+                                        <span className="text-[12px] font-bold text-slate-600 uppercase">Avg Rating</span>
                                     </div>
+                                    <span className="text-[12px] font-black text-slate-900">4.9 / 5.0</span>
                                 </div>
-
-                                <div className="pt-6 border-t border-slate-100">
-                                    <div className="flex items-center gap-4 mb-8 cursor-pointer group" onClick={() => setAgreedToTerms(!agreedToTerms)}>
-                                        <div className={`w-7 h-7 rounded-xl border-2 transition-all flex items-center justify-center ${agreedToTerms ? "bg-pink-500 border-pink-500 shadow-lg shadow-pink-500/40" : "border-slate-300 group-hover:border-slate-400"}`}>
-                                            {agreedToTerms && <CheckCircle2 className="text-white" size={16} />}
-                                        </div>
-                                        <span className="text-[12px] font-bold text-slate-500 uppercase tracking-tight italic">I agree to the service policies & T&C</span>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><ShieldCheck size={18} /></div>
+                                        <span className="text-[12px] font-bold text-slate-600 uppercase">Verified</span>
                                     </div>
-
-                                    <button 
-                                        type="submit"
-                                        disabled={isBooking || !selectedPackage || !agreedToTerms}
-                                        className="w-full py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[32px] font-bold uppercase tracking-[0.3em] text-[15px] hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-pink-500/40 active:scale-95 flex items-center justify-center gap-4"
-                                    >
-                                        {isBooking ? <Loader2 className="animate-spin" size={24} /> : <Send size={20} />}
-                                        {isBooking ? "Confirming..." : "Book Now"}
-                                    </button>
-                                    <p className="text-center text-[11px] font-bold text-slate-400 uppercase mt-10 tracking-widest">Powered by BookMyTicket</p>
+                                    <span className="text-[12px] font-black text-green-500 uppercase">Yes</span>
                                 </div>
-                            </form>
+                            </div>
+
+                            <div className="space-y-4 pt-8 border-t border-slate-100">
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">About the Artist</h4>
+                                <p className="text-[14px] font-medium text-slate-500 leading-relaxed line-clamp-4">
+                                    {fullProfile.vendorProfile?.bio || "A dedicated professional committed to excellence. With years of experience and a passion for their craft, they bring unique creativity and skill to every project."}
+                                </p>
+                                <button 
+                                    onClick={() => {
+                                        const el = document.getElementById('tabs-section');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                        setActiveTab('portfolio');
+                                    }}
+                                    className="text-pink-500 text-[12px] font-black uppercase tracking-widest hover:underline"
+                                >
+                                    Read more
+                                </button>
+                            </div>
+
+                            {/* Book Now Button (RIGHT SIDE) */}
+                            <div className="pt-10 border-t border-slate-100">
+                                <button 
+                                    onClick={handleBooking}
+                                    disabled={isBooking || !selectedPackage || !formData.date || !agreedToTerms}
+                                    className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-black uppercase tracking-[0.15em] text-[14px] hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-pink-500/40 active:scale-95 flex items-center justify-center gap-3"
+                                >
+                                    {isBooking ? <Loader2 className="animate-spin" size={20} /> : <Send size={18} />}
+                                    {isBooking ? "Confirming..." : (selectedPackage ? `Book for ₹${selectedPackage.price.toLocaleString()}` : "Book Now")}
+                                </button>
+                                {!selectedPackage && <p className="text-[10px] text-slate-400 text-center mt-3 font-bold uppercase tracking-widest">Select a package to enable booking</p>}
+                                {!formData.date && selectedPackage && <p className="text-[10px] text-pink-400 text-center mt-3 font-bold uppercase tracking-widest">Please pick a date on the left</p>}
+                            </div>
+                        </div>
+
+                        {/* Safety & Trust Card */}
+                        <div className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden">
+                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center"><ShieldCheck size={24} className="text-pink-400" /></div>
+                                    <h4 className="text-lg font-black uppercase tracking-tighter italic">Book with Trust</h4>
+                                </div>
+                                <p className="text-white/60 text-[13px] leading-relaxed mb-6">
+                                    Your payment is held securely and only released after the service is successfully completed.
+                                </p>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest"><CheckCircle2 size={16} className="text-green-400" /> Instant Confirmation</li>
+                                    <li className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest"><CheckCircle2 size={16} className="text-green-400" /> Secure Payment</li>
+                                    <li className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest"><CheckCircle2 size={16} className="text-green-400" /> 24/7 Support</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
+
                 </div>
             </div>
-
-            {/* Modals */}
-            <CalendarModal 
-                isOpen={isCalendarOpen}
-                onClose={() => setIsCalendarOpen(false)}
-                selectedDate={formData.date ? new Date(formData.date) : null}
-                onSelect={(date) => {
-                    setFormData({ ...formData, date: date.toISOString().split('T')[0] });
-                    setIsCalendarOpen(false);
-                }}
-            />
 
             {/* Mobile Sticky Booking Bar */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-100 z-[90] flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
