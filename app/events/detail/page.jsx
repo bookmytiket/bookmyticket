@@ -1,6 +1,7 @@
 import React from 'react';
 import EventDetailClient from '../components/EventDetailClient';
 import { supabase } from '@/lib/supabase';
+import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ searchParams }) {
     const params = await searchParams;
@@ -12,7 +13,7 @@ export async function generateMetadata({ searchParams }) {
             .from('events')
             .select('*')
             .eq('id', id)
-            .single();
+            .maybeSingle();
 
         if (!event) return { title: 'Event Not Found | BookMyTicket' };
 
@@ -41,20 +42,16 @@ export default async function EventDetailPage({ searchParams }) {
     const params = await searchParams;
     const id = params?.id;
     
-    if (!id) {
-        return (
-            <div style={{ paddingTop: '150px', textAlign: 'center' }}>
-                <h2>Event ID is required</h2>
-            </div>
-        );
-    }
+    if (!id) notFound();
 
     // Fetch event for schema
     const { data: event } = await supabase
         .from('events')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+
+    if (!event) notFound();
 
     return (
         <>

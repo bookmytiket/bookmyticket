@@ -30,7 +30,7 @@ class OrganiserErrorBoundary extends Component {
             return (
                 <div style={{ minHeight: "100vh", padding: "40px", background: "#f8fafc", color: "#0f172a", fontFamily: "'Figtree', sans-serif" }}>
                     <div style={{ maxWidth: "600px", margin: "0 auto", padding: "40px", backgroundColor: "#ffffff", borderRadius: "24px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)", border: "1px solid #e2e8f0" }}>
-                        <h2 style={{ color: "#ec4899", fontWeight: 900, fontSize: "24px", marginBottom: "16px", textTransform: "uppercase", fontStyle: "italic", letterSpacing: "-1px" }}>Organiser Portal Error</h2>
+                        <h2 style={{ color: "#ec4899", fontWeight: 700, fontSize: "24px", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "-0.5px" }}>Organiser Portal Error</h2>
                         <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f1f5f9", padding: "20px", borderRadius: "12px", fontSize: "12px", border: "1px solid #e2e8f0", color: "#475569" }}>{this.state.error?.message || String(this.state.error)}</pre>
                         <button onClick={() => this.setState({ error: null })} style={{ marginTop: "24px", padding: "12px 24px", background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)", color: "white", borderRadius: "12px", border: "none", fontWeight: 700, cursor: "pointer", transition: "all 0.3s ease" }}>Try again</button>
                     </div>
@@ -151,8 +151,8 @@ function LocationPickerModal({
                 {/* Header */}
                 <div className="px-8 py-5 border-b border-slate-50 flex items-center justify-between bg-white">
                     <div>
-                        <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tighter italic">Location Picker</h3>
-                        <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Interactive Map Selection</p>
+                        <h3 className="text-xl font-bold text-slate-900 leading-tight uppercase tracking-tight">Location Picker</h3>
+                        <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Interactive Map Selection</p>
                     </div>
                     <button 
                         onClick={() => setShowMapModal(false)} 
@@ -169,12 +169,12 @@ function LocationPickerModal({
                          {/* Coordinates Badge Glass */}
                          <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white shadow-lg flex items-center gap-4">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Latitude</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Latitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lat.toFixed(6)}</span>
                             </div>
                             <div className="w-[1px] h-6 bg-slate-200" />
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Longitude</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Longitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lng.toFixed(6)}</span>
                             </div>
                          </div>
@@ -183,13 +183,13 @@ function LocationPickerModal({
                     {/* Controls Sidebar */}
                     <div className="flex-1 min-w-[320px] bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6 overflow-y-auto">
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-sm flex flex-col gap-4">
-                             <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tighter italic">
+                             <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight italic">
                                 Precisely position the marker on the map to autofill address details.
                              </p>
                              
                              <div className="space-y-4 pt-2">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Latitude</label>
+                                    <label className="block text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Latitude</label>
                                     <input 
                                         type="number" step="any" value={tempLocation.lat} 
                                         onChange={e => setTempLocation(p => ({ ...p, lat: parseFloat(e.target.value) || 0 }))}
@@ -197,7 +197,7 @@ function LocationPickerModal({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Longitude</label>
+                                    <label className="block text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Longitude</label>
                                     <input 
                                         type="number" step="any" value={tempLocation.lng} 
                                         onChange={e => setTempLocation(p => ({ ...p, lng: parseFloat(e.target.value) || 0 }))}
@@ -218,7 +218,7 @@ function LocationPickerModal({
                             <button 
                                 onClick={handleUseLocation}
                                 disabled={isGeoLoading}
-                                className="w-full py-4 rounded-2xl bg-[#ec4899] text-white text-[13px] font-black tracking-widest uppercase shadow-xl shadow-pink-200 hover:shadow-pink-300 transition-all flex items-center justify-center gap-2 group"
+                                className="w-full py-4 rounded-2xl bg-[#ec4899] text-white text-[13px] font-bold tracking-widest uppercase shadow-xl shadow-pink-200 hover:shadow-pink-300 transition-all flex items-center justify-center gap-2 group"
                                 style={{ background: ACCENT_GRADIENT }}
                             >
                                 {isGeoLoading ? (
@@ -235,7 +235,7 @@ function LocationPickerModal({
                                     setPostEvent(pe => ({ ...pe, latitude: String(tempLocation.lat), longitude: String(tempLocation.lng) }));
                                     setShowMapModal(false);
                                 }}
-                                className="w-full py-4 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-600 text-[11px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2"
+                                className="w-full py-4 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-600 text-[11px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2"
                             >
                                 Set Lat/Long Only
                             </button>
@@ -428,7 +428,7 @@ function OrganiserPanel() {
     const renderLoadingView = () => (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
             <div className="w-16 h-16 border-4 border-slate-200 border-t-pink-500 rounded-full animate-spin mb-6" />
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Initializing Portal</h2>
+            <h2 className="text-xl font-bold text-slate-900 uppercase tracking-tight italic">Initializing Portal</h2>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Connecting to Secure Gateway...</p>
         </div>
     );
@@ -454,6 +454,69 @@ function OrganiserPanel() {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // ── DATA FETCHING (Moved Up to Prevent TDZ Errors) ───────────────────────
+    const { data: organiserData, loading: isOrgLoading, refresh: refreshOrganiserData } = useSupabaseQuery(
+        "organisers",
+        (q) => q.eq("id", user?.id).maybeSingle(),
+        [user?.id]
+    );
+
+    const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
+
+    useEffect(() => {
+        if (!supportTicketsData) return;
+        const mapped = supportTicketsData
+            .filter(t => t.user_id === user?.id)
+            .map(t => ({
+                id: t.id,
+                ticketId: t.id.slice(-6),
+                email: t.user_id,
+                subject: t.subject || "No Subject",
+                description: t.message,
+                status: t.status,
+                createdAt: t.created_at,
+                updatedAt: t.updated_at || t.created_at,
+                adminNotes: t.admin_notes || "",
+                replies: Array.isArray(t.replies) ? t.replies : []
+            }));
+        setSupportTicketsList(prev => {
+            const currentString = JSON.stringify(prev);
+            const nextString = JSON.stringify(mapped);
+            return currentString === nextString ? prev : mapped;
+        });
+    }, [supportTicketsData, user?.id]);
+
+    const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
+    const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
+
+    const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
+        "events",
+        (q) => {
+            if (user?.role === "admin" || user?.role === "super_admin") {
+                return q.select('*').order('created_at', { ascending: false });
+            }
+            return q.select('*').eq("organiser_id", organiserData?.id || user?.id).order('created_at', { ascending: false });
+        },
+        [organiserData?.id, user?.id, user?.role]
+    );
+
+    const { data: bookingsData = [] } = useSupabaseQuery(
+        "bookings",
+        (q) => {
+            if (!eventsData || eventsData.length === 0) return q.eq("id", "none");
+            return q.in("event_id", eventsData.map(e => String(e.id)));
+        },
+        [eventsData]
+    );
+
+    const { data: staffAccounts = [], refresh: refetchStaff } = useSupabaseQuery(
+        "staff",
+        (q) => q.eq("organiser_id", user?.id),
+        [user?.id]
+    );
+
+    const { data: systemConfigs = [] } = useSupabaseQuery("system_config", q => q, [], { realtime: false });
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -554,13 +617,6 @@ function OrganiserPanel() {
         currency: "₹",
         transactions: []
     });
-
-    // Supabase Queries
-    const { data: organiserData, loading: isOrgLoading, refresh: refreshOrganiserData } = useSupabaseQuery(
-        "organisers",
-        (q) => q.eq("id", user?.id).maybeSingle(),
-        [user?.id]
-    );
 
     const [submitKycMutation] = useSupabaseMutation("organisers", "update", (q) => q.eq("id", user?.id));
 
@@ -709,75 +765,17 @@ function OrganiserPanel() {
         return () => { if (timeoutId) clearTimeout(timeoutId); };
     }, [organiserData, isOrgLoading, isStaff, loading, isProfessionalService, router]);
 
-    const { data: supportTicketsData = [] } = useSupabaseQuery("support_tickets");
-    const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
-    const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
-
-    useEffect(() => {
-        if (!supportTicketsData) return;
-        
-        // Stabilize mapping to prevent unnecessary re-renders
-        const mapped = supportTicketsData
-            .filter(t => t.user_id === user?.id)
-            .map(t => ({
-                id: t.id,
-                ticketId: t.id.slice(-6),
-                email: t.user_id,
-                subject: t.subject || "No Subject",
-                description: t.message,
-                status: t.status,
-                createdAt: t.created_at,
-                updatedAt: t.updated_at || t.created_at,
-                adminNotes: t.admin_notes || "",
-                replies: Array.isArray(t.replies) ? t.replies : []
-            }));
-            
-        // Only update if the stringified content actually changed to resolve loop
-        setSupportTicketsList(prev => {
-            const currentString = JSON.stringify(prev);
-            const nextString = JSON.stringify(mapped);
-            return currentString === nextString ? prev : mapped;
-        });
-    }, [supportTicketsData, user?.id]);
-
-    const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
-        "events",
-        (q) => {
-            // Admin/Super Admin can see all events
-            if (user?.role === "admin" || user?.role === "super_admin") {
-                return q.select('*').order('created_at', { ascending: false });
-            }
-            // Regular organisers only see their own
-            return q.select('*').eq("organiser_id", organiserData?.id || user?.id).order('created_at', { ascending: false });
-        },
-        [organiserData?.id, user?.id, user?.role]
-    );
     const [createEventMutation] = useSupabaseMutation("events", "insert");
     const [updateEventMutation] = useSupabaseMutation("events", "update", (q, p) => q.eq("id", p.id));
     const [createMeetingForEvent] = useSupabaseMutation("meetings", "insert");
     const [deleteEventMutation] = useSupabaseMutation("events", "delete", (q, p) => q.eq("id", p.id));
 
-    const { data: bookingsData = [] } = useSupabaseQuery(
-        "bookings",
-        (q) => {
-            if (!eventsData || eventsData.length === 0) return q.eq("id", "none");
-            return q.in("event_id", eventsData.map(e => String(e.id)));
-        },
-        [eventsData]
-    );
     const convexBookings = useMemo(() => bookingsData || [], [bookingsData]);
     const [updateBookingMutation] = useSupabaseMutation("bookings", "update", (q, p) => q.eq("id", p.id));
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
     const [deleteStaffMutation] = useSupabaseMutation("profiles", "delete", (q, p) => q.eq("id", p.id));
     
-    const { data: staffAccounts = [], refresh: refetchStaff } = useSupabaseQuery(
-        "staff",
-        (q) => q.eq("organiser_id", user?.id),
-        [user?.id]
-    );
-
-    const { data: systemConfigs = [] } = useSupabaseQuery("system_config", q => q, [], { realtime: false });
     const internalMeetingPortalEnabled = useMemo(() => {
         const cfg = systemConfigs.find(c => c.key === "internal_meeting_portal_enabled");
         return cfg ? (typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value) : true;
@@ -2174,12 +2172,12 @@ function OrganiserPanel() {
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between mb-2">
                     <div>
-                        <h2 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900 leading-none">Meeting Hub</h2>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
+                        <h2 className="text-2xl font-bold tracking-tight uppercase text-slate-900 leading-none">Meeting Hub</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
                     </div>
                     <button 
                         onClick={() => setIsCreating(true)}
-                        className="px-6 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xl shadow-slate-200"
+                        className="px-6 py-3.5 bg-black text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xl shadow-slate-200"
                     >
                         <Plus size={16} strokeWidth={3} /> New Meeting
                     </button>
@@ -2188,12 +2186,12 @@ function OrganiserPanel() {
                 {isCreating && (
                     <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-pink-500">Configure Session</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-pink-500">Configure Session</h3>
                             <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-all"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreate} className="space-y-6">
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
                                 <input 
                                     type="text" 
                                     required
@@ -2204,7 +2202,7 @@ function OrganiserPanel() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
                                 <textarea 
                                     value={newMeeting.description}
                                     onChange={(e) => setNewMeeting({...newMeeting, description: e.target.value})}
@@ -2213,8 +2211,8 @@ function OrganiserPanel() {
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setIsCreating(false)} className="px-6 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">Cancel</button>
-                                <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">Initialize Meeting</button>
+                                <button type="button" onClick={() => setIsCreating(false)} className="px-6 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">Initialize Meeting</button>
                             </div>
                         </form>
                     </div>
@@ -2226,13 +2224,13 @@ function OrganiserPanel() {
                             <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
                                 <Video size={40} />
                             </div>
-                            <h4 className="text-lg font-black italic tracking-tighter uppercase text-slate-400">No Meetings Planned</h4>
+                            <h4 className="text-lg font-bold tracking-tight uppercase text-slate-400">No Meetings Planned</h4>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2">Start by creating your first virtual event</p>
                         </div>
                     ) : meetings?.map(meeting => (
                         <div key={meeting.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
                             <div className="flex justify-between items-start mb-6">
-                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${
                                     meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' : 
                                     meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
                                 }`}>
@@ -2253,7 +2251,7 @@ function OrganiserPanel() {
                                     </button>
                                 )}
                             </div>
-                            <h4 className="text-xl font-black italic tracking-tighter uppercase text-slate-900 mb-2 truncate">{meeting.title}</h4>
+                            <h4 className="text-xl font-bold tracking-tight uppercase text-slate-900 mb-2 truncate">{meeting.title}</h4>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8 line-clamp-2">{meeting.description || "No description provided."}</p>
                             
                             <div className="flex flex-col gap-3">
@@ -2262,13 +2260,13 @@ function OrganiserPanel() {
                                         const url = meeting.meetingLink && meeting.meetingLink.startsWith("http") ? meeting.meetingLink : `/${meeting.meetingLink}`;
                                         window.open(url, '_blank');
                                     }}
-                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
                                 >
                                     <Video size={16} /> Start / Join Meeting
                                 </button>
                                 <button 
                                     onClick={() => copyLink(meeting.meetingLink)}
-                                    className="w-full py-4 border border-slate-100 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                                    className="w-full py-4 border border-slate-100 text-slate-600 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Share size={16} /> Copy Invitation Link
                                 </button>
@@ -2285,7 +2283,7 @@ function OrganiserPanel() {
         const renderTabContent = () => {
             const renderToggle = (label, field, options) => (
                 <div className="mb-6">
-                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
                         {options.map((opt) => {
                             const isActive = postEvent[field] === opt.value;
@@ -2294,7 +2292,7 @@ function OrganiserPanel() {
                                     key={opt.value}
                                     type="button"
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
-                                    className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                    className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
                                         isActive 
                                             ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100' 
                                             : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
@@ -2350,7 +2348,7 @@ function OrganiserPanel() {
                                         {isNewCategory && layout === "rate" && (
                                             <div className="w-full flex items-center justify-center relative my-6">
                                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                                                <div className="relative bg-white px-4 text-[11px] font-black tracking-widest text-slate-500 uppercase flex items-center gap-2">
+                                                <div className="relative bg-white px-4 text-[11px] font-bold tracking-widest text-slate-500 uppercase flex items-center gap-2">
                                                     <span>₹{cat.price}</span>
                                                     <span className="text-slate-900">{cat.name}</span>
                                                 </div>
@@ -2401,7 +2399,7 @@ function OrganiserPanel() {
                             </div>
                         )}
                         {layout === "ground" && (
-                            <div className="mt-16 mb-8 px-12 py-3 border-2 border-dashed border-slate-300 rounded-full text-slate-400 text-[11px] font-black uppercase tracking-widest">
+                            <div className="mt-16 mb-8 px-12 py-3 border-2 border-dashed border-slate-300 rounded-full text-slate-400 text-[11px] font-bold uppercase tracking-widest">
                                 Main Entrance / Exit
                             </div>
                         )}
@@ -2419,7 +2417,7 @@ function OrganiserPanel() {
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
                 <div className={`mb-6 ${fullWidth ? "col-span-2" : "col-span-1"}`}>
-                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="relative flex items-center">
                         {type === "date" ? (
                             <CalendarPicker 
@@ -2473,7 +2471,7 @@ function OrganiserPanel() {
 
                 return (
                     <div className="mb-6 col-span-1">
-                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
                         <CustomSelect 
                             value={postEvent[field] || ""}
                             options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.value || opt.name || opt.label || String(opt) }))}
@@ -2746,10 +2744,10 @@ function OrganiserPanel() {
                         return (
                             <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in-95 duration-500">
                                 <div className="text-center mb-12 space-y-3">
-                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-100 text-[10px] font-black uppercase tracking-widest text-pink-500 mb-2">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-100 text-[10px] font-bold uppercase tracking-widest text-pink-500 mb-2">
                                         <Sparkles size={12} /> Format Selection
                                     </div>
-                                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic uppercase">Create New Experience</h2>
+                                    <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Create New Experience</h2>
                                     <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
@@ -2762,7 +2760,7 @@ function OrganiserPanel() {
                                             <CloudUpload size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
                                         <div className="text-center space-y-2 z-10">
-                                            <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-pink-600 transition-colors">Digital Broadcast</span>
+                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-pink-600 transition-colors">Digital Broadcast</span>
                                             <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Access Event</span>
                                         </div>
                                     </button>
@@ -2775,7 +2773,7 @@ function OrganiserPanel() {
                                             <MapPin size={48} className="text-white" strokeWidth={1.5} />
                                         </div>
                                         <div className="text-center space-y-2 z-10">
-                                            <span className="block text-xl font-black text-slate-900 tracking-tighter uppercase italic group-hover:text-orange-600 transition-colors">Physical Venue</span>
+                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-orange-600 transition-colors">Physical Venue</span>
                                             <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">In-person Gathering</span>
                                         </div>
                                     </button>
@@ -2794,7 +2792,7 @@ function OrganiserPanel() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                     {/* Thumbnail Image */}
                                     <div>
-                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
                                         <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
                                             <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                                 {postEvent.bannerPreview ? (
@@ -2802,7 +2800,7 @@ function OrganiserPanel() {
                                                 ) : <ImageIcon size={28} className="text-slate-300" />}
                                             </div>
                                             <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                            <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
                                                 <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2919,9 +2917,9 @@ function OrganiserPanel() {
                                         <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
                                             <ImageIcon size={20} />
                                         </div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Image Details</h3>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Image Details</h3>
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-black text-white uppercase tracking-widest">
+                                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-bold text-white uppercase tracking-widest">
                                         <Sparkles size={10} className="text-pink-400" /> Premium Assets
                                     </div>
                                 </div>
@@ -2929,7 +2927,7 @@ function OrganiserPanel() {
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                                     {/* Cover / Banner Upload */}
                                     <div className="space-y-4">
-                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
                                         <div 
                                             className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all duration-500"
                                             onClick={() => thumbnailInputRef.current?.click()}
@@ -2938,7 +2936,7 @@ function OrganiserPanel() {
                                                 <div className="relative w-full h-full">
                                                     <img src={postEvent.bannerPreview} alt="Banner" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
+                                                        <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -2947,7 +2945,7 @@ function OrganiserPanel() {
                                                         <CloudUpload size={32} />
                                                     </div>
                                                     <div className="text-center">
-                                                        <span className="block text-xs font-black text-slate-900 uppercase tracking-tighter italic">Click to Upload Banner</span>
+                                                        <span className="block text-xs font-bold text-slate-900 uppercase tracking-tight italic">Click to Upload Banner</span>
                                                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
                                                     </div>
                                                 </div>
@@ -2957,7 +2955,7 @@ function OrganiserPanel() {
 
                                     {/* Gallery Management */}
                                     <div className="space-y-4">
-                                        <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {postEvent.galleryPreviews?.map((src, idx) => (
                                                 <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
@@ -2985,7 +2983,7 @@ function OrganiserPanel() {
                                                     <div className="p-2 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-pink-500 group-hover:rotate-90 transition-all duration-500">
                                                         <Plus size={20} />
                                                     </div>
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Add More</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Add More</span>
                                                 </div>
                                             )}
                                         </div>
@@ -3018,7 +3016,7 @@ function OrganiserPanel() {
                                     <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
                                         <Info size={20} />
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Event Information</h3>
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Event Information</h3>
                                 </div>
                                 <div className="flex flex-wrap gap-4">
                                     <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
@@ -3026,7 +3024,7 @@ function OrganiserPanel() {
                                             <Users size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Age Limit</label>
+                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Age Limit</label>
                                             <select 
                                                 value={postEvent.ageLimit} 
                                                 onChange={e => setPostEvent(p => ({ ...p, ageLimit: e.target.value }))}
@@ -3045,7 +3043,7 @@ function OrganiserPanel() {
                                             <Languages size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Language</label>
+                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Language</label>
                                             <select 
                                                 value={postEvent.language} 
                                                 onChange={e => setPostEvent(p => ({ ...p, language: e.target.value }))}
@@ -3066,7 +3064,7 @@ function OrganiserPanel() {
                                             <Clock size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Duration</label>
+                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Duration</label>
                                             <input 
                                                 type="text"
                                                 value={postEvent.duration} 
@@ -3085,7 +3083,7 @@ function OrganiserPanel() {
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                                         <Navigation size={20} />
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase italic">Venue & Features</h3>
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Venue & Features</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="bg-white p-5 rounded-3xl border border-indigo-100 flex items-center justify-between">
@@ -3094,8 +3092,8 @@ function OrganiserPanel() {
                                                 <ShieldCheck size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Safety Control</span>
-                                                <span className="block text-sm font-black text-slate-900 italic uppercase">All safety measures enabled</span>
+                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Safety Control</span>
+                                                <span className="block text-sm font-bold text-slate-900 uppercase">All safety measures enabled</span>
                                             </div>
                                         </div>
                                         <button 
@@ -3111,14 +3109,14 @@ function OrganiserPanel() {
                                                 <Armchair size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
-                                                <span className="block text-sm font-black text-slate-900 italic uppercase">Seating ({postEvent.seatingType})</span>
+                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
+                                                <span className="block text-sm font-bold text-slate-900 uppercase">Seating ({postEvent.seatingType})</span>
                                             </div>
                                         </div>
                                         <select 
                                             value={postEvent.seatingType}
                                             onChange={e => setPostEvent(p => ({ ...p, seatingType: e.target.value }))}
-                                            className="bg-slate-50 text-[10px] font-black uppercase text-slate-900 p-2 rounded-lg outline-none"
+                                            className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
                                         >
                                             <option value="FCFS">FCFS</option>
                                             <option value="Reserved">Reserved</option>
@@ -3131,8 +3129,8 @@ function OrganiserPanel() {
                                                 <CheckCircle2 size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reception Mode</span>
-                                                <span className="block text-sm font-black text-slate-900 italic uppercase">Mandatory Check-In</span>
+                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Reception Mode</span>
+                                                <span className="block text-sm font-bold text-slate-900 uppercase">Mandatory Check-In</span>
                                             </div>
                                         </div>
                                         <button 
@@ -3148,14 +3146,14 @@ function OrganiserPanel() {
                                                 <Landmark size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Venue Location</span>
-                                                <span className="block text-sm font-black text-slate-900 italic uppercase">{postEvent.environment} Event</span>
+                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Venue Location</span>
+                                                <span className="block text-sm font-bold text-slate-900 uppercase">{postEvent.environment} Event</span>
                                             </div>
                                         </div>
                                         <select 
                                             value={postEvent.environment}
                                             onChange={e => setPostEvent(p => ({ ...p, environment: e.target.value }))}
-                                            className="bg-slate-50 text-[10px] font-black uppercase text-slate-900 p-2 rounded-lg outline-none"
+                                            className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
                                         >
                                             <option value="Indoor">Indoor</option>
                                             <option value="Outdoor">Outdoor</option>
@@ -3235,7 +3233,7 @@ function OrganiserPanel() {
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
                                     <div>
-                                        <h4 className="text-2xl font-black text-slate-500 tracking-tighter uppercase italic">Ticketing & Seating</h4>
+                                        <h4 className="text-2xl font-bold text-slate-500 tracking-tight uppercase">Ticketing & Seating</h4>
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Configure event capacity and layout</p>
                                     </div>
                                     <div className="w-full md:w-64">
@@ -3260,8 +3258,8 @@ function OrganiserPanel() {
 
                                         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
                                             <div className="flex items-center justify-between mb-8">
-                                                <p className="text-[11px] font-black tracking-widest text-slate-500 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
-                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
+                                                <p className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
+                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
                                                     <Plus size={14} /> Add Category
                                                 </button>
                                             </div>
@@ -3284,7 +3282,7 @@ function OrganiserPanel() {
                                                                 const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
                                                                 setPostEvent(prev => ({ ...prev, categories: nc }));
                                                             }} placeholder="Price (₹)" className="w-full bg-transparent text-slate-900 text-xs font-bold px-4 py-3 focus:outline-none placeholder:text-slate-300 placeholder:font-medium disabled:opacity-50" />
-                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-black uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
                                                                 <input type="checkbox" checked={cat.isFree} className="rounded text-pink-500 focus:ring-pink-500 w-3.5 h-3.5 cursor-pointer" onChange={e => {
                                                                     const nc = [...postEvent.categories]; nc[idx].isFree = e.target.checked;
                                                                     if (e.target.checked) nc[idx].price = 0;
@@ -3308,7 +3306,7 @@ function OrganiserPanel() {
                                         ) : (
                                             <div className="mt-8 pt-6 border-t border-slate-100">
                                                 <div className="flex justify-between items-center mb-6 pl-2">
-                                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-widest">Live Map Preview</p>
+                                                    <p className="text-[12px] font-bold text-slate-800 uppercase tracking-widest">Live Map Preview</p>
                                                     <span className="text-[9px] text-pink-600 font-bold bg-pink-100/50 border border-pink-200 px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 shadow-sm"><Sparkles size={10} /> Real-time Sync</span>
                                                 </div>
                                                 {renderSeatVisualization(postEvent, true)}
@@ -3319,10 +3317,10 @@ function OrganiserPanel() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
                                         {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
                                         <div className="mb-6">
-                                            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
+                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
                                             <div className="flex bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
                                                 <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-300 disabled:bg-slate-50 disabled:text-slate-400" />
-                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-black uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
                                                     <input type="checkbox" checked={postEvent.ticketsAreFree} className="rounded text-pink-500 focus:ring-pink-500 w-4 h-4 cursor-pointer" onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
                                                 </label>
                                             </div>
@@ -3332,7 +3330,7 @@ function OrganiserPanel() {
                             </div>
 
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full animate-in fade-in slide-in-from-bottom-8 duration-700 mb-8">
-                                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
                                 <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 shadow-inner resize-y leading-relaxed" />
                             </div>
 
@@ -4809,10 +4807,10 @@ function OrganiserPanel() {
                         </div>
                     </div>
                     <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50" />
-                            <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">{profile.firstName || "Verified Partner"}</span>
+                            <span className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.2em] italic">{profile.firstName || "Verified Partner"}</span>
                         </div>
                     </div>
                     <div style={{ flex: 1, overflowY: "auto", paddingBottom: "24px" }}>
@@ -4957,7 +4955,7 @@ function OrganiserPanel() {
                                 style={{ marginBottom: "12px" }}
                             >
                                 <LogOut size={14} strokeWidth={3} className="text-white" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white">Sign Out</span>
                             </button>
                         </div>
                     </div>
@@ -5095,7 +5093,7 @@ function OrganiserPanel() {
                     </header>
                     <main className="flex-1 p-6 lg:p-10 relative z-0 flex flex-col">
                         <div className="flex-1">{renderTabContent()}</div>
-                        <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
                             Copyright ©2026. All Rights Reserved.
                         </footer>
                     </main>

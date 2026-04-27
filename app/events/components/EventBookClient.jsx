@@ -163,7 +163,7 @@ export default function EventBookClient({ id }) {
         <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-[60px]">
             <div className="container" style={{ padding: '24px 0', maxWidth: '1100px' }}>
                 <div className="flex flex-col gap-6 mb-8">
-                    <Link href={`/events/${id}`} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors w-fit px-2">
+                    <Link href={`/events/detail?id=${id}`} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors w-fit px-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                         <span>Back to event</span>
                     </Link>

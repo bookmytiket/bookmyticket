@@ -132,50 +132,52 @@ export default function EventDetailClient({ id }) {
 
     return (
         <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24">
-            <div className="max-w-[1240px] mx-auto px-6 py-4">
+            <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-4">
                 
-                {/* High Impact Banner Card */}
-                <div className="w-full h-[400px] md:h-[520px] rounded-[48px] overflow-hidden shadow-2xl relative mb-12 border-4 border-white group">
-                    <img src={event.img || DEFAULT_IMG} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={event.title} />
+                {/* High Impact Wide Banner Card */}
+                <div className="w-full h-[280px] md:h-[480px] rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl relative mb-6 border-4 border-white group">
+                    <img src={event.img || DEFAULT_IMG} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     
-                    {/* Share/Wishlist Floating Buttons */}
-                    <div className="absolute top-8 right-8 flex gap-3 z-30">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-[12px] font-black uppercase hover:bg-white hover:text-slate-900 transition-all shadow-lg"><Share2 size={16} /> Share</button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-[12px] font-black uppercase hover:bg-white hover:text-slate-900 transition-all shadow-lg"><Heart size={16} /> Wishlist</button>
-                    </div>
-
                     <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
                         <div className="max-w-[1200px] mx-auto w-full">
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
-                                    <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg">
+                                    <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg">
                                         {event.category || 'Event'}
                                     </span>
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-[12px] font-black uppercase italic">
-                                        <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                                        <span>4.9 (24 Reviews)</span>
-                                    </div>
                                 </div>
-                                <h1 className="text-white text-[40px] md:text-[72px] font-black uppercase italic tracking-tighter leading-none mt-2 drop-shadow-2xl">
+                                <h1 className="text-white text-[32px] md:text-[64px] font-bold uppercase tracking-tight leading-tight mt-2 drop-shadow-2xl">
                                     {event.title}
                                 </h1>
-                                <div className="flex flex-wrap items-center gap-6 text-white/90 mt-4 font-black uppercase italic text-[14px] tracking-tight">
-                                    <div className="flex items-center gap-2"><Calendar size={18} className="text-pink-400" /> {event.date}</div>
-                                    <div className="w-1.5 h-1.5 bg-white/30 rounded-full hidden md:block" />
-                                    <div className="flex items-center gap-2"><Clock size={18} className="text-pink-400" /> {event.time || "6:30 PM Onwards"}</div>
-                                    <div className="w-1.5 h-1.5 bg-white/30 rounded-full hidden md:block" />
+                                <div className="flex flex-wrap items-center gap-6 text-white/90 mt-4 font-bold uppercase text-[13px] tracking-wide">
                                     <div className="flex items-center gap-2"><MapPin size={18} className="text-pink-400" /> {event.venue}, {event.city}</div>
+                                    <div className="w-1.5 h-1.5 bg-white/30 rounded-full hidden md:block" />
+                                    <div className="flex items-center gap-2"><Calendar size={18} className="text-pink-400" /> {event.date} | {event.time || "6:30 PM"}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => router.back()}
+                    
+                    <Link 
+                        href="/"
                         className="absolute top-8 left-8 p-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all z-10"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
+                    </Link>
+                </div>
+
+                {/* Info Bar below Banner */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 px-2">
+                    <div className="flex flex-wrap items-center gap-8 text-[14px] font-bold text-slate-500 uppercase tracking-tight">
+                        <div className="flex items-center gap-3"><Clock size={18} className="text-slate-400" /> Duration 2 hr</div>
+                        <div className="flex items-center gap-3"><Users size={18} className="text-slate-400" /> {event.ageLimit || "All age groups"}</div>
+                        <div className="flex items-center gap-3"><Languages size={18} className="text-slate-400" /> {event.language || "Tamil"}</div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <button className="flex items-center gap-2 text-[14px] font-bold text-slate-600 hover:text-slate-900 transition-colors uppercase tracking-tight"><Share2 size={18} /> Share</button>
+                        <button className="flex items-center gap-2 text-[14px] font-bold text-slate-600 hover:text-slate-900 transition-colors uppercase tracking-tight"><Heart size={18} /> Wishlist</button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
@@ -183,47 +185,53 @@ export default function EventDetailClient({ id }) {
                     {/* Left: Event Information */}
                     <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-10">
                         
-                        <div className="flex items-center justify-center space-x-3 border-none bg-gradient-to-r from-pink-500/10 to-purple-600/10 px-8 py-4 rounded-[32px] border border-pink-500/20 shadow-sm w-full">
-                            <span className="font-black text-slate-900 uppercase italic tracking-tighter text-lg">Safe & Secure Booking</span>
-                            <ShieldCheck className="text-pink-500" size={24} />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="px-6 py-2 bg-slate-900 text-white text-[12px] font-bold uppercase tracking-widest rounded-2xl">
+                                    {event.category || 'Concert'}
+                                </span>
+                                <span className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-[12px] font-bold uppercase tracking-widest rounded-2xl shadow-lg">
+                                    Recommended
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-10 overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-bl-full -z-0" />
+                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm p-10 md:p-14 overflow-hidden relative">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/5 rounded-bl-full -z-0" />
                             
                             <div className="relative z-10">
-                                <h3 className="text-2xl font-black text-[#111827] uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                                    <Info className="text-pink-500" /> About the Event
+                                <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight mb-8 flex items-center gap-3">
+                                    <Info className="text-pink-500" size={28} /> About the Event
                                 </h3>
-                                <p className="text-[16px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-10">
+                                <p className="text-[17px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-12">
                                     {event.description}
                                 </p>
                                 
-                                <hr className="border-slate-100 mb-10" />
+                                <hr className="border-slate-100 mb-12" />
                                 
-                                <h3 className="text-2xl font-black text-[#111827] uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                                    <Warehouse className="text-pink-500" /> Venue & Comforts
+                                <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight mb-8 flex items-center gap-3">
+                                    <Warehouse className="text-pink-500" size={28} /> Venue & Comforts
                                 </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-12">
                                     {event.features.map((feature, idx) => (
-                                        <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white shadow-sm shrink-0 text-xl">
+                                        <div key={idx} className="flex items-center gap-5 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
+                                            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white shadow-md shrink-0 text-2xl">
                                                 {feature.icon || "✓"}
                                             </div>
-                                            <span className="text-[14px] font-black text-slate-900 uppercase italic tracking-tight">{feature.label || feature}</span>
+                                            <span className="text-[14px] font-bold text-slate-800 uppercase tracking-tight">{feature.label || feature}</span>
                                         </div>
                                     ))}
                                 </div>
                                 
-                                <div className="mt-10 pt-10 border-t border-slate-100">
-                                    <h3 className="text-2xl font-black text-[#111827] uppercase italic tracking-tighter mb-8 flex items-center gap-3">
-                                        <CheckCircle className="text-pink-500" /> Things to Know
+                                <div className="mt-12 pt-12 border-t border-slate-100">
+                                    <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight mb-8 flex items-center gap-3">
+                                        <CheckCircle className="text-pink-500" size={28} /> Things to Know
                                     </h3>
-                                    <ul className="space-y-4">
+                                    <ul className="space-y-6">
                                         {event.refundPolicy.map((rule, idx) => (
-                                            <li key={idx} className="flex items-start gap-4">
-                                                <div className="w-2 h-2 rounded-full bg-pink-500 shrink-0 mt-2.5"></div>
-                                                <span className="text-[14px] font-medium text-slate-500 leading-relaxed">{rule}</span>
+                                            <li key={idx} className="flex items-start gap-5">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-pink-500 shrink-0 mt-2.5 shadow-lg shadow-pink-500/40"></div>
+                                                <span className="text-[16px] font-medium text-slate-500 leading-relaxed">{rule}</span>
                                             </li>
                                         ))}
                                     </ul>
@@ -233,27 +241,27 @@ export default function EventDetailClient({ id }) {
                     </div>
 
                     {/* Right Column: Premium Booking Widget */}
-                    <div className="lg:col-span-5 xl:col-span-4 space-y-6 sticky top-[120px]">
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 pb-10">
-                            <div className="flex justify-between items-start mb-8">
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-[120px]">
+                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-xl p-10 pb-12">
+                            <div className="flex justify-between items-start mb-10">
                                 <div>
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">Starting from</div>
-                                    <div className="text-3xl font-black text-slate-900 tracking-tighter italic">₹{event.price || "950"}<span className="text-sm font-bold text-slate-400 not-italic ml-1">onwards</span></div>
+                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Starting from</div>
+                                    <div className="text-4xl font-bold text-slate-900 tracking-tight">₹{event.price || "950"}<span className="text-sm font-bold text-slate-400 ml-1 tracking-tight">onwards</span></div>
                                 </div>
-                                <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-1">
-                                    <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Selling Fast
+                                <div className="px-4 py-2 bg-green-50 text-green-600 text-[11px] font-bold uppercase tracking-widest rounded-full flex items-center gap-2 border border-green-100">
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Selling Fast
                                 </div>
                             </div>
                             
                             {existingBooking ? (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-center gap-2 p-5 bg-green-50 border border-green-100 rounded-2xl">
-                                        <CheckCircle2 size={20} className="text-green-500" />
-                                        <span className="text-[15px] font-black text-green-700 italic uppercase tracking-tight">Ticket Booked!</span>
+                                <div className="space-y-5">
+                                    <div className="flex items-center justify-center gap-3 p-6 bg-green-50 border border-green-100 rounded-[32px]">
+                                        <CheckCircle2 size={24} className="text-green-500" />
+                                        <span className="text-[16px] font-bold text-green-700 uppercase tracking-tight">Ticket Booked!</span>
                                     </div>
                                     <button 
                                         onClick={() => router.push('/bookings')}
-                                        className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[13px] hover:bg-black transition-all"
+                                        className="w-full py-6 bg-slate-900 text-white rounded-[32px] font-bold uppercase tracking-widest text-[14px] hover:bg-black transition-all shadow-lg"
                                     >
                                         View My Tickets
                                     </button>
@@ -266,28 +274,28 @@ export default function EventDetailClient({ id }) {
                                         if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
                                         else router.push(bookUrl);
                                     }}
-                                    className="w-full py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-pink-500/30 hover:scale-[1.02] active:scale-95 transition-all"
+                                    className="w-full py-7 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[32px] font-bold uppercase tracking-[0.3em] text-[15px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                 >
                                     {event.price === 0 ? "Get Free Ticket" : "Book Now"}
                                 </button>
                             )}
 
-                            <div className="mt-8 flex flex-col items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest italic text-center">
-                                <div className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-500" /> Instant Confirmation</div>
-                                <div className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-green-500" /> Secure Checkout</div>
+                            <div className="mt-10 flex flex-col items-center gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest italic text-center">
+                                <div className="flex items-center gap-2"><CheckCircle size={16} className="text-green-500" /> Instant Confirmation</div>
+                                <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-green-500" /> Secure Checkout</div>
                             </div>
                         </div>
 
                         {/* Organized By Card */}
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8">
-                            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 italic">Organized By</h4>
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
-                                    <Warehouse size={28} />
+                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-lg p-10">
+                            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8 italic">Organized By</h4>
+                            <div className="flex items-center gap-5">
+                                <div className="w-16 h-16 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-lg">
+                                    <Warehouse size={32} />
                                 </div>
                                 <div>
-                                    <div className="text-lg font-black text-slate-900 uppercase italic tracking-tighter leading-tight">Motta Maadi Music</div>
-                                    <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loved by event-goers</div>
+                                    <div className="text-lg font-bold text-slate-900 uppercase tracking-tight leading-tight">Motta Maadi Music</div>
+                                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Loved by event-goers</div>
                                 </div>
                             </div>
                         </div>

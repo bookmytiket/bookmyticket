@@ -273,7 +273,7 @@ export default function CheckoutClient({ id }) {
                 {/* Checkout Header */}
                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
                     <Link 
-                        href={`/events/${id}/book`}
+                        href={`/events/book?id=${id}`}
                         className="flex items-center space-x-2 text-slate-700 hover:text-slate-900 font-bold px-4 py-2 hover:bg-slate-100 rounded-xl transition-all"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
