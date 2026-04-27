@@ -1155,7 +1155,7 @@ function OrganiserPanel() {
 
         // Core validation — use toast-style state, not alert()
         if (!postEvent.title?.trim()) {
-            setPublishError("Please fill in Event Title.");
+            showToast("Please fill in Event Title.", "error");
             return;
         }
         setPublishError("");
@@ -1181,7 +1181,8 @@ function OrganiserPanel() {
             if (isSeating) {
                 totalSeats = categories.reduce((sum, cat) => sum + (Number(cat.rows) * Number(postEvent.cols || 10)), 0) || 100;
             } else {
-                totalSeats = (parseInt(postEvent.normalTicketCapacity, 10) || 100);
+                // Support both normalTicketCapacity and the newer totalTickets field used in Sports
+                totalSeats = (parseInt(postEvent.totalTickets || postEvent.normalTicketCapacity, 10) || 100);
             }
         }
 
@@ -1193,15 +1194,16 @@ function OrganiserPanel() {
             const prices = categories.map(c => c.isFree ? 0 : Number(c.price) || 0);
             finalPrice = Math.min(...prices);
         } else {
-            finalPrice = Number(postEvent.normalTicketPrice) || 0;
+            // Support both price and normalTicketPrice
+            finalPrice = Number(postEvent.price || postEvent.normalTicketPrice) || 0;
         }
 
         const imgUrl = (typeof postEvent.bannerPreview === "string" && postEvent.bannerPreview.startsWith("data:"))
             ? postEvent.bannerPreview
-            : postEvent.img || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
+            : postEvent.img || postEvent.image_url || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
 
         // Build payload with ONLY fields accepted by Convex
-        if (!isOnline) {
+        if (!isOnline && postEvent.type !== "Sports") {
             if (!postEvent.country) { setPublishError("Please select a Country."); return; }
             if (!postEvent.state) { setPublishError("Please select a State."); return; }
             if (!postEvent.district) { setPublishError("Please select a District."); return; }
@@ -1262,22 +1264,7 @@ function OrganiserPanel() {
             safety_measures: !!postEvent.safetyMeasures,
             seating_type: postEvent.seatingType || "FCFS",
             mandatory_checkin: !!postEvent.mandatoryCheckin,
-            gallery: postEvent.galleryPreviews || [],
-            sports_details: postEvent.type === "Sports" ? {
-                sport_type: postEvent.sportType,
-                distance: postEvent.distance,
-                age_category: postEvent.ageCategory,
-                t_shirt_size: postEvent.tShirtSize,
-                route_map: postEvent.routeMap,
-                prize_details: postEvent.prizeDetails,
-                teams_count: postEvent.teamsCount,
-                match_schedule: postEvent.matchSchedule,
-                tournament_type: postEvent.tournamentType,
-                rules: postEvent.rules,
-                trainer_details: postEvent.trainerDetails,
-                session_slots: postEvent.sessionSlots,
-                capacity: postEvent.capacity
-            } : undefined
+            gallery: postEvent.galleryPreviews || []
         };
 
         // Remove undefined keys
@@ -1296,7 +1283,7 @@ function OrganiserPanel() {
                 })
                 .catch(err => {
                     console.error("Error updating event:", err);
-                    setPublishError("Failed to update: " + (err?.message || "Unknown error"));
+                    showToast("Failed to update: " + (err?.message || "Unknown error"), "error");
                 });
         } else {
             createEventMutation(payload)
@@ -1322,34 +1309,36 @@ function OrganiserPanel() {
                             await createMarathonConfig({
                                 event_id: eventId,
                                 distance_options: postEvent.distanceOptions || [],
-                                age_min: parseInt(postEvent.ageMin),
-                                age_max: parseInt(postEvent.ageMax),
+                                age_min: parseInt(postEvent.ageMin) || 0,
+                                age_max: parseInt(postEvent.ageMax) || 100,
                                 tshirt_enabled: (postEvent.tshirtSizes || []).length > 0,
                                 tshirt_sizes: postEvent.tshirtSizes || [],
-                                route_map_url: postEvent.routeMapUrl,
-                                prize_details: postEvent.prizeDetails,
+                                route_map_url: postEvent.routeMapUrl || "",
+                                prize_details: postEvent.prizeDetails || "",
                                 hydration_support: !!postEvent.hydrationSupport,
-                                medical_support: !!postEvent.medicalSupport
+                                medical_support: !!postEvent.medicalSupport,
+                                amenities: postEvent.amenities || [],
+                                distance_pricing: postEvent.distancePricing || {},
+                                age_pricing: postEvent.agePricing || {},
+                                category_configs: postEvent.categoryConfigs || {}
                             });
                         } else if (sportType === "tournament") {
                             await createTournamentConfig({
                                 event_id: eventId,
-                                teams_count: parseInt(postEvent.teamsCount),
-                                match_type: postEvent.matchType,
-                                rules: postEvent.rules,
-                                venue_details: postEvent.venueDetails,
+                                teams_count: parseInt(postEvent.teamsCount) || 0,
+                                match_type: postEvent.matchType || "Knockout",
+                                rules: postEvent.rules || "",
+                                venue_details: postEvent.venueDetails || "",
                                 schedule_json: postEvent.scheduleJson || []
                             });
                         } else if (sportType === "coaching") {
                             await createCoachingConfig({
                                 event_id: eventId,
-                                trainer_name: postEvent.trainerName,
-                                trainer_experience: postEvent.trainerExperience,
-                                trainer_certification: postEvent.trainerCertification,
-                                capacity: parseInt(postEvent.capacity),
-                                duration: postEvent.duration,
-                                price: parseFloat(postEvent.sessionPrice || 0),
-                                slots_json: postEvent.slotsJson || []
+                                trainer_name: postEvent.trainerName || "",
+                                trainer_bio: postEvent.trainerBio || "",
+                                capacity: parseInt(postEvent.capacity) || 0,
+                                slot_duration: postEvent.slotDuration || "1 Hour",
+                                sessions_json: postEvent.sessionsJson || []
                             });
                         }
                     }
@@ -1357,11 +1346,12 @@ function OrganiserPanel() {
                     setAddEventStep("select_type");
                     try { localStorage.removeItem("organiser_draft"); } catch (_) { }
                     setActiveTab("manage_events");
-                    showToast("Event published successfully", "success");
+                    showToast("Event published successfully!", "success");
+                    refreshEvents();
                 })
                 .catch(err => {
                     console.error("Error publishing event:", err);
-                    setPublishError("Failed to publish: " + (err?.message || "Unknown error"));
+                    showToast("Failed to publish: " + (err?.message || "Check your input"), "error");
                 });
         }
     };
@@ -2867,7 +2857,10 @@ function OrganiserPanel() {
                                         </div>
                                     </button>
                                     <button
-                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Sports" })); setAddEventStep("sports_type"); }}
+                                        onClick={() => { 
+                                            setPostEvent(pe => ({ ...pe, type: "Sports", category: "Sports", seatingEnabled: false })); 
+                                            setAddEventStep("sports_type"); 
+                                        }}
                                         className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-200 hover:-translate-y-2"
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
