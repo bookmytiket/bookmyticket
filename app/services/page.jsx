@@ -74,6 +74,13 @@ export default function ServicesPage() {
   const lastWord = words.pop();
   const firstWords = words.join(" ");
 
+  // Determine if we are actually waiting for data we need
+  const isDataLoading = useMemo(() => {
+    if (category === "All Services") return vendorsLoading || turfsLoading;
+    if (category === "Turf Booking") return turfsLoading;
+    return vendorsLoading;
+  }, [category, vendorsLoading, turfsLoading]);
+
   return (
     <main style={{ minHeight: "100vh", backgroundColor: "#f8fafc" }}>
 
@@ -233,7 +240,7 @@ export default function ServicesPage() {
           </h1>
 
           <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0, fontWeight: 500 }}>
-            {vendorsLoading || turfsLoading
+            {isDataLoading
               ? "Loading experts..."
               : `${totalItems} result${totalItems !== 1 ? "s" : ""} ready to serve you`}
           </p>
@@ -246,7 +253,7 @@ export default function ServicesPage() {
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 24px 60px" }}>
 
         {/* Loading */}
-        {(vendorsLoading || turfsLoading) && (
+        {isDataLoading && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
             <div style={{
               width: 44, height: 44,
@@ -262,7 +269,7 @@ export default function ServicesPage() {
         )}
 
         {/* Empty State */}
-        {(!vendorsLoading && !turfsLoading) && totalItems === 0 && (
+        {!isDataLoading && totalItems === 0 && (
           <div style={{
             textAlign: "center", padding: "80px 20px",
             background: "#fff", borderRadius: "28px",
@@ -291,7 +298,7 @@ export default function ServicesPage() {
         )}
 
         {/* 4-Column Grid */}
-        {(!vendorsLoading && !turfsLoading) && totalItems > 0 && (
+        {!isDataLoading && totalItems > 0 && (
           <>
             <div style={{
               display: "grid",

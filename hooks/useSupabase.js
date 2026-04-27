@@ -89,11 +89,9 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
   useEffect(() => {
     isMounted.current = true;
     
-    // Stagger initial fetch to prevent thundering herd on page load
-    const jitter = Math.random() * 200;
-    const initialFetchTimeout = setTimeout(() => {
-      fetchData();
-    }, jitter);
+    // Set loading to true whenever dependencies change to trigger fresh fetch
+    setLoading(true);
+    fetchData();
 
     let subscription = null;
     if (realtime && table && supabase) {
@@ -112,7 +110,6 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
 
     return () => {
       isMounted.current = false;
-      clearTimeout(initialFetchTimeout);
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
       if (subscription && supabase) {
         supabase.removeChannel(subscription);
