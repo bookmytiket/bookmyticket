@@ -12,7 +12,7 @@ export async function generateMetadata({ params }) {
             .from('service_providers')
             .select('*')
             .eq('id', id)
-            .single();
+            .maybeSingle();
 
         if (!service) return { title: 'Artist Profile | BookMyTicket' };
 

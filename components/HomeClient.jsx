@@ -772,6 +772,8 @@ function HomeClient() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
+            <VideoHeroBanner />
+
             {/* Cloned Brand Coupons Section (Top Trending Offers) - Placed under Hero Banner */}
             <BrandCouponsSection 
                coupons={allCoupons} 

@@ -34,10 +34,10 @@ export default function ServiceCheckoutPage() {
         const decodedId = decodeURIComponent(id);
         
         // Fetch full profile (service provider + its organiser record)
-        supabase.from('service_providers').select('*, vendors(*)').eq('id', decodedId).single()
+        supabase.from('service_providers').select('*').eq('id', decodedId).maybeSingle()
             .then(({ data }) => {
                 if (data) {
-                    setFullProfile({ organiser: data.vendors, vendorProfile: data });
+                    setFullProfile({ organiser: data, vendorProfile: data });
                     setBlockedDates(data.advanced_settings?.blocked_dates || []);
                 } else {
                     setFullProfile(null);
@@ -136,7 +136,7 @@ export default function ServiceCheckoutPage() {
                 },
                 remarks: bookingData.remarks || null,
                 status: 'Pending',
-            }).select('id').single();
+            }).select('id').maybeSingle();
             if (error) throw error;
             const bookingId = booking.id;
             

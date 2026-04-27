@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════
    FONTS & RESET
+   (Fonts are handled via next/font in layout.js)
 ═══════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&family=Syne:wght@400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,8 +10,8 @@
 
 :root {
   --font-logo: 'Syne', sans-serif;
-  --font-heading: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: var(--font-sans), 'Inter', sans-serif;
+  --font-body: var(--font-sans), 'Inter', sans-serif;
 
   --accent: #c026d3;
   --accent-dark: #7c3aed;

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthContext";
 import { 
-    Star, MapPin, Sparkles, CheckCircle2, Clock, 
+    Star, MapPin, Sparkles, CheckCircle2, Clock, Users, Languages,
     ArrowLeft, Send, Loader2, ChevronLeft, ChevronRight,
     Calendar, ShieldCheck, User, Mail, Phone, Share2, Heart, Info, Warehouse
 } from "lucide-react";
@@ -104,7 +104,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
     if (profileLoading) return <div className="min-h-screen flex items-center justify-center bg-[#fafbfc]"><Loader2 className="animate-spin text-[#FF5A5F]" size={48} /></div>;
     if (!fullProfile) return <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafbfc] space-y-4"><h1 className="text-2xl font-bold text-slate-900">Artist Not Found</h1><button onClick={() => router.back()} className="text-[#FF5A5F] font-bold hover:underline">Go Back</button></div>;
 
-    const organiser = fullProfile.organiser || fullProfile.vendorProfile;
+    const organiser = fullProfile?.organiser || fullProfile?.vendorProfile;
     const coverPhoto = fullProfile.vendorProfile?.portfolio?.[0]?.url || "https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=1200";
     const portfolio = fullProfile.vendorProfile?.portfolio || [];
 

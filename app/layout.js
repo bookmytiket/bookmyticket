@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Figtree, Space_Grotesk } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import SeoAnalyticsScripts from '@/components/SeoAnalyticsScripts';
 import './globals.css';
@@ -15,16 +15,10 @@ import { ConfirmProvider } from '@/context/ConfirmContext';
 import ToastContainer from '@/components/ui/ToastContainer';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 
-const figtree = Figtree({
+const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-body',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-heading',
+  variable: '--font-sans',
 });
 
 export async function generateMetadata() {
@@ -53,7 +47,7 @@ export async function generateMetadata() {
       .from('system_config')
       .select('value')
       .eq('key', 'seo_analytics')
-      .single();
+      .maybeSingle();
 
     if (data?.value) {
       if (data.value.global_title) title = data.value.global_title;
@@ -180,22 +174,22 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className={`${figtree.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <ToastProvider>
           <ConfirmProvider>
             <AuthProvider>
               <MaintenanceGuard>
-                <Suspense fallback={null}>
-                  <SeoAnalyticsScripts />
-                  <ConditionalNavbar />
-                  <CustomerAdPopup />
-                  <ToastContainer />
-                  <ChangePasswordModal />
+                <SeoAnalyticsScripts />
+                <ConditionalNavbar />
+                <CustomerAdPopup />
+                <ToastContainer />
+                <ChangePasswordModal />
+                <Suspense fallback={<div className="min-h-screen bg-white" />}>
                   <ConditionalLayoutWrapper>
                     {children}
                   </ConditionalLayoutWrapper>
-                  <MobileBottomNav />
                 </Suspense>
+                <MobileBottomNav />
               </MaintenanceGuard>
             </AuthProvider>
           </ConfirmProvider>
