@@ -18,6 +18,7 @@ import PromoteModal from "@/components/PromoteModal";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
+import SportsEventForm from "./components/SportsEventForm";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -46,7 +47,7 @@ import {
     Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
-    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus
+    Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus, Trophy, Goal, Timer, Dribbble, Target
 } from "lucide-react";
 
 const ACCENT_BLUE = "#3b82f6";
@@ -489,6 +490,10 @@ function OrganiserPanel() {
 
     const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
     const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
+ 
+    const [createMarathonConfig] = useSupabaseMutation("marathon_config", "insert");
+    const [createTournamentConfig] = useSupabaseMutation("tournament_config", "insert");
+    const [createCoachingConfig] = useSupabaseMutation("coaching_config", "insert");
 
     const { data: eventsData = [], refresh: refreshEvents } = useSupabaseQuery(
         "events",
@@ -542,6 +547,10 @@ function OrganiserPanel() {
             } else {
                 console.warn("OrganiserPanel: editId present but event not found in current dataset.");
             }
+        } else if (params.get("sport") === "true") {
+            setPostEvent(pe => ({ ...pe, type: "Sports" }));
+            setAddEventStep("sports_type");
+            setActiveTab("post_event");
         } else if (params.get("tab")) {
             setActiveTab(params.get("tab"));
         }
@@ -978,6 +987,21 @@ function OrganiserPanel() {
         eventStatus: "published", isFeature: "Yes", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
+        
+        // Sports Event Specific Fields
+        sportType: "Marathon", 
+        distance: "5K",
+        ageCategory: "All ages",
+        tShirtSize: "M",
+        routeMap: "",
+        prizeDetails: "",
+        teamsCount: "",
+        matchSchedule: "",
+        tournamentType: "Knockout",
+        rules: "",
+        trainerDetails: "",
+        sessionSlots: "",
+        capacity: "",
         meetingUrl: "",
         meetingType: "internal",
         externalMeetingUrl: "",
@@ -1238,7 +1262,22 @@ function OrganiserPanel() {
             safety_measures: !!postEvent.safetyMeasures,
             seating_type: postEvent.seatingType || "FCFS",
             mandatory_checkin: !!postEvent.mandatoryCheckin,
-            gallery: postEvent.galleryPreviews || []
+            gallery: postEvent.galleryPreviews || [],
+            sports_details: postEvent.type === "Sports" ? {
+                sport_type: postEvent.sportType,
+                distance: postEvent.distance,
+                age_category: postEvent.ageCategory,
+                t_shirt_size: postEvent.tShirtSize,
+                route_map: postEvent.routeMap,
+                prize_details: postEvent.prizeDetails,
+                teams_count: postEvent.teamsCount,
+                match_schedule: postEvent.matchSchedule,
+                tournament_type: postEvent.tournamentType,
+                rules: postEvent.rules,
+                trainer_details: postEvent.trainerDetails,
+                session_slots: postEvent.sessionSlots,
+                capacity: postEvent.capacity
+            } : undefined
         };
 
         // Remove undefined keys
@@ -1273,6 +1312,45 @@ function OrganiserPanel() {
                             });
                         } catch (meetErr) {
                             console.error("Failed to auto-create meeting:", meetErr);
+                        }
+                    }
+ 
+                    // Sports Config Insertion
+                    if (postEvent.type === "Sports") {
+                        const sportType = postEvent.sportType?.toLowerCase();
+                        if (sportType === "marathon") {
+                            await createMarathonConfig({
+                                event_id: eventId,
+                                distance_options: postEvent.distanceOptions || [],
+                                age_min: parseInt(postEvent.ageMin),
+                                age_max: parseInt(postEvent.ageMax),
+                                tshirt_enabled: (postEvent.tshirtSizes || []).length > 0,
+                                tshirt_sizes: postEvent.tshirtSizes || [],
+                                route_map_url: postEvent.routeMapUrl,
+                                prize_details: postEvent.prizeDetails,
+                                hydration_support: !!postEvent.hydrationSupport,
+                                medical_support: !!postEvent.medicalSupport
+                            });
+                        } else if (sportType === "tournament") {
+                            await createTournamentConfig({
+                                event_id: eventId,
+                                teams_count: parseInt(postEvent.teamsCount),
+                                match_type: postEvent.matchType,
+                                rules: postEvent.rules,
+                                venue_details: postEvent.venueDetails,
+                                schedule_json: postEvent.scheduleJson || []
+                            });
+                        } else if (sportType === "coaching") {
+                            await createCoachingConfig({
+                                event_id: eventId,
+                                trainer_name: postEvent.trainerName,
+                                trainer_experience: postEvent.trainerExperience,
+                                trainer_certification: postEvent.trainerCertification,
+                                capacity: parseInt(postEvent.capacity),
+                                duration: postEvent.duration,
+                                price: parseFloat(postEvent.sessionPrice || 0),
+                                slots_json: postEvent.slotsJson || []
+                            });
                         }
                     }
                     setPostEvent(getInitialPostEvent());
@@ -2633,8 +2711,8 @@ function OrganiserPanel() {
                                                                 <tr key={ev.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)", opacity: isExpiredSection ? 0.7 : 1 }}>
                                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                                                                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : "#f97316") + (isExpiredSection ? "10" : "20"), display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                                                {ev.type === "Online" ? <CloudUpload size={24} color="#22c55e" /> : <MapPin size={24} color="#f97316" />}
+                                                                            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: (ev.type === "Online" ? "#22c55e" : ev.type === "Sports" ? "#3b82f6" : "#f97316") + (isExpiredSection ? "10" : "20"), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                                                {ev.type === "Online" ? <CloudUpload size={24} color="#22c55e" /> : ev.type === "Sports" ? <Trophy size={24} color="#3b82f6" /> : <MapPin size={24} color="#f97316" />}
                                                                             </div>
                                                                             <div>
                                                                                 <p style={{ fontWeight: 800, margin: 0, fontSize: "15px", color: t.textMain }}>{ev.title}</p>
@@ -2687,6 +2765,17 @@ function OrganiserPanel() {
                                                                                 setPostEvent({
                                                                                     ...getInitialPostEvent(),
                                                                                     ...ev,
+                                                                                    ...(ev.sports_details || {}),
+                                                                                    sportType: ev.sports_details?.sport_type || ev.sportType,
+                                                                                    ageCategory: ev.sports_details?.age_category || ev.ageCategory,
+                                                                                    tShirtSize: ev.sports_details?.t_shirt_size || ev.tShirtSize,
+                                                                                    routeMap: ev.sports_details?.route_map || ev.routeMap,
+                                                                                    prizeDetails: ev.sports_details?.prize_details || ev.prizeDetails,
+                                                                                    teamsCount: ev.sports_details?.teams_count || ev.teamsCount,
+                                                                                    matchSchedule: ev.sports_details?.match_schedule || ev.matchSchedule,
+                                                                                    tournamentType: ev.sports_details?.tournament_type || ev.tournamentType,
+                                                                                    trainerDetails: ev.sports_details?.trainer_details || ev.trainerDetails,
+                                                                                    sessionSlots: ev.sports_details?.session_slots || ev.sessionSlots,
                                                                                     isFeature: ev.featured ? "Yes" : "No",
                                                                                     isExclusive: ev.exclusive ? "Yes" : "No",
                                                                                     eventStatus: ev.status || "published",
@@ -2750,7 +2839,7 @@ function OrganiserPanel() {
                                     <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Create New Experience</h2>
                                     <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
                                     <button
                                         onClick={() => { setPostEvent(pe => ({ ...pe, type: "Online" })); setAddEventStep("form"); }}
                                         className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20 hover:border-pink-200 hover:-translate-y-2"
@@ -2777,11 +2866,80 @@ function OrganiserPanel() {
                                             <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">In-person Gathering</span>
                                         </div>
                                     </button>
+                                    <button
+                                        onClick={() => { setPostEvent(pe => ({ ...pe, type: "Sports" })); setAddEventStep("sports_type"); }}
+                                        className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-200 hover:-translate-y-2"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-500">
+                                            <Trophy size={48} className="text-white" strokeWidth={1.5} />
+                                        </div>
+                                        <div className="text-center space-y-2 z-10">
+                                            <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-blue-600 transition-colors">Sports Event</span>
+                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Athletics, Turf, Competitions</span>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
                         );
                     }
+ 
+                    if (addEventStep === "sports_type") {
+                        const sportsTypes = [
+                            { id: "Marathon", label: "Marathon", sub: "Running & Athletics", icon: Activity, color: "from-blue-400 to-indigo-600" },
+                            { id: "Tournament", label: "Tournament", sub: "Competitions & Leagues", icon: Trophy, color: "from-orange-400 to-red-600" },
+                            { id: "Coaching", label: "Coaching Session", sub: "Training & Sessions", icon: Target, color: "from-purple-400 to-pink-600" },
+                        ];
+ 
+                        return (
+                            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 animate-in fade-in zoom-in-95 duration-500">
+                                <div className="text-center mb-12 space-y-3">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-2">
+                                        <Trophy size={12} /> Sports Configuration
+                                    </div>
+                                    <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Select Sport Type</h2>
+                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">What kind of sports event are you organizing?</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+                                    {sportsTypes.map((st) => (
+                                        <button
+                                            key={st.id}
+                                            onClick={() => { setPostEvent(pe => ({ ...pe, sportType: st.id })); setAddEventStep("form"); }}
+                                            className="group relative bg-white border border-slate-100 rounded-[2rem] p-8 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:border-blue-200 hover:-translate-y-2"
+                                        >
+                                            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${st.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                                                <st.icon size={32} className="text-white" strokeWidth={1.5} />
+                                            </div>
+                                            <div className="text-center space-y-1">
+                                                <span className="block text-lg font-bold text-slate-900 tracking-tight uppercase">{st.label}</span>
+                                                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">{st.sub}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <button 
+                                    onClick={() => setAddEventStep("select_type")}
+                                    className="mt-12 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors"
+                                >
+                                    <ArrowLeft size={14} /> Back to Formats
+                                </button>
+                            </div>
+                        );
+                    }
 
+                    // Step 3: Sports Form
+                    if (postEvent.type === "Sports") {
+                        return (
+                            <SportsEventForm 
+                                postEvent={postEvent}
+                                setPostEvent={setPostEvent}
+                                onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                onPublish={publishSeatEvent}
+                                isEditing={!!editingEvent}
+                            />
+                        );
+                    }
+ 
                     // Step 2: Online Form
                     if (postEvent.type === "Online") {
                         return (
