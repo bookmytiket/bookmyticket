@@ -284,7 +284,6 @@ export default function Navbar() {
           </Link>
 
 
-          {/* Desktop Searchbar - Premium Version */}
           <div className="nav-search-wrap hide-mobile" style={{
             marginLeft: '20px',
             marginRight: '20px',
@@ -292,11 +291,13 @@ export default function Navbar() {
             flex: 1,
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: scrolled ? 'rgba(255,255,255,0.1)' : '#f8fafc',
-            borderRadius: '12px',
+            backgroundColor: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.9)',
+            borderRadius: '16px',
             padding: '4px 6px',
-            border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
-            transition: 'all 0.3s ease'
+            border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.5)',
+            backdropFilter: 'blur(10px)',
+            transition: 'all 0.3s ease',
+            boxShadow: scrolled ? 'none' : '0 4px 15px rgba(0,0,0,0.05)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', flex: 1, paddingLeft: '8px' }}>
               <Search size={18} color={scrolled ? "#fff" : "#f84464"} />
@@ -310,31 +311,33 @@ export default function Navbar() {
                   border: 'none',
                   outline: 'none',
                   background: 'transparent',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
                   fontSize: '14px',
                   width: '100%',
-                  color: scrolled ? '#fff' : '#1e293b'
+                  color: scrolled ? '#fff' : '#1e293b',
+                  fontWeight: 500
                 }}
               />
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(248, 68, 164, 0.4)' }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => router.push(`/?q=${encodeURIComponent(search)}`)}
               style={{
                 background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '6px 16px',
+                borderRadius: '12px',
+                padding: '8px 20px',
                 fontSize: '13px',
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: 'pointer',
-                transition: 'transform 0.2s'
+                letterSpacing: '0.02em',
+                boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               Search
-            </button>
+            </motion.button>
           </div>
 
           {/* Location Selection Button */}
@@ -386,45 +389,38 @@ export default function Navbar() {
               </Link>
             ) : (
                 <>
-                {/* Persistent Join Now Button - Pink */}
-                <button
-                    onClick={() => {
-                        if (nextMeeting) {
-                        const url = nextMeeting.customer_details?.meeting_url;
-                        const target = url.startsWith("http") ? url : `/${url}`;
-                        window.open(target, '_blank', 'noopener,noreferrer');
-                        } else {
-                            router.push('/meeting/join');
-                        }
-                    }}
+                {/* Persistent Join Now Button - Pink-Purple Gradient */}
+                <motion.div
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    href="/join"
                     style={{
                       background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                       color: '#fff',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      fontSize: '12px',
-                      border: 'none',
-                      cursor: 'pointer',
+                      padding: '10px 24px',
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      fontSize: '13px',
+                      textDecoration: 'none',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                      transition: 'all 0.3s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(248, 68, 164, 0.25)',
+                      transition: 'all 0.3s',
+                      border: '1px solid rgba(255,255,255,0.1)'
                     }}
                   >
-                    <Video size={16} /> Join Now
-                </button>
+                    Join Now
+                  </Link>
+                </motion.div>
 
                 {user ? (
+                    <motion.div
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
                     <Link
                       href={
                         user.role === "organiser" || user.role === "staff" ? "/organiser" :
@@ -436,24 +432,16 @@ export default function Navbar() {
                       style={{
                         background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
                         color: '#fff',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        fontWeight: 700,
-                        fontSize: '12px',
+                        padding: '10px 20px',
+                        borderRadius: '12px',
+                        fontWeight: 800,
+                        fontSize: '13px',
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
                         transition: 'all 0.3s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
                       }}
                     >
                       {
@@ -464,34 +452,33 @@ export default function Navbar() {
                         "Dashboard"
                       }
                     </Link>
+                    </motion.div>
                 ) : (
-                    <Link
-                      href="/signin"
-                      style={{
-                        background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
-                        color: '#fff',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        fontWeight: 700,
-                        fontSize: '12px',
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(248, 68, 164, 0.2)',
-                        transition: 'all 0.3s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(248, 68, 164, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(248, 68, 164, 0.2)';
-                      }}
+                    <motion.div
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      Sign In
-                    </Link>
+                      <Link
+                        href="/signin"
+                        style={{
+                          background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
+                          color: '#fff',
+                          padding: '10px 24px',
+                          borderRadius: '12px',
+                          fontWeight: 800,
+                          fontSize: '13px',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 4px 12px rgba(248, 68, 164, 0.25)',
+                          transition: 'all 0.3s',
+                          border: '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        Sign In
+                      </Link>
+                    </motion.div>
                 )}
                 </>
             )}
@@ -720,45 +707,74 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Sub-navbar with Animation - Moved Inside Header */}
-        <nav className="header-subnav">
-          <div className="subnav-container">
-            <div className="subnav-links">
+        {/* Sub-navbar with Animation - Premium Dynamic UI */}
+        <nav className="header-subnav" style={{ 
+          background: scrolled ? 'transparent' : 'rgba(255,255,255,0.5)',
+          backdropFilter: scrolled ? 'none' : 'blur(10px)',
+          borderBottom: scrolled ? 'none' : '1px solid rgba(0,0,0,0.05)'
+        }}>
+          <div className="subnav-container" style={{ padding: '8px 0' }}>
+            <div className="subnav-links" style={{ gap: '40px' }}>
               {SUBNAV_LINKS.map((link) => (
                 <motion.div
                   key={link.label}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   className="subnav-item"
                 >
                   <Link
                     href={link.href}
                     className={`subnav-link ${(pathname === link.href || (pathname === '/' && link.label === 'Events')) ? "active" : ""}`}
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: scrolled ? '#fff' : '#475569'
+                    }}
                   >
-                    {link.label === "Events" && <Calendar size={14} style={{ marginRight: '6px' }} />}
-                    {link.label === "RSVP" && <TicketIcon size={14} style={{ marginRight: '6px' }} />}
-                    {link.label === "Services" && <Wrench size={14} style={{ marginRight: '6px' }} />}
+                    <span className="subnav-icon-wrap" style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      background: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? 'var(--accent-gradient)' : 'rgba(0,0,0,0.03)',
+                      color: (pathname === link.href || (pathname === '/' && link.label === 'Events')) ? '#fff' : 'inherit',
+                      transition: 'all 0.3s'
+                    }}>
+                      {link.label === "Events" && <Calendar size={14} />}
+                      {link.label === "Services" && <Wrench size={14} />}
+                    </span>
                     {link.label}
                   </Link>
                 </motion.div>
               ))}
             </div>
 
-            <div className="subnav-actions hide-mobile">
-              <button
+            <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
+              <motion.button
+                whileHover={{ scale: 1.05, color: '#f84464' }}
                 onClick={() => setOrgOpen(true)}
                 className={`subnav-action${orgOpen ? " active" : ""}`}
+                style={{ fontSize: '14px', fontWeight: 700, color: scrolled ? '#fff' : '#475569' }}
               >
-                <Handshake size={16} className="subnav-action-icon" />
+                <Handshake size={18} className="subnav-action-icon" style={{ color: '#f84464' }} />
                 Become a Partner
-              </button>
-              <Link
-                href="/branding"
-                className={`subnav-action${pathname?.startsWith("/branding") ? " active" : ""}`}
-              >
-                <Globe size={16} className="subnav-action-icon" />
-                Branding
-              </Link>
+              </motion.button>
+              <motion.div whileHover={{ scale: 1.05, color: '#c026d3' }}>
+                <Link
+                  href="/branding"
+                  className={`subnav-action${pathname?.startsWith("/branding") ? " active" : ""}`}
+                  style={{ fontSize: '14px', fontWeight: 700, color: scrolled ? '#fff' : '#475569' }}
+                >
+                  <Globe size={18} className="subnav-action-icon" style={{ color: '#c026d3' }} />
+                  Branding
+                </Link>
+              </motion.div>
             </div>
           </div>
         </nav>

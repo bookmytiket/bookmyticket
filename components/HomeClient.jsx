@@ -690,12 +690,12 @@ function HomeClient() {
           }
         `}</style>
 
+
+        {/* Search & Category Filter Results Section */}
         {/* 0) Top Video Hero (Primary) */}
         <div style={{ width: '100%', paddingTop: isMobile ? '0' : '0' }}>
           <VideoHeroBanner />
         </div>
-
-        {/* Search & Category Filter Results Section */}
 
         <SubnavMarquee />
 
@@ -850,29 +850,31 @@ function HomeClient() {
 
             {/* Promotional Image Hero Banners moved to bottom for better flow */}
 
-            {/* DYNAMIC UI SECTION: About BookMyTicket */}
+            {/* DYNAMIC UI SECTION: Features & Info */}
             <section style={{ width: '100%', backgroundColor: '#ffffff', padding: '80px 20px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                <motion.div 
+                
+                {/* DYNAMIC HEADING SECTION */}
+                <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.8 }}
-                  style={{ textAlign: 'left', marginBottom: '60px' }}
+                  style={{ marginBottom: '60px' }}
                 >
-                  <h2 id="platform-intro-heading" style={{ fontSize: 'clamp(42px, 5vw, 64px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                    BookMyTicket – <br />
-                    <span style={{ background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                      Book Events, Turf & Services
+                  <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
+                    Book Your Next <br />
+                    <span style={{ background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      Experience on BookMyTicket
                     </span>
                   </h2>
-                  <p style={{ color: '#475569', fontSize: '18px', maxWidth: '800px', margin: '0 0 40px', lineHeight: 1.6, fontWeight: 500 }}>
+                  <p style={{ fontSize: '18px', color: '#475569', lineHeight: 1.6, maxWidth: '900px', marginBottom: '32px', fontWeight: 500, borderLeft: '4px solid #f844a4', paddingLeft: '20px' }}>
+                    Explore concerts, shows, nightlife, and exclusive experiences happening around you. 
                     BookMyTicket helps you discover and book live events, sports turf slots, and professional services near you. 
                     Find concerts, local events, and trusted service providers easily in India's top cities.
                   </p>
                 </motion.div>
 
-                
                 {/* SLIDING UI SECTION: Features */}
                 <div className="sliding-features-wrap" style={{ 
                   display: 'flex', 
@@ -991,78 +993,8 @@ function HomeClient() {
                 <div style={{ width: '100%', maxWidth: '1240px', margin: '60px auto 0' }}>
                   <PublicReviewsBanner />
                 </div>
-
-                <div style={{ marginTop: '30px', textAlign: 'center', overflow: 'hidden', padding: '20px 0' }}>
-
-                  <h4 style={{ fontSize: '14px', fontWeight: 900, color: '#f84464', marginBottom: '30px', textTransform: 'uppercase', letterSpacing: '4px' }}>Serving Cities Across India</h4>
-                  
-                  <div className="city-marquee-container" style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
-                    <div style={{
-                      display: 'flex',
-                      gap: '30px',
-                      width: 'max-content',
-                      animation: 'cityMarquee 30s linear infinite',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.animationPlayState = 'paused'}
-                    onMouseLeave={e => e.currentTarget.style.animationPlayState = 'running'}
-                    >
-                      {[...Array(4)].map((_, i) => (
-                        <React.Fragment key={i}>
-                          {[
-                            { name: 'Coimbatore', code: 'CBE', img: 'https://images.unsplash.com/photo-1623582854588-d60de57fa33f?q=80&w=400&auto=format' },
-                            { name: 'Bengaluru', code: 'BLR', img: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?q=80&w=400&auto=format' },
-                            { name: 'Chennai', code: 'MAA', img: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&auto=format' },
-                            { name: 'Mumbai', code: 'BOM', img: 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?w=400&auto=format' },
-                            { name: 'Kochi', code: 'COK', img: 'https://images.pexels.com/photos/10557457/pexels-photo-10557457.jpeg?auto=compress&cs=tinysrgb&w=400' },
-                            { name: 'Delhi', code: 'DEL', img: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&auto=format' },
-                            { name: 'Hyderabad', code: 'HYD', img: 'https://images.unsplash.com/photo-1572445271230-a78b5944a659?w=400&auto=format' },
-                            { name: 'Pune', code: 'PNQ', img: 'https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=400&auto=format' },
-                            { name: 'Ahmedabad', code: 'AMD', img: 'https://images.unsplash.com/photo-1593181629936-11c609b8db9b?w=400&auto=format' },
-                            { name: 'Kolkata', code: 'CCU', img: 'https://images.pexels.com/photos/14101851/pexels-photo-14101851.jpeg?auto=compress&cs=tinysrgb&w=400' }
-                          ].map(city => (
-                            <div key={city.name + i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', width: '120px' }}>
-                              <div style={{
-                                width: '100px', height: '100px', borderRadius: '50%',
-                                overflow: 'hidden', border: '4px solid #fff',
-                                boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                                background: '#f1f5f9',
-                                transition: 'all 0.4s ease'
-                              }}
-                              className="city-img-circle"
-                              >
-                                <img 
-                                  src={city.img} 
-                                  alt={city.name}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  onError={(e) => {
-                                    e.target.src = `https://ui-avatars.com/api/?name=${city.code}&background=f84464&color=fff&size=100&bold=true`;
-                                  }}
-                                />
-                              </div>
-                              <span style={{ fontSize: '13px', fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px' }}>{city.name}</span>
-                            </div>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-
-                  <style>{`
-                    @keyframes cityMarquee {
-                      0% { transform: translateX(0); }
-                      100% { transform: translateX(-25%); }
-                    }
-                    .city-img-circle:hover {
-                      transform: scale(1.15) rotate(5deg);
-                      border-color: #f84464 !important;
-                      box-shadow: 0 15px 35px rgba(248, 68, 100, 0.3) !important;
-                    }
-                  `}</style>
-                </div>
               </div>
             </section>
-
-            {/* Image Banner removed from here - moved to top under video */}
           </div>
         )}
       </main>

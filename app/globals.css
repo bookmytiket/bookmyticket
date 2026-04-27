@@ -461,13 +461,11 @@ nextjs-portal {
 
 .header-scrolled {
   padding: 0 !important;
-  background: linear-gradient(110deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 50%) !important;
-  background-color: rgba(0, 0, 0, 0.45) !important;
-  backdrop-filter: blur(25px) !important;
-  -webkit-backdrop-filter: blur(25px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: none !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
 .header-scrolled .header-top {
@@ -731,20 +729,27 @@ nextjs-portal {
 }
 
 .header-main {
-  width: 92%;
+  width: 95%;
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 25px;
-  height: 75px;
-  background: #fde047;
-  /* Reverted to Yellow as requested */
-  border-radius: 12px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  padding: 0 30px;
+  height: 80px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFB900 100%);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(255, 185, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.header-scrolled .header-main {
+  background: transparent !important;
+  box-shadow: none;
+  border: none;
+  height: 70px;
 }
 
 .header-logo {
@@ -1078,10 +1083,10 @@ nextjs-portal {
 }
 
 .subnav-container {
-  width: 100%;
+  width: 95%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 30px;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
