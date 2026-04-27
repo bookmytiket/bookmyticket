@@ -3,33 +3,35 @@ import Script from 'next/script';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({ searchParams }) {
-    const { id } = await searchParams;
-    if (!id) return { title: 'Event Details' };
-    
-    const { data: event } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+    const params = await searchParams;
+    const id = params?.id;
+    if (!id) return {};
 
-    if (!event) return { title: 'Event Not Found' };
+    try {
+        const { data: event } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-    const title = `${event.title} - Book Tickets Online | BookMyTicket`;
-    const description = `Book your tickets for ${event.title}. Happening at ${event.venue || 'TBA'}, ${event.city || ''}. Find best prices on BookMyTicket.`;
-    
-    return {
-        title,
-        description,
-        openGraph: {
-            title,
-            description,
-            images: [event.img || '/og-image.png'],
-        },
-    };
+        if (!event) return { title: 'Event Not Found | BookMyTicket' };
+
+        return {
+            title: `${event.title} | BookMyTicket`,
+            description: event.description?.slice(0, 160),
+            openGraph: {
+                images: [event.img || '/og-image.png'],
+            }
+        };
+    } catch (e) {
+        return { title: 'Event Details | BookMyTicket' };
+    }
 }
 
 export default async function EventDetailLayout({ children, searchParams }) {
-    const { id } = await searchParams;
+    const params = await searchParams;
+    const id = params?.id;
+    
     if (!id) notFound();
     
     const { data: event } = await supabase

@@ -9,6 +9,8 @@ import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown'
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
+import CalendarModal from '@/components/booking/CalendarModal';
+import PackageSelector from '@/components/booking/PackageSelector';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -59,6 +61,9 @@ export default function EventBookClient({ id }) {
     const { data: convexEvents } = useSupabaseQuery('events', (q) => q.or('status.eq.published,status.eq.Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState(null);
 
     useEffect(() => {
         setStorageLoaded(true);
@@ -118,7 +123,8 @@ export default function EventBookClient({ id }) {
     const ticketPrice = isSeating
         ? (selectedSeats.length > 0 ? totalSeatPrice : 0)
         : (event?.price ?? 499);
-    const baseAmount = isSeating ? totalSeatPrice : ticketPrice * quantity;
+    const currentPrice = selectedPackage ? selectedPackage.price : ticketPrice;
+    const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
     const { convenienceFee, gst, total } = getFeeBreakdown(baseAmount, feeSettings);
 
     if (!event) {
@@ -148,8 +154,9 @@ export default function EventBookClient({ id }) {
         const seatParam = selectedSeats.length > 0
             ? `&seats=${encodeURIComponent(JSON.stringify(selectedSeats))}`
             : '';
-        const qtyParam = !isSeating && quantity > 1 ? `&qty=${quantity}` : '';
-        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}`);
+        const qtyParam = !isSeating ? `&qty=${quantity}` : '';
+        const packageParam = selectedPackage ? `&package=${encodeURIComponent(selectedPackage.title || selectedPackage.name)}` : '';
+        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}`);
     };
 
     return (
@@ -290,23 +297,33 @@ export default function EventBookClient({ id }) {
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                                <h2 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '16px', color: '#111827' }}>Select tickets</h2>
-                                <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                                    <div>
-                                        <p style={{ fontWeight: 700, margin: '0 0 4px 0', color: '#111827' }}>{ticketName}</p>
-                                        <p style={{ margin: 0, fontSize: '14px', color: '#4b5563' }}>First Come First Serve</p>
-                                        <p style={{ margin: '8px 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#111827' }}>₹ {ticketPrice}</p>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <button type="button" onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ width: '36px', height: '36px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '18px', cursor: 'pointer' }}>−</button>
-                                        <span style={{ minWidth: '28px', textAlign: 'center', fontWeight: 700 }}>{quantity}</span>
-                                        <button type="button" onClick={() => setQuantity(q => q + 1)} style={{ width: '36px', height: '36px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '18px', cursor: 'pointer' }}>+</button>
-                                        <button type="button" onClick={handleContinue} style={{ padding: '12px 24px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
-                                            Add & Continue
+                            <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm">
+                                <PackageSelector 
+                                    packages={event.ticketTypes || [
+                                        { id: 'gen', title: ticketName, price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+                                    ]}
+                                    selectedPackage={selectedPackage}
+                                    onSelect={setSelectedPackage}
+                                    type="event"
+                                />
+                                {selectedPackage && (
+                                    <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Total Quantity</p>
+                                            <div className="flex items-center gap-4">
+                                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-900 font-black text-xl hover:bg-slate-100 transition-all">−</button>
+                                                <span className="text-xl font-black text-slate-900 w-8 text-center">{quantity}</span>
+                                                <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-900 font-black text-xl hover:bg-slate-100 transition-all">+</button>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={handleContinue}
+                                            className="px-12 py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-pink-500/20"
+                                        >
+                                            Book Now →
                                         </button>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -335,7 +352,7 @@ export default function EventBookClient({ id }) {
                                 </div>
                             ) : !isSeating && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '14px', color: '#4b5563' }}>Ticket (₹ {ticketPrice} × {quantity})</span>
+                                    <span style={{ fontSize: '14px', color: '#4b5563' }}>{selectedPackage ? (selectedPackage.title || selectedPackage.name) : "Ticket"} (₹ {currentPrice} × {quantity})</span>
                                     <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>₹ {baseAmount.toFixed(2)}</span>
                                 </div>
                             )}

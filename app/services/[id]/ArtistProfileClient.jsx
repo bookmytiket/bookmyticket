@@ -10,6 +10,8 @@ import {
     Calendar, ShieldCheck, User, Mail, Phone
 } from "lucide-react";
 import { triggerNotification } from "@/lib/notificationHelper";
+import CalendarModal from "@/components/booking/CalendarModal";
+import PackageSelector from "@/components/booking/PackageSelector";
 
 export default function ArtistProfileClient({ id: vendorId }) {
     const router = useRouter();
@@ -128,14 +130,14 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 </div>
             )}
 
-            <div className="w-full h-[350px] md:h-[480px] relative overflow-hidden">
-                <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Service Cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#fafbfc] via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
-                    <div className="max-w-[1200px] mx-auto w-full">
+            <div className="max-w-[1240px] mx-auto px-6 mt-12 relative z-20">
+                <div className="w-full h-[400px] md:h-[500px] rounded-[48px] overflow-hidden shadow-2xl relative border-4 border-white group">
+                    <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Service Cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                                <span className="px-4 py-1.5 bg-[#FF5A5F] text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg shadow-pink-500/30">
+                                <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg">
                                     {fullProfile.vendorProfile?.category || 'Professional'}
                                 </span>
                                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-[12px] font-black uppercase italic">
@@ -143,27 +145,27 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                     <span>4.9 (24 Reviews)</span>
                                 </div>
                             </div>
-                            <h1 className="text-slate-900 md:text-white text-[40px] md:text-[72px] font-black uppercase italic tracking-tighter leading-[0.9] mt-2 drop-shadow-2xl">
+                            <h2 className="text-white text-[32px] md:text-[64px] font-black uppercase italic tracking-tighter leading-none mt-2">
                                 {organiser.business_name || organiser.name}
-                            </h1>
-                            <div className="flex items-center gap-4 text-slate-600 md:text-white/80 mt-2">
+                            </h2>
+                            <div className="flex items-center gap-4 text-white/80 mt-2">
                                 <div className="flex items-center gap-1.5 font-bold uppercase italic text-[13px] tracking-tight">
                                     <MapPin size={16} /> {fullProfile.vendorProfile?.city || "PAN India"}
                                 </div>
-                                <div className="w-1.5 h-1.5 bg-slate-400 md:bg-white/40 rounded-full" />
+                                <div className="w-1.5 h-1.5 bg-white/40 rounded-full" />
                                 <div className="flex items-center gap-1.5 font-bold uppercase italic text-[13px] tracking-tight">
-                                    <ShieldCheck size={16} className="text-green-500 md:text-green-400" /> Verified Artist
+                                    <ShieldCheck size={16} className="text-green-400" /> Verified Artist
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <button 
+                        onClick={() => router.back()}
+                        className="absolute top-8 left-8 p-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all z-10"
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
                 </div>
-                <button 
-                    onClick={() => router.back()}
-                    className="absolute top-8 left-8 p-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all z-10"
-                >
-                    <ArrowLeft size={24} />
-                </button>
             </div>
 
             <div className="max-w-[1200px] mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
@@ -171,7 +173,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 <div className="space-y-10">
                     <div className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-sm">
                         <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mb-4 flex items-center gap-3">
-                            <Sparkles className="text-[#FF5A5F]" /> About the Artist
+                            <Sparkles className="text-pink-500" /> About the Artist
                         </h2>
                         <p className="text-slate-600 font-medium leading-relaxed text-[17px]">
                             {fullProfile.vendorProfile?.bio || "A dedicated professional committed to excellence. With years of experience and a passion for their craft, they bring unique creativity and skill to every project."}
@@ -191,7 +193,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-6 py-4 font-black uppercase italic tracking-tight text-[14px] transition-all border-b-2 ${
                                         activeTab === tab.id 
-                                        ? "border-[#FF5A5F] text-[#FF5A5F]" 
+                                        ? "border-pink-500 text-pink-500" 
                                         : "border-transparent text-slate-400 hover:text-slate-600"
                                     }`}
                                 >
@@ -219,49 +221,12 @@ export default function ArtistProfileClient({ id: vendorId }) {
                             )}
 
                             {activeTab === 'packages' && (
-                                <div className="space-y-4">
-                                    {packages.length > 0 ? packages.map((pkg, idx) => (
-                                        <div 
-                                            key={pkg.id} 
-                                            onClick={() => setSelectedPackage(pkg)}
-                                            className={`p-6 rounded-[28px] border-2 transition-all cursor-pointer relative overflow-hidden group ${
-                                                selectedPackage?.id === pkg.id 
-                                                ? "border-[#FF5A5F] bg-pink-50" 
-                                                : "border-slate-100 bg-white hover:border-slate-300"
-                                            }`}
-                                        >
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">{pkg.title}</h3>
-                                                    <p className="text-[#FF5A5F] font-black text-[13px] uppercase italic mt-1 flex items-center gap-1.5">
-                                                        <Clock size={14} /> {pkg.duration || "Full Service"}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-2xl font-black text-slate-900 tracking-tighter italic">₹{pkg.price.toLocaleString()}</div>
-                                                    <div className="text-[10px] font-black text-slate-400 uppercase italic">Starts from</div>
-                                                </div>
-                                            </div>
-                                            <p className="text-slate-600 font-medium mb-6 leading-relaxed">{pkg.description}</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {pkg.features?.map((feat, fIdx) => (
-                                                    <span key={fIdx} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
-                                                        <CheckCircle2 size={12} className="text-green-500" /> {feat}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            {selectedPackage?.id === pkg.id && (
-                                                <div className="absolute top-0 right-0 w-12 h-12 bg-[#FF5A5F] flex items-center justify-center rounded-bl-[20px]">
-                                                    <CheckCircle2 className="text-white" size={20} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )) : (
-                                        <div className="py-20 text-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
-                                            <p className="text-slate-400 font-bold uppercase italic">Contact artist for custom pricing</p>
-                                        </div>
-                                    )}
-                                </div>
+                                <PackageSelector 
+                                    packages={packages}
+                                    selectedPackage={selectedPackage}
+                                    onSelect={setSelectedPackage}
+                                    type="service"
+                                />
                             )}
 
                             {activeTab === 'reviews' && (
@@ -300,7 +265,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                 </div>
 
                 {/* Right Column: Booking Widget */}
-                <div className="relative">
+                <div className="relative" id="booking-form">
                     <div className="sticky top-24 bg-white border-2 border-slate-900 rounded-[40px] p-8 shadow-[12px_12px_0_rgba(15,23,42,1)] overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-slate-900 rotate-45 translate-x-12 -translate-y-12" />
                         
@@ -339,17 +304,17 @@ export default function ArtistProfileClient({ id: vendorId }) {
 
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black uppercase italic tracking-widest text-slate-400 ml-1">Event Schedule</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#FF5A5F]" size={18} />
-                                    <input 
-                                        type="date" 
-                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-black transition-all text-sm outline-none uppercase"
-                                        value={formData.date}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => setFormData({...formData, date: e.target.value})}
-                                        required
-                                    />
-                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsCalendarOpen(true)}
+                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 hover:border-slate-300 rounded-2xl font-black transition-all text-sm outline-none uppercase flex items-center gap-3 text-left group"
+                                >
+                                    <Calendar className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${formData.date ? "text-green-500" : "text-[#FF5A5F]"}`} size={18} />
+                                    <span className={formData.date ? "text-slate-900" : "text-slate-400"}>
+                                        {formData.date ? new Date(formData.date).toLocaleDateString('default', { day: '2-digit', month: 'short', year: 'numeric' }) : "Select Date"}
+                                    </span>
+                                    {formData.date && <CheckCircle2 className="ml-auto text-green-500" size={16} />}
+                                </button>
                             </div>
 
                             <div className="space-y-2">
@@ -386,16 +351,44 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                 <button 
                                     type="submit"
                                     disabled={isBooking || !selectedPackage || !agreedToTerms}
-                                    className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_8px_0_rgba(0,0,0,1)] active:shadow-none active:translate-y-2 flex items-center justify-center gap-3"
+                                    className="w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-pink-500/20 active:scale-95 flex items-center justify-center gap-3"
                                 >
                                     {isBooking ? <Loader2 className="animate-spin" size={20} /> : <Send size={18} />}
-                                    {isBooking ? "Confirming..." : "Send Booking Request"}
+                                    {isBooking ? "Confirming..." : "Book Now"}
                                 </button>
                                 <p className="text-center text-[10px] font-black text-slate-400 uppercase italic mt-8 tracking-widest">Powered by BookMyTicket</p>
                             </div>
                         </form>
                     </div>
                 </div>
+            </div>
+
+            {/* Modals */}
+            <CalendarModal 
+                isOpen={isCalendarOpen}
+                onClose={() => setIsCalendarOpen(false)}
+                selectedDate={formData.date ? new Date(formData.date) : null}
+                onSelect={(date) => {
+                    setFormData({ ...formData, date: date.toISOString().split('T')[0] });
+                    setIsCalendarOpen(false);
+                }}
+            />
+
+            {/* Mobile Sticky Booking Bar */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-slate-100 z-[90] flex items-center justify-between">
+                <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Starts from</div>
+                    <div className="text-xl font-black text-slate-900 tracking-tighter italic">₹{(selectedPackage?.price || packages[0]?.price || 0).toLocaleString()}</div>
+                </div>
+                <button 
+                    onClick={() => {
+                        const el = document.getElementById('booking-form');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
+                >
+                    Book Now
+                </button>
             </div>
         </main>
     );
