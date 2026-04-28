@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, X, Globe } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -208,10 +210,16 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
             <X size={24} />
           </button>
 
-          <div style={{ textAlign: 'center', marginTop: '0px', marginBottom: '16px' }}>
-            <img src="/logo.png" alt="Logo" style={{ height: '32px', marginBottom: '8px' }} />
-            <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#1e1b4b', margin: '0' }}>Welcome</h2>
-            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Sign in to your account</p>
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
+              <img
+                src="/logo.png"
+                alt="BookMyTicket"
+                style={{ height: '50px', width: 'auto', objectFit: 'contain', display: 'block' }}
+              />
+            </div>
+            <h2 style={{ fontSize: "24px", fontWeight: 900, color: "#1e1b4b", margin: "0" }}>Welcome</h2>
+            <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>Sign in to your account</p>
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

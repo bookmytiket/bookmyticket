@@ -10,6 +10,7 @@ import { BRAND_COUPONS } from "@/app/data/homeEvents";
 import CouponModal from "@/components/CouponModal";
 import EmojiBackground from "@/components/EmojiBackground";
 import { isServiceProvider } from "@/app/data/serviceCategories";
+import DynamicLogo from "@/components/DynamicLogo";
 
 const FALLBACK_BANNER_SLIDES = [
     { image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1080&h=1080&fit=crop", title: "Live Events & Experiences", subtitle: "Book tickets for concerts, sports & more" },
@@ -827,9 +828,7 @@ export default function SignInPage() {
                         {/* Header Logo */}
                         <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "10px" }}>
                             <Link href="/">
-                                <div style={{ position: "relative" }}>
-                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "70px", width: "auto", display: "block", cursor: "pointer" }} />
-                                </div>
+                                <DynamicLogo size={75} />
                             </Link>
                         </div>
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
 import { Country, State, City } from "country-state-city";
 
 import { supabase } from "@/lib/supabase";
@@ -263,20 +264,34 @@ export default function Navbar() {
     }
   };
 
-  const [brandingLogo, setBrandingLogo] = useState("/logo.png");
-
-  useEffect(() => {
-    // Branding logo is now strictly /logo.png
-    setBrandingLogo("/logo.png");
-  }, []);
-
   return (
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between' }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
-            <img src={brandingLogo} alt="Logo" style={{ height: scrolled ? "45px" : "65px", width: "auto", display: "block", transition: "all 0.3s ease" }} />
+            <motion.img
+              src="/logo.png"
+              alt="BookMyTicket"
+              initial={{ y: -60, opacity: 0, scale: 0.7 }}
+              animate={{ y: [null, 0], opacity: 1, scale: 1 }}
+              transition={{
+                y: { type: 'spring', stiffness: 320, damping: 14, duration: 0.7 },
+                opacity: { duration: 0.3 },
+                scale: { type: 'spring', stiffness: 280, damping: 16 },
+              }}
+              whileHover={{ y: -5, scale: 1.06, transition: { type: 'spring', stiffness: 400, damping: 12 } }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                height: scrolled ? '50px' : '64px',
+                width: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+                transition: 'height 0.3s ease, filter 0.3s ease',
+                filter: scrolled ? 'brightness(0) invert(1)' : 'none',
+                cursor: 'pointer',
+              }}
+            />
           </Link>
 
 
