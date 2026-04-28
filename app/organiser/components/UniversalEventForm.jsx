@@ -15,13 +15,27 @@ import InlineMap from "./InlineMap";
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">{label}</label>
-        <input 
-            type={type}
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all"
-            placeholder={placeholder}
-        />
+        {type === "date" ? (
+            <CalendarPicker 
+                value={value || ""} 
+                onChange={onChange}
+                placeholder={placeholder || "dd/mm/yyyy"}
+            />
+        ) : type === "time" ? (
+            <TimePicker 
+                value={value || ""} 
+                onChange={onChange}
+                placeholder={placeholder || "--:--"}
+            />
+        ) : (
+            <input 
+                type={type}
+                value={value || ""}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all"
+                placeholder={placeholder}
+            />
+        )}
     </div>
 );
 

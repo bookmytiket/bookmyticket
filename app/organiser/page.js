@@ -3022,12 +3022,75 @@ function OrganiserPanel() {
                                     {renderSelect("Exclusive*", "isExclusive", [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }])}
                                 </div>
 
-                                {postEvent.dateType === "single" && (
+                                {postEvent.dateType === "single" ? (
                                     <div className="form-grid-4">
                                         {renderInput("Start Date*", "startDate", "date")}
                                         {renderInput("Start Time*", "startTime", "time")}
                                         {renderInput("End Date*", "endDate", "date")}
                                         {renderInput("End Time*", "endTime", "time")}
+                                    </div>
+                                ) : (
+                                    <div style={{ marginBottom: "24px", padding: "24px", border: `2px dashed ${t.border}`, borderRadius: "2rem", backgroundColor: t.cardBg + '50' }}>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                                    <Calendar size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day online sessions</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} 
+                                                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
+                                            >
+                                                <Plus size={14} /> Add New Slot
+                                            </button>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {(postEvent.dateSlots || []).length === 0 ? (
+                                                <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                                    <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
+                                                        <Clock size={32} className="opacity-20" />
+                                                    </div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-widest">No slots added yet.</p>
+                                                </div>
+                                            ) : (postEvent.dateSlots || []).map((slot, idx) => (
+                                                <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
+                                                        <CalendarPicker 
+                                                            value={slot.date} 
+                                                            onChange={val => {
+                                                                const ns = [...postEvent.dateSlots]; ns[idx].date = val;
+                                                                setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                            }} 
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
+                                                        <TimePicker 
+                                                            value={slot.time} 
+                                                            onChange={val => {
+                                                                const ns = [...postEvent.dateSlots]; ns[idx].time = val;
+                                                                setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                            }} 
+                                                        />
+                                                    </div>
+                                                    <div className="pt-6">
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} 
+                                                            className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
@@ -3365,25 +3428,64 @@ function OrganiserPanel() {
                                     {renderInput("End Time*", "endTime", "time")}
                                 </div>
                             ) : (
-                                <div style={{ marginBottom: "20px", padding: "16px", border: `1px dashed ${t.border}`, borderRadius: "12px", backgroundColor: t.cardBg }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: t.textSub }}>Multiple Date/Time Slots</p>
-                                        <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} style={{ color: "#3b82f6", background: "none", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}><Plus size={14} /> Add Slot</button>
+                                <div style={{ marginBottom: "24px", padding: "24px", border: `2px dashed ${t.border}`, borderRadius: "2rem", backgroundColor: t.cardBg + '50' }}>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                                <Calendar size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day sessions</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} 
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
+                                        >
+                                            <Plus size={14} /> Add New Slot
+                                        </button>
                                     </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    <div className="space-y-4">
                                         {(postEvent.dateSlots || []).length === 0 ? (
-                                            <p style={{ fontSize: "12px", color: t.textSub, textAlign: "center", margin: "10px 0" }}>No slots added. Click "Add Slot" to start.</p>
+                                            <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                                <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
+                                                    <Clock size={32} className="opacity-20" />
+                                                </div>
+                                                <p className="text-[11px] font-bold uppercase tracking-widest">No slots added yet. Start by adding your first schedule.</p>
+                                            </div>
                                         ) : (postEvent.dateSlots || []).map((slot, idx) => (
-                                            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "center" }}>
-                                                <input type="date" value={slot.date} onChange={e => {
-                                                    const ns = [...postEvent.dateSlots]; ns[idx].date = e.target.value;
-                                                    setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                }} style={{ padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
-                                                <input type="time" value={slot.time} onChange={e => {
-                                                    const ns = [...postEvent.dateSlots]; ns[idx].time = e.target.value;
-                                                    setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                }} style={{ padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "13px" }} />
-                                                <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                            <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
+                                                <div className="space-y-2">
+                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
+                                                    <CalendarPicker 
+                                                        value={slot.date} 
+                                                        onChange={val => {
+                                                            const ns = [...postEvent.dateSlots]; ns[idx].date = val;
+                                                            setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                        }} 
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
+                                                    <TimePicker 
+                                                        value={slot.time} 
+                                                        onChange={val => {
+                                                            const ns = [...postEvent.dateSlots]; ns[idx].time = val;
+                                                            setPostEvent(prev => ({ ...prev, dateSlots: ns }));
+                                                        }} 
+                                                    />
+                                                </div>
+                                                <div className="pt-6">
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} 
+                                                        className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -4816,26 +4918,26 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                         {newEvent.slots.map((slot, idx) => (
                                             <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                                                <input
-                                                    type="date"
-                                                    value={slot.date}
-                                                    onChange={(e) => {
-                                                        const newSlots = [...newEvent.slots];
-                                                        newSlots[idx].date = e.target.value;
-                                                        setNewEvent(prev => ({ ...prev, slots: newSlots }));
-                                                    }}
-                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                                />
-                                                <input
-                                                    type="time"
-                                                    value={slot.time}
-                                                    onChange={(e) => {
-                                                        const newSlots = [...newEvent.slots];
-                                                        newSlots[idx].time = e.target.value;
-                                                        setNewEvent(prev => ({ ...prev, slots: newSlots }));
-                                                    }}
-                                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain }}
-                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    <CalendarPicker 
+                                                        value={slot.date} 
+                                                        onChange={val => {
+                                                            const newSlots = [...newEvent.slots];
+                                                            newSlots[idx].date = val;
+                                                            setNewEvent(prev => ({ ...prev, slots: newSlots }));
+                                                        }} 
+                                                    />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <TimePicker 
+                                                        value={slot.time} 
+                                                        onChange={val => {
+                                                            const newSlots = [...newEvent.slots];
+                                                            newSlots[idx].time = val;
+                                                            setNewEvent(prev => ({ ...prev, slots: newSlots }));
+                                                        }} 
+                                                    />
+                                                </div>
                                                 {newEvent.slots.length > 1 && <button onClick={() => removeDateSlot(idx)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={18} /></button>}
                                             </div>
                                         ))}

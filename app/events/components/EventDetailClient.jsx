@@ -85,6 +85,7 @@ export default function EventDetailClient({ id }) {
             refundPolicy: Array.isArray(raw.refundPolicy) && raw.refundPolicy.length > 0 ? raw.refundPolicy : DEFAULT_REFUND,
             parking: raw.parking || 'Paid Parking Available at the Venue.',
             tags: Array.isArray(raw.tags) && raw.tags.length > 0 ? raw.tags : [raw.category || 'Event'].filter(Boolean),
+            dateSlots: raw.dateSlots || [],
         };
     }, [id, convexEvents]);
 
@@ -144,9 +145,15 @@ export default function EventDetailClient({ id }) {
                                     {event.title}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-6 text-white/90 mt-4 font-bold uppercase text-[13px] tracking-wide">
-                                    <div className="flex items-center gap-2"><MapPin size={18} className="text-pink-400" /> {event.venue}, {event.city}</div>
-                                    <div className="w-1.5 h-1.5 bg-white/30 rounded-full hidden md:block" />
                                     <div className="flex items-center gap-2"><Calendar size={18} className="text-pink-400" /> {event.date} | {event.time || "6:30 PM"}</div>
+                                    {event.dateSlots?.length > 1 && (
+                                        <>
+                                            <div className="w-1.5 h-1.5 bg-white/30 rounded-full" />
+                                            <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 text-[10px] font-black uppercase tracking-widest text-pink-300">
+                                                {event.dateSlots.length} Dates Available
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -158,16 +165,6 @@ export default function EventDetailClient({ id }) {
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                     </Link>
-
-                    {/* Dynamic Flipping Badge Overlay (Replaces massive static SPORTS) */}
-                    <div style={{
-                        position: 'absolute',
-                        top: '20px',
-                        right: '20px',
-                        zIndex: 10
-                    }}>
-                        <DynamicBadge size="medium" />
-                    </div>
                 </div>
 
                 {/* Info Bar below Banner */}

@@ -72,113 +72,113 @@ export default function CalendarModal({
                     <div className="flex justify-between items-start mb-6">
                         <div>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Select Date</h2>
-                            <div className="flex items-center gap-2 mt-1">
-                                <div className="w-2 h-2 rounded-full bg-orange-500 " />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Real-time Availability</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="w-2 h-2 rounded-full bg-pink-500 " />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Real-time Availability</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={onClose}
+                                className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition-all"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3 mb-8">
+                            {/* Month Selector */}
+                            <div className="relative flex-1">
+                                <select 
+                                    value={currentMonth.getMonth()}
+                                    onChange={(e) => setCurrentMonth(new Date(currentMonth.setMonth(parseInt(e.target.value))))}
+                                    className="w-full appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black uppercase italic tracking-tighter text-slate-900 outline-none cursor-pointer hover:border-pink-500/30 transition-all"
+                                >
+                                    {months.map((m, i) => (
+                                        <option key={i} value={i}>{m}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            </div>
+
+                            {/* Year Selector */}
+                            <div className="relative w-32">
+                                <select 
+                                    value={currentMonth.getFullYear()}
+                                    onChange={(e) => setCurrentMonth(new Date(currentMonth.setFullYear(parseInt(e.target.value))))}
+                                    className="w-full appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black uppercase italic tracking-tighter text-slate-900 outline-none cursor-pointer hover:border-pink-500/30 transition-all"
+                                >
+                                    {years.map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                             </div>
                         </div>
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="px-8 pb-8">
+                        <div className="grid grid-cols-7 mb-4">
+                            {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
+                                <div key={d} className="text-[10px] font-black text-slate-400 text-center tracking-widest">{d}</div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1">
+                            {daysInMonth.map((dayObj, i) => {
+                                const isSelected = selectedDate && dayObj.date && selectedDate.toDateString() === dayObj.date.toDateString();
+                                const isBlocked = dayObj.date && (
+                                    dayObj.isPast || 
+                                    blockedDates.some(d => new Date(d).toDateString() === dayObj.date.toDateString()) ||
+                                    (availableDates.length > 0 && !availableDates.some(d => new Date(d).toDateString() === dayObj.date.toDateString()))
+                                );
+
+                                return (
+                                    <button
+                                        key={i}
+                                        disabled={!dayObj.day || isBlocked}
+                                        onClick={() => dayObj.date && onSelect(dayObj.date)}
+                                        className={`
+                                            aspect-square flex flex-col items-center justify-center rounded-2xl text-sm font-black transition-all relative group
+                                            ${!dayObj.day ? "pointer-events-none" : ""}
+                                            ${isSelected ? "bg-pink-500 text-white shadow-lg shadow-pink-500/30 scale-110 z-10" : "text-slate-900 hover:bg-pink-50/50"}
+                                            ${isBlocked ? "opacity-20 cursor-not-allowed grayscale" : "cursor-pointer"}
+                                            ${dayObj.isToday && !isSelected ? "text-pink-500" : ""}
+                                        `}
+                                    >
+                                        {dayObj.day}
+                                        {dayObj.isToday && !isSelected && (
+                                            <div className="w-1 h-1 bg-pink-500 rounded-full mt-0.5" />
+                                        )}
+                                        {isSelected && (
+                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                                                <CheckCircle2 size={10} className="text-pink-500" />
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-8 pt-0 flex gap-4">
                         <button 
                             onClick={onClose}
-                            className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition-all"
+                            className="flex-1 py-4 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-slate-100 transition-all"
                         >
-                            <X size={20} />
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={onClose}
+                            className="flex-1 py-4 bg-pink-500 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-pink-600 transition-all shadow-lg shadow-pink-500/20"
+                        >
+                            Confirm
                         </button>
                     </div>
-
-                    <div className="flex gap-3 mb-8">
-                        {/* Month Selector */}
-                        <div className="relative flex-1">
-                            <select 
-                                value={currentMonth.getMonth()}
-                                onChange={(e) => setCurrentMonth(new Date(currentMonth.setMonth(parseInt(e.target.value))))}
-                                className="w-full appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black uppercase italic tracking-tighter text-slate-900 outline-none cursor-pointer hover:border-orange-500/30 transition-all"
-                            >
-                                {months.map((m, i) => (
-                                    <option key={i} value={i}>{m}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                        </div>
-
-                        {/* Year Selector */}
-                        <div className="relative w-32">
-                            <select 
-                                value={currentMonth.getFullYear()}
-                                onChange={(e) => setCurrentMonth(new Date(currentMonth.setFullYear(parseInt(e.target.value))))}
-                                className="w-full appearance-none bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black uppercase italic tracking-tighter text-slate-900 outline-none cursor-pointer hover:border-orange-500/30 transition-all"
-                            >
-                                {years.map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="px-8 pb-8">
-                    <div className="grid grid-cols-7 mb-4">
-                        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
-                            <div key={d} className="text-[10px] font-black text-slate-400 text-center tracking-widest">{d}</div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1">
-                        {daysInMonth.map((dayObj, i) => {
-                            const isSelected = selectedDate && dayObj.date && selectedDate.toDateString() === dayObj.date.toDateString();
-                            const isBlocked = dayObj.date && (
-                                dayObj.isPast || 
-                                blockedDates.some(d => new Date(d).toDateString() === dayObj.date.toDateString()) ||
-                                (availableDates.length > 0 && !availableDates.some(d => new Date(d).toDateString() === dayObj.date.toDateString()))
-                            );
-
-                            return (
-                                <button
-                                    key={i}
-                                    disabled={!dayObj.day || isBlocked}
-                                    onClick={() => dayObj.date && onSelect(dayObj.date)}
-                                    className={`
-                                        aspect-square flex flex-col items-center justify-center rounded-2xl text-sm font-black transition-all relative group
-                                        ${!dayObj.day ? "pointer-events-none" : ""}
-                                        ${isSelected ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110 z-10" : "text-slate-900 hover:bg-orange-50/50"}
-                                        ${isBlocked ? "opacity-20 cursor-not-allowed grayscale" : "cursor-pointer"}
-                                        ${dayObj.isToday && !isSelected ? "text-orange-500" : ""}
-                                    `}
-                                >
-                                    {dayObj.day}
-                                    {dayObj.isToday && !isSelected && (
-                                        <div className="w-1 h-1 bg-orange-500 rounded-full mt-0.5" />
-                                    )}
-                                    {isSelected && (
-                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                                            <CheckCircle2 size={10} className="text-orange-500" />
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-8 pt-0 flex gap-4">
-                    <button 
-                        onClick={onClose}
-                        className="flex-1 py-4 bg-slate-50 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-slate-100 transition-all"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        onClick={onClose}
-                        className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
-                    >
-                        Confirm
-                    </button>
-                </div>
-                
-                {/* Decorative Element */}
-                <div className="absolute top-8 right-8 w-16 h-16 bg-orange-500/10 rounded-3xl -z-10 rotate-12" />
+                    
+                    {/* Decorative Element */}
+                    <div className="absolute top-8 right-8 w-16 h-16 bg-pink-500/10 rounded-3xl -z-10 rotate-12" />
             </div>
         </div>
     );

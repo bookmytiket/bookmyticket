@@ -1,5 +1,5 @@
 "use client";
-import DynamicBadge from '@/components/DynamicBadge';
+
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ function getEventById(id, convexEvents) {
         date: raw.date || 'TBA',
         time: raw.time || '',
         location: raw.location || raw.venue || raw.address || 'Venue',
+        dateSlots: raw.dateSlots || [],
     };
 }
 
@@ -66,6 +67,14 @@ export default function EventBookClient({ id }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
 
+    const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
+
+    useEffect(() => {
+        if (event?.dateSlots?.length > 0 && !selectedDate) {
+            setSelectedDate(new Date(event.dateSlots[0].date));
+        }
+    }, [event, selectedDate]);
+
     useEffect(() => {
         setStorageLoaded(true);
     }, []);
@@ -92,8 +101,6 @@ export default function EventBookClient({ id }) {
     }, [bookingList]);
 
     const isSeatBooked = (seatId) => bookedSeats.includes(seatId);
-
-    const event = useMemo(() => getEventById(id, convexEvents), [id, convexEvents]);
 
     const isSeating = useMemo(() => {
         return event &&
@@ -179,13 +186,57 @@ export default function EventBookClient({ id }) {
                             <span className="font-bold text-black text-[17px]">Safe Checkout</span>
                         </div>
 
-                        <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', margin: '0 0 12px 0' }}>{event.title}</h1>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', color: '#4b5563', fontSize: '14px' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={16} /> {event.date}{event.time ? `, ${event.time}` : ''}</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><MapPin size={16} /> {event.location}</span>
+                        <div style={{ background: '#fff', padding: '32px', borderRadius: '24px', boxShadow: '0 4px 20px -10px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9' }}>
+                            <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', margin: '0 0 16px 0', letterSpacing: '-0.02em' }}>{event.title}</h1>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', color: '#64748b', fontSize: '14px', fontWeight: 600 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <Calendar size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">Date & Time</p>
+                                        <p className="text-slate-900">{selectedDate ? selectedDate.toDateString() : event.date}{event.time ? `, ${event.time}` : ''}</p>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <MapPin size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">Location</p>
+                                        <p className="text-slate-900">{event.location}</p>
+                                    </div>
+                                </div>
                             </div>
+
+                            {event.dateSlots?.length > 0 && (
+                                <div className="mt-8 pt-8 border-t border-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 mb-1">Multiple Dates Available</p>
+                                            <p className="text-xs text-slate-500">Pick a preferred date for this event</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setIsCalendarOpen(true)}
+                                            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2"
+                                        >
+                                            <Calendar size={14} /> Change Date
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
+                        <CalendarModal 
+                            isOpen={isCalendarOpen}
+                            onClose={() => setIsCalendarOpen(false)}
+                            selectedDate={selectedDate}
+                            onSelect={(date) => {
+                                setSelectedDate(date);
+                                setIsCalendarOpen(false);
+                            }}
+                            availableDates={event.dateSlots?.map(s => s.date) || []}
+                        />
 
                         {isSeating ? (
                             <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
@@ -334,9 +385,7 @@ export default function EventBookClient({ id }) {
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                             <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', position: 'relative' }}>
                                 <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
-                                    <DynamicBadge size="small" />
-                                </div>
+
                             </div>
                             <p style={{ fontWeight: 700, margin: '0 0 8px 0', color: '#111827' }}>{event.title}</p>
                             <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>{event.date}{event.time ? ` · ${event.time}` : ''}</p>

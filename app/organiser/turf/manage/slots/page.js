@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import TimePicker from "../../components/TimePicker";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -100,20 +101,16 @@ function SlotManager() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Start Time</label>
-                                    <input 
-                                        type="time"
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
+                                    <TimePicker 
                                         value={newSlot.start_time}
-                                        onChange={(e) => setNewSlot({...newSlot, start_time: e.target.value})}
+                                        onChange={(val) => setNewSlot({...newSlot, start_time: val})}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">End Time</label>
-                                    <input 
-                                        type="time"
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all"
+                                    <TimePicker 
                                         value={newSlot.end_time}
-                                        onChange={(e) => setNewSlot({...newSlot, end_time: e.target.value})}
+                                        onChange={(val) => setNewSlot({...newSlot, end_time: val})}
                                     />
                                 </div>
                             </div>

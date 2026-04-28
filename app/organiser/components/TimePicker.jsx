@@ -63,7 +63,7 @@ export default function TimePicker({ value, onChange, placeholder = "--:--" }) {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 4, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="absolute left-0 top-full z-[100] w-[280px] bg-white border border-slate-100 rounded-[2rem] shadow-2xl p-4 select-none overflow-hidden"
+                        className="absolute left-0 top-full z-[100] w-[280px] bg-white/95 backdrop-blur-xl border border-slate-100 rounded-[2rem] shadow-2xl p-4 select-none overflow-hidden"
                     >
                         <div className="flex justify-between items-center mb-4 px-2">
                             <span className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Select Time</span>

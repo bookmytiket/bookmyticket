@@ -1,5 +1,5 @@
 "use client";
-import DynamicBadge from "./DynamicBadge";
+
 
 export default function EventCard({ title, date, location, image }) {
     return (
@@ -7,10 +7,7 @@ export default function EventCard({ title, date, location, image }) {
             <div className="event-image">
                 {image ? <img src={image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', background: '#f1f5f9' }} />}
                 
-                {/* Dynamic Flip Badge Overlay (Replaces static SPORTS) */}
-                <div style={{ position: 'absolute', top: '8px', right: '12px', zIndex: 10 }}>
-                    <DynamicBadge size="small" />
-                </div>
+
             </div>
             <div className="event-content" style={{ paddingTop: '16px' }}>
                 <span className="event-date">{date}</span>
