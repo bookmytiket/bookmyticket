@@ -77,19 +77,38 @@ export default function SignInPage() {
         const timer = setInterval(updateTime, 1000);
 
         // Battery Status
+        let batteryObj = null;
+        const updateBattery = (bat) => {
+            setBatteryLevel(Math.round(bat.level * 100));
+            setIsCharging(bat.charging);
+        };
+
         if (typeof navigator !== 'undefined' && navigator.getBattery) {
             navigator.getBattery().then(bat => {
-                const updateBattery = () => {
-                    setBatteryLevel(Math.round(bat.level * 100));
-                    setIsCharging(bat.charging);
-                };
-                updateBattery();
-                bat.addEventListener('levelchange', updateBattery);
-                bat.addEventListener('chargingchange', updateBattery);
+                batteryObj = bat;
+                updateBattery(bat);
+                bat.addEventListener('levelchange', () => updateBattery(bat));
+                bat.addEventListener('chargingchange', () => updateBattery(bat));
+            }).catch(err => {
+                console.warn("Battery API failed:", err);
+                // Fallback to a realistic random-ish level if API fails but exists
+                setBatteryLevel(prev => prev || 78);
             });
+        } else {
+            // Fallback for iOS/non-supported browsers: Use a realistic simulated level
+            // In a real app, we might just hide the status bar if it's not real,
+            // but for a mockup, showing a dynamic-looking value is better.
+            const simulatedLevel = 70 + Math.floor(Math.random() * 25);
+            setBatteryLevel(simulatedLevel);
         }
         
-        return () => { clearInterval(timer); };
+        return () => { 
+            clearInterval(timer); 
+            if (batteryObj) {
+                batteryObj.removeEventListener('levelchange', updateBattery);
+                batteryObj.removeEventListener('chargingchange', updateBattery);
+            }
+        };
     }, []);
     
     const getRedirectDestination = (user, redirectPath) => {
@@ -682,6 +701,11 @@ export default function SignInPage() {
                         0% { transform: translateY(30px); opacity: 0; }
                         100% { transform: translateY(0); opacity: 1; }
                     }
+                    @keyframes pulse {
+                        0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+                        50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+                        100% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+                    }
                 ` }} />
             </div>
 
@@ -749,14 +773,40 @@ export default function SignInPage() {
                             <span style={{ fontSize: "10px", color: "#64748b" }}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-                            <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-                                <span style={{ fontSize: "10px" }}>{batteryLevel}%</span>
-                                <div style={{ width: "22px", height: "11px", border: "1.5px solid #000", borderRadius: "3px", position: "relative", padding: "1px", display: "flex" }}>
-                                    <div style={{ width: `${batteryLevel}%`, height: "100%", background: isCharging ? "#fbbf24" : (batteryLevel < 20 ? "#ef4444" : "#22c55e"), borderRadius: "1px" }} />
-                                    <div style={{ width: "2px", height: "5px", background: "#000", position: "absolute", right: "-3.5px", top: "1.5px", borderRadius: "0 1px 1px 0" }} />
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span style={{ fontSize: "11px", fontWeight: 800 }}>{batteryLevel}%</span>
+                                <div style={{ 
+                                    width: "24px", 
+                                    height: "12px", 
+                                    border: "1.5px solid rgba(0,0,0,0.8)", 
+                                    borderRadius: "4px", 
+                                    position: "relative", 
+                                    padding: "1px", 
+                                    display: "flex",
+                                    background: "rgba(0,0,0,0.05)"
+                                }}>
+                                    <div style={{ 
+                                        width: `${batteryLevel}%`, 
+                                        height: "100%", 
+                                        background: isCharging ? "#22c55e" : (batteryLevel < 20 ? "#ef4444" : "#000"), 
+                                        borderRadius: "2px",
+                                        transition: "width 0.5s ease-in-out, background 0.3s ease",
+                                        boxShadow: isCharging ? "0 0 8px rgba(34, 197, 94, 0.5)" : "none"
+                                    }} />
+                                    <div style={{ width: "1.5px", height: "4px", background: "rgba(0,0,0,0.8)", position: "absolute", right: "-3.5px", top: "2.5px", borderRadius: "0 1px 1px 0" }} />
                                     {isCharging && (
-                                        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", color: "#000", fontSize: "8px", fontWeight: 900 }}>⚡</div>
+                                        <div style={{ 
+                                            position: "absolute", 
+                                            left: "50%", 
+                                            top: "50%", 
+                                            transform: "translate(-50%, -50%)", 
+                                            color: "#fff", 
+                                            fontSize: "9px", 
+                                            fontWeight: 900,
+                                            textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                            animation: "pulse 1.5s infinite"
+                                        }}>⚡</div>
                                     )}
                                 </div>
                             </div>

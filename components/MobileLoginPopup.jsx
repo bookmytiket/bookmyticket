@@ -15,6 +15,9 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState("");
 
+  const [batteryLevel, setBatteryLevel] = useState(85);
+  const [isCharging, setIsCharging] = useState(false);
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -22,7 +25,33 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
+
+    // Battery Status
+    let batteryObj = null;
+    const updateBattery = (bat) => {
+      setBatteryLevel(Math.round(bat.level * 100));
+      setIsCharging(bat.charging);
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.getBattery) {
+      navigator.getBattery().then(bat => {
+        batteryObj = bat;
+        updateBattery(bat);
+        bat.addEventListener('levelchange', () => updateBattery(bat));
+        bat.addEventListener('chargingchange', () => updateBattery(bat));
+      }).catch(err => console.warn("Battery API error:", err));
+    } else {
+      // Realistic fallback for unsupported browsers
+      setBatteryLevel(75 + Math.floor(Math.random() * 20));
+    }
+
+    return () => {
+      clearInterval(timer);
+      if (batteryObj) {
+        batteryObj.removeEventListener('levelchange', updateBattery);
+        batteryObj.removeEventListener('chargingchange', updateBattery);
+      }
+    };
   }, []);
 
   const handleLogin = async (e) => {
@@ -122,9 +151,35 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
         }}>
           <span>{currentTime}</span>
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-            <Globe size={14} />
-            <div style={{ width: '22px', height: '11px', border: '1.5px solid #000', borderRadius: '3px', position: 'relative' }}>
-              <div style={{ width: '85%', height: '100%', backgroundColor: '#22c55e' }} />
+            <span style={{ fontSize: '10px', fontWeight: '800' }}>{batteryLevel}%</span>
+            <div style={{ 
+              width: '24px', 
+              height: '12px', 
+              border: '1.5px solid #000', 
+              borderRadius: '4px', 
+              position: 'relative',
+              padding: '1px',
+              display: 'flex'
+            }}>
+              <div style={{ 
+                width: `${batteryLevel}%`, 
+                height: '100%', 
+                backgroundColor: isCharging ? '#22c55e' : (batteryLevel < 20 ? '#ef4444' : '#000'),
+                borderRadius: '1.5px',
+                transition: 'width 0.4s ease'
+              }} />
+              {isCharging && (
+                <span style={{ 
+                  position: 'absolute', 
+                  left: '50%', 
+                  top: '50%', 
+                  transform: 'translate(-50%, -50%)', 
+                  fontSize: '8px', 
+                  color: '#fff',
+                  fontWeight: '900',
+                  animation: 'pulse 1.5s infinite'
+                }}>⚡</span>
+              )}
             </div>
           </div>
         </div>
@@ -234,6 +289,11 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
           @keyframes popIn {
             from { transform: scale(0.8); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
+          }
+          @keyframes pulse {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
           }
         `}</style>
       </div>
