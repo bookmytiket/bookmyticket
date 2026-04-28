@@ -19,6 +19,7 @@ import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
+import UniversalEventForm from "./components/UniversalEventForm";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -1203,7 +1204,7 @@ function OrganiserPanel() {
             : postEvent.img || postEvent.image_url || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=650&fit=crop";
 
         // Build payload with ONLY fields accepted by Convex
-        if (!isOnline && postEvent.type !== "Sports") {
+        if (!isOnline && postEvent.type !== "Sports" && postEvent.type !== "Dynamic") {
             if (!postEvent.country) { setPublishError("Please select a Country."); return; }
             if (!postEvent.state) { setPublishError("Please select a State."); return; }
             if (!postEvent.district) { setPublishError("Please select a District."); return; }
@@ -1264,7 +1265,8 @@ function OrganiserPanel() {
             safety_measures: !!postEvent.safetyMeasures,
             seating_type: postEvent.seatingType || "FCFS",
             mandatory_checkin: !!postEvent.mandatoryCheckin,
-            gallery: postEvent.galleryPreviews || []
+            gallery: postEvent.galleryPreviews || [],
+            dynamic_config: postEvent.dynamic_config || undefined
         };
 
         // Remove undefined keys
@@ -2897,7 +2899,20 @@ function OrganiserPanel() {
                                     {sportsTypes.map((st) => (
                                         <button
                                             key={st.id}
-                                            onClick={() => { setPostEvent(pe => ({ ...pe, sportType: st.id })); setAddEventStep("form"); }}
+                                            onClick={() => { 
+                                                if (st.id === "Marathon") {
+                                                    setPostEvent(pe => ({ 
+                                                        ...pe, 
+                                                        type: "Dynamic", 
+                                                        category: "Sports", 
+                                                        sportType: "Marathon",
+                                                        seatingEnabled: false 
+                                                    }));
+                                                } else {
+                                                    setPostEvent(pe => ({ ...pe, sportType: st.id }));
+                                                }
+                                                setAddEventStep("form"); 
+                                            }}
                                             className="group relative bg-white border border-slate-100 rounded-[2rem] p-8 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all duration-500 hover:shadow-2xl hover:border-blue-200 hover:-translate-y-2"
                                         >
                                             <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${st.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
@@ -2920,7 +2935,20 @@ function OrganiserPanel() {
                         );
                     }
 
-                    // Step 3: Sports Form
+                    // Step 4: Universal Dynamic Form (Used for Marathon and custom events)
+                    if (postEvent.type === "Dynamic") {
+                        return (
+                            <UniversalEventForm 
+                                postEvent={postEvent}
+                                setPostEvent={setPostEvent}
+                                onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
+                                onPublish={publishSeatEvent}
+                                isEditing={!!editingEvent}
+                            />
+                        );
+                    }
+
+                    // Step 3: Sports Form (Other sports)
                     if (postEvent.type === "Sports") {
                         return (
                             <SportsEventForm 

@@ -1,5 +1,6 @@
 import React from 'react';
 import EventDetailClient from '../components/EventDetailClient';
+import DynamicEventClient from '../components/DynamicEventClient';
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 
@@ -44,7 +45,7 @@ export default async function EventDetailPage({ searchParams }) {
     
     if (!id) notFound();
 
-    // Fetch event for schema
+    // Fetch event for schema and type checking
     const { data: event } = await supabase
         .from('events')
         .select('*')
@@ -52,6 +53,8 @@ export default async function EventDetailPage({ searchParams }) {
         .maybeSingle();
 
     if (!event) notFound();
+
+    const isDynamic = event.type === 'Dynamic';
 
     return (
         <>
@@ -96,7 +99,11 @@ export default async function EventDetailPage({ searchParams }) {
                     }}
                 />
             )}
-            <EventDetailClient id={id} />
+            {isDynamic ? (
+                <DynamicEventClient event={event} />
+            ) : (
+                <EventDetailClient id={id} />
+            )}
         </>
     );
 }
