@@ -65,6 +65,8 @@ export default function SignInPage() {
     const [dealIdx, setDealIdx] = useState(0);
     const [currentTime, setCurrentTime] = useState("");
     const [selectedCoupon, setSelectedCoupon] = useState(null);
+    const [batteryLevel, setBatteryLevel] = useState(85);
+    const [isCharging, setIsCharging] = useState(false);
 
     useEffect(() => {
         const updateTime = () => {
@@ -73,6 +75,19 @@ export default function SignInPage() {
         };
         updateTime();
         const timer = setInterval(updateTime, 1000);
+
+        // Battery Status
+        if (typeof navigator !== 'undefined' && navigator.getBattery) {
+            navigator.getBattery().then(bat => {
+                const updateBattery = () => {
+                    setBatteryLevel(Math.round(bat.level * 100));
+                    setIsCharging(bat.charging);
+                };
+                updateBattery();
+                bat.addEventListener('levelchange', updateBattery);
+                bat.addEventListener('chargingchange', updateBattery);
+            });
+        }
         
         return () => { clearInterval(timer); };
     }, []);
@@ -736,10 +751,13 @@ export default function SignInPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
                             <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-                                <span style={{ fontSize: "10px" }}>85%</span>
+                                <span style={{ fontSize: "10px" }}>{batteryLevel}%</span>
                                 <div style={{ width: "22px", height: "11px", border: "1.5px solid #000", borderRadius: "3px", position: "relative", padding: "1px", display: "flex" }}>
-                                    <div style={{ width: "85%", height: "100%", background: "#22c55e", borderRadius: "1px" }} />
+                                    <div style={{ width: `${batteryLevel}%`, height: "100%", background: isCharging ? "#fbbf24" : (batteryLevel < 20 ? "#ef4444" : "#22c55e"), borderRadius: "1px" }} />
                                     <div style={{ width: "2px", height: "5px", background: "#000", position: "absolute", right: "-3.5px", top: "1.5px", borderRadius: "0 1px 1px 0" }} />
+                                    {isCharging && (
+                                        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", color: "#000", fontSize: "8px", fontWeight: 900 }}>⚡</div>
+                                    )}
                                 </div>
                             </div>
                         </div>
