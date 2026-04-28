@@ -55,7 +55,7 @@ export default function MeetingJoinClient({ id }) {
         return (
             <main className="min-h-screen w-full relative overflow-hidden bg-[#0a0f1e] flex items-center justify-center font-sans">
                 <div className="absolute inset-0 z-0">
-                    <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] animate-pulse" />
+                    <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] " />
                     <div className="absolute bottom-[-15%] right-[-5%] w-[55%] h-[55%] bg-indigo-600/15 rounded-full blur-[160px]" />
                 </div>
                 <div className="relative z-10 bg-white/[0.03] backdrop-blur-3xl p-16 rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center">
@@ -108,15 +108,15 @@ export default function MeetingJoinClient({ id }) {
         <main className="min-h-screen w-full relative overflow-hidden bg-[#0a0f1e] flex items-center justify-center font-sans selection:bg-blue-500/30">
             {/* Premium Immersive Background (Consistent with Portal) */}
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] animate-pulse" />
+                <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] " />
                 <div className="absolute bottom-[-15%] right-[-5%] w-[55%] h-[55%] bg-indigo-600/15 rounded-full blur-[160px]" />
-                <div className="absolute top-[15%] right-[15%] w-[35%] h-[35%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+                <div className="absolute top-[15%] right-[15%] w-[35%] h-[35%] bg-purple-600/10 rounded-full blur-[120px] " style={{ animationDuration: '10s' }} />
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] contrast-125 brightness-100" />
             </div>
 
             {/* Main Content Container */}
             <div className="relative z-10 w-full max-w-5xl px-6 py-4 pointer-events-none">
-                <div className="pointer-events-auto bg-white/[0.98] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.6)] border border-white/40 overflow-hidden transform transition-all duration-1000 ease-in-out flex flex-col max-h-[92vh]">
+                <div className="pointer-events-auto bg-white/[0.98] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.6)] border border-white/40 overflow-hidden transform transition-all  ease-in-out flex flex-col max-h-[92vh]">
                     
                     {/* Header: Event Identity - Compact */}
                     <div className="px-8 py-4 border-b border-slate-100/60 bg-slate-50/50 flex items-center justify-between">
@@ -137,7 +137,7 @@ export default function MeetingJoinClient({ id }) {
                         
                         <div className="hidden md:flex items-center gap-4">
                              {meetingStatus === "live" ? (
-                                <div className="flex items-center gap-2.5 px-4 py-2 bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 animate-pulse">
+                                <div className="flex items-center gap-2.5 px-4 py-2 bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 ">
                                     <div className="w-1.5 h-1.5 bg-white rounded-full" />
                                     Live Session
                                 </div>
@@ -157,7 +157,7 @@ export default function MeetingJoinClient({ id }) {
                             <div className="relative w-full max-w-xl aspect-video bg-[#0a0f1e] rounded-[1.5rem] overflow-hidden shadow-2xl border-4 border-white ring-1 ring-slate-100/50 group mx-auto">
                                 {/* Simulated Preview */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#1a233a] to-[#0a0f1e] flex flex-col items-center justify-center text-center p-6">
-                                    <div className="w-12 h-12 bg-white/[0.03] rounded-full flex items-center justify-center mb-4 backdrop-blur-2xl border border-white/[0.08] group-hover:scale-110 transition-transform duration-1000">
+                                    <div className="w-12 h-12 bg-white/[0.03] rounded-full flex items-center justify-center mb-4 backdrop-blur-2xl border border-white/[0.08] group-hover:scale-110 transition-transform ">
                                         <Video className="w-6 h-6 text-white/80" />
                                     </div>
                                     <h2 className="text-white text-lg font-black mb-1 tracking-tight uppercase antialiased">Check settings</h2>

@@ -63,8 +63,8 @@ export default function RequireAuth({ children, allowedRoles }) {
         {/* Branded Loader */}
         <div className="relative z-10">
           <div className="relative w-20 h-20 mb-8 mx-auto">
-            <div className="absolute inset-0 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin" />
-            <div className="absolute inset-0 rounded-full border-2 border-transparent border-b-purple-500 animate-spin [animation-duration:1.5s]" />
+            <div className="absolute inset-0 rounded-full border-2 border-pink-500/20 border-t-pink-500" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-b-purple-500 [animation-duration:1.5s]" />
             <div className="absolute inset-3 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-2xl">
               <span className="text-white font-black text-xl italic tracking-tighter">BT</span>
             </div>
@@ -73,12 +73,12 @@ export default function RequireAuth({ children, allowedRoles }) {
           <h2 className="text-xl font-black text-white italic tracking-tighter uppercase mb-1">
             Authenticating <span className="text-pink-500">Access</span>
           </h2>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] animate-pulse">
+          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] ">
             Establishing Secure Handshake...
           </p>
 
           {showRetry && (
-            <div className="mt-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="mt-12    ">
               <p className="text-slate-600 text-xs mb-4 max-w-[240px] mx-auto leading-relaxed">
                 Connection taking longer than expected. This can happen on first-load cold starts.
               </p>
@@ -94,7 +94,7 @@ export default function RequireAuth({ children, allowedRoles }) {
 
         {/* CSS Animation fix for spin speed */}
         <style jsx>{`
-          .animate-spin-slow { animation: spin 3s linear infinite; }
+          .animate-spin-slow { animation: none; }
           @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         `}</style>
       </div>

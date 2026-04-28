@@ -116,7 +116,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
             {/* Success Overlay */}
             {showSuccess && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
-                    <div className="bg-white rounded-[32px] p-10 max-w-md w-full text-center shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div className="bg-white rounded-[32px] p-10 max-w-md w-full text-center shadow-2xl   ">
                         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <CheckCircle2 className="text-green-500" size={40} />
                         </div>
@@ -135,7 +135,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-2 mt-4">
                 {/* Banner with Event-style Info Bar */}
                 <div className="w-full h-[220px] md:h-[360px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl relative mb-4 border-4 border-white group">
-                    <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Service Cover" />
+                    <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform  group-hover:scale-105" alt="Service Cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
                         <div className="flex flex-col gap-3">
@@ -269,14 +269,14 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                                             {formData.date ? new Date(formData.date).toLocaleDateString('default', { day: '2-digit', month: 'short', year: 'numeric' }) : "Select Date"}
                                                         </span>
                                                     </div>
-                                                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isDateDropdownOpen ? "rotate-180" : ""}`} />
+                                                    <ChevronDown size={18} className={`text-slate-400 transition-transform  ${isDateDropdownOpen ? "rotate-180" : ""}`} />
                                                 </button>
 
                                                 {/* Custom Date Dropdown Menu (OPENING ABOVE) */}
                                                 {isDateDropdownOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-40" onClick={() => setIsDateDropdownOpen(false)} />
-                                                        <div className="absolute bottom-[calc(100%+12px)] right-0 left-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 min-w-[280px]">
+                                                        <div className="absolute bottom-[calc(100%+12px)] right-0 left-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 z-50     min-w-[280px]">
                                                             {/* Calendar Header */}
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <button 
@@ -362,7 +362,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                             <span className={selectedPackage ? "text-slate-900" : "text-slate-400"}>
                                                 {selectedPackage ? selectedPackage.title : "Select a service package..."}
                                             </span>
-                                            <ChevronDown size={20} className={`text-slate-400 transition-transform duration-300 ${isPackageDropdownOpen ? "rotate-180" : ""}`} />
+                                            <ChevronDown size={20} className={`text-slate-400 transition-transform  ${isPackageDropdownOpen ? "rotate-180" : ""}`} />
                                         </button>
 
                                         {/* Custom Dropdown Menu */}
@@ -373,7 +373,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                                     className="fixed inset-0 z-40" 
                                                     onClick={() => setIsPackageDropdownOpen(false)}
                                                 />
-                                                <div className="absolute top-[calc(100%+12px)] left-0 right-0 bg-white border-2 border-slate-100 rounded-[32px] shadow-2xl py-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="absolute top-[calc(100%+12px)] left-0 right-0 bg-white border-2 border-slate-100 rounded-[32px] shadow-2xl py-4 z-50    ">
                                                     <div className="max-h-[300px] overflow-y-auto px-2 custom-scrollbar">
                                                         {packages.length > 0 ? packages.map((pkg) => (
                                                             <div 
@@ -406,7 +406,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
 
                                     {/* Selected Package Details Preview */}
                                     {selectedPackage && !isPackageDropdownOpen && (
-                                        <div className="mt-4 p-5 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm relative overflow-hidden">
+                                        <div className="mt-4 p-5 bg-gradient-to-br from-pink-50 to-white border border-pink-100 rounded-3xl     shadow-sm relative overflow-hidden">
                                             <div className="absolute -right-4 -top-4 w-20 h-20 bg-pink-500/5 rounded-full" />
                                             <div className="relative z-10">
                                                 <div className="flex justify-between items-start mb-3">
@@ -463,7 +463,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                         {portfolio.length > 0 ? portfolio.map((item, idx) => (
                                             <div key={idx} className="aspect-[4/5] rounded-[32px] overflow-hidden group cursor-pointer border-2 border-transparent hover:border-pink-500 transition-all relative shadow-lg">
-                                                <img src={item.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={`Portfolio ${idx}`} />
+                                                <img src={item.url} className="w-full h-full object-cover transition-transform  group-hover:scale-110" alt={`Portfolio ${idx}`} />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                     <Sparkles className="text-white" size={32} />
                                                 </div>

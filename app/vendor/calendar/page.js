@@ -160,7 +160,7 @@ export default function CalendarPage() {
                 <div 
                     key={day} 
                     onClick={() => setSelectedDate(date)}
-                    className={`h-12 md:h-14 border border-slate-50 p-1.5 md:p-2 transition-all duration-300 cursor-pointer relative group overflow-hidden rounded-xl m-0.5 ${
+                    className={`h-12 md:h-14 border border-slate-50 p-1.5 md:p-2 transition-all  cursor-pointer relative group overflow-hidden rounded-xl m-0.5 ${
                         isSelected ? 'bg-slate-900 ring-4 ring-slate-900/10 z-10' : 'bg-white hover:bg-slate-50'
                     }`}
                 >
@@ -171,7 +171,7 @@ export default function CalendarPage() {
                             {day}
                         </span>
                         {dayBookings.length > 0 ? (
-                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-pink-500 shadow-pink-500/50' : 'bg-pink-500 shadow-pink-500/30'} shadow-xl animate-pulse`}></span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-pink-500 shadow-pink-500/50' : 'bg-pink-500 shadow-pink-500/30'} shadow-xl `}></span>
                         ) : isBlocked ? (
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
                         ) : null}
@@ -200,7 +200,7 @@ export default function CalendarPage() {
     const isSelectedDateBlocked = blockedDates.includes(selectedDateStrForBlock);
 
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-4">
+        <div className="space-y-4     pb-4">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-3 border-b border-slate-200">
                 <div className="space-y-2">

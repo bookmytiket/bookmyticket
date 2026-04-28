@@ -1924,7 +1924,7 @@ function AdminHomePage() {
             )}
 
             {/* Sidebar Navigation - always visible on desktop, slide-in on mobile */}
-            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 bg-white border-r border-slate-200 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
+            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 bg-white border-r border-slate-200 transition-transform  transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
                 {/* Header */}
                 <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
                     <div className="flex items-center cursor-pointer" onClick={() => setActiveTab("dashboard")}>
@@ -1939,7 +1939,7 @@ function AdminHomePage() {
                     </div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Admin Portal</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full  shadow-sm shadow-green-500/50"></div>
                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Super Admin</span>
                     </div>
                 </div>
@@ -1948,7 +1948,7 @@ function AdminHomePage() {
                     {/* Render Helper */}
                     {(() => {
                         const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all  group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
                                 <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
                                 <span className={`text-[11px] uppercase tracking-widest whitespace-nowrap ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
                                 {active && <div className="absolute right-4 w-1 h-4 bg-pink-500 rounded-full"></div>}
@@ -1960,17 +1960,17 @@ function AdminHomePage() {
                         const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick }) => (
                             <button 
                                 onClick={onClick}
-                                className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all duration-300 group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all  group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 <div className="flex items-center space-x-3">
                                     <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
                                     <span className={`text-[11px] uppercase tracking-[0.2em] whitespace-nowrap ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
                                 </div>
-                                <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
+                                <ChevronDown size={14} className={`transition-transform  ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                             </button>
                         );
                         const SidebarSubItem = ({ id, label, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all  group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
                                 <span className="text-[10px] uppercase tracking-widest font-bold whitespace-nowrap">{label}</span>
                             </button>
@@ -2114,7 +2114,7 @@ function AdminHomePage() {
                     <div className="mb-2" />
                     <button 
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all  shadow-xl shadow-pink-500/20 group"
                     >
                         <LogOut size={12} strokeWidth={3} className="text-white" />
                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>

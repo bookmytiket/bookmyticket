@@ -2022,7 +2022,7 @@ nextjs-portal {
   background: rgba(239, 68, 68, 0.2);
   border-radius: 50%;
   transform: rotateX(60deg) translateY(20px);
-  animation: pinPulse 2s infinite ease-out;
+  animation: none;
 }
 
 @keyframes pinPulse {

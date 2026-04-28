@@ -112,7 +112,7 @@ export default function ManageTurfs() {
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+        <div className="space-y-10    ">
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                 <div className="space-y-1">
@@ -144,7 +144,7 @@ export default function ManageTurfs() {
                     >
                         <div className="h-48 bg-slate-100 relative overflow-hidden">
                              {turf.images?.[0] ? (
-                                <img src={turf.images[0]} alt={turf.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                <img src={turf.images[0]} alt={turf.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform " />
                              ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-300">
                                     <Activity size={64} strokeWidth={1} />
@@ -331,7 +331,7 @@ export default function ManageTurfs() {
                                             </div>
 
                                             {formData.pricingType === "per_person" && (
-                                                <div className="space-y-2 col-span-full animate-in fade-in slide-in-from-top-2">
+                                                <div className="space-y-2 col-span-full   ">
                                                     <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-2">Price Per Person (₹)</label>
                                                     <input 
                                                         type="number"
@@ -343,7 +343,7 @@ export default function ManageTurfs() {
                                             )}
 
                                             {formData.pricingType === "tiered" && (
-                                                <div className="col-span-full space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                <div className="col-span-full space-y-4   ">
                                                     <div className="flex items-center justify-between px-2">
                                                         <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Pricing Tiers/Groups</label>
                                                         <button 

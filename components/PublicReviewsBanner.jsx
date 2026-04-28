@@ -54,11 +54,8 @@ export default function PublicReviewsBanner() {
     }, []);
 
     useEffect(() => {
+        // Auto-rotation disabled for static UI
         if (reviews.length <= 1) return;
-        const interval = setInterval(() => {
-            setCurrentIndex(prev => (prev + 1) % reviews.length);
-        }, 5000);
-        return () => clearInterval(interval);
     }, [reviews]);
 
     if (loading || reviews.length === 0) return null;
@@ -170,7 +167,6 @@ export default function PublicReviewsBanner() {
                     100% { transform: translateY(0) rotateX(0deg); opacity: 1; }
                 }
                 .flip-card-content {
-                    animation: flipCardIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
                     perspective: 1000px;
                 }
             `}</style>

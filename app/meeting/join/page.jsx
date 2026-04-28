@@ -60,9 +60,9 @@ export default function JoinMeetingPage() {
         <main className="min-h-screen w-full relative overflow-hidden bg-[#0a0f1e] flex items-center justify-center font-sans">
             {/* Premium Immersive Background */}
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] animate-pulse" />
+                <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-600/15 rounded-full blur-[140px] " />
                 <div className="absolute bottom-[-15%] right-[-5%] w-[55%] h-[55%] bg-indigo-600/15 rounded-full blur-[160px]" />
-                <div className="absolute top-[15%] right-[15%] w-[35%] h-[35%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+                <div className="absolute top-[15%] right-[15%] w-[35%] h-[35%] bg-purple-600/10 rounded-full blur-[120px] " style={{ animationDuration: '10s' }} />
                 
                 {/* Subtle Grid / Grain Overlay */}
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] contrast-125 brightness-100" />
@@ -70,7 +70,7 @@ export default function JoinMeetingPage() {
 
             {/* Main Content Container - Restricted Width for 'Fitted' Look */}
             <div className="relative z-10 w-full max-w-4xl px-6 py-4 pointer-events-none">
-                <div className="pointer-events-auto bg-white/[0.98] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.6)] border border-white/40 overflow-hidden transform transition-all duration-1000 ease-in-out flex flex-col max-h-[92vh]">
+                <div className="pointer-events-auto bg-white/[0.98] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.6)] border border-white/40 overflow-hidden transform transition-all  ease-in-out flex flex-col max-h-[92vh]">
                     
                     {/* Header Section - Premium Branding */}
                     <div className="px-10 pt-8 pb-5 text-center border-b border-slate-100/60 bg-slate-50/50">
@@ -94,7 +94,7 @@ export default function JoinMeetingPage() {
                         {/* Manual Code Entry Area */}
                         <div className="space-y-4 flex flex-col h-full bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] transition-all hover:shadow-2xl hover:shadow-blue-500/5 group/card">
                             <div className="flex items-center gap-3 mb-1">
-                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover/card:bg-blue-600 group-hover/card:border-blue-600 transition-all duration-500">
+                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover/card:bg-blue-600 group-hover/card:border-blue-600 transition-all ">
                                     <Search className="w-4 h-4 text-slate-400 group-hover/card:text-white transition-colors" />
                                 </div>
                                 <div>
@@ -114,7 +114,7 @@ export default function JoinMeetingPage() {
                                         className="w-full bg-slate-50/50 border-2 border-slate-100 text-slate-900 px-5 py-3.5 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all text-sm font-black placeholder:text-slate-200 uppercase tracking-widest text-center shadow-inner"
                                     />
                                     {error && (
-                                        <div className="absolute -bottom-5 left-0 right-0 flex items-center justify-center gap-2 text-red-500 text-[9px] font-black uppercase italic tracking-wider animate-in fade-in slide-in-from-top-1">
+                                        <div className="absolute -bottom-5 left-0 right-0 flex items-center justify-center gap-2 text-red-500 text-[9px] font-black uppercase italic tracking-wider   ">
                                             <Lock className="w-2.5 h-2.5" /> {error}
                                         </div>
                                     )}
@@ -131,14 +131,14 @@ export default function JoinMeetingPage() {
                         {/* Recent Registrations / Bookings Area */}
                         <div className="space-y-4 flex flex-col h-full bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.05)] transition-all hover:shadow-2xl hover:shadow-indigo-500/5 group/card">
                             <div className="flex items-center gap-3 mb-1">
-                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover/card:bg-indigo-600 group-hover/card:border-indigo-600 transition-all duration-500">
+                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover/card:bg-indigo-600 group-hover/card:border-indigo-600 transition-all ">
                                     <Ticket className="w-4 h-4 text-slate-400 group-hover/card:text-white transition-colors" />
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-sm font-black text-slate-800 leading-tight tracking-tight">Your Sessions</h2>
                                         <div className="flex items-center gap-2 px-2 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+                                            <div className="w-1 h-1 bg-emerald-500 rounded-full " />
                                             <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">Live</span>
                                         </div>
                                     </div>
@@ -194,7 +194,7 @@ export default function JoinMeetingPage() {
                     {/* Footer Utility Branding */}
                     <div className="px-10 py-5 bg-slate-50/80 border-t border-slate-100/60 text-center">
                         <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-white rounded-full border border-slate-100 shadow-lg shadow-slate-200/50">
-                            <Zap className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse" />
+                            <Zap className="w-4 h-4 text-amber-500 fill-amber-500 " />
                             <div className="text-left">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live sessions open 15m early.</p>
                             </div>

@@ -53,7 +53,7 @@ export default function JoinNowButton({ eventId, className = "" }) {
         return (
             <button 
                 disabled 
-                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gray-100 text-gray-400 animate-pulse font-bold text-sm ${className}`}
+                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gray-100 text-gray-400  font-bold text-sm ${className}`}
             >
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Checking...</span>
@@ -79,7 +79,7 @@ export default function JoinNowButton({ eventId, className = "" }) {
             case "not_booked":
                 return "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 shadow-sm";
             case "success":
-                return "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-xl hover:shadow-emerald-500/30 transform hover:-translate-y-0.5 transition-all duration-300 border-transparent";
+                return "bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-xl hover:shadow-emerald-500/30 transform hover:-translate-y-0.5 transition-all  border-transparent";
             default:
                 return "bg-gray-100 text-gray-600 border-gray-200";
         }
@@ -121,7 +121,7 @@ export default function JoinNowButton({ eventId, className = "" }) {
             className={`
                 group relative flex items-center justify-center gap-2.5 px-6 py-3 
                 rounded-2xl font-black text-sm tracking-tight border 
-                transition-all duration-300 backdrop-blur-sm
+                transition-all  backdrop-blur-sm
                 active:scale-95
                 ${getBtnStyles()}
                 ${className}

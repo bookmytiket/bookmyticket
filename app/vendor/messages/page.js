@@ -79,7 +79,7 @@ export default function MessagesPage() {
     };
 
     return (
-        <div className="h-[calc(100vh-180px)] flex flex-col lg:flex-row gap-8 animate-in fade-in duration-700 pb-10">
+        <div className="h-[calc(100vh-180px)] flex flex-col lg:flex-row gap-8    pb-10">
             {/* Conversations List */}
             <div className={`lg:w-[400px] flex flex-col bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-2xl shadow-slate-200/50 transition-all ${selectedRoomId ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-8 border-b border-slate-50 space-y-6">
@@ -118,7 +118,7 @@ export default function MessagesPage() {
                                     <p className="text-xs text-slate-500 truncate mt-1 font-medium italic">"{room.last_message || "Start a conversation..."}"</p>
                                 </div>
                                 {isActive && (
-                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-pink-500 rounded-full animate-pulse"></div>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-pink-500 rounded-full "></div>
                                 )}
                             </button>
                         );
@@ -149,7 +149,7 @@ export default function MessagesPage() {
                                 <div>
                                     <p className="text-lg font-black text-slate-900 italic tracking-tighter uppercase">{selectedRoom?.participants?.find(p => p !== vendorId)}</p>
                                     <div className="flex items-center space-x-2">
-                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full "></span>
                                         <span className="text-[10px] text-green-600 font-black uppercase tracking-[0.2em]">Active Now</span>
                                     </div>
                                 </div>
@@ -172,7 +172,7 @@ export default function MessagesPage() {
                             {messages.map((msg, i) => {
                                 const isMe = msg.sender_id === vendorId;
                                 return (
-                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-${isMe ? 'right' : 'left'}-6 duration-400`}>
+                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}    ? 'right' : 'left'}-6 `}>
                                         <div className={`max-w-[70%] space-y-2 ${isMe ? 'items-end' : 'items-start'}`}>
                                             <div className={`px-6 py-4 rounded-[1.8rem] text-sm font-bold shadow-xl shadow-slate-200/20 ${
                                                 isMe 
@@ -239,7 +239,7 @@ export default function MessagesPage() {
                     <div className="flex-1 flex flex-col items-center justify-center p-16 text-center space-y-10 bg-slate-50/30">
                         <div className="relative group">
                             <div className="absolute inset-0 bg-pink-500 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
-                            <div className="relative w-40 h-40 rounded-[3rem] bg-white border border-slate-100 flex items-center justify-center text-pink-500 shadow-2xl shadow-slate-200/50 group-hover:scale-110 transition-transform duration-700">
+                            <div className="relative w-40 h-40 rounded-[3rem] bg-white border border-slate-100 flex items-center justify-center text-pink-500 shadow-2xl shadow-slate-200/50 group-hover:scale-110 transition-transform ">
                                 <MessageSquare size={72} strokeWidth={1} />
                             </div>
                         </div>

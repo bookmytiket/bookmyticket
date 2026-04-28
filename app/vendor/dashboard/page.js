@@ -96,7 +96,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
     ];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-12">
+        <div className="space-y-6     pb-12">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -136,7 +136,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                 {statCards.map((stat, i) => (
                     <div 
                         key={stat.name}
-                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-blue-500/20 transition-all duration-500 shadow-xl shadow-slate-200/40 overflow-hidden"
+                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-blue-500/20 transition-all  shadow-xl shadow-slate-200/40 overflow-hidden"
                     >
                         <div className="flex items-center justify-between relative z-10">
                             <div className={`p-3 rounded-xl bg-slate-50 border border-slate-100 ${stat.color} shadow-inner group-hover:bg-white transition-colors`}>
@@ -177,7 +177,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                                 className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-blue-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-blue-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-blue-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform  shrink-0">
                                         {booking.customer_details?.name?.charAt(0) || "U"}
                                     </div>
                                     
@@ -227,7 +227,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                 {/* Facility Roadmap */}
                 <div className="space-y-6">
                     <div className="group relative p-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform duration-1000 scale-150">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform  scale-150">
                             <TrendingUp size={80} className="text-blue-500" />
                         </div>
                         
@@ -310,7 +310,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
     ];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-12">
+        <div className="space-y-6     pb-12">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -350,7 +350,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                 {statCards.map((stat, i) => (
                     <div 
                         key={stat.name}
-                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-sky-500/20 transition-all duration-500 shadow-xl shadow-slate-200/40 overflow-hidden"
+                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-sky-500/20 transition-all  shadow-xl shadow-slate-200/40 overflow-hidden"
                     >
                         <div className="flex items-center justify-between relative z-10">
                             <div className={`p-3 rounded-xl bg-slate-50 border border-slate-100 ${stat.color} shadow-inner group-hover:bg-white transition-colors`}>
@@ -388,7 +388,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                                 className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-sky-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-sky-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-sky-600 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform  shrink-0">
                                         P
                                     </div>
                                     
@@ -500,7 +500,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
     ];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-12">
+        <div className="space-y-6     pb-12">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -529,7 +529,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                         href="/vendor/services"
                         className="group bg-white border border-slate-200 px-6 py-2.5 rounded-xl text-slate-900 font-black text-[9px] shadow-sm hover:shadow-xl hover:border-pink-500/30 transition-all flex items-center gap-2 uppercase tracking-widest"
                     >
-                        <Sparkles size={14} className="text-pink-500 group-hover:animate-pulse" />
+                        <Sparkles size={14} className="text-pink-500 group-hover:" />
                         Expand
                     </Link>
                 </div>
@@ -550,7 +550,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                 {statCards.map((stat, i) => (
                     <div 
                         key={stat.name}
-                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-pink-500/20 transition-all duration-500 shadow-xl shadow-slate-200/40 overflow-hidden"
+                        className="group relative bg-white rounded-2xl p-4 border border-slate-100 hover:border-pink-500/20 transition-all  shadow-xl shadow-slate-200/40 overflow-hidden"
                     >
                         <div className="flex items-center justify-between relative z-10">
                             <div className={`p-3 rounded-xl bg-slate-50 border border-slate-100 ${stat.color} shadow-inner group-hover:bg-white transition-colors`}>
@@ -591,7 +591,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                 className="group bg-white rounded-2xl p-4 border border-slate-100 hover:border-pink-500/20 transition-all flex flex-col md:flex-row md:items-center justify-between shadow-xl shadow-slate-200/30 relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-pink-500 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform duration-500 shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-slate-50 text-pink-500 border border-slate-100 flex items-center justify-center text-lg font-black italic shadow-inner transform group-hover:scale-105 transition-transform  shrink-0">
                                         {booking.customer_details?.name?.charAt(0) || "U"}
                                     </div>
                                     
@@ -639,7 +639,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                 <div className="space-y-6">
                     {/* Premium Earnings Card */}
                     <div className="group relative p-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform duration-1000 scale-150">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform  scale-150">
                             <Sparkles size={80} className="text-pink-500" />
                         </div>
                         

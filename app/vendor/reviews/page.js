@@ -54,7 +54,7 @@ export default function ReviewsPage() {
     };
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+        <div className="space-y-12     pb-20">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-slate-200">
                 <div className="space-y-4">
@@ -113,7 +113,7 @@ export default function ReviewsPage() {
                                         </div>
                                         <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
                                             <div 
-                                                className={`h-full bg-gradient-to-r ${s >= 4 ? 'from-green-500 to-emerald-400' : s === 3 ? 'from-yellow-400 to-orange-400' : 'from-red-500 to-rose-400'} transition-all duration-1000 shadow-xl`}
+                                                className={`h-full bg-gradient-to-r ${s >= 4 ? 'from-green-500 to-emerald-400' : s === 3 ? 'from-yellow-400 to-orange-400' : 'from-red-500 to-rose-400'} transition-all  shadow-xl`}
                                                 style={{ width: `${percent}%` }}
                                             ></div>
                                         </div>
@@ -145,7 +145,7 @@ export default function ReviewsPage() {
                         {reviews.length > 0 ? reviews.map((review, i) => (
                             <div 
                                 key={review.id} 
-                                className="bg-white rounded-[2.5rem] border border-slate-100 p-10 space-y-8 animate-in slide-in-from-right-10 duration-500 shadow-xl shadow-slate-200/40"
+                                className="bg-white rounded-[2.5rem] border border-slate-100 p-10 space-y-8    shadow-xl shadow-slate-200/40"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center space-x-6">
@@ -193,7 +193,7 @@ export default function ReviewsPage() {
                                 ) : (
                                     <div className="pt-4">
                                         {replyingTo === review.id ? (
-                                            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400">
+                                            <div className="space-y-6    ">
                                                 <div className="relative">
                                                     <textarea 
                                                         autoFocus
@@ -242,7 +242,7 @@ export default function ReviewsPage() {
                         )) : (
                             <div className="py-40 flex flex-col items-center justify-center text-center space-y-8 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 shadow-inner">
                                 <div className="w-28 h-28 rounded-[2.5rem] bg-slate-50 flex items-center justify-center text-slate-200 group">
-                                    <Star size={56} className="group-hover:text-orange-500 transition-all duration-700" />
+                                    <Star size={56} className="group-hover:text-orange-500 transition-all " />
                                 </div>
                                 <div className="space-y-4">
                                     <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Silencing Silence</h3>

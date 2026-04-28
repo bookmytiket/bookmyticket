@@ -53,7 +53,7 @@ export default function TurfLayout({ children }) {
             <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex">
                 {/* Sidebar */}
                 <aside 
-                    className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
+                    className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 transition-all  ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:inset-0 shadow-2xl lg:shadow-none`}
                 >
                     <div className="flex flex-col h-full">
                         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50">

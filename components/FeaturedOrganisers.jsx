@@ -45,7 +45,6 @@ export default function FeaturedOrganisers({ organisers = [] }) {
               display: "flex",
               gap: GAP,
               width: "max-content",
-              animation: `scrollRow1 ${DURATION}s linear infinite`,
             }}
           >
             {row1Items.map((org, i) => (

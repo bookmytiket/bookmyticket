@@ -124,7 +124,7 @@ export default function VendorSignInPage() {
                         </div>
 
                         {error && (
-                            <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-500 text-xs font-bold flex items-center gap-3 animate-shake">
+                            <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-500 text-xs font-bold flex items-center gap-3 ">
                                 <span className="bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">!</span>
                                 {error}
                             </div>
@@ -135,7 +135,7 @@ export default function VendorSignInPage() {
                             disabled={loading}
                             className="w-full group relative overflow-hidden py-5 rounded-[1.5rem] bg-slate-900 text-white font-black text-sm uppercase tracking-[0.2em] italic shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity " />
                             <span className="relative z-10 flex items-center justify-center gap-3">
                                 {loading ? "Verifying..." : (
                                     <>
@@ -169,7 +169,7 @@ export default function VendorSignInPage() {
                     25% { transform: translateX(-5px); }
                     75% { transform: translateX(5px); }
                 }
-                .animate-shake {
+                . {
                     animation: shake 0.3s ease-in-out;
                 }
             `}</style>

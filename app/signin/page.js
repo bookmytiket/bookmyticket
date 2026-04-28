@@ -74,10 +74,7 @@ export default function SignInPage() {
         updateTime();
         const timer = setInterval(updateTime, 1000);
         
-        const dealTimer = setInterval(() => {
-            setDealIdx(p => (p + 1) % PARTNER_DEALS.length);
-        }, 4000);
-        return () => { clearInterval(timer); clearInterval(dealTimer); };
+        return () => { clearInterval(timer); };
     }, []);
     
     const getRedirectDestination = (user, redirectPath) => {
@@ -514,25 +511,29 @@ export default function SignInPage() {
     const activeDeal = PARTNER_DEALS[dealIdx];
 
     return (
-        <div style={{ minHeight: "100vh", display: "flex", width: "100%", fontFamily: "'Inter','Roboto',sans-serif", background: "#f1f5f9" }}>
+        <div style={{ minHeight: "100vh", display: "flex", width: "100%", fontFamily: "'Inter','Roboto',sans-serif", background: "#f1f5f9", position: "relative" }}>
+            <EmojiBackground />
             <style dangerouslySetInnerHTML={{ __html: `
                 @media (max-width: 1200px) {
                     .hide-on-mobile { display: none !important; }
                     .signin-wrapper { justify-content: center !important; }
                 }
                 @media (max-width: 640px) {
+                    .signin-wrapper { padding: 10px !important; }
                     .phone-mockup {
-                        width: 100% !important;
-                        height: 100vh !important;
-                        max-width: 100% !important;
-                        max-height: 100vh !important;
-                        border: none !important;
-                        border-radius: 0 !important;
-                        margin: 0 !important;
-                        box-shadow: none !important;
+                        width: 350px !important;
+                        max-width: 95vw !important;
+                        height: 720px !important;
+                        max-height: 92vh !important;
+                        border: 12px solid #101010 !important;
+                        border-radius: 40px !important;
+                        margin: auto !important;
+                        background: #ffffff !important;
+                        box-shadow: 0 30px 60px rgba(0,0,0,0.2) !important;
                     }
-                    .phone-notch { display: none !important; }
-                    .phone-status-bar { padding-top: 20px !important; }
+                    .phone-notch { width: 100px !important; height: 24px !important; top: 8px !important; }
+                    .phone-status-bar { padding: 12px 20px 4px !important; }
+                    .no-scrollbar { padding: 10px 20px 20px !important; }
                 }
                 /* Phone mockup frame stays consistent across all devices */
                 body { overflow-x: hidden; margin: 0; }
@@ -671,9 +672,6 @@ export default function SignInPage() {
 
             {/* ══ RIGHT SIDE: SIGN IN FORM ══ */}
             <div className="signin-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "15px", background: "transparent", position: "relative", overflow: "hidden" }}>
-                
-                {/* WhatsApp Emoji Animation Background for the form area */}
-                <EmojiBackground />
 
                 {/* Connection Diagnostic Warning */}
                 {!supabase && (

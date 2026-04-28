@@ -231,7 +231,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+        <div className="max-w-6xl mx-auto space-y-12     pb-20">
             {/* Header omitted for brevity in replace, keeping the same logic */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-slate-200">
                 <div className="space-y-4">
@@ -266,7 +266,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                     >
                         <div className="h-56 bg-slate-50 relative overflow-hidden">
                              {turf.images?.[0] ? (
-                                <img src={turf.images[0]} alt={turf.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                <img src={turf.images[0]} alt={turf.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform " />
                              ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-200">
                                     <Package size={80} strokeWidth={1} />
@@ -355,8 +355,8 @@ function TurfServiceManagement({ user, vendorId, profile }) {
             {/* Modal - Landscape Redesign */}
             {showAddModal && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-10">
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl transition-opacity animate-in fade-in duration-500" onClick={() => setShowAddModal(false)} />
-                    <div className="w-full max-w-6xl bg-white rounded-[3.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl transition-opacity   " onClick={() => setShowAddModal(false)} />
+                    <div className="w-full max-w-6xl bg-white rounded-[3.5rem] shadow-2xl relative z-10 overflow-hidden    ">
                         <form onSubmit={handleSave} className="flex flex-col h-full max-h-[90vh]">
                             {/* Modal Header */}
                             <div className="p-10 pb-6 flex items-center justify-between border-b border-slate-50">
@@ -447,7 +447,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                                 {/* Manual Day-to-Day Slot Builder */}
                                                 <div className="space-y-6 p-8 bg-white rounded-[3rem] border border-slate-200 shadow-xl relative overflow-hidden group">
                                                     {/* Background Glow */}
-                                                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-all duration-1000" />
+                                                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-all " />
                                                     
                                                     <div className="flex items-center justify-between relative z-10">
                                                         <div className="flex items-center gap-3">
@@ -625,7 +625,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                                                 const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
                                                                 return Object.keys(grouped).sort().map(dayIdx => (
-                                                                    <div key={dayIdx} className="space-y-2 animate-in fade-in slide-in-from-right-4">
+                                                                    <div key={dayIdx} className="space-y-2   ">
                                                                         <div className="flex items-center gap-3 px-2">
                                                                             <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">{dayNames[dayIdx]}</span>
                                                                             <div className="flex-1 h-[1px] bg-blue-100" />
@@ -634,7 +634,7 @@ function TurfServiceManagement({ user, vendorId, profile }) {
                                                                             {grouped[dayIdx].sort((a,b) => a.start_time.localeCompare(b.start_time)).map((slot, sIdx) => (
                                                                                 <div key={sIdx} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 group hover:border-blue-500/30 transition-all hover:shadow-md">
                                                                                     <div className="flex items-center gap-4">
-                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500 " />
                                                                                         <p className="text-sm font-black text-slate-900 italic tracking-tight">
                                                                                             {(() => {
                                                                                                 const f = (t) => {
@@ -719,14 +719,14 @@ function TurfServiceManagement({ user, vendorId, profile }) {
 
                                                 {/* Conditional Pricing Strategy Layouts */}
                                                 {formData.pricing_type === "per_person" && (
-                                                    <div className="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 space-y-4   ">
                                                         <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Rate Per Person (₹)</label>
                                                         <input type="number" value={formData.price_per_person} onChange={(e) => setFormData({...formData, price_per_person: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-white border border-blue-200 rounded-xl text-xs font-black text-blue-600 outline-none" />
                                                     </div>
                                                 )}
 
                                                 {formData.pricing_type === "tiered" && (
-                                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="space-y-4   ">
                                                         <div className="flex items-center justify-between px-2">
                                                             <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Groups/Tiers</label>
                                                             <button type="button" onClick={addTier} className="text-[9px] font-black text-purple-600 uppercase tracking-widest hover:underline">+ Add New Tier</button>
@@ -996,7 +996,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-4">
+        <div className="max-w-6xl mx-auto space-y-4     pb-4">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-slate-200">
                 <div className="space-y-2">
@@ -1084,7 +1084,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                     {pricing.map((pkg, i) => (
                         <div 
                             key={i}
-                            className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4 hover:border-pink-300 transition-all group shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-500"
+                            className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4 hover:border-pink-300 transition-all group shadow-sm relative overflow-hidden   "
                         >
                             <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50 rounded-bl-3xl -z-0 opacity-50 group-hover:bg-pink-50 transition-colors"></div>
                             
@@ -1124,7 +1124,7 @@ function ArtistServiceManagement({ user, vendorId, profile }) {
                                         onChange={(e) => handleUpdatePackage(i, 'name', e.target.value)}
                                         className="w-full bg-transparent text-xl font-black text-slate-900 border-none outline-none placeholder:text-slate-200 tracking-tight" 
                                     />
-                                    <div className="h-0.5 w-8 bg-pink-500 rounded-full group-hover:w-full transition-all duration-700"></div>
+                                    <div className="h-0.5 w-8 bg-pink-500 rounded-full group-hover:w-full transition-all "></div>
                                 </div>
 
                                 <div className="relative group/price">

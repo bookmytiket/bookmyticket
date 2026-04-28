@@ -39,7 +39,6 @@ export default function Sponsors() {
                 <div style={{
                     display: "flex",
                     gap: "40px",
-                    animation: "sponsorScroll 22s linear infinite",
                     width: "max-content",
                     alignItems: "center",
                 }}>

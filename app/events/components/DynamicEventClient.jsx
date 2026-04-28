@@ -166,7 +166,7 @@ export default function DynamicEventClient({ event }) {
                                                             {cat.gender} Only
                                                         </div>
                                                         {cat.status === 'Fast Filling' && (
-                                                            <div className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md animate-pulse border border-amber-200">
+                                                            <div className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md  border border-amber-200">
                                                                 Fast Filling
                                                             </div>
                                                         )}

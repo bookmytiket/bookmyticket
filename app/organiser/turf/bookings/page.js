@@ -48,7 +48,7 @@ export default function TurfBookings() {
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="space-y-10    ">
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                 <div className="space-y-1">
@@ -170,7 +170,7 @@ export default function TurfBookings() {
                         </div>
 
                         {/* Background Decoration */}
-                        <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-1000">
+                        <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-[0.03] transition-opacity ">
                              <CheckCircle size={150} />
                         </div>
                     </motion.div>

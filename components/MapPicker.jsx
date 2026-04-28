@@ -68,7 +68,7 @@ export default function MapPicker({ lat, lng, onLocationSelect }) {
       </MapContainer>
       {!position && (
         <div className="absolute inset-x-0 bottom-6 flex justify-center z-[1000] pointer-events-none">
-          <div className="bg-slate-900/80 backdrop-blur-sm text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg animate-pulse">
+          <div className="bg-slate-900/80 backdrop-blur-sm text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg ">
             Tap or click on the map to drop a pin
           </div>
         </div>

@@ -55,7 +55,7 @@ function SlotManager() {
     if (!turfId) return <div className="p-12 text-center font-black uppercase tracking-widest text-slate-400">Invalid Turf ID</div>;
 
     return (
-        <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="max-w-5xl mx-auto space-y-12    ">
             {/* Header */}
             <div className="flex items-center gap-6 pb-8 border-b border-slate-100">
                 <Link 

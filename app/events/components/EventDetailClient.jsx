@@ -137,7 +137,7 @@ export default function EventDetailClient({ id }) {
                 
                 {/* Compact High Impact Wide Banner Card */}
                 <div className="w-full h-[200px] md:h-[350px] rounded-[24px] md:rounded-[32px] overflow-hidden shadow-xl relative mb-4 border-2 border-white group">
-                    <img src={event.img || DEFAULT_IMG} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
+                    <img src={event.img || DEFAULT_IMG} className="absolute inset-0 w-full h-full object-cover transition-transform  group-hover:scale-105" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     
                     <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
@@ -250,7 +250,7 @@ export default function EventDetailClient({ id }) {
                                     <div className="text-4xl font-bold text-slate-900 tracking-tight">₹{event.price || "950"}<span className="text-sm font-bold text-slate-400 ml-1 tracking-tight">onwards</span></div>
                                 </div>
                                 <div className="px-4 py-2 bg-green-50 text-green-600 text-[11px] font-bold uppercase tracking-widest rounded-full flex items-center gap-2 border border-green-100">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Selling Fast
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full " /> Selling Fast
                                 </div>
                             </div>
                             

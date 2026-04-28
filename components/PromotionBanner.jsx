@@ -38,8 +38,7 @@ export default function PromotionBanner() {
                         background: "linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)",
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
-                        backgroundSize: "200% auto",
-                        animation: "rainbow 3s linear infinite"
+                        backgroundSize: "100% auto",
                     }}>
                         <span style={{ fontSize: "clamp(14px, 3vw, 20px)", filter: "none", WebkitTextFillColor: "initial" }}>{promo.bogo ? "⚡" : "🏷️"}</span>
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>

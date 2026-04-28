@@ -146,9 +146,9 @@ function PWAScanContent() {
                     {!isScannerOpen ? (
                         <button 
                             onClick={() => setIsScannerOpen(true)}
-                            className="w-full aspect-square rounded-[3rem] bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 group hover:border-pink-500/50 transition-all duration-500"
+                            className="w-full aspect-square rounded-[3rem] bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 group hover:border-pink-500/50 transition-all "
                         >
-                            <div className="w-20 h-20 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:scale-110 transition-all duration-500 shadow-2xl shadow-pink-500/20">
+                            <div className="w-20 h-20 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:scale-110 transition-all  shadow-2xl shadow-pink-500/20">
                                 <Camera size={36} />
                             </div>
                             <div className="text-center">
@@ -166,7 +166,7 @@ function PWAScanContent() {
                                 <X size={20} />
                             </button>
                             <div className="absolute inset-x-0 bottom-8 flex justify-center">
-                                <div className="px-4 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/80 animate-pulse">
+                                <div className="px-4 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/80 ">
                                     Aim at QR Code
                                 </div>
                             </div>
@@ -208,7 +208,7 @@ function PWAScanContent() {
 
                 {/* Result Area */}
                 {scanResult && (
-                    <div className={`p-6 rounded-[2.5rem] border animate-in zoom-in-95 duration-300 ${
+                    <div className={`p-6 rounded-[2.5rem] border    ${
                         scanResult.status === "valid" ? "bg-green-500/10 border-green-500/20" : 
                         scanResult.status === "already_used" ? "bg-amber-500/10 border-amber-500/20" : 
                         "bg-red-500/10 border-red-500/20"

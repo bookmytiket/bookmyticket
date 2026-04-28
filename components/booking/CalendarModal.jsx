@@ -66,14 +66,14 @@ export default function CalendarModal({
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80" onClick={onClose} />
             
-            <div className="relative bg-white rounded-[40px] w-full max-w-[440px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative bg-white rounded-[40px] w-full max-w-[440px] overflow-hidden shadow-2xl   ">
                 {/* Header Section */}
                 <div className="p-8 pb-4">
                     <div className="flex justify-between items-start mb-6">
                         <div>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Select Date</h2>
                             <div className="flex items-center gap-2 mt-1">
-                                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                                <div className="w-2 h-2 rounded-full bg-orange-500 " />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Real-time Availability</span>
                             </div>
                         </div>

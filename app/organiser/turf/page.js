@@ -94,7 +94,7 @@ export default function TurfDashboard() {
                     <motion.div 
                         key={stat.name}
                         variants={itemVariants}
-                        className="bg-white rounded-[2rem] p-6 border border-slate-100 hover:border-blue-500/20 transition-all duration-500 shadow-xl shadow-slate-200/40 relative overflow-hidden group"
+                        className="bg-white rounded-[2rem] p-6 border border-slate-100 hover:border-blue-500/20 transition-all  shadow-xl shadow-slate-200/40 relative overflow-hidden group"
                     >
                         <div className="flex items-center justify-between relative z-10">
                             <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} shadow-inner`}>
@@ -112,7 +112,7 @@ export default function TurfDashboard() {
                             </div>
                         </div>
                         
-                        <div className="absolute -bottom-4 -right-4 opacity-0 group-hover:opacity-5 transition-opacity duration-700">
+                        <div className="absolute -bottom-4 -right-4 opacity-0 group-hover:opacity-5 transition-opacity ">
                              <stat.icon size={100} />
                         </div>
                     </motion.div>
@@ -214,7 +214,7 @@ export default function TurfDashboard() {
                              </Link>
                          </div>
                          
-                         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-1000 scale-150">
+                         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform  scale-150">
                              <Activity size={120} />
                          </div>
                     </div>

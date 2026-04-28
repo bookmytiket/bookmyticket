@@ -167,7 +167,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                 
                 <div className="space-y-3">
                     {(category.agePricing || []).map((ap, apIdx) => (
-                        <div key={apIdx} className="grid grid-cols-12 gap-3 items-center animate-in fade-in slide-in-from-top-1">
+                        <div key={apIdx} className="grid grid-cols-12 gap-3 items-center   ">
                             <div className="col-span-4 flex items-center gap-2">
                                 <input 
                                     type="number" placeholder="Min"
@@ -236,10 +236,10 @@ const CustomSelect = ({ label, value, onChange, options }) => {
                 className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
             >
                 <span>{value || "Select Option"}</span>
-                <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={18} className={`text-slate-400 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
             </div>
             {isOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden    ">
                     {options.map((opt) => (
                         <div 
                             key={opt}
@@ -415,7 +415,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 {steps.map((s, idx) => (
                     <React.Fragment key={s.id}>
                         <div className="flex flex-col items-center gap-3 shrink-0">
-                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all duration-500 border-2 ${
+                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all  border-2 ${
                                 currentStep >= s.id 
                                 ? 'bg-[#ec4899] border-[#ec4899] text-white shadow-xl shadow-pink-200' 
                                 : 'bg-white border-slate-100 text-slate-300'
@@ -427,7 +427,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             </span>
                         </div>
                         {idx < steps.length - 1 && (
-                            <div className={`w-12 h-0.5 mx-2 transition-colors duration-500 ${currentStep > s.id ? 'bg-[#ec4899]' : 'bg-slate-100'}`} />
+                            <div className={`w-12 h-0.5 mx-2 transition-colors  ${currentStep > s.id ? 'bg-[#ec4899]' : 'bg-slate-100'}`} />
                         )}
                     </React.Fragment>
                 ))}
@@ -435,7 +435,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-bottom-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <Layout size={24} />
@@ -514,7 +514,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 2: Location Setup */}
             {currentStep === 2 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <MapPin size={24} />
@@ -623,7 +623,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 3: Amenities & Benefits */}
             {currentStep === 3 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <Gift size={24} />
@@ -682,7 +682,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 4: Ticket Management */}
             {currentStep === 4 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
@@ -716,7 +716,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 5: Form Builder */}
             {currentStep === 5 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
@@ -769,7 +769,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 6: Pricing & Rules */}
             {currentStep === 6 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <DollarSign size={24} />
@@ -819,9 +819,9 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 7: Final Review & Publish */}
             {currentStep === 7 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10 animate-in fade-in slide-in-from-right-8 text-center">
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10    text-center">
                     <div className="flex flex-col items-center gap-6 py-10">
-                        <div className="w-24 h-24 rounded-[3rem] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-100 animate-bounce">
+                        <div className="w-24 h-24 rounded-[3rem] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-100 ">
                             <CheckCircle2 size={48} />
                         </div>
                         <div>

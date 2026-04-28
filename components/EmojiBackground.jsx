@@ -46,17 +46,6 @@ const EmojiBackground = () => {
             filter: 'opacity(0.6)',
             userSelect: 'none',
           }}
-          animate={{
-            y: [0, item.driftY, -item.driftY, 0],
-            x: [0, item.driftX, -item.driftX, 0],
-            rotate: [0, 15, -15, 0],
-          }}
-          transition={{
-            duration: item.duration,
-            repeat: Infinity,
-            delay: item.delay,
-            ease: "easeInOut",
-          }}
         >
           {item.emoji}
         </motion.div>

@@ -76,7 +76,7 @@ function TurfBookingRegistry({ user, vendorId }) {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-12">
+        <div className="space-y-6     pb-12">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
                 <div className="space-y-1">
@@ -108,7 +108,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                     <button
                         key={status}
                         onClick={() => setStatusFilter(status)}
-                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300 whitespace-nowrap ${
+                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all  whitespace-nowrap ${
                             statusFilter === status 
                                 ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' 
                                 : 'bg-white text-slate-400 border-slate-200 hover:border-blue-500/30 hover:text-blue-500 shadow-sm'
@@ -134,7 +134,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                              {filteredBookings.length > 0 ? filteredBookings.map((booking) => (
-                                <tr key={booking.id} className="group hover:bg-slate-50/50 transition-all duration-300">
+                                <tr key={booking.id} className="group hover:bg-slate-50/50 transition-all ">
                                     <td className="px-6 py-5 whitespace-nowrap">
                                         <div className="flex items-center space-x-3">
                                             <div className="relative">
@@ -171,7 +171,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                                     <td className="px-6 py-5">
                                         <div className="text-slate-900 font-black text-[13px] tracking-tight italic whitespace-nowrap">₹{booking.total_amount}</div>
                                         <div className={`text-[7px] mt-1 font-black uppercase tracking-[0.2em] flex items-center gap-1 whitespace-nowrap ${booking.payment_status === 'fully_paid' ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                            <div className={`w-1 h-1 rounded-full animate-pulse ${booking.payment_status === 'fully_paid' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                            <div className={`w-1 h-1 rounded-full  ${booking.payment_status === 'fully_paid' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
                                             {(booking.payment_status || 'pending').replace("_", " ")}
                                         </div>
                                     </td>
@@ -226,9 +226,9 @@ function TurfBookingRegistry({ user, vendorId }) {
 
             {/* Inspector Modal */}
             {selectedBooking && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl   ">
                     <div 
-                        className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-5 duration-500"
+                        className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col    "
                     >
                         <div className="p-10 space-y-10">
                             <div className="flex items-center justify-between">
@@ -359,7 +359,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-12">
+        <div className="space-y-6     pb-12">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
                 <div className="space-y-1">
@@ -391,7 +391,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                     <button
                         key={status}
                         onClick={() => setStatusFilter(status)}
-                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300 whitespace-nowrap ${
+                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all  whitespace-nowrap ${
                             statusFilter === status 
                                 ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' 
                                 : 'bg-white text-slate-400 border-slate-200 hover:border-pink-500/30 hover:text-pink-500 shadow-sm'
@@ -417,7 +417,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredBookings.length > 0 ? filteredBookings.map((booking) => (
-                                <tr key={booking.id} className="group hover:bg-slate-50/50 transition-all duration-300">
+                                <tr key={booking.id} className="group hover:bg-slate-50/50 transition-all ">
                                     <td className="px-6 py-5 whitespace-nowrap">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 text-slate-900 border border-slate-200 flex items-center justify-center font-black italic shadow-inner group-hover:scale-105 transition-transform shrink-0">
@@ -446,7 +446,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                                     <td className="px-6 py-5">
                                         <div className="text-slate-900 font-black text-[13px] tracking-tight italic whitespace-nowrap">₹{booking.total_amount}</div>
                                         <div className="text-[7px] text-emerald-500 mt-1 font-black uppercase tracking-[0.2em] flex items-center gap-1 whitespace-nowrap">
-                                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
+                                            <div className="w-1 h-1 bg-emerald-500 rounded-full "></div>
                                             Fully Vetted
                                         </div>
                                     </td>
@@ -484,7 +484,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                                                 </button>
                                             )}
                                             <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm group">
-                                                <MessageSquare size={16} strokeWidth={2.5} className="group-hover:animate-bounce" />
+                                                <MessageSquare size={16} strokeWidth={2.5} className="group-hover:" />
                                             </button>
                                         </div>
                                     </td>

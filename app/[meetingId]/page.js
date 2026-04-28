@@ -361,7 +361,7 @@ export default function MeetingRoom() {
         return (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
                 <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-[2rem] flex items-center justify-center mb-8 border border-amber-500/20 shadow-2xl">
-                    <Clock size={40} className="animate-pulse" />
+                    <Clock size={40} className="" />
                 </div>
                 <h1 className="text-4xl font-black text-white mb-4 tracking-tighter uppercase italic">Event Concluded</h1>
                 <p className="text-slate-400 mb-10 max-w-sm font-bold text-sm uppercase tracking-widest leading-relaxed">
@@ -532,7 +532,7 @@ export default function MeetingRoom() {
                     if (ctx.state === 'suspended') ctx.resume();
                 }
             }}
-            className={`flex h-[100dvh] bg-gradient-to-br transition-all duration-1000 ${THEMES[theme]} font-sans text-slate-800 selection:bg-blue-500/20 overflow-hidden relative`}
+            className={`flex h-[100dvh] bg-gradient-to-br transition-all  ${THEMES[theme]} font-sans text-slate-800 selection:bg-blue-500/20 overflow-hidden relative`}
         >
             {/* MAIN CONTENT AREA (Now Entirely Clean with Dynamic Background) */}
             <main className="flex-1 flex flex-col min-w-0">
@@ -618,7 +618,7 @@ export default function MeetingRoom() {
                                         {connectionStates[peerId] && (connectionStates[peerId] === 'failed' || connectionStates[peerId] === 'disconnected') && (
                                             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-4 text-center">
                                                 <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mb-3" />
-                                                <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest animate-pulse">Recovering Connection...</span>
+                                                <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest ">Recovering Connection...</span>
                                             </div>
                                         )}
                                         {connectionStates[peerId] && connectionStates[peerId] !== 'connected' && connectionStates[peerId] !== 'failed' && connectionStates[peerId] !== 'disconnected' && (

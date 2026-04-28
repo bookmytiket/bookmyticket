@@ -137,7 +137,7 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
                     </div>
 
                     {selectedBlock && (
-                        <div className="border-t border-slate-100 pt-6 animate-in fade-in slide-in-from-bottom-4">
+                        <div className="border-t border-slate-100 pt-6   ">
                             <div className="flex items-center justify-between mb-4">
                                 <p className="text-[11px] font-black tracking-widest text-indigo-600 uppercase">Edit {selectedBlock.name}</p>
                                 <button onClick={() => removeBlock(selectedBlock.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-slate-50 hover:bg-red-50 rounded-lg">

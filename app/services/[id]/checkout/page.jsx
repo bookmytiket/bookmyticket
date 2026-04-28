@@ -238,12 +238,12 @@ export default function ServiceCheckoutPage() {
         }
 
         return (
-            <div className="absolute bottom-full left-0 mb-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl z-[100] w-[300px] animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="absolute bottom-full left-0 mb-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl z-[100] w-[300px]    ">
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex flex-col">
                         <h4 className="font-extrabold text-[15px] text-slate-800">{monthNames[month]} {year}</h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 "></span>
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Real-time Availability</span>
                         </div>
                     </div>
@@ -345,7 +345,7 @@ export default function ServiceCheckoutPage() {
                                             <div className="flex items-center justify-between">
                                                 <label className="text-[13px] font-semibold text-slate-600 block">{dynamicDateLabel} <span className="text-[#FF5A5F]">*</span></label>
                                                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 rounded-full border border-green-100 shrink-0">
-                                                    <span className="flex h-1 w-1 rounded-full bg-green-500 animate-pulse"></span>
+                                                    <span className="flex h-1 w-1 rounded-full bg-green-500 "></span>
                                                     <span className="text-[8px] font-black text-green-700 uppercase tracking-tighter">Live Sync</span>
                                                 </div>
                                             </div>
@@ -366,7 +366,7 @@ export default function ServiceCheckoutPage() {
                                             {isCalendarOpen && renderCalendar()}
 
                                             {isDateUnavailable && (
-                                                <p className="text-red-500 text-[11px] font-bold mt-1 animate-in fade-in slide-in-from-top-1">⚠️ This date is already booked or blocked by the artist.</p>
+                                                <p className="text-red-500 text-[11px] font-bold mt-1   ">⚠️ This date is already booked or blocked by the artist.</p>
                                             )}
                                         </div>
                                     </div>
@@ -416,10 +416,10 @@ export default function ServiceCheckoutPage() {
 
                                     <div className="pt-6">
                                         {!selectedPackage && agreedToTerms && (
-                                            <p className="text-[#FF5A5F] text-[11px] font-bold mb-3 animate-pulse">⚠️ Please select a package from the summary card on the right first.</p>
+                                            <p className="text-[#FF5A5F] text-[11px] font-bold mb-3 ">⚠️ Please select a package from the summary card on the right first.</p>
                                         )}
                                         {selectedPackage && !bookingData.date && agreedToTerms && (
-                                            <p className="text-[#FF5A5F] text-[11px] font-bold mb-3 animate-pulse">⚠️ Please choose a booking date.</p>
+                                            <p className="text-[#FF5A5F] text-[11px] font-bold mb-3 ">⚠️ Please choose a booking date.</p>
                                         )}
                                         <button 
                                             type="submit"
@@ -468,7 +468,7 @@ export default function ServiceCheckoutPage() {
                                     </div>
 
                                     {isPkgDropdownOpen && (
-                                        <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="absolute top-full left-0 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden    ">
                                             <div className="max-h-[240px] overflow-y-auto py-2">
                                                 {(vendorProfile?.pricing?.length > 0 ? vendorProfile.pricing : PRESET_PLANS).map((pkg, idx) => (
                                                     <div 

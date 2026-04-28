@@ -97,7 +97,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
         </button>
     );
 
-    const KM_BADGE_STYLE = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-all duration-300";
+    const KM_BADGE_STYLE = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-all ";
 
     const DistanceBadge = ({ opt, isSelected, onClick }) => {
         const isKM = opt.includes('K') || opt.includes('KM') || !isNaN(opt.charAt(0));
@@ -124,13 +124,13 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
     };
 
     return (
-        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="max-w-4xl mx-auto    ">
             {/* Stepper Header */}
             <div className="flex items-center justify-between mb-12 px-4">
                 {steps.map((s, idx) => (
                     <React.Fragment key={s.id}>
                         <div className="flex flex-col items-center gap-3">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all  ${
                                 currentStep >= s.id ? 'bg-blue-500 text-white shadow-xl shadow-blue-500/20' : 'bg-slate-100 text-slate-400'
                             }`}>
                                 <s.icon size={20} />
@@ -140,7 +140,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             </span>
                         </div>
                         {idx < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 max-w-[60px] mx-4 transition-colors duration-500 ${currentStep > s.id ? 'bg-blue-500' : 'bg-slate-100'}`} />
+                            <div className={`flex-1 h-0.5 max-w-[60px] mx-4 transition-colors  ${currentStep > s.id ? 'bg-blue-500' : 'bg-slate-100'}`} />
                         )}
                     </React.Fragment>
                 ))}
@@ -160,7 +160,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                     </div>
 
                     {sportType === "marathon" && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="space-y-8    ">
                             <div className="space-y-3">
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Distance Categories</label>
                                 <div className="flex flex-wrap gap-3">
@@ -234,7 +234,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                     )}
 
                     {sportType === "tournament" && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="space-y-6    ">
                             {renderInput("Number of Teams", "teamsCount", "number", "e.g. 16")}
                             <div className="space-y-3">
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Match Type</label>
@@ -258,7 +258,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                     )}
 
                     {sportType === "coaching" && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="space-y-6    ">
                             {renderInput("Trainer Name", "trainerName", "text", "Enter name")}
                             {renderInput("Training Capacity", "capacity", "number", "e.g. 20")}
                             {renderInput("Session Slots", "sessionSlots", "text", "e.g. Morning 6-8 AM")}

@@ -28,14 +28,14 @@ const DesignCard = ({ item, onDelete, onToggleBeforeAfter, onToggleTopDesign, on
         : `https://images.unsplash.com/photo-1596704017254-9b1210630b65?q=80&w=1080&auto=format&fit=crop`;
 
     return (
-        <div className="group relative bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-xl shadow-slate-200/40 animate-in zoom-in-95 duration-500 hover:border-pink-300 transition-all">
+        <div className="group relative bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-xl shadow-slate-200/40    hover:border-pink-300 transition-all">
             <div className="aspect-[4/5] bg-slate-50 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 z-10"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all  z-10"></div>
                 
                 <img 
                     src={imageUrl}
                     alt={item.category}
-                    className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-all  group-hover:scale-110"
                 />
 
                 {/* Badges */}
@@ -55,14 +55,14 @@ const DesignCard = ({ item, onDelete, onToggleBeforeAfter, onToggleTopDesign, on
                 {/* Before/After Badge */}
                 {item.beforeAfter && (
                     <div className="absolute top-4 right-4 z-20">
-                        <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-[10px] font-black px-4 py-2 rounded-xl border border-white/20 shadow-xl uppercase tracking-widest text-white animate-pulse">
+                        <span className="bg-gradient-to-r from-pink-500 to-purple-600 text-[10px] font-black px-4 py-2 rounded-xl border border-white/20 shadow-xl uppercase tracking-widest text-white ">
                             B / A
                         </span>
                     </div>
                 )}
 
                 {/* Actions Overlay */}
-                <div className="absolute bottom-6 left-6 right-6 z-20 translate-y-12 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-between">
+                <div className="absolute bottom-6 left-6 right-6 z-20 translate-y-12 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all  flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                         <button 
                             onClick={onToggleBeforeAfter}
@@ -248,7 +248,7 @@ export default function PortfolioPage() {
     };
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+        <div className="space-y-12     pb-20">
             <div className="flex flex-col space-y-10">
                 {/* Filters */}
                 {!isTurfVendor && (
@@ -310,7 +310,7 @@ export default function PortfolioPage() {
             {/* Upload Modal */}
             {showUploadConfig && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 backdrop-blur-2xl bg-slate-900/40">
-                    <div className="bg-white w-full max-w-xl rounded-[3rem] border border-slate-100 shadow-3xl p-10 space-y-10 animate-in zoom-in-95 duration-500">
+                    <div className="bg-white w-full max-w-xl rounded-[3rem] border border-slate-100 shadow-3xl p-10 space-y-10   ">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                                 <div className="w-12 h-12 bg-pink-50 rounded-2xl text-pink-500 flex items-center justify-center border border-pink-100 italic font-black">
@@ -436,16 +436,16 @@ export default function PortfolioPage() {
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
-                    className={`py-20 lg:py-44 px-6 lg:px-10 flex flex-col items-center justify-center text-center space-y-8 lg:space-y-10 bg-white rounded-[2rem] lg:rounded-[4rem] border-2 border-dashed transition-all duration-500 shadow-inner ${
+                    className={`py-20 lg:py-44 px-6 lg:px-10 flex flex-col items-center justify-center text-center space-y-8 lg:space-y-10 bg-white rounded-[2rem] lg:rounded-[4rem] border-2 border-dashed transition-all  shadow-inner ${
                         isDragging ? 'border-pink-500 bg-pink-50/30 scale-[0.98]' : 'border-slate-100'
                     }`}
                 >
                     <div className="relative group">
                         <div className={`absolute inset-0 bg-pink-500 blur-[60px] lg:blur-[80px] transition-opacity ${isDragging ? 'opacity-30' : 'opacity-10'}`}></div>
-                        <div className={`relative w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] lg:rounded-[3rem] flex items-center justify-center transition-all duration-700 border ${
+                        <div className={`relative w-24 h-24 lg:w-32 lg:h-32 rounded-[2rem] lg:rounded-[3rem] flex items-center justify-center transition-all  border ${
                             isDragging ? 'bg-pink-500 text-white scale-110 border-pink-400 rotate-12' : 'bg-slate-50 text-slate-200 border-slate-100'
                         }`}>
-                            <ImageIcon size={40} className={isDragging ? 'animate-bounce' : 'lg:size-56'} />
+                            <ImageIcon size={40} className={isDragging ? '' : 'lg:size-56'} />
                         </div>
                     </div>
                     <div className="space-y-4">

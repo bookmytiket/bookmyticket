@@ -77,14 +77,14 @@ export default function VendorLayout({ children }) {
             {/* Backdrop for mobile */}
             {isSidebarOpen && (
                 <div 
-                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 lg:hidden transition-opacity duration-300"
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 lg:hidden transition-opacity "
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside 
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static shadow-2xl lg:shadow-none flex flex-col h-full shrink-0`}
+                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all  ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static shadow-2xl lg:shadow-none flex flex-col h-full shrink-0`}
             >
                 <div className="flex flex-col h-full font-figtree w-full">
                     {/* Header */}
@@ -122,7 +122,7 @@ export default function VendorLayout({ children }) {
                                     key={item.name}
                                     href={item.href}
                                     onClick={() => setIsSidebarOpen(false)}
-                                    className={`flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all duration-400 group relative ${
+                                    className={`flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all  group relative ${
                                         isActive 
                                             ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' 
                                             : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]'
@@ -151,7 +151,7 @@ export default function VendorLayout({ children }) {
                         </div>
                         <button 
                             onClick={logout}
-                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-[1rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
+                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-[1rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all  shadow-xl shadow-pink-500/20 group"
                         >
                             <LogOut size={14} strokeWidth={3} className="text-white" />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
@@ -199,7 +199,7 @@ export default function VendorLayout({ children }) {
                             <Bell size={20} strokeWidth={2.5} />
                             <span className="absolute top-3.5 right-3.5 w-2 h-2 bg-pink-500 rounded-full ring-4 ring-white shadow-lg"></span>
                         </button>
-                        <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-[1rem] lg:rounded-[1.2rem] bg-gradient-to-br from-pink-500 to-purple-600 p-0.5 shadow-2xl shadow-pink-500/30 group cursor-pointer hover:rotate-[10deg] transition-transform duration-500">
+                        <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-[1rem] lg:rounded-[1.2rem] bg-gradient-to-br from-pink-500 to-purple-600 p-0.5 shadow-2xl shadow-pink-500/30 group cursor-pointer hover:rotate-[10deg] transition-transform ">
                             <div className="w-full h-full bg-white rounded-[0.8rem] lg:rounded-[1rem] flex items-center justify-center text-pink-500 font-black text-lg lg:text-xl shadow-inner italic">
                                 {user?.name?.charAt(0) || "V"}
                             </div>

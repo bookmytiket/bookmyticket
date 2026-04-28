@@ -130,7 +130,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+        <div className="max-w-5xl mx-auto space-y-12     pb-20">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4 border-b border-slate-200">
                 <div className="space-y-4">
@@ -160,17 +160,17 @@ export default function SettingsPage() {
                 <div className="space-y-10">
                     <div className="flex flex-col items-center space-y-6">
                         <div className="relative group cursor-pointer" onClick={() => document.getElementById('profileImageUpload').click()}>
-                            <div className="absolute inset-0 bg-pink-500 rounded-[3.5rem] blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity duration-700"></div>
-                            <div className="relative w-56 h-56 rounded-[3.5rem] bg-white border-4 border-slate-50 p-1.5 transition-all duration-700 overflow-hidden shadow-2xl shadow-slate-200/50 group-hover:border-pink-500/50 group-hover:scale-[1.02]">
+                            <div className="absolute inset-0 bg-pink-500 rounded-[3.5rem] blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity "></div>
+                            <div className="relative w-56 h-56 rounded-[3.5rem] bg-white border-4 border-slate-50 p-1.5 transition-all  overflow-hidden shadow-2xl shadow-slate-200/50 group-hover:border-pink-500/50 group-hover:scale-[1.02]">
                                 <div className="w-full h-full rounded-[2.8rem] bg-slate-50 flex items-center justify-center text-slate-200 relative group overflow-hidden shadow-inner">
                                     {formData.profileImage ? (
-                                        <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform " />
                                     ) : (
-                                        <User size={80} strokeWidth={1} className="group-hover:scale-110 transition-transform duration-700" />
+                                        <User size={80} strokeWidth={1} className="group-hover:scale-110 transition-transform " />
                                     )}
                                     <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center space-y-3 backdrop-blur-sm">
-                                        <Camera size={36} className="text-white translate-y-6 group-hover:translate-y-0 transition-transform duration-500" />
-                                        <span className="text-[10px] text-white font-black uppercase tracking-widest translate-y-6 group-hover:translate-y-0 transition-transform duration-500">Update Avatar</span>
+                                        <Camera size={36} className="text-white translate-y-6 group-hover:translate-y-0 transition-transform " />
+                                        <span className="text-[10px] text-white font-black uppercase tracking-widest translate-y-6 group-hover:translate-y-0 transition-transform ">Update Avatar</span>
                                     </div>
                                 </div>
                             </div>
@@ -277,9 +277,9 @@ export default function SettingsPage() {
                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3 italic">Broadcast Contact</span>
                                 <button 
                                     onClick={() => setFormData({...formData, contactVisible: !formData.contactVisible})}
-                                    className={`relative w-12 h-6 rounded-full transition-all duration-500 shadow-inner ${formData.contactVisible ? 'bg-pink-500' : 'bg-slate-200'}`}
+                                    className={`relative w-12 h-6 rounded-full transition-all  shadow-inner ${formData.contactVisible ? 'bg-pink-500' : 'bg-slate-200'}`}
                                 >
-                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-500 shadow-md ${formData.contactVisible ? 'left-7' : 'left-1'}`} />
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all  shadow-md ${formData.contactVisible ? 'left-7' : 'left-1'}`} />
                                 </button>
                             </div>
                         </div>
@@ -337,10 +337,10 @@ export default function SettingsPage() {
                     </section>
 
                     <div className="bg-white rounded-[3rem] border border-slate-100 p-10 flex items-start space-x-8 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 text-pink-500/5 opacity-50 group-hover:scale-110 transition-transform duration-1000">
+                        <div className="absolute top-0 right-0 p-8 text-pink-500/5 opacity-50 group-hover:scale-110 transition-transform ">
                              <Sparkles size={80} />
                         </div>
-                        <div className="w-20 h-20 rounded-[2rem] bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0 border border-pink-100 shadow-inner group-hover:bg-pink-500 group-hover:text-white transition-all duration-500">
+                        <div className="w-20 h-20 rounded-[2rem] bg-pink-50 flex items-center justify-center text-pink-500 flex-shrink-0 border border-pink-100 shadow-inner group-hover:bg-pink-500 group-hover:text-white transition-all ">
                              <Info size={36} />
                         </div>
                         <div className="space-y-3 relative z-10">

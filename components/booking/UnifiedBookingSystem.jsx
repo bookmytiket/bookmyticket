@@ -120,7 +120,7 @@ export default function UnifiedBookingSystem({
             {/* Success State */}
             {bookingSuccess && (
                 <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
-                    <div className="bg-white rounded-[40px] p-12 max-w-md w-full text-center shadow-2xl animate-in zoom-in-95">
+                    <div className="bg-white rounded-[40px] p-12 max-w-md w-full text-center shadow-2xl  ">
                         <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8">
                             <CheckCircle2 className="text-green-500" size={48} />
                         </div>
@@ -141,7 +141,7 @@ export default function UnifiedBookingSystem({
                 <div className="space-y-10">
                     {/* Header Info */}
                     <div className="bg-white rounded-[40px] p-8 border border-slate-100 shadow-sm overflow-hidden relative group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-bl-[80px] -z-10 group-hover:bg-orange-500/10 transition-all duration-700" />
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-bl-[80px] -z-10 group-hover:bg-orange-500/10 transition-all " />
                         <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
                             <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-xl shadow-orange-500/20 flex-shrink-0">
                                 <img 
@@ -199,7 +199,7 @@ export default function UnifiedBookingSystem({
                                     <span className="text-sm font-black uppercase italic tracking-tighter text-slate-400 group-hover:text-slate-900">Select Event Date</span>
                                 </button>
                             ) : (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
+                                <div className="space-y-8   ">
                                     <div className="flex items-center gap-6 p-6 bg-orange-50 rounded-[32px] border border-orange-100">
                                         <div className="w-16 h-16 bg-white rounded-2xl flex flex-col items-center justify-center shadow-sm">
                                             <span className="text-[10px] font-black uppercase text-orange-500">{selectedDate.toLocaleString('default', { month: 'short' })}</span>
@@ -260,7 +260,7 @@ export default function UnifiedBookingSystem({
                             </div>
 
                             {step >= 2 && (
-                                <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
+                                <div className="space-y-4   ">
                                     {packages.length > 0 ? (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {packages.map(pkg => (
@@ -288,7 +288,7 @@ export default function UnifiedBookingSystem({
                                                         ))}
                                                     </div>
                                                     {selectedPackage?.id === pkg.id && (
-                                                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in">
+                                                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-lg  zoom-in">
                                                             <CheckCircle2 size={16} />
                                                         </div>
                                                     )}
@@ -324,7 +324,7 @@ export default function UnifiedBookingSystem({
                             </div>
 
                             {step >= 3 && (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
+                                <div className="space-y-6   ">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="relative">
                                             <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

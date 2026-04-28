@@ -61,7 +61,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
     const SidebarItem = ({ id, label, icon: Icon, active }) => (
         <button 
             onClick={() => navigateToTab(id)} 
-            className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all duration-400 group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}
+            className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all  group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}
         >
             <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
             <span className={`text-[11px] uppercase tracking-widest whitespace-nowrap ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
@@ -76,20 +76,20 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
     const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick }) => (
         <button 
             onClick={onClick}
-            className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all duration-300 group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all  group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
         >
             <div className="flex items-center space-x-3">
                 <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
                 <span className={`text-[11px] uppercase tracking-[0.2em] whitespace-nowrap ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
             </div>
-            <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
+            <ChevronDown size={14} className={`transition-transform  ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
         </button>
     );
 
     const SidebarSubItem = ({ id, label, active }) => (
         <button 
             onClick={() => navigateToTab(id)} 
-            className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all duration-300 group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}
+            className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all  group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}
         >
             <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
             <span className="text-[10px] uppercase tracking-widest font-bold whitespace-nowrap">{label}</span>
@@ -127,7 +127,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
 
             {/* Sidebar */}
             {/* Sidebar */}
-            <aside className={`fixed md:sticky top-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 h-screen transition-all duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:flex shadow-2xl shadow-slate-200/50`}>
+            <aside className={`fixed md:sticky top-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 h-screen transition-all  ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:flex shadow-2xl shadow-slate-200/50`}>
                 <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
                     <div className="flex items-center cursor-pointer" onClick={() => navigateToTab("dashboard")}>
                         <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
@@ -192,7 +192,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                 <div className="p-4 border-t border-slate-50 bg-slate-50/50 mt-auto">
                     <button 
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-pink-500/20 group"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all  shadow-xl shadow-pink-500/20 group"
                     >
                         <LogOut size={12} strokeWidth={3} />
                         <span className="text-[9px] font-black uppercase tracking-[0.2em]">Sign Out</span>

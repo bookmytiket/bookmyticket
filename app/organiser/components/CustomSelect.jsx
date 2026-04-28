@@ -54,7 +54,7 @@ export default function CustomSelect({
                 <span className={selectedOption ? "text-slate-900" : "text-slate-300 font-medium truncate mr-2"}>
                     {isLoading ? "Loading..." : (selectedOption ? selectedOption.label : placeholder)}
                 </span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-slate-400 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             <AnimatePresence>

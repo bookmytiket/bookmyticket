@@ -61,7 +61,6 @@ export default function VenueEventCard({ event }) {
                             borderRadius: "50%",
                             backgroundColor: "#f84464",
                             display: "inline-block",
-                            animation: "pulse 1.5s infinite",
                         }}
                     ></span>
                     LIVE
@@ -168,7 +167,6 @@ export default function VenueEventCard({ event }) {
             <style jsx>{`
         @keyframes pulse {
           0% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(1.2); }
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>

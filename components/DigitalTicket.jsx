@@ -221,7 +221,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
             {/* Security Warning for Mobile/Web */}
             {!isCapturing && !isTabActive && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none">
-                    <div className="bg-slate-900/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 animate-pulse">
+                    <div className="bg-slate-900/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 ">
                         <ShieldCheck className="text-pink-500" size={24} />
                         <p className="text-white font-black uppercase italic tracking-widest text-xs">Security Protocol Active</p>
                     </div>
@@ -298,7 +298,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                                 </div>
                             )}
                             
-                            <div className={`p-4 flex items-center justify-center w-full transition-all duration-500 ${!isRevealed && !isCapturing ? 'blur-xl scale-90 opacity-20' : 'blur-0 scale-100 opacity-100'}`}>
+                            <div className={`p-4 flex items-center justify-center w-full transition-all  ${!isRevealed && !isCapturing ? 'blur-xl scale-90 opacity-20' : 'blur-0 scale-100 opacity-100'}`}>
                                 <QRCodeSVG 
                                     value={bookingId} 
                                     size={100} 
@@ -308,7 +308,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                             </div>
                             <div className="w-full bg-slate-900 py-2 px-1">
                                 <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Booking ID</p>
-                                <div className={`transition-all duration-500 ${!isRevealed && !isCapturing ? 'blur-md opacity-20' : 'blur-0 opacity-100'}`}>
+                                <div className={`transition-all  ${!isRevealed && !isCapturing ? 'blur-md opacity-20' : 'blur-0 opacity-100'}`}>
                                     <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{shortId}</p>
                                 </div>
                             </div>

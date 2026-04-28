@@ -62,7 +62,7 @@ export default function EarningsPage() {
     }));
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-12">
+        <div className="space-y-8     pb-12">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-1 border-b border-slate-200 px-1">
                 <div className="space-y-2">
@@ -179,7 +179,7 @@ export default function EarningsPage() {
                 {/* Card/System Sidebar */}
                 <div className="space-y-6">
                     <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden group shadow-purple-900/10">
-                        <div className="absolute top-0 right-0 p-6 text-white/5 opacity-10 rotate-12 group-hover:rotate-0 transition-all duration-1000">
+                        <div className="absolute top-0 right-0 p-6 text-white/5 opacity-10 rotate-12 group-hover:rotate-0 transition-all ">
                             <CreditCard size={150} />
                         </div>
                         <div className="relative z-10 space-y-8">

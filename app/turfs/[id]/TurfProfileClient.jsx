@@ -224,7 +224,7 @@ export default function TurfProfileClient({ id: turfId }) {
     return (
         <main className="min-h-screen bg-[#f8fafc] pb-40">
             <div className="h-[40vh] relative overflow-hidden group">
-                <img src={turf.images?.[0] || "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200q=80"} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt={turf.name} />
+                <img src={turf.images?.[0] || "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200q=80"} className="w-full h-full object-cover transition-transform  group-hover:scale-105" alt={turf.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
                 <div className="absolute top-8 left-8 flex items-center gap-4 z-50">
                      <button onClick={() => router.push('/')} className="flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all border border-white/20 shadow-2xl font-black text-[10px] uppercase tracking-widest"><ArrowLeft size={16} /> Back to Home</button>
