@@ -17,8 +17,16 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
 
   const [batteryLevel, setBatteryLevel] = useState(85);
   const [isCharging, setIsCharging] = useState(false);
+  const [isRealMobile, setIsRealMobile] = useState(false);
 
   useEffect(() => {
+    // Detect if we are on a real mobile device
+    const checkMobile = () => {
+      setIsRealMobile(window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
@@ -41,12 +49,12 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
         bat.addEventListener('chargingchange', () => updateBattery(bat));
       }).catch(err => console.warn("Battery API error:", err));
     } else {
-      // Realistic fallback for unsupported browsers
       setBatteryLevel(75 + Math.floor(Math.random() * 20));
     }
 
     return () => {
       clearInterval(timer);
+      window.removeEventListener('resize', checkMobile);
       if (batteryObj) {
         batteryObj.removeEventListener('levelchange', updateBattery);
         batteryObj.removeEventListener('chargingchange', updateBattery);
@@ -105,15 +113,15 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
     }}>
       {/* Phone Mockup Frame */}
       <div style={{
-        width: '340px',
-        maxWidth: '95vw',
-        height: '640px',
-        maxHeight: '92vh',
+        width: isRealMobile ? '100%' : '340px',
+        maxWidth: isRealMobile ? '100%' : '95vw',
+        height: isRealMobile ? '100%' : '640px',
+        maxHeight: isRealMobile ? '100vh' : '92vh',
         backgroundColor: '#fff',
-        borderRadius: '44px',
-        border: '12px solid #1a1a1a',
+        borderRadius: isRealMobile ? '0' : '44px',
+        border: isRealMobile ? 'none' : '12px solid #1a1a1a',
         position: 'relative',
-        boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+        boxShadow: isRealMobile ? 'none' : '0 40px 80px rgba(0,0,0,0.5)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -125,64 +133,68 @@ export default function MobileLoginPopup({ onClose, onLoginSuccess }) {
         </div>
 
         {/* Notch */}
-        <div style={{
-          width: '110px',
-          height: '28px',
-          backgroundColor: '#1a1a1a',
-          position: 'absolute',
-          top: '0',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          borderBottomLeftRadius: '18px',
-          borderBottomRightRadius: '18px',
-          zIndex: 10
-        }} />
+        {!isRealMobile && (
+          <div style={{
+            width: '110px',
+            height: '28px',
+            backgroundColor: '#1a1a1a',
+            position: 'absolute',
+            top: '0',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            borderBottomLeftRadius: '18px',
+            borderBottomRightRadius: '18px',
+            zIndex: 10
+          }} />
+        )}
 
         {/* Status Bar */}
-        <div style={{
-          padding: '16px 24px 8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '12px',
-          fontWeight: '700',
-          color: '#000',
-          zIndex: 9
-        }}>
-          <span>{currentTime}</span>
-          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', fontWeight: '800' }}>{batteryLevel}%</span>
-            <div style={{ 
-              width: '24px', 
-              height: '12px', 
-              border: '1.5px solid #000', 
-              borderRadius: '4px', 
-              position: 'relative',
-              padding: '1px',
-              display: 'flex'
-            }}>
+        {!isRealMobile && (
+          <div style={{
+            padding: '16px 24px 8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '12px',
+            fontWeight: '700',
+            color: '#000',
+            zIndex: 9
+          }}>
+            <span>{currentTime}</span>
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', fontWeight: '800' }}>{batteryLevel}%</span>
               <div style={{ 
-                width: `${batteryLevel}%`, 
-                height: '100%', 
-                backgroundColor: isCharging ? '#22c55e' : (batteryLevel < 20 ? '#ef4444' : '#000'),
-                borderRadius: '1.5px',
-                transition: 'width 0.4s ease'
-              }} />
-              {isCharging && (
-                <span style={{ 
-                  position: 'absolute', 
-                  left: '50%', 
-                  top: '50%', 
-                  transform: 'translate(-50%, -50%)', 
-                  fontSize: '8px', 
-                  color: '#fff',
-                  fontWeight: '900',
-                  animation: 'pulse 1.5s infinite'
-                }}>⚡</span>
-              )}
+                width: '24px', 
+                height: '12px', 
+                border: '1.5px solid #000', 
+                borderRadius: '4px', 
+                position: 'relative',
+                padding: '1px',
+                display: 'flex'
+              }}>
+                <div style={{ 
+                  width: `${batteryLevel}%`, 
+                  height: '100%', 
+                  backgroundColor: isCharging ? '#22c55e' : (batteryLevel < 20 ? '#ef4444' : '#000'),
+                  borderRadius: '1.5px',
+                  transition: 'width 0.4s ease'
+                }} />
+                {isCharging && (
+                  <span style={{ 
+                    position: 'absolute', 
+                    left: '50%', 
+                    top: '50%', 
+                    transform: 'translate(-50%, -50%)', 
+                    fontSize: '8px', 
+                    color: '#fff',
+                    fontWeight: '900',
+                    animation: 'pulse 1.5s infinite'
+                  }}>⚡</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Internal Content */}
         <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', zIndex: 1, position: 'relative' }}>

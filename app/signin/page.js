@@ -67,8 +67,16 @@ export default function SignInPage() {
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [batteryLevel, setBatteryLevel] = useState(85);
     const [isCharging, setIsCharging] = useState(false);
+    const [isRealMobile, setIsRealMobile] = useState(false);
 
     useEffect(() => {
+        // Detect if we are on a real mobile device
+        const checkMobile = () => {
+            setIsRealMobile(window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
         const updateTime = () => {
             const now = new Date();
             setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
@@ -91,19 +99,16 @@ export default function SignInPage() {
                 bat.addEventListener('chargingchange', () => updateBattery(bat));
             }).catch(err => {
                 console.warn("Battery API failed:", err);
-                // Fallback to a realistic random-ish level if API fails but exists
                 setBatteryLevel(prev => prev || 78);
             });
         } else {
-            // Fallback for iOS/non-supported browsers: Use a realistic simulated level
-            // In a real app, we might just hide the status bar if it's not real,
-            // but for a mockup, showing a dynamic-looking value is better.
             const simulatedLevel = 70 + Math.floor(Math.random() * 25);
             setBatteryLevel(simulatedLevel);
         }
         
         return () => { 
             clearInterval(timer); 
+            window.removeEventListener('resize', checkMobile);
             if (batteryObj) {
                 batteryObj.removeEventListener('levelchange', updateBattery);
                 batteryObj.removeEventListener('chargingchange', updateBattery);
@@ -553,21 +558,20 @@ export default function SignInPage() {
                     .signin-wrapper { justify-content: center !important; }
                 }
                 @media (max-width: 640px) {
-                    .signin-wrapper { padding: 10px !important; }
+                    .signin-wrapper { padding: 0 !important; background: #fff !important; }
                     .phone-mockup {
-                        width: 350px !important;
-                        max-width: 95vw !important;
-                        height: 720px !important;
-                        max-height: 92vh !important;
-                        border: 12px solid #101010 !important;
-                        border-radius: 40px !important;
-                        margin: auto !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 100vh !important;
+                        max-height: 100vh !important;
+                        border: none !important;
+                        border-radius: 0 !important;
+                        margin: 0 !important;
                         background: #ffffff !important;
-                        box-shadow: 0 30px 60px rgba(0,0,0,0.2) !important;
+                        box-shadow: none !important;
                     }
-                    .phone-notch { width: 100px !important; height: 24px !important; top: 8px !important; }
-                    .phone-status-bar { padding: 12px 20px 4px !important; }
-                    .no-scrollbar { padding: 10px 20px 20px !important; }
+                    .phone-notch, .phone-status-bar { display: none !important; }
+                    .no-scrollbar { padding: 20px !important; }
                 }
                 /* Phone mockup frame stays consistent across all devices */
                 body { overflow-x: hidden; margin: 0; }
@@ -722,96 +726,100 @@ export default function SignInPage() {
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div className="phone-mockup" style={{ 
-                    width: "350px", 
-                    maxWidth: "92vw",
-                    height: "700px", 
-                    maxHeight: "92vh",
+                    width: isRealMobile ? "100%" : "350px", 
+                    maxWidth: isRealMobile ? "100%" : "92vw",
+                    height: isRealMobile ? "100vh" : "700px", 
+                    maxHeight: isRealMobile ? "100vh" : "92vh",
                     background: "#ffffff", 
-                    borderRadius: "40px", 
-                    border: "12px solid #101010", 
+                    borderRadius: isRealMobile ? "0" : "40px", 
+                    border: isRealMobile ? "none" : "12px solid #101010", 
                     position: "relative", 
-                    boxShadow: "0 40px 80px rgba(0,0,0,0.25)",
+                    boxShadow: isRealMobile ? "none" : "0 40px 80px rgba(0,0,0,0.25)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    margin: "10px auto",
+                    margin: isRealMobile ? "0" : "10px auto",
                     zIndex: 10
                 }}>
                     {/* Notch (Dynamic Island Style) */}
-                    <div className="phone-notch" style={{ 
-                        width: "110px", 
-                        height: "25px", 
-                        background: "#101010", 
-                        position: "absolute", 
-                        top: "10px", 
-                        left: "50%", 
-                        transform: "translateX(-50%)", 
-                        borderRadius: "18px", 
-                        zIndex: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        padding: "0 14px"
-                    }}>
-                         <div style={{ width: "6px", height: "6px", background: "#1e293b", borderRadius: "50%", marginRight: "8px", opacity: 0.8 }} />
-                         <div style={{ width: "10px", height: "10px", background: "radial-gradient(circle, #2d3748 0%, #1a202c 100%)", borderRadius: "50%", border: "1px solid #2d3748" }} />
-                    </div>
+                    {!isRealMobile && (
+                        <div className="phone-notch" style={{ 
+                            width: "110px", 
+                            height: "25px", 
+                            background: "#101010", 
+                            position: "absolute", 
+                            top: "10px", 
+                            left: "50%", 
+                            transform: "translateX(-50%)", 
+                            borderRadius: "18px", 
+                            zIndex: 10,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            padding: "0 14px"
+                        }}>
+                             <div style={{ width: "6px", height: "6px", background: "#1e293b", borderRadius: "50%", marginRight: "8px", opacity: 0.8 }} />
+                             <div style={{ width: "10px", height: "10px", background: "radial-gradient(circle, #2d3748 0%, #1a202c 100%)", borderRadius: "50%", border: "1px solid #2d3748" }} />
+                        </div>
+                    )}
 
                     {/* Status Bar */}
-                    <div className="phone-status-bar" style={{ 
-                        padding: "12px 22px 4px", 
-                        display: "flex", 
-                        justifyContent: "space-between", 
-                        alignItems: "center", 
-                        fontSize: "12px", 
-                        fontWeight: 700, 
-                        color: "#000", 
-                        zIndex: 9 
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>{currentTime}</span>
-                            <span style={{ fontSize: "10px", color: "#64748b" }}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span style={{ fontSize: "11px", fontWeight: 800 }}>{batteryLevel}%</span>
-                                <div style={{ 
-                                    width: "24px", 
-                                    height: "12px", 
-                                    border: "1.5px solid rgba(0,0,0,0.8)", 
-                                    borderRadius: "4px", 
-                                    position: "relative", 
-                                    padding: "1px", 
-                                    display: "flex",
-                                    background: "rgba(0,0,0,0.05)"
-                                }}>
+                    {!isRealMobile && (
+                        <div className="phone-status-bar" style={{ 
+                            padding: "12px 22px 4px", 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            alignItems: "center", 
+                            fontSize: "12px", 
+                            fontWeight: 700, 
+                            color: "#000", 
+                            zIndex: 9 
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span>{currentTime}</span>
+                                <span style={{ fontSize: "10px", color: "#64748b" }}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                    <span style={{ fontSize: "11px", fontWeight: 800 }}>{batteryLevel}%</span>
                                     <div style={{ 
-                                        width: `${batteryLevel}%`, 
-                                        height: "100%", 
-                                        background: isCharging ? "#22c55e" : (batteryLevel < 20 ? "#ef4444" : "#000"), 
-                                        borderRadius: "2px",
-                                        transition: "width 0.5s ease-in-out, background 0.3s ease",
-                                        boxShadow: isCharging ? "0 0 8px rgba(34, 197, 94, 0.5)" : "none"
-                                    }} />
-                                    <div style={{ width: "1.5px", height: "4px", background: "rgba(0,0,0,0.8)", position: "absolute", right: "-3.5px", top: "2.5px", borderRadius: "0 1px 1px 0" }} />
-                                    {isCharging && (
+                                        width: "24px", 
+                                        height: "12px", 
+                                        border: "1.5px solid rgba(0,0,0,0.8)", 
+                                        borderRadius: "4px", 
+                                        position: "relative", 
+                                        padding: "1px", 
+                                        display: "flex",
+                                        background: "rgba(0,0,0,0.05)"
+                                    }}>
                                         <div style={{ 
-                                            position: "absolute", 
-                                            left: "50%", 
-                                            top: "50%", 
-                                            transform: "translate(-50%, -50%)", 
-                                            color: "#fff", 
-                                            fontSize: "9px", 
-                                            fontWeight: 900,
-                                            textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                                            animation: "pulse 1.5s infinite"
-                                        }}>⚡</div>
-                                    )}
+                                            width: `${batteryLevel}%`, 
+                                            height: "100%", 
+                                            background: isCharging ? "#22c55e" : (batteryLevel < 20 ? "#ef4444" : "#000"), 
+                                            borderRadius: "2px",
+                                            transition: "width 0.5s ease-in-out, background 0.3s ease",
+                                            boxShadow: isCharging ? "0 0 8px rgba(34, 197, 94, 0.5)" : "none"
+                                        }} />
+                                        <div style={{ width: "1.5px", height: "4px", background: "rgba(0,0,0,0.8)", position: "absolute", right: "-3.5px", top: "2.5px", borderRadius: "0 1px 1px 0" }} />
+                                        {isCharging && (
+                                            <div style={{ 
+                                                position: "absolute", 
+                                                left: "50%", 
+                                                top: "50%", 
+                                                transform: "translate(-50%, -50%)", 
+                                                color: "#fff", 
+                                                fontSize: "9px", 
+                                                fontWeight: 900,
+                                                textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                                animation: "pulse 1.5s infinite"
+                                            }}>⚡</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                     
                     {/* Internal Screen Content */}
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
