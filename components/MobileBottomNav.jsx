@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Home, Calendar, Ticket, User, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from './AuthContext';
@@ -14,18 +14,35 @@ const NAV_ITEMS = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
 
   const handleBookNow = () => {
-    if (pathname.includes('/turfs/')) {
-      const section = document.getElementById('booking-section');
+    // If we're on a turf or service page, scroll to booking section
+    if (pathname.includes('/turfs/') || pathname.includes('/services/')) {
+      const section = document.getElementById('booking-section') || document.getElementById('booking-form');
       if (section) {
         section.scrollIntoView({ behavior: 'smooth' });
         return;
       }
     }
 
+    // If we're on an event detail page, route to the event book page
+    if (pathname.includes('/events/detail')) {
+      const eventId = searchParams.get('id');
+      if (eventId) {
+        const bookUrl = `/events/book?id=${eventId}`;
+        if (!user) {
+          router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+        } else {
+          router.push(bookUrl);
+        }
+        return;
+      }
+    }
+
+    // Default behavior
     if (!user) {
       router.push(`/signin?redirect=${encodeURIComponent(pathname)}`);
     } else {
@@ -48,17 +65,19 @@ export default function MobileBottomNav() {
           <span className="nav-label">Events</span>
         </Link>
 
-        {/* Floating Book Now Action */}
+        {/* Floating Book Now Action - Hidden on booking/checkout pages */}
         <div className="nav-item-action">
-          <button 
-            onClick={handleBookNow}
-            className="book-now-floating"
-          >
-            <div className="book-now-inner">
-              <span className="book-now-text">Book</span>
-              <span className="book-now-subtext">Now</span>
-            </div>
-          </button>
+          {!pathname.includes('/events/book') && !pathname.includes('/checkout') && (
+            <button 
+              onClick={handleBookNow}
+              className="book-now-floating"
+            >
+              <div className="book-now-inner">
+                <span className="book-now-text">Book</span>
+                <span className="book-now-subtext">Now</span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Tickets */}

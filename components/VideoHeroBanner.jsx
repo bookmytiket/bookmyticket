@@ -144,7 +144,7 @@ export default function VideoHeroBanner() {
       "@type": "VideoObject",
       "name": "BookMyTicket - Your Event Partner",
       "description": "Experience the best online event ticketing and service booking platform with BookMyTicket.",
-      "thumbnailUrl": "https://bookmyticket.net/og-image.png",
+      "thumbnailUrl": "",
       "uploadDate": "2024-01-01T08:00:00+08:00",
       "duration": "PT0M30S",
       "contentUrl": "https://bookmyticket.net/bookmyticket/videoplayback.mp4",
@@ -180,7 +180,6 @@ export default function VideoHeroBanner() {
                 ref={videoRef}
                 src="/bookmyticket/videoplayback.mp4"
                 preload="metadata"
-                poster="/og-image.png"
                 autoPlay
                 loop
                 muted

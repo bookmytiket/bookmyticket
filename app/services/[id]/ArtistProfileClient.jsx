@@ -191,7 +191,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                             <span className="font-bold text-black text-[17px]">Safe Checkout</span>
                         </div>
 
-                        <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-6 md:p-10 relative">
+                        <div id="booking-form" className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-6 md:p-10 relative">
                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
                                  Booking Confirmation
                             </h3>

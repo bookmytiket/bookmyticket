@@ -48,8 +48,9 @@ export default function EventDetailClient({ id }) {
 
     // Fetch user bookings to check if they've already booked this event
     const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
-        user?.id ? q.eq('user_id', user.id) : q.eq('user_id', 'none'),
-        [user?.id]
+        q.eq('user_id', user?.id),
+        [user?.id],
+        { enabled: !!user?.id }
     );
     
     // Check if this specific event is already booked by the user
@@ -134,12 +135,12 @@ export default function EventDetailClient({ id }) {
         <main className="min-h-screen bg-[#fafbfc] pt-[40px] md:pt-[60px] pb-24">
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-4">
                 
-                {/* High Impact Wide Banner Card */}
-                <div className="w-full h-[280px] md:h-[480px] rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl relative mb-6 border-4 border-white group">
+                {/* Compact High Impact Wide Banner Card */}
+                <div className="w-full h-[200px] md:h-[350px] rounded-[24px] md:rounded-[32px] overflow-hidden shadow-xl relative mb-4 border-2 border-white group">
                     <img src={event.img || DEFAULT_IMG} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     
-                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
                         <div className="max-w-[1200px] mx-auto w-full">
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">

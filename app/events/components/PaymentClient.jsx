@@ -18,8 +18,9 @@ export default function PaymentClient({ eventId }) {
     const [paypalClientId, setPaypalClientId] = useState("");
 
     const { data: booking } = useSupabaseQuery('bookings', (q) => 
-        bookingId ? q.eq('id', bookingId).single() : q.eq('id', 'none'),
-        [bookingId]
+        q.eq('id', bookingId).single(),
+        [bookingId],
+        { enabled: !!bookingId }
     );
     const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 

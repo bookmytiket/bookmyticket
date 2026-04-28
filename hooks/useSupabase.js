@@ -9,10 +9,10 @@ import { supabase } from "@/lib/supabase";
  * @param {object} options Configuration options: { realtime, retryCount, initialData }
  */
 export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options = {}) {
-  const { realtime = true, initialData = undefined } = options;
+  const { realtime = true, initialData = undefined, enabled = true } = options;
   
   const [data, setData] = useState(initialData);
-  const [loading, setLoading] = useState(!initialData);
+  const [loading, setLoading] = useState(enabled && !initialData);
   const [error, setError] = useState(null);
   
   const isMounted = React.useRef(true);
@@ -88,6 +88,11 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
 
   useEffect(() => {
     isMounted.current = true;
+    
+    if (!enabled) {
+        setLoading(false);
+        return;
+    }
     
     // Set loading to true whenever dependencies change to trigger fresh fetch
     setLoading(true);

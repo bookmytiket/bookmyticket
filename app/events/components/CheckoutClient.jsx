@@ -50,8 +50,9 @@ export default function CheckoutClient({ id }) {
     const bookingIdFromUrl = searchParams.get('bookingId');
     const isSuccess = searchParams.get('success') === 'true';
     const { data: existingBooking } = useSupabaseQuery('bookings', (q) => 
-        bookingIdFromUrl ? q.eq('id', bookingIdFromUrl).single() : q.eq('id', 'none'),
-        [bookingIdFromUrl]
+        q.eq('id', bookingIdFromUrl).single(),
+        [bookingIdFromUrl],
+        { enabled: !!bookingIdFromUrl }
     );
 
     useEffect(() => {

@@ -913,26 +913,6 @@ function HomeClient() {
 
               <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
                 
-                {/* DYNAMIC HEADING SECTION */}
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8 }}
-                  style={{ marginBottom: '60px' }}
-                >
-                  <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.04em', lineHeight: 1.1 }}>
-                    Book Your Next <br />
-                    <span style={{ background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                      Experience on BookMyTicket
-                    </span>
-                  </h2>
-                  <p style={{ fontSize: '18px', color: '#475569', lineHeight: 1.6, maxWidth: '900px', marginBottom: '32px', fontWeight: 500, borderLeft: '4px solid #f844a4', paddingLeft: '20px' }}>
-                    Explore concerts, shows, nightlife, and exclusive experiences happening around you. 
-                    BookMyTicket helps you discover and book live events, sports turf slots, and professional services near you. 
-                    Find concerts, local events, and trusted service providers easily in India's top cities.
-                  </p>
-                </motion.div>
 
                 {/* SLIDING UI SECTION: Features */}
                 <div className="sliding-features-wrap" style={{ 
@@ -1044,38 +1024,6 @@ function HomeClient() {
                   }
                 `}</style>
 
-                {/* DYNAMIC UI SECTION: Why Book With BookMyTicket? */}
-                <WhyChooseUs />
-
-                {/* Content Expansion for Text-to-Code Ratio Improvement */}
-                <div style={{ marginTop: '100px', backgroundColor: '#f8fafc', padding: '60px 40px', borderRadius: '32px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', marginBottom: '24px' }}>Discover the Best Events & Services Near You</h2>
-                    <p style={{ fontSize: '16px', color: '#475569', lineHeight: 1.8, marginBottom: '32px' }}>
-                      Whether you are looking for the latest <strong>music concerts</strong>, high-energy <strong>sports events</strong>, or a quiet evening at the <strong>theater</strong>, BookMyTicket is your ultimate destination. We specialize in providing a seamless <strong>online ticketing platform</strong> that connects fans with their favorite experiences. From the pulse of <strong>nightlife events</strong> to the strategic thrill of <strong>board game meetups</strong>, our platform covers every niche of entertainment.
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '40px', textAlign: 'left' }}>
-                      <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>🏟️ Sports & Turf Booking</h3>
-                        <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6 }}>
-                          Looking to play? Book <strong>cricket turfs</strong>, football grounds, and badminton courts instantly. We provide real-time availability for the best sports venues in your city, ensuring you never miss a game.
-                        </p>
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>🎨 Professional Services</h3>
-                        <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6 }}>
-                          Need an expert? Browse our directory of <strong>verified service providers</strong>. From professional photographers to wedding mehendi artists, we help you find and book the right talent for your special occasions.
-                        </p>
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>🎟️ Seamless Ticketing</h3>
-                        <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6 }}>
-                          Experience the future of <strong>digital ticketing</strong>. Our platform offers instant confirmations, secure payments, and easy entry with e-tickets, making your <strong>event experience</strong> stress-free from start to finish.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 <div style={{ width: '100%', maxWidth: '1240px', margin: '60px auto 0' }}>
                   <PublicReviewsBanner />
