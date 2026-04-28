@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 function useCountdown(targetDate) {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
@@ -8,7 +9,6 @@ function useCountdown(targetDate) {
     useEffect(() => {
         if (!targetDate) return;
         const calc = () => {
-            // Normalize "YYYY-MM-DD HH:mm" to "YYYY-MM-DDTHH:mm" for cross-browser consistency
             const normalized = String(targetDate).includes(' ') && !String(targetDate).includes('T') 
                 ? String(targetDate).replace(' ', 'T') 
                 : targetDate;
@@ -33,16 +33,16 @@ function TimerBox({ value, label }) {
     return (
         <div style={{
             background: "#fff",
-            borderRadius: "10px",
-            padding: "10px 14px",
+            borderRadius: "6px",
+            padding: "6px 8px",
             textAlign: "center",
-            minWidth: "62px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            minWidth: "48px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
         }}>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#111827", lineHeight: 1 }}>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#111827", lineHeight: 1 }}>
                 {String(value).padStart(2, "0")}
             </div>
-            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "4px" }}>
+            <div style={{ fontSize: "8px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "2px" }}>
                 {label}
             </div>
         </div>
@@ -51,9 +51,23 @@ function TimerBox({ value, label }) {
 
 export default function ComingSoonEvents({ events = [] }) {
     const [idx, setIdx] = useState(0);
+    const [direction, setDirection] = useState(0); // 1 for right, -1 for left
     const [isHovered, setIsHovered] = useState(false);
+    
+    const BADGES = [
+        { label: "Trending", color: "#fff", bg: "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)" },
+        { label: "Recommended", color: "#fff", bg: "linear-gradient(90deg, #6366f1 0%, #3b82f6 100%)" },
+        { label: "Exclusive", color: "#fff", bg: "linear-gradient(90deg, #f43f5e 0%, #d946ef 100%)" }
+    ];
+    const [badgeIdx, setBadgeIdx] = useState(0);
 
-    // Filter events that have a targetDate or are marked as featured/special
+    useEffect(() => {
+        const t = setInterval(() => {
+            setBadgeIdx(prev => (prev + 1) % BADGES.length);
+        }, 3000);
+        return () => clearInterval(t);
+    }, []);
+
     const now = new Date();
     const parseEventDate = (dateStr, timeStr) => {
         if (!dateStr) return null;
@@ -63,12 +77,10 @@ export default function ComingSoonEvents({ events = [] }) {
                 const parts = dt.split(/[-/]/);
                 dt = `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
-            
             if (dt.includes('T') || dt.includes(' ')) {
                 const d = new Date(dt.replace(' ', 'T'));
                 return isNaN(d.getTime()) ? null : d;
             }
-
             let normalizedTime = "23:59";
             if (timeStr) {
                 let t = String(timeStr).trim().toUpperCase();
@@ -83,7 +95,6 @@ export default function ComingSoonEvents({ events = [] }) {
                     normalizedTime = t.includes(':') ? t : `${t}:00`;
                 }
             }
-            
             const eventDate = new Date(`${dt}T${normalizedTime}`);
             return isNaN(eventDate.getTime()) ? null : eventDate;
         } catch (_) { return null; }
@@ -98,31 +109,51 @@ export default function ComingSoonEvents({ events = [] }) {
     const event = COMING_SOON_EVENTS[idx] || {};
     const timeLeft = useCountdown(event.date);
 
-    const prev = () => setIdx((i) => (i - 1 + COMING_SOON_EVENTS.length) % COMING_SOON_EVENTS.length);
-    const next = () => setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);
+    const prev = () => {
+        setDirection(-1);
+        setIdx((i) => (i - 1 + COMING_SOON_EVENTS.length) % COMING_SOON_EVENTS.length);
+    };
+    const next = () => {
+        setDirection(1);
+        setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);
+    };
 
     useEffect(() => {
         if (isHovered || COMING_SOON_EVENTS.length <= 1) return;
         const timer = setInterval(() => {
+            setDirection(1);
             setIdx((i) => (i + 1) % COMING_SOON_EVENTS.length);
-        }, 5000);
+        }, 6000);
         return () => clearInterval(timer);
     }, [isHovered, COMING_SOON_EVENTS.length]);
 
-    if (COMING_SOON_EVENTS.length === 0) {
-        return null;
-    }
+    if (COMING_SOON_EVENTS.length === 0) return null;
+
+    const variants = {
+        enter: (dir) => ({
+            x: dir > 0 ? 1000 : -1000,
+            opacity: 0
+        }),
+        center: {
+            x: 0,
+            opacity: 1
+        },
+        exit: (dir) => ({
+            x: dir < 0 ? 1000 : -1000,
+            opacity: 0
+        })
+    };
 
     return (
         <section
-            style={{ width: "100%", backgroundColor: "#fff", padding: "36px 0 32px" }}
+            style={{ width: "100%", backgroundColor: "#fff", padding: "24px 0", overflow: "hidden" }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>
-                <div style={{ marginBottom: "20px" }}>
+                <div style={{ marginBottom: "16px" }}>
                     <h2 style={{
-                        fontSize: "28px",
+                        fontSize: "26px",
                         fontWeight: 900,
                         color: "#111827",
                         margin: 0,
@@ -140,51 +171,156 @@ export default function ComingSoonEvents({ events = [] }) {
                             display: 'inline-block'
                         }}>Soon</span> 🎯
                     </h2>
-                    <p style={{ fontSize: "13px", color: "#9ca3af", margin: "4px 0 0", fontWeight: 500 }}>
-                        Handpicked experiences and standout events you won't want to miss!
-                    </p>
                 </div>
 
-                <div style={{
-                    display: "flex",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-                    border: "1px solid #f0f0f0",
-                    minHeight: "260px",
-                    background: "#fff",
-                }}>
-                    <div style={{ flex: "0 0 60%", position: "relative", overflow: "hidden" }}>
-                        <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <div style={{ position: "absolute", top: "16px", right: "16px", background: "#fff", color: "#111", fontSize: "10px", fontWeight: 800, padding: "5px 12px", borderRadius: "6px" }}>
-                            {event.category || "Featured"}
-                        </div>
-                    </div>
+                <div style={{ position: "relative", height: "380px" }}>
+                    <AnimatePresence initial={false} custom={direction}>
+                        <motion.div
+                            key={idx}
+                            custom={direction}
+                            variants={variants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{
+                                x: { type: "spring", stiffness: 300, damping: 30 },
+                                opacity: { duration: 0.2 }
+                            }}
+                            style={{
+                                position: "absolute",
+                                width: "100%",
+                                display: "grid",
+                                gridTemplateColumns: "1.8fr 1fr",
+                                borderRadius: "24px",
+                                overflow: "hidden",
+                                boxShadow: "0 15px 50px rgba(0,0,0,0.12)",
+                                border: "1px solid #f1f5f9",
+                                height: "380px",
+                                background: "#fff",
+                            }}
+                        >
+                            {/* Left Grid: Banner Image */}
+                            <div style={{ position: "relative", overflow: "hidden" }}>
+                                <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                <div style={{ position: "absolute", top: "20px", left: "20px", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", color: "#fff", fontSize: "11px", fontWeight: 800, padding: "6px 14px", borderRadius: "8px", textTransform: "uppercase" }}>
+                                    {event.category || "Featured"}
+                                </div>
+                            </div>
 
-                    <div style={{ flex: "0 0 40%", background: "#fff5f5", padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                        <div>
-                            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#111827", margin: "0 0 14px" }}>{event.title}</h3>
-                            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-                                <TimerBox value={timeLeft.days} label="Days" />
-                                <TimerBox value={timeLeft.hours} label="Hours" />
-                                <TimerBox value={timeLeft.mins} label="Mins" />
-                                <TimerBox value={timeLeft.secs} label="Secs" />
+                            {/* Right Grid: Timer & Content */}
+                            <div style={{ 
+                                background: "#fff", 
+                                padding: "40px 30px", 
+                                display: "flex", 
+                                flexDirection: "column", 
+                                justifyContent: "space-between",
+                                position: "relative",
+                                overflow: "hidden" 
+                            }}>
+                                {/* Dynamic Glitch-Mesh Background */}
+                                <div style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    zIndex: 0,
+                                    overflow: "hidden"
+                                }}>
+                                    <img 
+                                        src={event.img} 
+                                        alt="" 
+                                        style={{ 
+                                            width: "140%", 
+                                            height: "140%", 
+                                            position: "absolute",
+                                            top: "-20%",
+                                            left: "-20%",
+                                            objectFit: "cover",
+                                            filter: "blur(80px) saturate(2)",
+                                            opacity: 0.15,
+                                            transform: "rotate(-5deg)"
+                                        }} 
+                                    />
+                                </div>
+
+                                {/* Dynamic Rotating Badge with 3D Flip */}
+                                <div style={{ position: "absolute", top: "20px", right: "20px", zIndex: 1, perspective: "1000px" }}>
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={badgeIdx}
+                                            initial={{ rotateX: -90, opacity: 0 }}
+                                            animate={{ rotateX: 0, opacity: 1 }}
+                                            exit={{ rotateX: 90, opacity: 0 }}
+                                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                                            style={{
+                                                background: BADGES[badgeIdx].bg,
+                                                color: BADGES[badgeIdx].color,
+                                                fontSize: "11px",
+                                                fontWeight: 800,
+                                                padding: "4px 14px",
+                                                borderRadius: "20px",
+                                                textTransform: "capitalize",
+                                                letterSpacing: "0.02em",
+                                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                minWidth: "100px",
+                                                backfaceVisibility: "hidden",
+                                                transformStyle: "preserve-3d"
+                                            }}
+                                        >
+                                            {BADGES[badgeIdx].label}
+                                        </motion.div>
+                                    </AnimatePresence>
+                                </div>
+
+                                <div style={{ position: "relative", zIndex: 1 }}>
+                                    <h3 style={{ fontSize: "28px", fontWeight: 900, color: "#111827", margin: "0 0 20px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{event.title}</h3>
+                                    
+                                    <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
+                                        <TimerBox value={timeLeft.days} label="Days" />
+                                        <TimerBox value={timeLeft.hours} label="Hours" />
+                                        <TimerBox value={timeLeft.mins} label="Mins" />
+                                        <TimerBox value={timeLeft.secs} label="Secs" />
+                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "30px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <span style={{ fontSize: "16px", color: "#f84464" }}>📅</span>
+                                            <span style={{ fontSize: "15px", color: "#475569", fontWeight: 700 }}>{event.date}</span>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <span style={{ fontSize: "16px", color: "#f84464" }}>📍</span>
+                                            <span style={{ fontSize: "15px", color: "#475569", fontWeight: 700 }}>{event.location}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ position: "relative", zIndex: 1 }}>
+                                    <Link href={`/events/detail?id=${event.id}`}>
+                                        <button style={{ 
+                                            background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", 
+                                            color: "#fff", 
+                                            border: "none", 
+                                            borderRadius: "12px", 
+                                            padding: "14px 32px", 
+                                            fontWeight: 800, 
+                                            cursor: "pointer", 
+                                            boxShadow: "0 10px 20px rgba(248, 68, 164, 0.25)", 
+                                            fontSize: "15px",
+                                            width: "100%",
+                                            transition: "all 0.2s"
+                                        }}>
+                                            BOOK NOW
+                                        </button>
+                                    </Link>
+                                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
+                                        <button onClick={prev} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+                                        <button onClick={next} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "20px" }}>
-                                <span style={{ fontSize: "12px", color: "#374151" }}>{event.date}</span>
-                                <span style={{ fontSize: "12px", color: "#374151" }}>{event.location}</span>
-                            </div>
-                                <Link href={`/events/detail?id=${event.id}`}>
-                                    <button style={{ background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", color: "#fff", border: "none", borderRadius: "10px", padding: "12px 28px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(248, 68, 164, 0.2)" }}>
-                                        Book Now
-                                    </button>
-                                </Link>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                            <button onClick={prev} style={{ padding: "8px", borderRadius: "50%", border: "1px solid #e5e7eb" }}>←</button>
-                            <button onClick={next} style={{ padding: "8px", borderRadius: "50%", border: "1px solid #e5e7eb" }}>→</button>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </div>
         </section>
