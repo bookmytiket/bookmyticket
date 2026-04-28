@@ -70,6 +70,15 @@ export async function generateMetadata() {
     description,
     keywords,
     metadataBase: new URL(baseUrl),
+    icons: {
+      icon: [
+        { url: '/favicon.jpeg?v=3', type: 'image/jpeg' },
+      ],
+      shortcut: ['/favicon.jpeg?v=3'],
+      apple: [
+        { url: '/favicon.jpeg?v=3', sizes: '180x180', type: 'image/jpeg' },
+      ],
+    },
     robots: {
       index: true,
       follow: true,
