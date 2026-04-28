@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import DynamicBadge from "./DynamicBadge";
 
 function useCountdown(targetDate) {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
@@ -54,20 +55,6 @@ export default function ComingSoonEvents({ events = [] }) {
     const [direction, setDirection] = useState(0); // 1 for right, -1 for left
     const [isHovered, setIsHovered] = useState(false);
     
-    const BADGES = [
-        { label: "Trending", color: "#fff", bg: "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)" },
-        { label: "Recommended", color: "#fff", bg: "linear-gradient(90deg, #6366f1 0%, #3b82f6 100%)" },
-        { label: "Exclusive", color: "#fff", bg: "linear-gradient(90deg, #f43f5e 0%, #d946ef 100%)" }
-    ];
-    const [badgeIdx, setBadgeIdx] = useState(0);
-
-    useEffect(() => {
-        const t = setInterval(() => {
-            setBadgeIdx(prev => (prev + 1) % BADGES.length);
-        }, 3000);
-        return () => clearInterval(t);
-    }, []);
-
     const now = new Date();
     const parseEventDate = (dateStr, timeStr) => {
         if (!dateStr) return null;
@@ -202,9 +189,6 @@ export default function ComingSoonEvents({ events = [] }) {
                             {/* Left Grid: Banner Image */}
                             <div style={{ position: "relative", overflow: "hidden" }}>
                                 <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                <div style={{ position: "absolute", top: "20px", left: "20px", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)", color: "#fff", fontSize: "11px", fontWeight: 800, padding: "6px 14px", borderRadius: "8px", textTransform: "uppercase" }}>
-                                    {event.category || "Featured"}
-                                </div>
                             </div>
 
                             {/* Right Grid: Timer & Content */}
@@ -241,36 +225,9 @@ export default function ComingSoonEvents({ events = [] }) {
                                     />
                                 </div>
 
-                                {/* Dynamic Rotating Badge with 3D Flip */}
-                                <div style={{ position: "absolute", top: "20px", right: "20px", zIndex: 1, perspective: "1000px" }}>
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={badgeIdx}
-                                            initial={{ rotateX: -90, opacity: 0 }}
-                                            animate={{ rotateX: 0, opacity: 1 }}
-                                            exit={{ rotateX: 90, opacity: 0 }}
-                                            transition={{ duration: 0.5, ease: "easeInOut" }}
-                                            style={{
-                                                background: BADGES[badgeIdx].bg,
-                                                color: BADGES[badgeIdx].color,
-                                                fontSize: "11px",
-                                                fontWeight: 800,
-                                                padding: "4px 14px",
-                                                borderRadius: "20px",
-                                                textTransform: "capitalize",
-                                                letterSpacing: "0.02em",
-                                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                minWidth: "100px",
-                                                backfaceVisibility: "hidden",
-                                                transformStyle: "preserve-3d"
-                                            }}
-                                        >
-                                            {BADGES[badgeIdx].label}
-                                        </motion.div>
-                                    </AnimatePresence>
+                                {/* Dynamic Flipping Badge (Restored & Replaced static SPORTS) */}
+                                <div style={{ position: "absolute", top: "20px", right: "20px", zIndex: 1 }}>
+                                    <DynamicBadge size="medium" />
                                 </div>
 
                                 <div style={{ position: "relative", zIndex: 1 }}>

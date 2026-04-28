@@ -1,4 +1,5 @@
 "use client";
+import DynamicBadge from '@/components/DynamicBadge';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -18,18 +19,14 @@ import {
     Share2,
     Heart,
     Video,
-    Lock,
-    ExternalLink,
     Play,
-    CheckCircle2,
-    Sparkles
+    CheckCircle2
 } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
-import { isVirtualEvent } from '@/app/utils/eventUtils';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const DEFAULT_FEATURES = [
@@ -46,14 +43,12 @@ export default function EventDetailClient({ id }) {
     const { data: convexEvents } = useSupabaseQuery('events', (q) => q.or('status.eq.published,status.eq.Active'), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
 
-    // Fetch user bookings to check if they've already booked this event
     const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
         q.eq('user_id', user?.id),
         [user?.id],
         { enabled: !!user?.id }
     );
     
-    // Check if this specific event is already booked by the user
     const existingBooking = useMemo(() => {
         if (!userBookings || !id) return null;
         return userBookings.find(b => String(b.event_id) === String(id));
@@ -144,9 +139,6 @@ export default function EventDetailClient({ id }) {
                         <div className="max-w-[1200px] mx-auto w-full">
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
-                                    <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg">
-                                        {event.category || 'Event'}
-                                    </span>
                                 </div>
                                 <h1 className="text-white text-[32px] md:text-[64px] font-bold uppercase tracking-tight leading-tight mt-2 drop-shadow-2xl">
                                     {event.title}
@@ -166,6 +158,16 @@ export default function EventDetailClient({ id }) {
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                     </Link>
+
+                    {/* Dynamic Flipping Badge Overlay (Replaces massive static SPORTS) */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '20px',
+                        right: '20px',
+                        zIndex: 10
+                    }}>
+                        <DynamicBadge size="medium" />
+                    </div>
                 </div>
 
                 {/* Info Bar below Banner */}
@@ -188,12 +190,6 @@ export default function EventDetailClient({ id }) {
                         
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <span className="px-6 py-2 bg-slate-900 text-white text-[12px] font-bold uppercase tracking-widest rounded-2xl">
-                                    {event.category || 'Concert'}
-                                </span>
-                                <span className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-[12px] font-bold uppercase tracking-widest rounded-2xl shadow-lg">
-                                    Recommended
-                                </span>
                             </div>
                         </div>
 
@@ -201,9 +197,12 @@ export default function EventDetailClient({ id }) {
                             <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/5 rounded-bl-full -z-0" />
                             
                             <div className="relative z-10">
-                                <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight mb-8 flex items-center gap-3">
-                                    <Info className="text-pink-500" size={28} /> About the Event
-                                </h3>
+                                <div className="flex items-center justify-between mb-8">
+                                    <h3 className="text-2xl font-bold text-[#111827] uppercase tracking-tight m-0 flex items-center gap-3">
+                                        <Info className="text-pink-500" size={28} /> About the Event
+                                    </h3>
+                                    <DynamicBadge size="large" />
+                                </div>
                                 <p className="text-[17px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-12">
                                     {event.description}
                                 </p>
@@ -294,8 +293,8 @@ export default function EventDetailClient({ id }) {
                                 <div className="w-16 h-16 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-lg">
                                     <Warehouse size={32} />
                                 </div>
-                                <div>
-                                    <div className="text-lg font-bold text-slate-900 uppercase tracking-tight leading-tight">Motta Maadi Music</div>
+                                <div className="min-w-0">
+                                    <div className="text-lg font-bold text-slate-900 uppercase tracking-tight leading-tight truncate">Motta Maadi Music</div>
                                     <div className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">Loved by event-goers</div>
                                 </div>
                             </div>

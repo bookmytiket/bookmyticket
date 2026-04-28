@@ -1,4 +1,5 @@
 "use client";
+import DynamicBadge from '@/components/DynamicBadge';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -331,8 +332,11 @@ export default function EventBookClient({ id }) {
                     {/* Order Summary */}
                     <div className="event-detail-right-col" style={{ position: 'sticky', top: '110px' }}>
                         <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                            <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+                            <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', position: 'relative' }}>
                                 <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
+                                    <DynamicBadge size="small" />
+                                </div>
                             </div>
                             <p style={{ fontWeight: 700, margin: '0 0 8px 0', color: '#111827' }}>{event.title}</p>
                             <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>{event.date}{event.time ? ` · ${event.time}` : ''}</p>
