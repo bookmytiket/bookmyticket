@@ -520,8 +520,22 @@ export default function SignInPage() {
                     .hide-on-mobile { display: none !important; }
                     .signin-wrapper { justify-content: center !important; }
                 }
+                @media (max-width: 640px) {
+                    .phone-mockup {
+                        width: 100% !important;
+                        height: 100vh !important;
+                        max-width: 100% !important;
+                        max-height: 100vh !important;
+                        border: none !important;
+                        border-radius: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .phone-notch { display: none !important; }
+                    .phone-status-bar { padding-top: 20px !important; }
+                }
                 /* Phone mockup frame stays consistent across all devices */
-                body { overflow: hidden; margin: 0; }
+                body { overflow-x: hidden; margin: 0; }
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             ` }} />
@@ -670,7 +684,7 @@ export default function SignInPage() {
                 )}
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
-                <div style={{ 
+                <div className="phone-mockup" style={{ 
                     width: "350px", 
                     maxWidth: "92vw",
                     height: "700px", 
@@ -737,14 +751,10 @@ export default function SignInPage() {
                     <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "4px", marginTop: "10px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "10px" }}>
                             <Link href="/">
                                 <div style={{ position: "relative" }}>
-                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "45px", width: "auto", display: "block", cursor: "pointer" }} />
-                                    {/* Hand-drawn effect rays from image */}
-                                    <div style={{ position: "absolute", top: "-6px", left: "50%", transform: "translateX(-50%)" }}>
-                                        <svg width="24" height="12" viewBox="0 0 40 20"><path d="M5 15L10 5M20 18L20 2M35 15L30 5" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
-                                    </div>
+                                    <img src="/logo.png" alt="BookMyTicket" style={{ height: "70px", width: "auto", display: "block", cursor: "pointer" }} />
                                 </div>
                             </Link>
                         </div>
@@ -752,8 +762,8 @@ export default function SignInPage() {
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                                    <h1 style={{ fontSize: "20px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 1px" }}>
+                                <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                                    <h1 style={{ fontSize: "26px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
                                         Welcome
                                     </h1>
                                     <p style={{ fontSize: "13px", color: "#64748b", margin: 0, fontWeight: 500 }}>

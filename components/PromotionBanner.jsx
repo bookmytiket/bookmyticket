@@ -25,7 +25,6 @@ export default function PromotionBanner() {
                 gap: "min(24px, 4vw)",
                 alignItems: "center",
                 whiteSpace: "nowrap",
-                animation: "blink 3s step-end infinite",
                 padding: "0 10px"
             }}>
                 {activePromos.map((promo, idx) => (
@@ -61,10 +60,6 @@ export default function PromotionBanner() {
             <style>{`
                 @keyframes rainbow {
                     to { background-position: 200% center; }
-                }
-                @keyframes blink {
-                    from, to { opacity: 1; }
-                    50% { opacity: 0; }
                 }
             `}</style>
         </div>

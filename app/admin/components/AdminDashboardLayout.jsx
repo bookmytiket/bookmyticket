@@ -137,7 +137,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Admin Portal</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+
                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Super Admin</span>
                     </div>
                 </div>

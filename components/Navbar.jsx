@@ -266,12 +266,8 @@ export default function Navbar() {
   const [brandingLogo, setBrandingLogo] = useState("/logo.png");
 
   useEffect(() => {
-    fetch('/api/branding')
-      .then(res => res.json())
-      .then(data => {
-        if (data.logo_url) setBrandingLogo(data.logo_url);
-      })
-      .catch(console.error);
+    // Branding logo is now strictly /logo.png
+    setBrandingLogo("/logo.png");
   }, []);
 
   return (

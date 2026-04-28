@@ -796,7 +796,23 @@ function OrganiserPanel() {
     const [events, setEvents] = useState([]);
     useEffect(() => {
         if (eventsData) {
-            setEvents(eventsData.map(e => ({ ...e, id: e.id })));
+            const now = new Date();
+            const processed = eventsData.map(e => {
+                let status = e.status || 'published';
+                // Check if event has passed its date/time
+                if (status === 'published' && e.date) {
+                    try {
+                        const eventDateTime = new Date(`${e.date}T${e.time || '23:59'}`);
+                        if (eventDateTime < now) {
+                            status = 'expired';
+                        }
+                    } catch (err) {
+                        console.error("Error parsing event date:", e.date, e.time, err);
+                    }
+                }
+                return { ...e, id: e.id, status };
+            });
+            setEvents(processed);
         }
     }, [eventsData]);
 
@@ -2569,7 +2585,7 @@ function OrganiserPanel() {
                                     <div className="overview-card-icon" style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10b981", width: "56px", height: "56px" }}>
                                         <Activity size={28} />
                                     </div>
-                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(events.filter(e => e.status === "Active").length).toLocaleString()}</p>
+                                    <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(events.filter(e => e.status !== "expired" && e.status !== "draft").length).toLocaleString()}</p>
                                     <p style={{ fontSize: "13px", fontWeight: 600, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>Active Events</p>
                                 </div>
                                 <div className="overview-card" style={{ borderTop: "4px solid #8b5cf6" }}>
@@ -3668,7 +3684,17 @@ function OrganiserPanel() {
                                                         <div style={{ fontSize: "11px", color: t.textSub }}>Total Capacity</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#22c55e20", color: "#22c55e" }}>ACTIVE</span>
+                                                        <span style={{ 
+                                                            padding: "6px 14px", 
+                                                            borderRadius: "100px", 
+                                                            fontSize: "11px", 
+                                                            fontWeight: 800, 
+                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                            color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
+                                                            textTransform: "uppercase"
+                                                        }}>
+                                                            {ev.status || 'draft'}
+                                                        </span>
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
@@ -3744,7 +3770,17 @@ function OrganiserPanel() {
                                                         <div style={{ fontSize: "11px", color: t.textSub }}>Registered Users</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: "#3b82f620", color: "#3b82f6" }}>STREAMING SOON</span>
+                                                        <span style={{ 
+                                                            padding: "6px 14px", 
+                                                            borderRadius: "100px", 
+                                                            fontSize: "11px", 
+                                                            fontWeight: 800, 
+                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                            color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
+                                                            textTransform: "uppercase"
+                                                        }}>
+                                                            {ev.status || 'draft'}
+                                                        </span>
                                                     </td>
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
@@ -4988,7 +5024,7 @@ function OrganiserPanel() {
                     <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50" />
+
                             <span className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.2em] italic">{profile.firstName || "Verified Partner"}</span>
                         </div>
                     </div>

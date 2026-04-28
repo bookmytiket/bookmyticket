@@ -108,7 +108,7 @@ export default function VendorLayout({ children }) {
                             {isTurfVendor ? "Turf Portal" : isPoolVendor ? "Pool Portal" : "Artist Portal"}
                         </p>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
+
                             <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">{user?.category || "Professional Artist"}</span>
                         </div>
                     </div>

@@ -11,26 +11,8 @@ export default function PublicReviewsBanner() {
     const navigation = useNavigation();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const pulseAnim = useState(new Animated.Value(1))[0];
-    const blinkAnim = useState(new Animated.Value(1))[0];
 
     useEffect(() => {
-        // Pulse Animation for icon
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.15, duration: 1000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 1000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-            ])
-        ).start();
-
-        // Blink Animation for text
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(blinkAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-                Animated.timing(blinkAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-            ])
-        ).start();
-
         async function fetchReviews() {
             try {
                 const { data: reviewsRaw, error: reviewError } = await supabase
@@ -68,12 +50,12 @@ export default function PublicReviewsBanner() {
     return (
         <View style={styles.container}>
             <View style={styles.labelContainer}>
-                <Animated.View style={[styles.iconBox, { transform: [{ scale: pulseAnim }] }]}>
+                <View style={styles.iconBox}>
                     <Ionicons name="chatbox-ellipses" size={14} color="#f84464" />
-                </Animated.View>
+                </View>
                 <View style={{ marginLeft: 8 }}>
                     <Text style={styles.labelText}>FEEDBACK</Text>
-                    <Animated.Text style={[styles.blinkText, { opacity: blinkAnim }]}>LIVE PULSE</Animated.Text>
+                    <Text style={styles.blinkText}>LIVE PULSE</Text>
                 </View>
             </View>
             
@@ -155,6 +137,7 @@ const styles = StyleSheet.create({
         color: '#f84464',
         letterSpacing: 1,
         marginTop: 1,
+        opacity: 1, // Static opacity
     },
     listContent: {
         paddingLeft: 16,

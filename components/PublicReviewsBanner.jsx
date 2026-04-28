@@ -95,7 +95,6 @@ export default function PublicReviewsBanner() {
                     border: '1px solid #fce7f3',
                     marginBottom: '20px'
                 }}>
-                    <div className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f84464' }}></div>
                     <span style={{ fontSize: '10px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Live Pulse Feedback</span>
                 </div>
 
@@ -166,17 +165,9 @@ export default function PublicReviewsBanner() {
             </div>
 
             <style jsx>{`
-                @keyframes pulseDot {
-                    0% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.5); opacity: 0.5; }
-                    100% { transform: scale(1); opacity: 1; }
-                }
                 @keyframes flipCardIn {
                     0% { transform: translateY(30px) rotateX(-45deg); opacity: 0; }
                     100% { transform: translateY(0) rotateX(0deg); opacity: 1; }
-                }
-                .pulse-dot {
-                    animation: pulseDot 2s ease-in-out infinite;
                 }
                 .flip-card-content {
                     animation: flipCardIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;

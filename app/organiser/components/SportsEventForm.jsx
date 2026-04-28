@@ -118,9 +118,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                 ) : (
                     <span className="text-[10px] font-bold uppercase tracking-widest">{opt}</span>
                 )}
-                {isSelected && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse ml-1" />
-                )}
+
             </button>
         );
     };
