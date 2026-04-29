@@ -33,7 +33,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "comm_hub"];
-        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "seo_settings"];
+        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "seo_settings", "terms_settings"];
 
         if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
         if (organizerTabs.includes(activeTab)) setIsOrganizersOpen(true);
@@ -52,6 +52,8 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
             router.push('/admin/settings/seo');
         } else if (id === "comm_hub") {
             router.push('/admin/settings/communication');
+        } else if (id === "terms_settings") {
+            router.push('/admin/settings/terms');
         } else {
             router.push(`/admin?tab=${id}`);
         }
@@ -181,7 +183,8 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                                 { label: "SMS & WhatsApp", id: "comm_hub" },
                                 { label: "Payments", id: "payment_settings" },
                                 { label: "SEO & Analytics", id: "seo_settings" },
-                                { label: "SSO Config", id: "sso_settings" }
+                                { label: "SSO Config", id: "sso_settings" },
+                                { label: "Terms & Conditions", id: "terms_settings" },
                             ].map(sub => (
                                 <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} />
                             ))}

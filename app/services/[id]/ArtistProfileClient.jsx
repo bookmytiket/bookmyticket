@@ -11,6 +11,7 @@ import {
     Calendar, ShieldCheck, User, Mail, Phone, Share2, Heart, Info, Warehouse
 } from "lucide-react";
 import { triggerNotification } from "@/lib/notificationHelper";
+import BookingDisclaimer from "@/components/BookingDisclaimer";
 import CalendarModal from "@/components/booking/CalendarModal";
 import PackageSelector from "@/components/booking/PackageSelector";
 
@@ -434,6 +435,7 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                         <span className="text-[13px] font-bold text-slate-500 leading-tight">I have read and agreed to the <span className="text-pink-500 hover:underline">Service Policies and Terms & Conditions</span></span>
                                     </div>
                                 </div>
+                                <BookingDisclaimer type="service" />
                             </form>
                         </div>
 

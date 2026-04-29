@@ -29,6 +29,135 @@ import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
+
+/* ── Helpers ── */
+function parseEventDate(dateStr, timeStr) {
+    if (!dateStr) return null;
+    try {
+        let dt = String(dateStr).trim();
+        if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+            const p = dt.split(/[-/]/);
+            dt = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+        const nd = dt.includes(' ') && !dt.includes('T') ? dt.replace(' ', 'T') : dt;
+        let nt = '23:59';
+        if (timeStr) {
+            const t = String(timeStr).trim().toUpperCase();
+            const m = t.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)$/);
+            if (m) {
+                let h = parseInt(m[1]), mn = m[2] || '00', ap = m[3];
+                if (ap === 'PM' && h < 12) h += 12;
+                if (ap === 'AM' && h === 12) h = 0;
+                nt = `${String(h).padStart(2,'0')}:${mn}`;
+            } else nt = t.includes(':') ? t : `${t}:00`;
+        }
+        const d = new Date(`${nd}T${nt}`);
+        return isNaN(d.getTime()) ? null : d;
+    } catch (_) { return null; }
+}
+
+/* ── Expired Event Page ── */
+function EventExpiredPage({ event, router }) {
+    return (
+        <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#fff5f5 0%,#fdf2f8 50%,#f5f3ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+                {/* Animated clock icon */}
+                <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg,#fee2e2,#fecaca)', border: '3px solid #fca5a5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 8px 32px rgba(239,68,68,0.2)' }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" stroke="#dc2626" strokeWidth="2" />
+                        <line x1="19.07" y1="4.93" x2="16.24" y2="7.76" stroke="#dc2626" strokeWidth="2" />
+                    </svg>
+                </div>
+
+                <div style={{ background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 16px', borderRadius: '100px', fontSize: '11px', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '20px' }}>
+                    ⏰ Event Expired
+                </div>
+
+                <h1 style={{ fontSize: '30px', fontWeight: 900, color: '#111827', letterSpacing: '-0.03em', margin: '0 0 12px', lineHeight: 1.2 }}>
+                    {event?.title || 'This Event'}
+                </h1>
+                <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: '0 0 8px' }}>
+                    This event has already taken place and is no longer accepting bookings.
+                </p>
+                {event?.date && <p style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600, margin: '0 0 32px' }}>Was scheduled for <strong style={{ color: '#374151' }}>{event.date}</strong></p>}
+
+                {/* Info chips */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '36px' }}>
+                    {['🎫 Tickets Closed', '🔒 Booking Ended', '📅 Date Passed'].map(t => (
+                        <span key={t} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '100px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#374151' }}>{t}</span>
+                    ))}
+                </div>
+
+                {/* CTA */}
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => router.push('/events')}
+                        style={{ padding: '14px 32px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg,#f84464,#c026d3)', color: '#fff', fontWeight: 800, fontSize: '14px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(248,68,100,0.3)' }}>
+                        Browse Upcoming Events
+                    </button>
+                    <button onClick={() => router.back()}
+                        style={{ padding: '14px 24px', borderRadius: '14px', border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        </main>
+    );
+}
+
+/* ── Deleted Event Page ── */
+function EventDeletedPage({ router }) {
+    return (
+        <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#fafafa 0%,#f1f5f9 50%,#f5f3ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+                {/* Trash icon */}
+                <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg,#fef3c7,#fde68a)', border: '3px solid #fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 8px 32px rgba(245,158,11,0.2)' }}>
+                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6" /><path d="M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                </div>
+
+                <div style={{ background: '#f59e0b', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 16px', borderRadius: '100px', fontSize: '11px', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '20px' }}>
+                    🗑️ Removed by Organiser
+                </div>
+
+                <h1 style={{ fontSize: '30px', fontWeight: 900, color: '#111827', letterSpacing: '-0.03em', margin: '0 0 12px', lineHeight: 1.2 }}>
+                    Event No Longer Available
+                </h1>
+                <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: '0 0 8px' }}>
+                    This event has been removed or deleted by the organiser. It is no longer available for booking.
+                </p>
+                <p style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600, margin: '0 0 32px' }}>
+                    If you had a booking for this event, please contact the organiser or our support team.
+                </p>
+
+                {/* Info chips */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '36px' }}>
+                    {['🚫 Event Removed', '📞 Contact Support', '🔍 Find Alternatives'].map(t => (
+                        <span key={t} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '100px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#374151' }}>{t}</span>
+                    ))}
+                </div>
+
+                {/* CTA */}
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => router.push('/events')}
+                        style={{ padding: '14px 32px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg,#f84464,#c026d3)', color: '#fff', fontWeight: 800, fontSize: '14px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(248,68,100,0.3)' }}>
+                        Browse Events
+                    </button>
+                    <Link href="/support" style={{ textDecoration: 'none' }}>
+                        <button style={{ padding: '14px 24px', borderRadius: '14px', border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
+                            Contact Support
+                        </button>
+                    </Link>
+                </div>
+            </div>
+        </main>
+    );
+}
 const DEFAULT_FEATURES = [
     { icon: '🛡️', label: 'All safety measures enabled' },
     { icon: '🪑', label: 'Seating (FCFS)' },
@@ -102,6 +231,10 @@ export default function EventDetailClient({ id }) {
         } catch (_) { }
     }, [event]);
 
+    /* ── Check expired (event found but date passed) ── */
+    const eventDate = event ? parseEventDate(event.rawDate || event.date, event.rawTime || event.time) : null;
+    const isExpired = eventDate ? eventDate < new Date() : false;
+
     if (!event) {
         if (convexEvents === undefined || !storageLoaded) {
             return (
@@ -112,19 +245,12 @@ export default function EventDetailClient({ id }) {
                 </main>
             );
         }
-        return (
-            <main style={{ backgroundColor: '#f9fafb', minHeight: '100vh', paddingTop: '150px', textAlign: 'center' }}>
-                <div className="container">
-                    <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#111827' }}>Event Not Found</h2>
-                    <p style={{ color: '#6b7280', marginTop: '10px' }}>The event you are looking for does not exist or has been removed.</p>
-                    <Link href="/">
-                        <button style={{ marginTop: '20px', padding: '12px 24px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                            Back to Home
-                        </button>
-                    </Link>
-                </div>
-            </main>
-        );
+        // Event not found in DB → deleted by organiser
+        return <EventDeletedPage router={router} />;
+    }
+
+    if (isExpired) {
+        return <EventExpiredPage event={event} router={router} />;
     }
 
     return (

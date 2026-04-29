@@ -620,7 +620,7 @@ function AdminHomePage() {
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "comm_hub"];
-        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub"];
+        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings"];
 
         if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
         if (organizerTabs.includes(activeTab)) setIsOrganizersOpen(true);
@@ -808,6 +808,27 @@ function AdminHomePage() {
 
     const { data: policiesArr = [] } = useSupabaseQuery('policies', q => q, [], { realtime: false });
     const [updatePolicies] = useSupabaseMutation('policies', 'update', (q, p) => q.eq('id', p.id));
+
+    // ── Local buffer so copy-paste isn't interrupted by DB re-renders ──
+    const [localPolicies, setLocalPolicies] = useState({
+        booking_header: "",
+        payment_terms: "",
+        event_disclaimer: "",
+        cancellation_policy: ""
+    });
+    const [isSavingPolicies, setIsSavingPolicies] = useState(false);
+
+    // Sync local state when DB data arrives (initial load only)
+    useEffect(() => {
+        if (policiesArr[0]) {
+            setLocalPolicies({
+                booking_header: policiesArr[0].booking_header || "",
+                payment_terms: policiesArr[0].payment_terms || "",
+                event_disclaimer: policiesArr[0].event_disclaimer || "",
+                cancellation_policy: policiesArr[0].cancellation_policy || ""
+            });
+        }
+    }, [policiesArr[0]?.id]);  // only re-sync when the record itself changes, not on every field update
 
     const { data: ssoSettingsArr = [] } = useSupabaseQuery('sso_settings', q => q, [], { realtime: true });
     const [updateSsoSettings] = useSupabaseMutation('sso_settings', 'upsert');
@@ -2087,6 +2108,7 @@ function AdminHomePage() {
                                             { label: "SEO & Analytics", id: "seo_settings", onClick: () => router.push('/admin/settings/seo') },
                                             { label: "Email Templates", id: "email_templates" },
                                             { label: "Disclaimers", id: "disclaimer_settings" },
+                                            { label: "Terms & Conditions", id: "terms_settings", onClick: () => router.push('/admin/settings/terms') },
                                             { label: "SSO Config", id: "sso_settings" },
                                             { label: "Tickets & Notifs", id: "ticket_settings" }
                                         ].map(sub => (
@@ -5057,10 +5079,10 @@ function AdminHomePage() {
                                             <label style={{ fontSize: "15px", fontWeight: 700, color: t.textMain }}>Booking Header Disclaimer</label>
                                         </div>
                                         <textarea
-                                            value={disclaimerContent.booking_header}
-                                            onChange={(e) => updatePolicies({ ...policiesArr[0], booking_header: e.target.value })}
+                                            value={localPolicies.booking_header}
+                                            onChange={(e) => setLocalPolicies(p => ({ ...p, booking_header: e.target.value }))}
                                             rows={3}
-                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
+                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6", resize: "vertical", boxSizing: "border-box" }}
                                         />
                                         <p style={{ margin: "6px 0 0", fontSize: "11px", color: t.textSub }}>Displayed at the top of the event booking page.</p>
                                     </div>
@@ -5071,10 +5093,10 @@ function AdminHomePage() {
                                             <label style={{ fontSize: "15px", fontWeight: 700, color: t.textMain }}>Payment Terms Disclaimer</label>
                                         </div>
                                         <textarea
-                                            value={disclaimerContent.payment_terms}
-                                            onChange={(e) => updatePolicies({ ...policiesArr[0], payment_terms: e.target.value })}
+                                            value={localPolicies.payment_terms}
+                                            onChange={(e) => setLocalPolicies(p => ({ ...p, payment_terms: e.target.value }))}
                                             rows={3}
-                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6" }}
+                                            style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "14px", lineHeight: "1.6", resize: "vertical", boxSizing: "border-box" }}
                                         />
                                         <p style={{ margin: "6px 0 0", fontSize: "11px", color: t.textSub }}>Shown above the 'Pay Now' button during checkout.</p>
                                     </div>
@@ -5083,30 +5105,41 @@ function AdminHomePage() {
                                         <div>
                                             <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Event Content Policy</label>
                                             <textarea
-                                                value={disclaimerContent.event_disclaimer}
-                                                onChange={(e) => updatePolicies({ ...policiesArr[0], event_disclaimer: e.target.value })}
+                                                value={localPolicies.event_disclaimer}
+                                                onChange={(e) => setLocalPolicies(p => ({ ...p, event_disclaimer: e.target.value }))}
                                                 rows={5}
-                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
+                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5", resize: "vertical", boxSizing: "border-box" }}
                                             />
                                         </div>
                                         <div>
-                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Cancellation & Refund Policy</label>
+                                            <label style={{ display: "block", fontSize: "14px", fontWeight: 700, marginBottom: "10px", color: t.textMain }}>Cancellation &amp; Refund Policy</label>
                                             <textarea
-                                                value={disclaimerContent.cancellation_policy}
-                                                onChange={(e) => updatePolicies({ ...policiesArr[0], cancellation_policy: e.target.value })}
+                                                value={localPolicies.cancellation_policy}
+                                                onChange={(e) => setLocalPolicies(p => ({ ...p, cancellation_policy: e.target.value }))}
                                                 rows={5}
-                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5" }}
+                                                style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, outline: "none", fontSize: "13px", lineHeight: "1.5", resize: "vertical", boxSizing: "border-box" }}
                                             />
                                         </div>
                                     </div>
 
                                     <div style={{ mt: "8px" }}>
                                         <button
-                                            onClick={() => showToast("Legal policies updated successfully!", "success")}
-                                            style={{ backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "14px 28px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", transition: "0.2s", width: "100%" }}
-                                            onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
-                                            onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}>
-                                            Save All Policy Changes
+                                            onClick={async () => {
+                                                setIsSavingPolicies(true);
+                                                try {
+                                                    await updatePolicies({ ...policiesArr[0], ...localPolicies });
+                                                    showToast("Legal policies updated successfully!", "success");
+                                                } catch (err) {
+                                                    showToast("Failed to save policies: " + err.message, "error");
+                                                } finally {
+                                                    setIsSavingPolicies(false);
+                                                }
+                                            }}
+                                            disabled={isSavingPolicies}
+                                            style={{ backgroundColor: isSavingPolicies ? "#93c5fd" : "#3b82f6", color: "#fff", border: "none", padding: "14px 28px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: isSavingPolicies ? "not-allowed" : "pointer", transition: "0.2s", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                                            onMouseOver={(e) => { if (!isSavingPolicies) e.currentTarget.style.backgroundColor = "#2563eb"; }}
+                                            onMouseOut={(e) => { if (!isSavingPolicies) e.currentTarget.style.backgroundColor = "#3b82f6"; }}>
+                                            {isSavingPolicies ? "Saving…" : "Save All Policy Changes"}
                                         </button>
                                     </div>
                                 </div>

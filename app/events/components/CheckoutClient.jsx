@@ -15,6 +15,8 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthContext";
 import { triggerNotification } from "@/lib/notificationHelper";
+import BookingDisclaimer from "@/components/BookingDisclaimer";
+import TermsModal from "@/components/TermsModal";
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
@@ -49,6 +51,8 @@ export default function CheckoutClient({ id }) {
     const router = useRouter();
     const bookingIdFromUrl = searchParams.get('bookingId');
     const isSuccess = searchParams.get('success') === 'true';
+    const [showTermsModal, setShowTermsModal] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const { data: existingBooking } = useSupabaseQuery('bookings', (q) => 
         q.eq('id', bookingIdFromUrl).single(),
         [bookingIdFromUrl],
@@ -345,11 +349,33 @@ export default function CheckoutClient({ id }) {
                                 <div className="pt-10 space-y-3.5">
                                     <label className="flex items-start space-x-3 cursor-pointer">
                                         <div className="relative flex items-start">
-                                            <input type="checkbox" required className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" />
+                                            <input
+                                                type="checkbox"
+                                                required
+                                                checked={termsAccepted}
+                                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]"
+                                            />
                                         </div>
-                                        <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the <a href="#terms" className="text-blue-500 hover:underline">Event Guidelines and Terms & Conditions</a></span>
+                                        <span className="text-[13px] font-semibold text-slate-600">
+                                            I have read and agreed to the{" "}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowTermsModal(true)}
+                                                className="text-blue-500 hover:underline font-bold"
+                                            >
+                                                Event Guidelines and Terms &amp; Conditions
+                                            </button>
+                                        </span>
                                     </label>
                                 </div>
+
+                                <TermsModal
+                                    isOpen={showTermsModal}
+                                    onClose={() => setShowTermsModal(false)}
+                                    onAccept={() => setTermsAccepted(true)}
+                                    type="event"
+                                />
 
                                 <div className="pt-6">
                                     <button 
@@ -361,6 +387,8 @@ export default function CheckoutClient({ id }) {
                                 </div>
                             </form>
                         </div>
+
+                        <BookingDisclaimer type="event" />
                     </div>
 
                     {/* Right: Summary Card */}

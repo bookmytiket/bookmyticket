@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
 import CalendarModal from '@/components/booking/CalendarModal';
 import PackageSelector from '@/components/booking/PackageSelector';
+import BookingDisclaimer from '@/components/BookingDisclaimer';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -378,6 +379,7 @@ export default function EventBookClient({ id }) {
                                 )}
                             </div>
                         )}
+                        <BookingDisclaimer type="event" />
                     </div>
 
                     {/* Order Summary */}

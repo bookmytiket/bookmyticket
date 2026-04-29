@@ -301,8 +301,14 @@ export default function Footer() {
                         ))}
                     </div>
 
-                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px" }}>
-                        {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
+                    <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap", justifyContent: "center" }}>
+                        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px" }}>
+                            {copyright.copyrightText || DEFAULT_COPYRIGHT.copyrightText}
+                        </div>
+                        <a href="/terms" style={{ color: "rgba(255,255,255,0.45)", fontSize: "12px", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "1px", transition: "color 0.2s" }}
+                            onMouseEnter={e => e.currentTarget.style.color = "#f844a4"}
+                            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}
+                        >Terms &amp; Conditions</a>
                     </div>
                 </div>
             </div>
