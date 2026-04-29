@@ -40,6 +40,11 @@ export default function Footer() {
     const { data: allConfig } = useSupabaseQuery('system_config', (q) => q, []);
     const rawCopyright = allConfig?.find(c => c.key === "admin_footer_copyright")?.value;
     const { data: dynamicPagesRaw, error: pagesError } = useSupabaseQuery('pages', (q) => q.eq('show_in_footer', true).order('sort_order'), []);
+    const { data: activeJobs = [] } = useSupabaseQuery('jobs', (q) => q.eq('status', 'open'), []);
+    const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings').maybeSingle(), []);
+    
+    const bannerConfig = bannerConfigRaw?.value || { is_enabled: true };
+    const hasActiveJobs = activeJobs.length > 0 && bannerConfig.is_enabled;
     const dynamicPages = dynamicPagesRaw || [];
     const [isMobile, setIsMobile] = React.useState(false);
 
@@ -229,6 +234,35 @@ export default function Footer() {
                                         onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}
                                     >
                                         {page.title}
+                                        {page.slug === 'careers' && hasActiveJobs && (
+                                            <motion.span 
+                                                animate={{ 
+                                                    opacity: [1, 0.5, 1],
+                                                    scale: [1, 1.05, 1],
+                                                    color: ['#f84464', '#c026d3', '#f84464']
+                                                }}
+                                                transition={{ 
+                                                    duration: 3,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut"
+                                                }}
+                                                style={{ 
+                                                    marginLeft: "12px", 
+                                                    fontSize: "10px", 
+                                                    fontWeight: 900,
+                                                    textTransform: "uppercase",
+                                                    verticalAlign: "middle",
+                                                    letterSpacing: "0.1em",
+                                                    whiteSpace: "nowrap",
+                                                    display: "inline-block",
+                                                    background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
+                                                    WebkitBackgroundClip: "text",
+                                                    WebkitTextFillColor: "transparent",
+                                                }}
+                                            >
+                                                {bannerConfig.text?.includes('!!!') ? 'Join Our Team' : 'We Are Hiring'}
+                                            </motion.span>
+                                        )}
                                     </a>
                                 </li>
                             ))}

@@ -637,6 +637,10 @@ function AdminHomePage() {
     const [isServicesOpen, setIsServicesOpen] = useState(false);
     const [isGrowthOpen, setIsGrowthOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    // Careers Data
+    const { data: jobApplicants = [] } = useSupabaseQuery('job_applications', (q) => q.eq('status', 'new'), []);
+    const newApplicantsCount = jobApplicants.length;
+
     const [isCareersOpen, setIsCareersOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
@@ -1965,7 +1969,7 @@ function AdminHomePage() {
                         const SidebarGroupTitle = ({ title }) => (
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 mb-1 px-4 first:mt-2">{title}</p>
                         );
-                        const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick }) => (
+                        const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick, badge }) => (
                             <button 
                                 onClick={onClick}
                                 className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all  group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
@@ -1973,6 +1977,11 @@ function AdminHomePage() {
                                 <div className="flex items-center space-x-3">
                                     <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
                                     <span className={`text-[11px] uppercase tracking-[0.2em] whitespace-nowrap ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                    {badge > 0 && (
+                                        <span className="ml-2 px-2 py-0.5 bg-pink-500 text-white text-[9px] font-black rounded-full shadow-lg shadow-pink-500/20 animate-pulse">
+                                            {badge}
+                                        </span>
+                                    )}
                                 </div>
                                 <ChevronDown size={14} className={`transition-transform  ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
                             </button>
@@ -2083,7 +2092,7 @@ function AdminHomePage() {
                                 <SidebarGroupTitle title="Administration" />
                                 <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
                                 
-                                <SidebarCategoryHeader label="Careers" icon={Briefcase} isOpen={isCareersOpen} onClick={() => setIsCareersOpen(!isCareersOpen)} />
+                                <SidebarCategoryHeader label="Careers" icon={Briefcase} isOpen={isCareersOpen} onClick={() => setIsCareersOpen(!isCareersOpen)} badge={newApplicantsCount} />
                                 {isCareersOpen && (
                                     <div className="space-y-0.5">
                                         {[

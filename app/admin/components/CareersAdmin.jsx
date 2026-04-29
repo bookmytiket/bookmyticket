@@ -569,7 +569,14 @@ const CareersAdmin = ({ t, theme }) => {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px" }}>
                 <div>
                     <h2 style={{ fontSize: "28px", fontWeight: 900, color: t.textMain, tracking: "-0.02em" }}>Careers Management</h2>
-                    <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Manage your team's expansion and job opportunities</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                        <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage your team's expansion</p>
+                        <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: t.border }}></div>
+                        <span style={{ fontSize: "12px", fontWeight: 800, color: "#22c55e", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <div className="animate-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }}></div>
+                            Portal Active
+                        </span>
+                    </div>
                 </div>
                 <div style={{ display: "flex", gap: "12px" }}>
                     <button 
@@ -687,16 +694,33 @@ const CareersAdmin = ({ t, theme }) => {
                                         </button>
                                     </td>
                                     <td style={{ padding: "20px 24px" }}>
-                                        <span style={{ 
-                                            padding: "4px 10px", 
-                                            borderRadius: "100px", 
-                                            fontSize: "11px", 
-                                            fontWeight: 800, 
-                                            backgroundColor: job.status === 'open' ? "#22c55e15" : (job.status === 'closed' ? "#ef444415" : "#64748b15"),
-                                            color: job.status === 'open' ? "#22c55e" : (job.status === 'closed' ? "#ef4444" : "#64748b")
-                                        }}>
-                                            {job.status.toUpperCase()}
-                                        </span>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newStatus = job.status === 'open' ? 'closed' : 'open';
+                                                upsertJob({ ...job, status: newStatus }).then(() => refetchJobs());
+                                            }}
+                                            style={{ 
+                                                padding: "6px 14px", 
+                                                borderRadius: "100px", 
+                                                fontSize: "10px", 
+                                                fontWeight: 900, 
+                                                backgroundColor: job.status === 'open' ? "#22c55e" : "#cbd5e1",
+                                                color: "#fff",
+                                                border: "none",
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                                boxShadow: job.status === 'open' ? "0 4px 12px rgba(34, 197, 94, 0.2)" : "none",
+                                                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                                            onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                                        >
+                                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#fff", boxShadow: "0 0 5px rgba(255,255,255,0.8)" }}></div>
+                                            {job.status === 'open' ? "LIVE / ENABLED" : "DISABLED"}
+                                        </button>
                                     </td>
                                     <td style={{ padding: "20px 24px", textAlign: "right" }}>
                                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>

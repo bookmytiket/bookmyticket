@@ -57,26 +57,30 @@ export default function CareersPage() {
         <main className="min-h-screen bg-[#fafbfc]">
             {/* Dynamic Banner */}
             {bannerConfig.is_enabled && (
-                <section className={`relative pt-32 pb-24 px-6 overflow-hidden ${
+                <section className={`relative pt-10 pb-8 px-6 overflow-hidden ${
                     bannerConfig.theme === 'pink-purple' ? 'bg-gradient-to-r from-pink-600 to-purple-700' :
                     bannerConfig.theme === 'blue-cyan' ? 'bg-gradient-to-r from-blue-600 to-cyan-600' :
                     bannerConfig.theme === 'golden' ? 'bg-gradient-to-r from-amber-500 to-orange-600' : 'bg-slate-950'
                 }`}>
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/10 rounded-full blur-[120px] -mr-64 -mt-64"></div>
                     <div className="max-w-[1240px] mx-auto text-center relative z-10 text-white">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-xs font-bold uppercase tracking-widest mb-8">
-                            <Sparkles className="w-4 h-4" /> {bannerConfig.text}
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-[10px] font-bold uppercase tracking-widest mb-4">
+                            <Sparkles className="w-3.5 h-3.5" /> {bannerConfig.text}
                         </div>
-                        <h1 className="text-4xl md:text-7xl font-black mb-8 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {bannerConfig.text.split('!!!')[0]} <br /> 
-                            <span className="opacity-80">Our Team</span>
+                        <h1 className="text-3xl md:text-5xl font-black mb-4 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {bannerConfig.text.includes('!!!') ? (
+                                <>
+                                    {bannerConfig.text.split('!!!')[0]} <br className="hidden md:block" /> 
+                                    <span className="opacity-80">Our Team</span>
+                                </>
+                            ) : bannerConfig.text}
                         </h1>
-                        <p className="text-lg md:text-xl text-white/80 max-w-[800px] mx-auto leading-relaxed mb-12 font-medium">
+                        <p className="text-sm md:text-base text-white/80 max-w-[600px] mx-auto leading-relaxed mb-6 font-medium">
                             {bannerConfig.subtext}
                         </p>
                         <button 
                             onClick={() => document.getElementById('jobs-list').scrollIntoView({ behavior: 'smooth' })}
-                            className="px-8 py-4 bg-white text-slate-900 rounded-full font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform shadow-2xl shadow-black/20"
+                            className="px-6 py-3 bg-white text-slate-900 rounded-full font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-xl shadow-black/10"
                         >
                             {bannerConfig.button_text}
                         </button>

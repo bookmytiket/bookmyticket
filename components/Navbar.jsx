@@ -8,10 +8,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Country, State, City } from "country-state-city";
 
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthContext";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const SUBNAV_LINKS = [
   { href: "/#explore-popular-events", label: "Events" },
   { href: "/#services", label: "Services" },
+  { href: "/careers", label: "Careers" },
 ];
 
 
@@ -126,7 +129,6 @@ import { SERVICE_CATEGORIES, isServiceProvider } from "@/app/data/serviceCategor
 
 const EVENT_CATEGORIES = [...SERVICE_CATEGORIES, "Other"];
 
-import { useAuth } from "./AuthContext";
 import LocationSelectionModal from "./LocationSelectionModal";
 import BecomePartnerModal from "./BecomePartnerModal";
 
@@ -141,7 +143,6 @@ const ALL_CITIES_BY_COUNTRY = {
 };
 
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
-import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const DEFAULT_CATEGORIES = [
   "Concert", "Sports", "Comedy", "Theatre",
@@ -184,6 +185,11 @@ export default function Navbar() {
 
   const [userBookings, setUserBookings] = useState([]);
   const [nextMeeting, setNextMeeting] = useState(null);
+
+  const { data: activeJobs = [] } = useSupabaseQuery('jobs', (q) => q.eq('status', 'open'), []);
+  const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings').maybeSingle(), []);
+  const bannerConfig = bannerConfigRaw?.value || { is_enabled: true };
+  const hasActiveJobs = activeJobs.length > 0 && bannerConfig.is_enabled;
 
   useEffect(() => {
     const fetchNavbarData = async () => {
@@ -894,6 +900,32 @@ export default function Navbar() {
                       {link.label === "Services" && <Wrench size={14} />}
                     </span>
                     {link.label}
+                    {link.label === "Careers" && hasActiveJobs && (
+                        <motion.span 
+                            animate={{ 
+                                opacity: [1, 0.5, 1],
+                                scale: [1, 1.03, 1]
+                            }}
+                            transition={{ 
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                            style={{ 
+                                fontSize: "10px", 
+                                fontWeight: 900,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.1em",
+                                whiteSpace: "nowrap",
+                                display: "inline-block",
+                                background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                            }}
+                        >
+                            {bannerConfig.text?.includes('!!!') ? 'Join Our Team' : 'We Are Hiring'}
+                        </motion.span>
+                    )}
                   </Link>
                 </motion.div>
               ))}
