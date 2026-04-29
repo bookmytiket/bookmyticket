@@ -42,7 +42,7 @@ export default function RecentMemories({ memories: propMemories = [] }) {
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             display: 'inline-block'
-                        }}>2024</span>
+                        }}>2026</span>
                     </h2>
                 </div>
             </div>

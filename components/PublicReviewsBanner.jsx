@@ -54,9 +54,12 @@ export default function PublicReviewsBanner() {
     }, []);
 
     useEffect(() => {
-        // Auto-rotation disabled for static UI
         if (reviews.length <= 1) return;
-    }, [reviews]);
+        const timer = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % reviews.length);
+        }, 5000); // Rotate every 5 seconds
+        return () => clearInterval(timer);
+    }, [reviews.length]);
 
     if (loading || reviews.length === 0) return null;
 
@@ -65,10 +68,31 @@ export default function PublicReviewsBanner() {
     return (
         <div style={{ 
             display: 'flex', 
-            justifyContent: 'center', 
+            flexDirection: 'column',
+            alignItems: 'center', 
             width: '100%',
-            padding: '20px 0'
+            padding: '80px 20px'
         }}>
+            {/* Main Heading for Reviews */}
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <h2 style={{ 
+                    fontSize: 'clamp(28px, 4vw, 42px)', 
+                    fontWeight: 950, 
+                    color: '#0f172a', 
+                    letterSpacing: '-0.03em', 
+                    margin: '0 0 16px',
+                    lineHeight: 1
+                }}>
+                    Real Stories from <span style={{ 
+                        background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                    }}>Our Community</span>
+                </h2>
+                <p style={{ fontSize: '16px', color: '#64748b', fontWeight: 500, margin: 0 }}>
+                    See why thousands trust BookMyTicket for their most important events.
+                </p>
+            </div>
             <div style={{ 
                 width: '100%',
                 maxWidth: '600px',
@@ -168,6 +192,7 @@ export default function PublicReviewsBanner() {
                 }
                 .flip-card-content {
                     perspective: 1000px;
+                    animation: flipCardIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
                 }
             `}</style>
         </div>

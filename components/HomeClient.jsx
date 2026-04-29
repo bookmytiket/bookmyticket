@@ -22,7 +22,7 @@ import Footer from '@/components/Footer';
 import { MEMORIES, FEATURED_ORGANISERS, HERO_BANNER_SLIDES, BRAND_COUPONS } from '@/app/data/homeEvents';
 import { eventMatchesCategory } from '@/app/utils/categoryMatch';
 import { useAuth } from '@/components/AuthContext';
-import { Ticket, X } from 'lucide-react';
+import { Ticket, X, Sparkles } from 'lucide-react';
 
 const EMPTY_ARRAY = [];
 import TicketBookingDemo from '@/components/TicketBookingDemo';
@@ -956,34 +956,106 @@ function HomeClient() {
                             ))}
                         </div>
 
-                        {/* Premium Guide Card (Pink/Purple Gradient) */}
+                        {/* Premium Guide Card (DYNAMC PINK & PURPLE UI) */}
                         <div style={{ 
-                            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', 
+                            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)', 
                             borderRadius: '32px', 
-                            padding: '32px', 
+                            padding: '36px', 
                             color: '#fff',
                             position: 'relative',
                             overflow: 'hidden',
-                            boxShadow: '0 20px 40px -10px rgba(30, 27, 75, 0.3)'
-                        }}>
-                            <div style={{ 
-                                position: 'absolute', 
-                                top: '-20%', right: '-10%', 
-                                width: '200px', height: '200px', 
-                                background: 'radial-gradient(circle, rgba(248, 68, 100, 0.15) 0%, transparent 70%)',
-                                pointerEvents: 'none'
-                            }} />
-                            
+                            boxShadow: '0 25px 50px -12px rgba(124, 58, 237, 0.4)',
+                            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'default'
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 35px 60px -15px rgba(219, 39, 119, 0.5)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                            e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(124, 58, 237, 0.4)';
+                        }}
+                        >
+                            {/* Animated Mesh Gradients using Framer Motion */}
+                            <motion.div 
+                                animate={{ 
+                                    scale: [1, 1.2, 1],
+                                    x: [0, 10, 0],
+                                    y: [0, -10, 0],
+                                    opacity: [0.5, 0.8, 0.5]
+                                }}
+                                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                                style={{ 
+                                    position: 'absolute', top: '-50%', right: '-20%', 
+                                    width: '300px', height: '300px', 
+                                    background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%)',
+                                    borderRadius: '50%', filter: 'blur(40px)'
+                                }} 
+                            />
+                            <motion.div 
+                                animate={{ 
+                                    scale: [1.2, 1, 1.2],
+                                    x: [10, 0, 10],
+                                    y: [-10, 0, -10],
+                                    opacity: [0.8, 0.5, 0.8]
+                                }}
+                                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                                style={{ 
+                                    position: 'absolute', bottom: '-20%', left: '-10%', 
+                                    width: '250px', height: '250px', 
+                                    background: 'radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%)',
+                                    borderRadius: '50%', filter: 'blur(50px)'
+                                }} 
+                            />
+
                             <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyCenter: 'center', marginBottom: '20px' }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f84464', margin: 'auto' }}>
-                                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                                    </svg>
+                                <div style={{ 
+                                    width: '44px', height: '44px', 
+                                    background: 'rgba(255,255,255,0.15)', 
+                                    backdropFilter: 'blur(12px)', 
+                                    borderRadius: '14px', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                    marginBottom: '24px',
+                                    boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                                    border: '1px solid rgba(255,255,255,0.2)'
+                                }}>
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                    >
+                                        <Sparkles size={22} className="text-white" />
+                                    </motion.div>
                                 </div>
-                                <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>BookMyTicket – India's Leading <span style={{ color: '#f84464' }}>Event</span> Partner</h3>
-                                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, fontWeight: 500 }}>
-                                    From music concerts and comedy specials to sports turf bookings, BookMyTicket is your one-stop destination for entertainment in India. We operate in over 20+ cities with the lowest platform fees and verified trust.
+                                
+                                <h3 style={{ 
+                                    fontSize: '24px', 
+                                    fontWeight: 950, 
+                                    marginBottom: '16px', 
+                                    letterSpacing: '-0.04em', 
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1.1,
+                                    color: '#fff',
+                                    textShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                                }}>
+                                    BookMyTicket – India's <span style={{ color: '#fbbf24', textShadow: '0 0 15px rgba(251, 191, 36, 0.6)' }}>PREMIER</span> <span style={{ color: '#fff', borderBottom: '4px solid #f472b6' }}>EVENT</span> DESTINATION
+                                </h3>
+                                
+                                <p style={{ 
+                                    fontSize: '15px', 
+                                    color: '#f8fafc', 
+                                    lineHeight: 1.7, 
+                                    fontWeight: 600,
+                                    letterSpacing: '0.01em',
+                                    opacity: 0.95
+                                }}>
+                                    Discover the pulse of live entertainment. From electric music concerts to major sports and exclusive workshops, we bridge the gap with <span style={{ color: '#fbbf24', fontWeight: 900 }}>zero friction</span> and <span style={{ color: '#fff', fontWeight: 900, textDecoration: 'underline', textDecorationColor: '#f472b6' }}>verified trust</span>.
                                 </p>
+                                
+                                <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                                    <div style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.1)', borderRadius: '100px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.1)' }}>✨ 20+ Cities</div>
+                                    <div style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.1)', borderRadius: '100px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.1)' }}>🛡️ Secure</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1064,6 +1136,63 @@ function HomeClient() {
 
               <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
                 
+
+                {/* Discovery Section Heading */}
+                <div style={{ textAlign: 'center', marginBottom: '60px', padding: '0 20px' }}>
+                  <motion.span 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    style={{ 
+                      fontSize: '14px', 
+                      fontWeight: 900, 
+                      color: '#f84464', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.3em',
+                      display: 'block',
+                      marginBottom: '16px'
+                    }}
+                  >
+                    ✦ Explore Our Ecosystem
+                  </motion.span>
+                  <motion.h2 
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    style={{ 
+                      fontSize: 'clamp(32px, 5vw, 56px)', 
+                      fontWeight: 950, 
+                      color: '#0f172a', 
+                      letterSpacing: '-0.04em', 
+                      lineHeight: 1,
+                      margin: '0 auto 24px',
+                      maxWidth: '900px'
+                    }}
+                  >
+                    Your One-Stop Destination for <span style={{ 
+                      background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>Everything Entertainment</span>
+                  </motion.h2>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    style={{ 
+                      fontSize: '18px', 
+                      color: '#64748b', 
+                      maxWidth: '650px', 
+                      margin: '0 auto',
+                      lineHeight: 1.6,
+                      fontWeight: 500
+                    }}
+                  >
+                    From the biggest concerts to professional services and local sports venues, BookMyTicket connects you to the experiences that matter most.
+                  </motion.p>
+                </div>
 
                 {/* SLIDING UI SECTION: Features */}
                 <div className="sliding-features-wrap" style={{ 
@@ -1152,15 +1281,43 @@ function HomeClient() {
                       />
 
                       <div style={{ position: 'relative', zIndex: 1 }}>
-                        <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>{item.title}</h3>
-                        <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, margin: 0, userSelect: 'none', pointerEvents: 'none' }}>
-                          {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: '#334155', fontWeight: 700 }}>{part}</strong> : part)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                          <div style={{ 
+                            width: '48px', height: '48px', 
+                            background: `linear-gradient(135deg, ${item.color}15 0%, ${item.color}05 100%)`,
+                            borderRadius: '16px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '24px',
+                            boxShadow: `0 8px 16px ${item.color}10`,
+                            border: `1px solid ${item.color}20`
+                          }}>
+                            {item.icon}
+                          </div>
+                          <h3 style={{ 
+                            fontSize: '24px', 
+                            fontWeight: 900, 
+                            margin: 0, 
+                            letterSpacing: '-0.04em',
+                            background: `linear-gradient(135deg, #0f172a 0%, ${item.color} 100%)`,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            lineHeight: 1.1
+                          }}>
+                            {item.title}
+                          </h3>
+                        </div>
+                        
+                        <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.8, marginBottom: '24px', userSelect: 'none', pointerEvents: 'none' }}>
+                          {item.desc.split('**').map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: item.color, fontWeight: 700 }}>{part}</strong> : part)}
                         </p>
-                      </div>
-                      
-                      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px', position: 'relative', zIndex: 1 }}>
-                        <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '12px', userSelect: 'none' }}>{item.sub}</h4>
-                        <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.6, margin: 0, userSelect: 'none', pointerEvents: 'none' }}>{item.subDesc}</p>
+
+                        <div style={{ height: '1px', background: 'linear-gradient(to right, rgba(0,0,0,0.05), transparent)', margin: '0 -40px 24px' }} />
+
+                        <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }} />
+                          {item.sub}
+                        </h4>
+                        <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{item.subDesc}</p>
                       </div>
                     </motion.div>
                   ))}
