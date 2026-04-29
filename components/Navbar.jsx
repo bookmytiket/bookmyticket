@@ -14,7 +14,6 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 const SUBNAV_LINKS = [
   { href: "/#explore-popular-events", label: "Events" },
   { href: "/#services", label: "Services" },
-  { href: "/careers", label: "Careers" },
 ];
 
 
@@ -901,32 +900,6 @@ export default function Navbar() {
                       {link.label === "Services" && <Wrench size={14} />}
                     </span>
                     {link.label}
-                    {link.label === "Careers" && mounted && hasActiveJobs && (
-                        <motion.span 
-                            animate={{ 
-                                opacity: [1, 0.5, 1],
-                                scale: [1, 1.03, 1]
-                            }}
-                            transition={{ 
-                                duration: 3,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            style={{ 
-                                fontSize: "10px", 
-                                fontWeight: 900,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.1em",
-                                whiteSpace: "nowrap",
-                                display: "inline-block",
-                                background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                            }}
-                        >
-                            {bannerConfig.text?.includes('!!!') ? 'Join Our Team' : 'We Are Hiring'}
-                        </motion.span>
-                    )}
                   </Link>
                 </motion.div>
               ))}

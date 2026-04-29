@@ -299,7 +299,7 @@ export default function Footer() {
                             background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
                             border: "none",
                             cursor: "pointer",
-                            display: "flex",
+                            display: isMobile ? "none" : "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             boxShadow: "0 10px 30px rgba(248, 68, 100, 0.4)",
