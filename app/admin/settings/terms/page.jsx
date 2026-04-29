@@ -130,6 +130,95 @@ const SIMPLE_TEMPLATE = [
   },
 ];
 
+/* ─── Service Policies & Terms template ─── */
+const SERVICE_TEMPLATE = [
+  {
+    id: "sv1", title: "📋 Service Booking Confirmation",
+    content: "BookMyTicket – Powered by Nexvant Technologies. By confirming a service booking through BookMyTicket, you agree to all applicable Service Policies and Terms & Conditions listed herein.",
+    bullets: [
+      "Service bookings are confirmed only upon receipt of full or agreed advance payment.",
+      "A booking confirmation email/SMS will be sent to the registered contact details.",
+      "The service provider reserves the right to decline a booking at their discretion.",
+      "BookMyTicket acts solely as an intermediary platform; the service provider is responsible for actual service delivery.",
+      "Any modifications to the booking must be confirmed in writing by both parties.",
+    ], image: "",
+  },
+  {
+    id: "sv2", title: "💳 Payment Terms",
+    content: "All payments for service bookings must be made through BookMyTicket's secure payment gateway unless explicitly agreed otherwise.",
+    bullets: [
+      "Advance payment (as specified in the package) is required to secure the booking.",
+      "Remaining balance, if any, must be settled before or on the day of service.",
+      "All prices listed are inclusive of platform fees unless stated otherwise.",
+      "GST and applicable taxes will be charged as per prevailing government regulations.",
+      "Receipts and invoices will be issued upon successful payment confirmation.",
+    ], image: "",
+  },
+  {
+    id: "sv3", title: "❌ Cancellation & Refund Policy",
+    content: "Cancellations and refunds are governed by the following policy. Please read carefully before confirming your booking.",
+    bullets: [
+      "Cancellations made 7+ days before the service date: 80% refund.",
+      "Cancellations made 3–6 days before the service date: 50% refund.",
+      "Cancellations made less than 48 hours before the service date: No refund.",
+      "Cancellations initiated by the service provider: Full refund guaranteed within 5–7 business days.",
+      "Refunds will be credited to the original payment method only.",
+      "Force majeure events (natural disasters, government restrictions) may qualify for rescheduling at no charge.",
+    ], image: "",
+  },
+  {
+    id: "sv4", title: "🔄 Rescheduling Policy",
+    content: "Rescheduling requests are subject to the service provider's availability and the following conditions.",
+    bullets: [
+      "Rescheduling requests must be raised at least 48 hours before the scheduled service date.",
+      "Each booking is eligible for a maximum of one complimentary rescheduling.",
+      "Subsequent rescheduling may attract an administrative fee of ₹200–₹500.",
+      "Rescheduling is subject to the service provider's availability on the new requested date.",
+    ], image: "",
+  },
+  {
+    id: "sv5", title: "🎨 Scope of Service",
+    content: "The service delivered shall be limited to what is explicitly stated in the selected service package.",
+    bullets: [
+      "Any additional requirements beyond the package scope may attract extra charges.",
+      "All customisations must be discussed and agreed upon before confirmation of booking.",
+      "The service provider may bring assistants or junior artists as required for efficient delivery.",
+      "Provision of basic amenities (seating, power supply, water) at the venue is the client's responsibility.",
+      "The platform is not liable for any deviation in service quality from client expectations.",
+    ], image: "",
+  },
+  {
+    id: "sv6", title: "🤝 Artist & Provider Conduct",
+    content: "Both the service provider and the client are expected to maintain professional conduct throughout the service engagement.",
+    bullets: [
+      "The client must ensure a safe and respectful working environment for the service provider.",
+      "Harassment, verbal abuse, or any form of misconduct by either party will result in immediate termination of service.",
+      "In case of misconduct by the service provider, the client may file a complaint via BookMyTicket's support system.",
+      "Providers must adhere to the agreed service timeline; delays beyond 30 minutes must be communicated promptly.",
+    ], image: "",
+  },
+  {
+    id: "sv7", title: "📸 Intellectual Property & Content Rights",
+    content: "Any photographs, videos, or creative works produced during the service engagement are subject to the following rights.",
+    bullets: [
+      "All creative works remain the intellectual property of the service provider unless a transfer agreement is signed.",
+      "The client is granted a personal-use licence for all delivered work.",
+      "The service provider may use produced content for portfolio and promotional purposes unless the client opts out in writing.",
+      "Commercial use of any delivered content by the client requires a separate licensing agreement.",
+    ], image: "",
+  },
+  {
+    id: "sv8", title: "⚖️ Governing Law & Acceptance",
+    content: "These terms are governed by the laws of India. By proceeding with the booking, you accept all the above Service Policies and Terms & Conditions.",
+    bullets: [
+      "Any disputes shall be subject to the exclusive jurisdiction of courts in Coimbatore, Tamil Nadu.",
+      "BookMyTicket reserves the right to amend these terms without prior notice.",
+      "Continued use of the platform constitutes acceptance of the revised terms.",
+      "For grievances, contact: support@bookmyticket.in",
+    ], image: "",
+  },
+];
+
 const DEFAULT_SECTION = () => ({
   id: `s${Date.now()}`,
   title: "", content: "", bullets: [], image: "",
@@ -301,43 +390,45 @@ export default function TermsAdminPage() {
             </div>
           </div>
 
-          {/* ── Card 2 — Simple Disclaimer ── */}
-          <div style={{ background: "#fff", borderRadius: "20px", border: "1.5px solid #fecdd3", overflow: "hidden", boxShadow: "0 4px 20px rgba(239,68,68,0.07)" }}>
+          {/* ── Card 3 — Service Policies & T&C ── */}
+          <div style={{ background: "#fff", borderRadius: "20px", border: "1.5px solid #bbf7d0", overflow: "hidden", boxShadow: "0 4px 20px rgba(16,185,129,0.07)" }}>
             {/* Header */}
-            <div style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", padding: "20px 22px" }}>
-              <p style={{ margin: 0, fontWeight: 900, fontSize: "15px", color: "#fff" }}>⚠️ Simple Disclaimer</p>
-              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>{SIMPLE_TEMPLATE.length} sections · Concise organiser disclaimer</p>
+            <div style={{ background: "linear-gradient(135deg,#059669,#10b981)", padding: "20px 22px" }}>
+              <p style={{ margin: 0, fontWeight: 900, fontSize: "15px", color: "#fff" }}>🛡️ Service Policies &amp; T&amp;C</p>
+              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>{SERVICE_TEMPLATE.length} sections · Full service booking legal coverage</p>
             </div>
 
             {/* Booking Highlights */}
-            <div style={{ background: "#fff5f5", borderBottom: "1px solid #fecdd3", padding: "12px 22px" }}>
-              <p style={{ margin: "0 0 8px", fontSize: "9px", fontWeight: 900, color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.15em" }}>Best For</p>
+            <div style={{ background: "#f0fdf4", borderBottom: "1px solid #bbf7d0", padding: "12px 22px" }}>
+              <p style={{ margin: "0 0 8px", fontSize: "9px", fontWeight: 900, color: "#059669", textTransform: "uppercase", letterSpacing: "0.15em" }}>Best For</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                 {[
-                  { label: "🎫 Quick Booking", bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5" },
-                  { label: "🎤 Artist Booking", bg: "#fff7ed", color: "#c2410c", border: "#fdba74" },
-                  { label: "🛎️ Service Booking", bg: "#f0fdf4", color: "#15803d", border: "#86efac" },
-                  { label: "🏟️ Venue Hire", bg: "#eff6ff", color: "#1d4ed8", border: "#93c5fd" },
-                  { label: "📋 Registration", bg: "#fdf4ff", color: "#a21caf", border: "#e879f9" },
+                  { label: "🎨 Artist Booking", bg: "#fdf4ff", color: "#a21caf", border: "#e879f9" },
+                  { label: "📸 Photography", bg: "#eff6ff", color: "#1d4ed8", border: "#93c5fd" },
+                  { label: "🎵 Music Services", bg: "#fff7ed", color: "#c2410c", border: "#fdba74" },
+                  { label: "💆 Beauty & Wellness", bg: "#fdf4ff", color: "#9333ea", border: "#d8b4fe" },
+                  { label: "🎪 Event Services", bg: "#f0fdf4", color: "#15803d", border: "#86efac" },
+                  { label: "🎹 Entertainment", bg: "#fef3c7", color: "#b45309", border: "#fcd34d" },
                 ].map(b => (
                   <span key={b.label} style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color, borderRadius: "100px", padding: "4px 10px", fontSize: "10px", fontWeight: 800 }}>{b.label}</span>
                 ))}
               </div>
             </div>
 
-            {/* Preview + button */}
+            {/* Section pills + button */}
             <div style={{ padding: "14px 22px 16px" }}>
-              <div style={{ background: "#fff5f5", border: "2px solid #fca5a5", borderLeft: "4px solid #dc2626", borderRadius: "10px", padding: "12px 14px", marginBottom: "14px" }}>
-                <p style={{ margin: "0 0 5px", fontWeight: 900, fontSize: "12px", color: "#dc2626", fontStyle: "italic" }}>Disclaimer:</p>
-                <p style={{ margin: 0, fontSize: "11px", color: "#dc2626", fontStyle: "italic", fontWeight: 600, lineHeight: 1.6 }}>
-                  BookMyTicket is a ticketing platform assisting the Event Organiser with event registrations only. Not responsible for event operations, postponement, cancellation, or refunds.
-                </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "14px" }}>
+                {SERVICE_TEMPLATE.map((s, i) => (
+                  <span key={s.id} style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "100px", padding: "3px 9px", fontSize: "10px", fontWeight: 700, color: "#059669" }}>
+                    {i + 1}. {s.title}
+                  </span>
+                ))}
               </div>
               <button
-                onClick={() => applyTemplate(SIMPLE_TEMPLATE)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", padding: "11px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg,#dc2626,#f97316)", color: "#fff", fontWeight: 800, fontSize: "13px", cursor: "pointer" }}
+                onClick={() => applyTemplate(SERVICE_TEMPLATE)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", padding: "11px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg,#059669,#10b981)", color: "#fff", fontWeight: 800, fontSize: "13px", cursor: "pointer" }}
               >
-                <Zap size={14} /> Use Simple Template
+                <Zap size={14} /> Use Service Template
               </button>
             </div>
           </div>

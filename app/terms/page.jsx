@@ -15,6 +15,7 @@ const DEFAULT_SECTIONS = [
       "You must be at least 18 years of age to use this service.",
       "You agree to provide accurate and complete information during registration.",
       "You are responsible for maintaining the confidentiality of your account credentials.",
+      "You agree to follow all local laws and venue regulations when attending events.",
     ],
     image: null,
   },
@@ -203,41 +204,8 @@ export default function TermsPage() {
       </div>
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 24px", display: "grid", gridTemplateColumns: "260px 1fr", gap: "40px", alignItems: "start" }}
-        className="terms-grid">
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "48px 24px", display: "flex", flexDirection: "column", gap: "32px" }}>
 
-        {/* ── Sticky sidebar nav ── */}
-        <aside style={{ position: "sticky", top: "100px" }} className="terms-sidebar">
-          <div style={{ background: "#fff", borderRadius: "20px", padding: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", border: "1px solid #f1f5f9" }}>
-            <p style={{ fontSize: "10px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "12px" }}>On This Page</p>
-            <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {sections.map((s, i) => (
-                <button
-                  key={s.id}
-                  onClick={() => scrollTo(s.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "10px",
-                    padding: "10px 12px", borderRadius: "12px", border: "none",
-                    background: activeId === s.id ? "linear-gradient(135deg, #fdf2f8, #f5f3ff)" : "transparent",
-                    color: activeId === s.id ? "#9333ea" : "#64748b",
-                    fontSize: "12px", fontWeight: activeId === s.id ? 800 : 600,
-                    cursor: "pointer", textAlign: "left", transition: "all 0.2s",
-                    borderLeft: activeId === s.id ? "3px solid #f844a4" : "3px solid transparent",
-                  }}
-                >
-                  <span style={{
-                    width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0,
-                    background: activeId === s.id ? "linear-gradient(135deg,#f844a4,#9333ea)" : "#f1f5f9",
-                    color: activeId === s.id ? "#fff" : "#94a3b8",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "10px", fontWeight: 900,
-                  }}>{i + 1}</span>
-                  {s.title}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </aside>
 
         {/* ── Sections content ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
@@ -355,11 +323,9 @@ export default function TermsPage() {
         </div>
       </div>
 
-      {/* ── Responsive styles ── */}
       <style>{`
-        @media (max-width: 900px) {
-          .terms-grid { grid-template-columns: 1fr !important; }
-          .terms-sidebar { position: static !important; display: none; }
+        @media (max-width: 600px) {
+          .terms-grid { padding: 24px 16px !important; }
         }
       `}</style>
     </main>

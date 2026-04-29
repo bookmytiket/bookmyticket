@@ -410,7 +410,18 @@ export default function ServiceCheckoutPage() {
                                                     className="w-[18px] h-[18px] rounded border-slate-300 text-[#FF5A5F] focus:ring-[#FF5A5F] mt-[2px]" 
                                                 />
                                             </div>
-                                            <span className="text-[13px] font-semibold text-slate-600">I have read and agreed to the website <a href="#" className="text-blue-500 hover:underline">terms and conditions</a></span>
+                                            <span className="text-[13px] font-semibold text-slate-600">
+                                                I have read and agreed to the{" "}
+                                                <a
+                                                    href="/terms"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-pink-500 underline underline-offset-2 hover:text-purple-600 transition-colors font-extrabold"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    Service Policies and Terms &amp; Conditions
+                                                </a>
+                                            </span>
                                         </label>
                                     </div>
 

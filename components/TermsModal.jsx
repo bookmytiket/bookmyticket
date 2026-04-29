@@ -8,7 +8,7 @@ const FALLBACK = [
   {
     id: "s1", title: "Acceptance of Terms",
     content: "By completing this booking, you agree to be bound by BookMyTicket's Terms & Conditions and Privacy Policy.",
-    bullets: ["You must be at least 18 years old.", "Accurate information must be provided at checkout.", "Tickets are non-transferable unless stated otherwise."],
+    bullets: ["You must be at least 18 years old.", "Accurate information must be provided at checkout.", "Tickets are non-transferable unless stated otherwise.", "You agree to follow all local laws and venue regulations."],
     image: null,
   },
   {

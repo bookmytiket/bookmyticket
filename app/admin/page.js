@@ -2107,7 +2107,7 @@ function AdminHomePage() {
                                             { label: "Emails", id: "email_settings" },
                                             { label: "SEO & Analytics", id: "seo_settings", onClick: () => router.push('/admin/settings/seo') },
                                             { label: "Email Templates", id: "email_templates" },
-                                            { label: "Disclaimers", id: "disclaimer_settings" },
+
                                             { label: "Terms & Conditions", id: "terms_settings", onClick: () => router.push('/admin/settings/terms') },
                                             { label: "SSO Config", id: "sso_settings" },
                                             { label: "Tickets & Notifs", id: "ticket_settings" }

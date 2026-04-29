@@ -432,10 +432,20 @@ export default function ArtistProfileClient({ id: vendorId }) {
                                         <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center shrink-0 mt-0.5 ${agreedToTerms ? "bg-pink-500 border-pink-500 shadow-lg shadow-pink-500/40" : "border-slate-300 group-hover:border-slate-400"}`}>
                                             {agreedToTerms && <CheckCircle2 className="text-white" size={16} />}
                                         </div>
-                                        <span className="text-[13px] font-bold text-slate-500 leading-tight">I have read and agreed to the <span className="text-pink-500 hover:underline">Service Policies and Terms & Conditions</span></span>
+                                        <span className="text-[13px] font-bold text-slate-500 leading-tight">
+                                            I have read and agreed to the{" "}
+                                            <a
+                                                href="/terms"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={e => e.stopPropagation()}
+                                                className="text-pink-500 underline underline-offset-2 hover:text-purple-600 transition-colors font-extrabold"
+                                            >
+                                                Service Policies and Terms &amp; Conditions
+                                            </a>
+                                        </span>
                                     </div>
                                 </div>
-                                <BookingDisclaimer type="service" />
                             </form>
                         </div>
 

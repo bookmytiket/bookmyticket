@@ -388,7 +388,7 @@ export default function CheckoutClient({ id }) {
                             </form>
                         </div>
 
-                        <BookingDisclaimer type="event" />
+
                     </div>
 
                     {/* Right: Summary Card */}
