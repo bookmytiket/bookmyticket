@@ -549,13 +549,13 @@ nextjs-portal {
 }
 
 .header-scrolled .header-subnav {
-  transform: translateY(-20px);
-  opacity: 0;
-  pointer-events: none;
-  height: 0;
-  overflow: hidden;
-  padding: 0;
+  opacity: 1;
+  pointer-events: auto;
+  height: auto;
+  overflow: visible;
+  padding: 4px 0;
   margin: 0;
+  background: rgba(15, 23, 42, 0.9) !important;
 }
 
 .header-scrolled .header-main {

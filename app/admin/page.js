@@ -1526,8 +1526,8 @@ function AdminHomePage() {
     useEffect(() => {
         if (apiKeysArr.length === 0) {
             const defaults = [
-                { label: "Production Mobile App", key: "ak_live_724819...9238" },
-                { label: "Staging Environment", key: "ak_test_123891...0841" }
+                { name: "Production Mobile App", key_value: "ak_live_724819...9238" },
+                { name: "Staging Environment", key_value: "ak_test_123891...0841" }
             ];
             defaults.forEach(d => createApiKey(d));
         }
@@ -5522,9 +5522,9 @@ function AdminHomePage() {
                                         {apiKeysArr.map((item, i) => (
                                             <tr key={item.id} style={{ borderBottom: i === apiKeysArr.length - 1 ? 'none' : `1px solid ${t.border}` }}>
                                                 <td style={{ padding: "12px 16px", fontWeight: 600, color: t.textMain }}>
-                                                    {item.label}
+                                                    {item.name}
                                                 </td>
-                                                <td style={{ padding: "12px 16px", fontFamily: "monospace", color: t.textSub }}>{item.key}</td>
+                                                <td style={{ padding: "12px 16px", fontFamily: "monospace", color: t.textSub }}>{item.key_value}</td>
                                                 <td style={{ padding: "12px 16px" }}>
                                                     <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: item.status === "Active" ? "#22c55e20" : "#ef444420", color: item.status === "Active" ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{item.status.toUpperCase()}</span>
                                                 </td>

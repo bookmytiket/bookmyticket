@@ -98,6 +98,8 @@ const CareersAdmin = ({ t, theme }) => {
 
     // Data Fetching
     const { data: jobs = [], loading: jobsLoading, refresh: refetchJobs } = useSupabaseQuery('jobs', (q) => q.order('created_at', { ascending: false }));
+    const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
+    const bannerConfig = bannerConfigRaw?.[0]?.value || { is_enabled: true };
     const { data: applicants = [], loading: applicantsLoading, refresh: refetchApplicants } = useSupabaseQuery('job_applications', (q) => q.order('created_at', { ascending: false }));
 
     // Mutations
@@ -572,9 +574,21 @@ const CareersAdmin = ({ t, theme }) => {
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                         <p style={{ fontSize: "14px", color: t.textSub, margin: 0 }}>Manage your team's expansion</p>
                         <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: t.border }}></div>
-                        <span style={{ fontSize: "12px", fontWeight: 800, color: "#22c55e", display: "flex", alignItems: "center", gap: "4px" }}>
-                            <div className="animate-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }}></div>
-                            Portal Active
+                        <span style={{ 
+                            fontSize: "12px", 
+                            fontWeight: 800, 
+                            color: bannerConfig.is_enabled ? "#22c55e" : "#ef4444", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: "4px" 
+                        }}>
+                            <div className={bannerConfig.is_enabled ? "animate-pulse" : ""} style={{ 
+                                width: "6px", 
+                                height: "6px", 
+                                borderRadius: "50%", 
+                                background: bannerConfig.is_enabled ? "#22c55e" : "#ef4444" 
+                            }}></div>
+                            {bannerConfig.is_enabled ? "Portal Active" : "Portal Disabled"}
                         </span>
                     </div>
                 </div>

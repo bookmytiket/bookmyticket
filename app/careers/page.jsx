@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Briefcase, MapPin, Clock, ArrowRight, Sparkles, 
     Rocket, Users, Heart, Filter, X, CheckCircle, 
-    Upload, Loader2, Search, DollarSign, Calendar, ChevronDown
+    Upload, Loader2, Search, DollarSign, Calendar, ChevronDown, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
@@ -16,28 +16,33 @@ export default function CareersPage() {
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
     const [filterDept, setFilterDept] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
-    
-    // Fetch Banner Config
-    const [bannerConfig, setBannerConfig] = useState({
-        is_enabled: true,
-        text: "We Are Hiring!!!",
-        subtext: "Join our world-class team and build the future of live experiences.",
-        theme: "pink-purple",
-        button_text: "View Openings"
-    });
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        const fetchBanner = async () => {
-            const { data } = await supabase.from('system_config').select('value').eq('key', 'careers_banner_settings').maybeSingle();
-            if (data?.value) setBannerConfig(data.value);
-        };
-        fetchBanner();
+        setMounted(true);
     }, []);
+    
+    const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
+    const bannerConfig = bannerConfigRaw?.[0]?.value || {
+        is_enabled: true,
+        text: "We Are Hiring!!!",
+        subtext: "Join our mission to revolutionize the event industry.",
+        button_text: "Explore Roles"
+    };
 
-    // Fetch Jobs
-    const { data: jobs = [], loading: jobsLoading } = useSupabaseQuery('jobs', (q) => 
-        q.eq('status', 'open').order('created_at', { ascending: false })
+    // Fetch Jobs - Fetching all and filtering in JS for maximum reliability
+    const { data: allJobs = [], loading: jobsLoading, error: jobsError } = useSupabaseQuery('jobs', (q) => 
+        q.order('created_at', { ascending: false }),
+        []
     );
+
+    const jobs = (allJobs || []).filter(j => j.status === 'open');
+
+    useEffect(() => {
+        if (jobsError) {
+            console.error("Error fetching jobs:", jobsError);
+        }
+    }, [jobsError]);
 
     const departments = ["All", ...new Set(jobs.map(j => j.department).filter(Boolean))];
 
@@ -68,21 +73,21 @@ export default function CareersPage() {
                             <Sparkles className="w-3.5 h-3.5" /> {bannerConfig.text}
                         </div>
                         <h1 className="text-3xl md:text-5xl font-black mb-4 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {bannerConfig.text.includes('!!!') ? (
+                            {bannerConfig.text && bannerConfig.text.includes('!!!') ? (
                                 <>
                                     {bannerConfig.text.split('!!!')[0]} <br className="hidden md:block" /> 
                                     <span className="opacity-80">Our Team</span>
                                 </>
-                            ) : bannerConfig.text}
+                            ) : (bannerConfig.text || "Join Our Team")}
                         </h1>
                         <p className="text-sm md:text-base text-white/80 max-w-[600px] mx-auto leading-relaxed mb-6 font-medium">
-                            {bannerConfig.subtext}
+                            {bannerConfig.subtext || "We're looking for passionate individuals to join us."}
                         </p>
                         <button 
                             onClick={() => document.getElementById('jobs-list').scrollIntoView({ behavior: 'smooth' })}
                             className="px-6 py-3 bg-white text-slate-900 rounded-full font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform shadow-xl shadow-black/10"
                         >
-                            {bannerConfig.button_text}
+                            {bannerConfig.button_text || "Explore Roles"}
                         </button>
                     </div>
                 </section>
@@ -129,16 +134,45 @@ export default function CareersPage() {
                 </div>
 
                 {/* Jobs Grid */}
-                {jobsLoading ? (
+                {!mounted || jobsLoading ? (
                     <div className="flex flex-col items-center justify-center py-32 gap-4">
                         <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Fetching latest openings...</p>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                            {!mounted ? "Preparing listings..." : "Fetching latest openings..."}
+                        </p>
+                    </div>
+                ) : jobsError ? (
+                    <div className="text-center py-20 bg-red-50 rounded-[40px] border border-red-100">
+                        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-red-900 mb-2">Connection Issue</h3>
+                        <p className="text-red-600 max-w-md mx-auto text-sm">
+                            The database returned an error: <strong>{jobsError.message || "Access Restricted"}</strong>. 
+                            This is likely due to Row Level Security (RLS) policies.
+                        </p>
                     </div>
                 ) : filteredJobs.length === 0 ? (
                     <div className="text-center py-32 bg-white rounded-[40px] border border-slate-100">
                         <Briefcase className="w-16 h-16 text-slate-200 mx-auto mb-6" />
-                        <h3 className="text-2xl font-bold text-slate-900 mb-2">No positions found</h3>
-                        <p className="text-slate-500">Try adjusting your filters or search term.</p>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                            {searchTerm || filterDept !== "All" ? "No matching positions" : "We're currently expanding our team"}
+                        </h3>
+                        <p className="text-slate-500 mb-4">
+                            {searchTerm || filterDept !== "All" 
+                                ? "Try adjusting your filters or search term." 
+                                : "Check back soon for new opportunities or follow us for updates."}
+                        </p>
+                        <div className="text-[10px] text-slate-300 font-mono">
+                            DEBUG: Received {allJobs.length} raw jobs from DB. 
+                            Active Filter: {filterDept} | Search: "{searchTerm}"
+                        </div>
+                        {(searchTerm || filterDept !== "All") && (
+                            <button 
+                                onClick={() => { setSearchTerm(""); setFilterDept("All"); }}
+                                className="mt-6 text-pink-600 font-bold uppercase tracking-widest text-[10px] hover:underline"
+                            >
+                                Clear all filters
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

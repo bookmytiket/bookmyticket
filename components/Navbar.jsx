@@ -187,9 +187,10 @@ export default function Navbar() {
   const [nextMeeting, setNextMeeting] = useState(null);
 
   const { data: activeJobs = [] } = useSupabaseQuery('jobs', (q) => q.eq('status', 'open'), []);
-  const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings').maybeSingle(), []);
-  const bannerConfig = bannerConfigRaw?.value || { is_enabled: true };
-  const hasActiveJobs = activeJobs.length > 0 && bannerConfig.is_enabled;
+  const { data: bannerConfigRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'careers_banner_settings'), []);
+  const bannerConfig = bannerConfigRaw?.[0]?.value || { is_enabled: true };
+  const isPortalEnabled = bannerConfig.is_enabled === true || bannerConfig.is_enabled === 'true';
+  const hasActiveJobs = activeJobs.length > 0 && isPortalEnabled;
 
   useEffect(() => {
     const fetchNavbarData = async () => {
@@ -859,8 +860,8 @@ export default function Navbar() {
 
         {/* Sub-navbar with Animation - Premium Dynamic UI */}
         <nav className="header-subnav" style={{ 
-          background: scrolled ? 'transparent' : 'rgba(255,255,255,0.5)',
-          backdropFilter: scrolled ? 'none' : 'blur(10px)',
+          background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(10px)',
           borderBottom: scrolled ? 'none' : '1px solid rgba(0,0,0,0.05)'
         }}>
           <div className="subnav-container" style={{ padding: '8px 0' }}>
@@ -900,7 +901,7 @@ export default function Navbar() {
                       {link.label === "Services" && <Wrench size={14} />}
                     </span>
                     {link.label}
-                    {link.label === "Careers" && hasActiveJobs && (
+                    {link.label === "Careers" && mounted && hasActiveJobs && (
                         <motion.span 
                             animate={{ 
                                 opacity: [1, 0.5, 1],
