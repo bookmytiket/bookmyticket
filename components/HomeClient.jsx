@@ -622,7 +622,7 @@ function HomeClient() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '142px' : 'var(--header-h)' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '192px' : 'var(--header-h)' }}>
         
         {/* Community Trust: Public Reviews Banner */}
         {/* Moved PublicReviewsBanner below for better flow */}
@@ -1136,7 +1136,7 @@ function HomeClient() {
                 }}
               />
 
-              <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+              <div style={{ maxWidth: '1240px', margin: '0 auto', position: 'relative', zIndex: 1, padding: isMobile ? '0 20px' : '0' }}>
                 
 
                 {/* Discovery Section Heading */}
@@ -1199,9 +1199,12 @@ function HomeClient() {
                 {/* SLIDING UI SECTION: Features */}
                 <div className="sliding-features-wrap" style={{ 
                   display: 'flex', 
-                  overflowX: 'auto', 
-                  gap: '32px', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  overflowX: isMobile ? 'visible' : 'auto', 
+                  gap: isMobile ? '24px' : '32px', 
                   paddingBottom: '20px',
+                  paddingLeft: '0',
+                  paddingRight: '0',
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
                   WebkitOverflowScrolling: 'touch'
@@ -1235,23 +1238,25 @@ function HomeClient() {
                     <motion.div 
                       key={idx} 
                       className="sliding-card"
-                      whileHover={{ y: -12, scale: 1.02 }}
-                      initial={{ opacity: 0, x: 50 }}
-                      whileInView={{ opacity: 1, x: 0 }}
+                      whileHover={isMobile ? {} : { y: -12, scale: 1.02 }}
+                      initial={{ opacity: 0, y: isMobile ? 30 : 0, x: isMobile ? 0 : 50 }}
+                      whileInView={{ opacity: 1, y: 0, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: idx * 0.1 }}
                       style={{ 
-                        flex: '0 0 380px',
+                        flex: isMobile ? '1 1 auto' : '0 0 380px',
+                        width: isMobile ? '100%' : 'auto',
+                        maxWidth: isMobile ? '100%' : '380px',
                         background: 'rgba(255, 255, 255, 0.4)', 
                         backdropFilter: 'blur(16px)',
                         WebkitBackdropFilter: 'blur(16px)',
-                        padding: '40px', 
+                        padding: isMobile ? '24px' : '40px', 
                         borderRadius: '32px', 
                         border: '1px solid rgba(255, 255, 255, 0.5)',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.03)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '24px',
+                        gap: isMobile ? '16px' : '24px',
                         cursor: 'pointer',
                         overflow: 'hidden',
                         position: 'relative',

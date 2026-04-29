@@ -795,12 +795,12 @@ export default function Navbar() {
 
         {/* Mobile View - Home Only Ticker & Search */}
         <div className="show-mobile" style={{
-          padding: '8px 12px',
+          padding: '4px 12px',
           background: 'transparent'
         }}>
           {/* Mobile Coupon Ticker - Top Priority */}
           {isHome && (
-            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'center', width: '100%' }}>
                <CouponFlipTicker isMobileMode={true} isScrolled={scrolled} />
             </div>
           )}

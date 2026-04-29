@@ -7,7 +7,7 @@ const QUICK_LINKS = [
     { title: "About Us", slug: "about" },
     { title: "Our Blogs", slug: "blogs" },
     { title: "Event Listing", slug: "events" },
-    { title: "Pricing Plan", slug: "pricing" },
+    { title: "Careers", slug: "careers" },
     { title: "Contact Us", slug: "contact" }
 ];
 const GALLERY_IMGS = [];
@@ -219,7 +219,7 @@ export default function Footer() {
                         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
                             {quickLinks.map(page => (
                                 <li key={page.title}>
-                                    <a href={page.slug === "events" ? "/events" : (["about", "contact", "privacy"].includes(page.slug) ? `/${page.slug}` : (page.slug === "#" ? "#" : `/p/${page.slug}`))} style={{
+                                    <a href={page.slug === "events" ? "/events" : (["about", "contact", "privacy", "terms", "careers"].includes(page.slug) ? `/${page.slug}` : (page.slug === "#" ? "#" : `/p/${page.slug}`))} style={{
                                         fontSize: "14px", color: "rgba(255,255,255,0.5)",
                                         textDecoration: "none", transition: "all 0.2s",
                                         fontWeight: 500,
@@ -248,37 +248,35 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div style={{ 
-                    marginTop: "20px",
-                    position: "relative"
-                }}>
-                    {/* Back to Top Button */}
+                    {/* Back to Top Button - Moved to Fixed Position */}
                     <button 
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                         style={{
-                            position: "absolute",
-                            right: "0",
-                            top: "30px",
-                            width: "60px",
-                            height: "60px",
+                            position: "fixed",
+                            right: "30px",
+                            bottom: "30px",
+                            width: "50px",
+                            height: "50px",
                             borderRadius: "50%",
                             background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
                             border: "none",
                             cursor: "pointer",
-                            display: isMobile ? "none" : "flex",
+                            display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            boxShadow: "0 10px 20px rgba(248, 68, 100, 0.3)",
-                            transition: "transform 0.3s ease"
+                            boxShadow: "0 10px 30px rgba(248, 68, 100, 0.4)",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            zIndex: 1000,
+                            opacity: "1",
+                            transform: "translateY(0)"
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = "translateY(-50%) scale(1.1)"}
-                        onMouseLeave={e => e.currentTarget.style.transform = "translateY(-50%) scale(1)"}
+                        onMouseEnter={e => e.currentTarget.style.transform = "translateY(-5px) scale(1.1)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "translateY(0) scale(1)"}
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 19V5M5 12l7-7 7 7" />
                         </svg>
                     </button>
-                </div>
 
                 {/* Bottom Bar: Socials & Copyright */}
                 <div style={{ 

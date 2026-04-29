@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BRAND_COUPONS } from "@/app/data/homeEvents";
 
 const FALLBACK_NAV_ITEMS = [
+    { label: "Events", icon: "🎟️" },
+    { label: "Services", icon: "🛠️" },
     { label: "Live Concerts", icon: "🎵" },
     { label: "Standup Comedy", icon: "🎭" },
     { label: "Sporting Events", icon: "🏆" },
@@ -62,7 +64,7 @@ export default function SubnavMarquee() {
                 >
                     <div style={{
                         backgroundColor: "#fff",
-                        padding: "16px 0",
+                        padding: "10px 0",
                         borderBottom: "1px solid #eaeaea",
                         borderTop: "1px solid #eaeaea",
                         boxShadow: "0 2px 12px rgba(0,0,0,0.03)",

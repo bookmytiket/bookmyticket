@@ -6,7 +6,7 @@ export default function ConditionalNavbar() {
     const pathname = usePathname();
     
     const isMeetingRoute = pathname && /^\/[a-zA-Z0-9]{6,12}$/.test(pathname) && ![
-        '/events', '/services', '/admin', '/organiser', '/vendor', '/signin', '/login', '/profile', '/movies', '/branding', '/advertising', '/checkout'
+        '/events', '/services', '/admin', '/organiser', '/vendor', '/signin', '/login', '/profile', '/movies', '/branding', '/advertising', '/checkout', '/careers', '/terms', '/privacy', '/about', '/contact'
     ].includes(pathname);
 
     if (
@@ -28,6 +28,9 @@ export default function ConditionalNavbar() {
         pathname?.startsWith("/pwa-scan") ||
         pathname?.startsWith("/turfs") ||
         pathname?.startsWith("/reset-password") ||
+        pathname?.startsWith("/careers") ||
+        pathname?.startsWith("/terms") ||
+        pathname?.startsWith("/privacy") ||
         pathname?.includes("/checkout")
     ) {
         return null;

@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Shield, Lock, Eye, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Shield, Lock, Eye, FileText, ChevronRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
 
     return (
         <main className="min-h-screen bg-[#fafbfc]">
-            <Navbar />
+            {/* ConditionalNavbar handles the Navbar display logic */}
             
             {/* Header */}
             <section className="pt-32 pb-20 px-6 bg-slate-900 relative overflow-hidden">
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
                                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {section.bullets.map((bullet, bIdx) => (
                                         <li key={bIdx} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <CheckCircle2 className="w-5 h-5 text-pink-500 flex-shrink-0" />
+                                            <CheckCircle className="w-5 h-5 text-pink-500 flex-shrink-0" />
                                             <span className="text-sm font-bold text-slate-700 uppercase tracking-tight">{bullet}</span>
                                         </li>
                                     ))}
