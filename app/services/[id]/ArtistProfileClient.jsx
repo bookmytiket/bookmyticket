@@ -638,6 +638,58 @@ export default function ArtistProfileClient({ id: vendorId }) {
                     Book Now
                 </button>
             </div>
+
+            {/* --- SEO ENHANCEMENT SECTION --- */}
+            <div className="mt-20 border-t border-slate-100 pt-20 pb-20">
+                <div className="max-w-[900px] mx-auto text-slate-600 px-6">
+                    <h2 className="text-3xl font-bold text-slate-900 mb-8 uppercase tracking-tight">Hiring Professional {fullProfile.vendorProfile?.category || 'Services'} from {organiser.business_name || organiser.name}</h2>
+                    
+                    <div className="prose prose-slate max-w-none space-y-6 text-[16px] leading-relaxed">
+                        <p>
+                            Are you looking to hire a professional <strong>{fullProfile.vendorProfile?.category}</strong> in <strong>{fullProfile.vendorProfile?.city || "India"}</strong>? You've come to the right place. BookMyTicket is a leading <strong>professional artist marketplace</strong>, and <strong>{organiser.business_name || organiser.name}</strong> is one of our top-rated <strong>verified service providers</strong>, known for their exceptional skill and professional approach.
+                        </p>
+
+                        <h3 className="text-xl font-bold text-slate-800 mt-10">Why Hire Professionals via BookMyTicket?</h3>
+                        <p>
+                            Booking professional services online can be daunting, but BookMyTicket makes it simple and safe. When you hire {organiser.business_name || organiser.name} through our <strong>artist management platform</strong>, you benefit from our <strong>Secure Payment Protection</strong>. Your money is held in escrow and only released to the service provider after the job is successfully completed.
+                        </p>
+
+                        <h3 className="text-xl font-bold text-slate-800 mt-10">About {organiser.business_name || organiser.name}</h3>
+                        <p>
+                            With over 5 years of experience in the industry, {organiser.business_name || organiser.name} has built a reputation for excellence. Specialising in <strong>{fullProfile.vendorProfile?.category}</strong>, they have successfully completed numerous projects across {fullProfile.vendorProfile?.city || "the country"}. 
+                            {fullProfile.vendorProfile?.bio && (
+                                <span className="italic"> "{fullProfile.vendorProfile.bio.slice(0, 200)}..."</span>
+                            )}
+                            Their portfolio showcases a diverse range of work, reflecting their versatility and commitment to client satisfaction.
+                        </p>
+
+                        <h3 className="text-xl font-bold text-slate-800 mt-10">Booking Process Explained</h3>
+                        <ul className="list-disc pl-5 space-y-3">
+                            <li><strong>Select a Package:</strong> Browse through the various service packages offered by {organiser.business_name || organiser.name} above. Each package is designed to cater to different needs and budgets.</li>
+                            <li><strong>Pick Your Date:</strong> Use our real-time calendar to check the availability of the artist and select the date for your event or project.</li>
+                            <li><strong>Submit Details:</strong> Provide your contact information and any specific requirements you might have. This helps the artist prepare better for the job.</li>
+                            <li><strong>Confirmation:</strong> Once you submit the booking request, {organiser.business_name || organiser.name} will review the details and confirm the booking. You'll receive instant updates via WhatsApp and Email.</li>
+                        </ul>
+
+                        <h3 className="text-xl font-bold text-slate-800 mt-10">Frequently Asked Questions</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="font-bold text-slate-700">Can I cancel my booking?</h4>
+                                <p>Yes, cancellations are subject to the service provider's refund policy. We recommend discussing the terms directly with {organiser.business_name || organiser.name} after the booking request is initiated.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-slate-700">Is my data safe?</h4>
+                                <p>Absolutely. BookMyTicket uses enterprise-grade security to ensure your personal information and transaction details are always protected.</p>
+                            </div>
+                        </div>
+
+                        <h3 className="text-xl font-bold text-slate-800 mt-10">Trust and Quality Assurance</h3>
+                        <p>
+                            BookMyTicket is committed to bringing you the best talent from across India. Whether you're planning a wedding, a corporate event, or a private party, our platform connects you with verified professionals who are experts in their fields. Join thousands of satisfied customers who trust BookMyTicket for their professional service needs.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </main>
     );
 }

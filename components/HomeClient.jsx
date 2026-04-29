@@ -798,9 +798,6 @@ function HomeClient() {
             {/* 5) Exclusive Events */}
             <ExclusiveEvents events={exclusiveEventsList} />
 
-            {/* 6) Virtual Events */}
-            <VirtualEvents events={normalizedOrgEvents} />
-
             {/* Professional Services Section */}
             <section id="services" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
@@ -841,6 +838,160 @@ function HomeClient() {
               </div>
               <ServiceCategories />
             </section>
+
+            {/* --- DYNAMIC & ATTRACTIVE DISCOVERY SECTION (PINK & PURPLE UI) --- */}
+            <section style={{ width: '100%', padding: '60px 20px', background: 'linear-gradient(180deg, #fafbfc 0%, #ffffff 100%)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ maxW: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1fr', gap: '40px', position: 'relative', zIndex: 10 }}>
+                    
+                    {/* Left: Top Categories */}
+                    <div>
+                        <div style={{ marginBottom: '32px' }}>
+                            <div style={{ display: 'inline-block', padding: '4px 12px', background: '#fff1f2', borderRadius: '100px', color: '#f84464', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px', border: '1px solid #fecdd3' }}>
+                                Explore Your Passions
+                            </div>
+                            <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                                Top <span style={{ color: 'transparent', WebkitBackgroundClip: 'text', backgroundImage: 'linear-gradient(to right, #f84464, #ec4899)' }}>Categories</span>
+                            </h2>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                            {[
+                                { name: 'Music', icon: '🎵', color: '#f84464' },
+                                { name: 'Sports', icon: '🏆', color: '#8b5cf6' },
+                                { name: 'Workshops', icon: '🎓', color: '#f84464' },
+                                { name: 'Comedy', icon: '😂', color: '#8b5cf6' },
+                                { name: 'Concerts', icon: '🎸', color: '#f84464' },
+                                { name: 'Wellness', icon: '🧘', color: '#8b5cf6' },
+                                { name: 'Screening', icon: '🎬', color: '#f84464' },
+                                { name: 'Festivals', icon: '🎉', color: '#8b5cf6' }
+                            ].map(cat => (
+                                <Link 
+                                    key={cat.name} 
+                                    href={`/?category=${cat.name}`}
+                                    style={{ 
+                                        padding: '16px', 
+                                        background: '#ffffff', 
+                                        borderRadius: '24px', 
+                                        border: '1px solid #f1f5f9',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'all 0.3s ease',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.01)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                        e.currentTarget.style.borderColor = cat.color;
+                                        e.currentTarget.style.boxShadow = `0 12px 24px -10px ${cat.color}25`;
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.borderColor = '#f1f5f9';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.01)';
+                                    }}
+                                >
+                                    <div style={{ 
+                                        width: '40px', 
+                                        height: '40px', 
+                                        background: `${cat.color}10`, 
+                                        borderRadius: '12px', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center',
+                                        fontSize: '20px',
+                                        flexShrink: 0
+                                    }}>
+                                        {cat.icon}
+                                    </div>
+                                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.01em' }}>{cat.name}</div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right: Popular Cities */}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ marginBottom: '32px' }}>
+                            <div style={{ display: 'inline-block', padding: '4px 12px', background: '#f5f3ff', borderRadius: '100px', color: '#8b5cf6', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px', border: '1px solid #ddd6fe' }}>
+                                Find Events Near You
+                            </div>
+                            <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                                Popular <span style={{ color: 'transparent', WebkitBackgroundClip: 'text', backgroundImage: 'linear-gradient(to right, #8b5cf6, #d946ef)' }}>Cities</span>
+                            </h2>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '40px' }}>
+                            {['Hyderabad', 'Bangalore', 'Mumbai', 'Chennai', 'Coimbatore', 'Pune', 'Vizag', 'Kochi', 'Delhi', 'Ahmedabad'].map((city, i) => (
+                                <button 
+                                    key={city}
+                                    onClick={() => router.push(`/?q=${city}`)}
+                                    style={{ 
+                                        padding: '8px 18px', 
+                                        background: '#ffffff', 
+                                        borderRadius: '100px', 
+                                        border: '1px solid #e2e8f0',
+                                        fontSize: '12px',
+                                        fontWeight: 800,
+                                        color: '#64748b',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => {
+                                        const isEven = i % 2 === 0;
+                                        e.currentTarget.style.borderColor = isEven ? '#f84464' : '#8b5cf6';
+                                        e.currentTarget.style.color = isEven ? '#f84464' : '#8b5cf6';
+                                        e.currentTarget.style.background = isEven ? '#fff1f2' : '#f5f3ff';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                        e.currentTarget.style.color = '#64748b';
+                                        e.currentTarget.style.background = '#ffffff';
+                                    }}
+                                >
+                                    {city}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Premium Guide Card (Pink/Purple Gradient) */}
+                        <div style={{ 
+                            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', 
+                            borderRadius: '32px', 
+                            padding: '32px', 
+                            color: '#fff',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            boxShadow: '0 20px 40px -10px rgba(30, 27, 75, 0.3)'
+                        }}>
+                            <div style={{ 
+                                position: 'absolute', 
+                                top: '-20%', right: '-10%', 
+                                width: '200px', height: '200px', 
+                                background: 'radial-gradient(circle, rgba(248, 68, 100, 0.15) 0%, transparent 70%)',
+                                pointerEvents: 'none'
+                            }} />
+                            
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyCenter: 'center', marginBottom: '20px' }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f84464', margin: 'auto' }}>
+                                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                                    </svg>
+                                </div>
+                                <h3 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>BookMyTicket – India's Leading <span style={{ color: '#f84464' }}>Event</span> Partner</h3>
+                                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, fontWeight: 500 }}>
+                                    From music concerts and comedy specials to sports turf bookings, BookMyTicket is your one-stop destination for entertainment in India. We operate in over 20+ cities with the lowest platform fees and verified trust.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* 6) Virtual Events */}
+            <VirtualEvents events={normalizedOrgEvents} />
 
              {/* Branding & Others */}
             <div style={{ width: '100%' }}>

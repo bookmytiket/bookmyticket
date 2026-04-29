@@ -370,6 +370,50 @@ export default function DynamicEventClient({ event }) {
                     </div>
 
                 </div>
+
+                {/* --- SEO ENHANCEMENT SECTION --- */}
+                <div className="mt-20 border-t border-slate-100 pt-20 pb-20">
+                    <div className="max-w-[900px] mx-auto text-slate-600">
+                        <h2 className="text-3xl font-bold text-slate-900 mb-8 uppercase tracking-tight">Everything You Need to Know About {event.title}</h2>
+                        
+                        <div className="prose prose-slate max-w-none space-y-6 text-[16px] leading-relaxed">
+                            <p>
+                                Need <strong>online event registration</strong> for <strong>{event.title}</strong>? BookMyTicket is your <strong>premium event booking</strong> partner for all things events in <strong>{event.city || "your city"}</strong>. This page provides all the essential information you need to register, prepare, and enjoy this spectacular event.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Safe and Secure Registration</h3>
+                            <p>
+                                Registering for {event.title} on BookMyTicket is 100% secure. Our <strong>secure checkout ticketing</strong> system uses advanced encryption to protect your personal and payment information. For dynamic events that require participant details, our form is designed to be quick and easy to fill out, ensuring you can secure your spot before slots run out.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Event Overview & Highlights</h3>
+                            <p>
+                                {event.title} is more than just an event; it's an experience. Scheduled for <strong>{event.startDate}</strong>, it brings together people with a shared passion for {event.category}. 
+                                {event.description.length < 300 && (
+                                    <span> Expect a day filled with engagement, learning, and entertainment. Whether you're participating in the main activities or enjoying the amenities, there's something for everyone.</span>
+                                )}
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Preparation Checklist</h3>
+                            <ul className="list-disc pl-5 space-y-3">
+                                <li><strong>Check Your Email:</strong> Once you complete your booking, you'll receive a confirmation email with all the details.</li>
+                                <li><strong>Join the Community:</strong> If there's a WhatsApp group link provided, make sure to join it for real-time updates from the organisers.</li>
+                                <li><strong>Required Documents:</strong> If the event requires ID proof or specific certificates, keep them handy for the registration desk.</li>
+                                <li><strong>Know the Venue:</strong> Familiarise yourself with <strong>{config.location?.venueName || "the venue"}</strong>. Plan your travel in advance to ensure a stress-free arrival.</li>
+                            </ul>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Why Choose BookMyTicket for Dynamic Events?</h3>
+                            <p>
+                                BookMyTicket offers a specialized interface for events that require more than just a ticket. From marathons and sports tournaments to workshops and conferences, our platform handles complex registration forms and slot management with ease. We provide organisers with the tools they need to manage participants effectively, ensuring a professional experience for you.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Need Assistance?</h3>
+                            <p>
+                                Our support team is available 24/7 to help you with any queries regarding your booking for {event.title}. Whether it's a payment issue or a question about the event schedule, we're here to ensure your journey from booking to attendance is smooth and enjoyable.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

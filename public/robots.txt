@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /organiser/
+Disallow: /api/
+Disallow: /profile/
+Disallow: /_next/
+Disallow: /reset-password
+
+Sitemap: https://bookmyticket.net/sitemap.xml

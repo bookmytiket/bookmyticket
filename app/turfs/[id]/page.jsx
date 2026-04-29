@@ -42,6 +42,7 @@ export default async function TurfProfilePage({ params }) {
 
     return (
         <>
+            <h1>{turf.name}</h1>
             {turf && (
                 <script
                     type="application/ld+json"

@@ -58,6 +58,7 @@ export default async function EventDetailPage({ searchParams }) {
 
     return (
         <>
+            <h1>{event.title}</h1>
             {event && (
                 <script
                     type="application/ld+json"

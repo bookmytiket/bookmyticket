@@ -85,7 +85,12 @@ export default function ProfilePage() {
     // Hydration guard: show nothing or a loader until client-side mount
     if (!mounted) {
         return (
-            <div style={{ minHeight: "100vh", background: THEME.bg }} />
+            <div style={{ minHeight: "100vh", background: THEME.bg }}>
+                {/* Semrush checks initial HTML; this ensures an H1 exists pre-hydration */}
+                <h1 style={{ fontSize: "34px", fontWeight: 900, color: THEME.textMain, margin: "0 0 10px", padding: "120px 24px 0" }}>
+                    Your Profile
+                </h1>
+            </div>
         );
     }
 
@@ -93,7 +98,12 @@ export default function ProfilePage() {
     if (!user) {
         return (
             <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg }}>
-                <p style={{ color: THEME.textSub }}>Redirecting to login...</p>
+                <div style={{ textAlign: "center", padding: "24px" }}>
+                    <h1 style={{ fontSize: "34px", fontWeight: 900, color: THEME.textMain, margin: "0 0 10px" }}>
+                        Your Profile
+                    </h1>
+                    <p style={{ color: THEME.textSub }}>Redirecting to login...</p>
+                </div>
             </div>
         );
     }

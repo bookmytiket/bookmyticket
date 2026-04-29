@@ -422,8 +422,53 @@ export default function EventDetailClient({ id }) {
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
 
+                </div>
+
+                {/* --- SEO ENHANCEMENT SECTION --- */}
+                <div className="mt-20 border-t border-slate-100 pt-20">
+                    <div className="max-w-[900px] mx-auto text-slate-600">
+                        <h2 className="text-3xl font-bold text-slate-900 mb-8 uppercase tracking-tight">Your Complete Guide to Booking {event.title} on BookMyTicket</h2>
+                        
+                        <div className="prose prose-slate max-w-none space-y-6 text-[16px] leading-relaxed">
+                            <p>
+                                Looking for <strong>online event registration</strong> for <strong>{event.title}</strong>? You've come to the right place. BookMyTicket is India's most trusted <strong>premium event booking</strong> platform for securing your spot at the biggest events in <strong>{event.city || event.location}</strong>. Whether you're looking for <strong>music festival passes</strong>, <strong>live sports tickets</strong>, or <strong>workshop and seminar tickets</strong>, our seamless booking experience ensures you get your tickets in under 60 seconds.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Why Book {event.title} Tickets Online?</h3>
+                            <p>
+                                Booking your tickets for {event.title} online offers numerous advantages. Our <strong>secure checkout ticketing</strong> system uses state-of-the-art encryption to keep your payment details secure, and our instant e-ticket system means you'll have your entry pass on your phone immediately after purchase. BookMyTicket offers exclusive early-bird discounts and partner offers that you won't find anywhere else.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Event Details & What to Expect</h3>
+                            <p>
+                                {event.title} is scheduled to take place on <strong>{event.date}</strong> at <strong>{event.venue || event.location}</strong>. As one of the most anticipated {event.category} events of the year, it is expected to draw a significant crowd from across {event.city || "the region"}. 
+                                {event.description.length < 200 && (
+                                    <span> This event promises an unforgettable experience featuring top-tier talent and high-production value. Attendees can expect a well-organized environment with all necessary amenities provided at the venue.</span>
+                                )}
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">How to Prepare for the Event</h3>
+                            <ul className="list-disc pl-5 space-y-3">
+                                <li><strong>Arrival Time:</strong> We recommend arriving at {event.venue || "the venue"} at least 30-45 minutes before the scheduled start time of {event.time || "the event"}. This allows for smooth security checks and finding your seat.</li>
+                                <li><strong>Digital Tickets:</strong> Ensure your phone is fully charged. Your BookMyTicket QR code will be scanned at the entry. You can also find your ticket in the 'My Bookings' section of our app.</li>
+                                <li><strong>Venue Rules:</strong> Please adhere to the venue guidelines. Most events prohibit outside food and beverages. Follow the instructions provided by the ground staff for a pleasant experience.</li>
+                                <li><strong>Parking:</strong> {event.parking || "Check local parking options near the venue."} We suggest using public transport or ride-sharing services for large-scale events to avoid traffic congestion.</li>
+                            </ul>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">Our Commitment to Your Safety</h3>
+                            <p>
+                                At BookMyTicket, your safety is our top priority. We work closely with event organisers like <strong>Motta Maadi Music</strong> and venue partners to ensure that all safety protocols are strictly followed. From crowd management to emergency medical assistance, we ensure that the infrastructure is in place for a worry-free experience. If you have any specific requirements or need assistance during the event, please reach out to the nearest staff member.
+                            </p>
+
+                            <h3 className="text-xl font-bold text-slate-800 mt-10">About BookMyTicket</h3>
+                            <p>
+                                BookMyTicket is India's fastest-growing event discovery and ticketing platform. We specialise in a wide range of categories including <em>Concerts, Comedy Shows, Workshops, Sports Events, and Festivals</em>. Our mission is to connect people with experiences that matter, making event discovery and booking as simple as a few taps on your screen. Join millions of happy users and start exploring the best events in your city today.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

@@ -56,6 +56,7 @@ export default async function ArtistProfilePage({ params }) {
 
     return (
         <>
+            <h1>{service.business_name || service.name}</h1>
             {service && (
                 <script
                     type="application/ld+json"

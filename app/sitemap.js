@@ -12,10 +12,7 @@ export default async function sitemap() {
     '/services',
     '/branding',
     '/profile',
-    '/advertise',
-    '/events',
     '/signin',
-    '/auth/signup',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
