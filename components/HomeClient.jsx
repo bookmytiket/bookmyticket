@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoHeroBanner from '@/components/VideoHeroBanner';
+import NewEventPublishedBanner from '@/components/NewEventPublishedBanner';
 import FeaturedOrganisers from '@/components/FeaturedOrganisers';
 import FeaturedEvents from '@/components/FeaturedEvents';
 import RecentlyViewedEvents from '@/components/RecentlyViewedEvents';
@@ -772,6 +773,7 @@ function HomeClient() {
           </section>
         ) : (
           <div style={{ width: '100%' }}>
+            <NewEventPublishedBanner />
             <VideoHeroBanner />
 
             {/* Cloned Brand Coupons Section (Top Trending Offers) - Placed under Hero Banner */}

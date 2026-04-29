@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, MapPin, ChevronDown, User, LogOut, Menu, X, Calendar, Ticket as TicketIcon, Handshake, Globe, Wrench, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -140,6 +140,9 @@ const ALL_CITIES_BY_COUNTRY = {
   "United States": ["New York City", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
 };
 
+import { BRAND_COUPONS } from "@/app/data/homeEvents";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+
 const DEFAULT_CATEGORIES = [
   "Concert", "Sports", "Comedy", "Theatre",
   "Music", "Workshop", "Festival", "Live Shows",
@@ -157,6 +160,14 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Mark as mounted after hydration to avoid SSR/localStorage mismatch
   useEffect(() => {
@@ -264,11 +275,109 @@ export default function Navbar() {
     }
   };
 
+  const CouponFlipTicker = ({ isScrolled = false, isMobileMode = false }) => {
+    const { data: supabaseCoupons } = useSupabaseQuery('brand_coupons', (q) => q, []);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const coupons = useMemo(() => {
+        if (supabaseCoupons && supabaseCoupons.length > 0) return supabaseCoupons;
+        return BRAND_COUPONS;
+    }, [supabaseCoupons]);
+
+    useEffect(() => {
+        if (!coupons || coupons.length <= 1) return;
+        const timer = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % coupons.length);
+        }, 4000);
+        return () => clearInterval(timer);
+    }, [coupons]);
+
+    if (!coupons || coupons.length === 0) return null;
+
+    const current = coupons[currentIndex];
+    const brandName = current.brand_name || current.brandName;
+    const title = current.title;
+    const code = current.coupon_code || current._id?.toUpperCase() || 'GET DEAL';
+
+    const handleCouponClick = () => {
+        if (!user) {
+            router.push("/signin?redirect=/coupons");
+        } else {
+            router.push("/coupons");
+        }
+    };
+
+    return (
+        <div style={{ perspective: '1000px', display: 'flex', justifyContent: 'center', flex: (isScrolled || isMobileMode) ? 'none' : 1, width: isMobileMode ? '100%' : 'auto' }}>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentIndex}
+                    onClick={handleCouponClick}
+                    initial={{ rotateX: 90, opacity: 0, y: isScrolled ? -5 : 5 }}
+                    animate={{ rotateX: 0, opacity: 1, y: 0 }}
+                    exit={{ rotateX: -90, opacity: 0, y: isScrolled ? 5 : -5 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.5, ease: "backOut" }}
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: (isScrolled || isMobileMode) ? '8px' : '12px',
+                        background: 'transparent',
+                        backdropFilter: 'none',
+                        padding: (isScrolled || isMobileMode) ? '2px 0' : '5px 0',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        cursor: 'pointer',
+                        maxWidth: isMobileMode ? '100%' : '420px',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}
+                >
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                        transform: 'translateX(-100%)',
+                        animation: 'shimmer 3s infinite',
+                        pointerEvents: 'none'
+                    }} />
+                    <span style={{ fontSize: (isScrolled || isMobileMode) ? '10px' : '12px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        🏷️ {brandName}:
+                    </span>
+                    <span style={{ fontSize: (isScrolled || isMobileMode) ? '11px' : '13px', fontWeight: 800, color: isScrolled ? '#fff' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {title}
+                    </span>
+                    <div style={{ 
+                        background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', 
+                        color: '#fff', 
+                        padding: (isScrolled || isMobileMode) ? '2px 8px' : '3px 10px', 
+                        borderRadius: (isScrolled || isMobileMode) ? '6px' : '8px', 
+                        fontSize: (isScrolled || isMobileMode) ? '9px' : '10px', 
+                        fontWeight: 900,
+                        boxShadow: '0 4px 8px rgba(248, 68, 100, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        GET DEAL
+                    </div>
+                </motion.div>
+            </AnimatePresence>
+            <style>{`
+                @keyframes shimmer {
+                    100% { transform: translateX(100%); }
+                }
+            `}</style>
+        </div>
+    );
+  };
+
   return (
     <>
       <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
         {/* Main Navbar */}
-        <div className="header-main" style={{ justifyContent: 'space-between' }}>
+        <div className="header-main" style={{ justifyContent: 'space-between', position: 'relative', zIndex: 100 }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
             <motion.img
               src="/logo.png"
@@ -366,11 +475,7 @@ export default function Navbar() {
               marginRight: 'auto'
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span suppressHydrationWarning style={{ fontWeight: 700, fontSize: '15px' }}>{mounted ? (selectedCity || "Select Location") : "Select Location"}</span>
+            <div suppressHydrationWarning style={{ fontWeight: 700, fontSize: '15px' }}>{mounted ? (selectedCity || "Select Location") : "Select Location"}</div>
           </button>
 
           {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
@@ -667,11 +772,39 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Search - Persistent */}
+        {/* Persistent Scrolled Ticker - INTEGRATED into Main Navbar */}
+        <AnimatePresence>
+          {scrolled && isHome && !isMobile && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              style={{
+                position: 'absolute',
+                left: '65%',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 60,
+                pointerEvents: 'auto'
+              }}
+            >
+              <CouponFlipTicker isScrolled={true} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile View - Home Only Ticker & Search */}
         <div className="show-mobile" style={{
-          padding: '4px 12px 10px',
+          padding: '8px 12px',
           background: 'transparent'
         }}>
+          {/* Mobile Coupon Ticker - Top Priority */}
+          {isHome && (
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+               <CouponFlipTicker isMobileMode={true} isScrolled={scrolled} />
+            </div>
+          )}
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -765,6 +898,9 @@ export default function Navbar() {
                 </motion.div>
               ))}
             </div>
+
+            {/* Dynamic Coupon Flip Ticker (Center) - Home Only */}
+            {!scrolled && isHome && !isMobile && <CouponFlipTicker />}
 
             <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
               <motion.button

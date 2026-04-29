@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Camera, Palette, Sparkles, Users, ArrowUpRight, Waves } from "lucide-react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 
 const CATEGORIES = [
@@ -137,27 +138,32 @@ export default function ServiceCategories() {
               display: "flex", flexDirection: "column", gap: isMobile ? "4px" : "6px",
             }}>
               {/* Icon pill */}
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: "7px",
-                background: cat.gradient,
-                borderRadius: isMobile ? "8px" : "12px",
-                padding: isMobile ? "4px 8px" : "6px 12px",
-                width: "fit-content",
-                marginBottom: isMobile ? "2px" : "6px",
-                boxShadow: `0 6px 16px ${cat.color}55`,
-              }}>
+              <motion.div 
+                whileHover={{ scale: 1.1, rotate: -2 }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  background: cat.gradient,
+                  borderRadius: isMobile ? "10px" : "14px",
+                  padding: isMobile ? "6px 12px" : "8px 16px",
+                  width: "fit-content",
+                  marginBottom: isMobile ? "4px" : "10px",
+                  boxShadow: `0 8px 24px ${cat.color}66`,
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  backdropFilter: 'blur(8px)'
+                }}>
                 <span style={{ color: "#fff", display: "flex" }}>
-                  {React.cloneElement(cat.icon, { size: isMobile ? 12 : 16 })}
+                  {React.cloneElement(cat.icon, { size: isMobile ? 14 : 18 })}
                 </span>
-                <span style={{ fontSize: isMobile ? "8px" : "11px", fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <span style={{ fontSize: isMobile ? "9px" : "12px", fontWeight: 900, color: "#fff", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   {cat.name}
                 </span>
-              </div>
+              </motion.div>
 
               {!isMobile && (
                 <p style={{
-                  fontSize: "12px", color: "rgba(255,255,255,0.8)",
-                  lineHeight: 1.5, margin: 0, maxWidth: "220px"
+                  fontSize: "13px", color: "rgba(255,255,255,0.95)",
+                  lineHeight: 1.6, margin: "0 0 12px", maxWidth: "240px",
+                  fontWeight: 500, textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                 }}>
                   {cat.description}
                 </p>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Marquee from "react-fast-marquee";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { motion, AnimatePresence } from "framer-motion";
+import { BRAND_COUPONS } from "@/app/data/homeEvents";
 
 const FALLBACK_NAV_ITEMS = [
     { label: "Live Concerts", icon: "🎵" },
@@ -16,6 +17,10 @@ const FALLBACK_NAV_ITEMS = [
     { label: "Food Festivals", icon: "🍽️" },
     { label: "Exclusive Experiences", icon: "✨" },
 ];
+
+function CouponFlipTicker() {
+    return null;
+}
 
 export default function SubnavMarquee() {
     const router = useRouter();
@@ -60,7 +65,11 @@ export default function SubnavMarquee() {
                         padding: "16px 0",
                         borderBottom: "1px solid #eaeaea",
                         borderTop: "1px solid #eaeaea",
-                        boxShadow: "0 2px 12px rgba(0,0,0,0.03)"
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.03)",
+                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        overflow: "hidden"
                     }}>
                         <Marquee
                             speed={50}
