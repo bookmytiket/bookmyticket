@@ -12,15 +12,19 @@ export function AuthProvider({ children }) {
     const [selectedCity, setSelectedCity] = useState("");
     const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "" });
     const isProcessingRef = useRef(false);
+    const ongoingFetchRef = useRef(null);
     const router = useRouter();
 
     useEffect(() => {
         const initializeAuth = async () => {
-            // Try to load cached user immediately to prevent flicker/redirects
             const cachedUser = localStorage.getItem("user");
             if (cachedUser) {
                 try {
-                    setUser(JSON.parse(cachedUser));
+                    const parsed = JSON.parse(cachedUser);
+                    setUser(parsed);
+                    // Optimistic loading: if we have a cached user, let the app render
+                    // while we verify the session in the background.
+                    setLoading(false);
                 } catch (e) {
                     console.error("Error parsing cached user:", e);
                 }
@@ -66,13 +70,13 @@ export function AuthProvider({ children }) {
         let subscription = null;
         if (supabase) {
             const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+                if (event === 'SIGNED_IN' && !user) {
                     setLoading(true);
                 }
 
                 if (session) {
                     await fetchAndSetUser(session.user);
-                } else {
+                } else if (event === 'SIGNED_OUT') {
                     setUser(null);
                     localStorage.removeItem("user");
                 }
@@ -113,10 +117,10 @@ export function AuthProvider({ children }) {
 
     const fetchAndSetUser = async (supabaseUser) => {
         if (!supabase) return null;
-        if (isProcessingRef.current) return user;
+        if (ongoingFetchRef.current) return ongoingFetchRef.current;
         
-        isProcessingRef.current = true;
-        try {
+        ongoingFetchRef.current = (async () => {
+            try {
             const fetchPromise = Promise.all([
                 (async () => {
                     try { return await supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(); }
@@ -153,8 +157,8 @@ export function AuthProvider({ children }) {
                 const minimalUser = {
                     id: supabaseUser.id,
                     email: supabaseUser.email,
-                    role: user?.role || 'public', // Keep existing role if possible
-                    name: user?.name || supabaseUser.email?.split('@')[0],
+                    role: user?.role || (localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).role : 'public'),
+                    name: user?.name || (localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).name : supabaseUser.email?.split('@')[0]),
                     is_pwa_mode: true
                 };
                 setUser(minimalUser);
@@ -223,10 +227,12 @@ export function AuthProvider({ children }) {
             return userData;
         } catch (err) {
             console.error("AuthContext: Critical error in fetchAndSetUser:", err);
-            return null;
+            return user; // Return current state on error rather than null
         } finally {
-            isProcessingRef.current = false;
+            ongoingFetchRef.current = null;
         }
+    })();
+    return ongoingFetchRef.current;
     };
 
     const updateCity = async (city, hierarchy = null) => {

@@ -97,8 +97,8 @@ const CareersAdmin = ({ t, theme }) => {
     const { confirm } = useConfirm();
 
     // Data Fetching
-    const { data: jobs = [], loading: jobsLoading, refetch: refetchJobs } = useSupabaseQuery('jobs', (q) => q.order('created_at', { ascending: false }));
-    const { data: applicants = [], loading: applicantsLoading, refetch: refetchApplicants } = useSupabaseQuery('job_applications', (q) => q.order('created_at', { ascending: false }));
+    const { data: jobs = [], loading: jobsLoading, refresh: refetchJobs } = useSupabaseQuery('jobs', (q) => q.order('created_at', { ascending: false }));
+    const { data: applicants = [], loading: applicantsLoading, refresh: refetchApplicants } = useSupabaseQuery('job_applications', (q) => q.order('created_at', { ascending: false }));
 
     // Mutations
     const [upsertJob] = useSupabaseMutation('jobs', 'upsert');
