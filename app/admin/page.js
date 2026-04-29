@@ -576,6 +576,21 @@ function AdminHomePage() {
         }
     }, [user, loading, router]);
 
+    useEffect(() => {
+        if (!user || (user.role !== "admin" && user.role !== "super_admin")) return;
+
+        const channel = supabase
+            .channel('new-applicants')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'job_applications' }, payload => {
+                showToast(`New Application from ${payload.new.name}!`, "info");
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
+
     const handleLogout = () => {
         logout();
     };
@@ -588,7 +603,7 @@ function AdminHomePage() {
         const homeTabs = ["hero", "mobile_banners", "video_banner", "site_branding", "events_settings", "event_partners", "memories", "sections", "copyright", "meeting_settings", "maintenance"];
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
-        const growthTabs = ["promotions", "send_notif", "comm_hub"];
+        const growthTabs = ["promotions", "send_notif", "email_broadcast", "comm_hub"];
         const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings"];
         const careerTabs = ["careers_admin", "careers_banner"];
 
@@ -2047,7 +2062,7 @@ function AdminHomePage() {
                                         {[
                                             { label: "Promotions", id: "promotions" },
                                             { label: "Push Notifications", id: "send_notif" },
-                                            { label: "Email Broadcast", id: "email_templates" },
+                                            { label: "Email Broadcast", id: "email_broadcast" },
 
                                         ].map(sub => (
                                             <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={sub.onClick || (() => setActiveTab(sub.id))} />
@@ -2090,7 +2105,6 @@ function AdminHomePage() {
                                             { label: "Payments", id: "payment_settings" },
                                             { label: "Emails", id: "email_settings" },
                                             { label: "SEO & Analytics", id: "seo_settings", onClick: () => router.push('/admin/settings/seo') },
-                                            { label: "Email Templates", id: "email_templates" },
 
                                             { label: "Terms & Conditions", id: "terms_settings", onClick: () => router.push('/admin/settings/terms') },
                                             { label: "SSO Config", id: "sso_settings" },
@@ -5044,7 +5058,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "email_templates" && (
+                    {(activeTab === "email_templates" || activeTab === "email_broadcast") && (
                         <EmailCommSystem t={t} theme={theme} />
                     )}
                     {activeTab === "disclaimer_settings" && (
@@ -5467,9 +5481,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {activeTab === "comm_hub" && (
-                        <EmailCommSystem t={t} theme={theme} />
-                    )}
+
 
 
                     {activeTab === "api_settings" && (

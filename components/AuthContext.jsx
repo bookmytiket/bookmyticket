@@ -16,6 +16,16 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const initializeAuth = async () => {
+            // Try to load cached user immediately to prevent flicker/redirects
+            const cachedUser = localStorage.getItem("user");
+            if (cachedUser) {
+                try {
+                    setUser(JSON.parse(cachedUser));
+                } catch (e) {
+                    console.error("Error parsing cached user:", e);
+                }
+            }
+
             if (!supabase) {
                 console.warn("AuthContext: Supabase client not initialized.");
                 setLoading(false);
@@ -80,7 +90,7 @@ export function AuthProvider({ children }) {
         if (!user) return;
 
         let inactivityTimer;
-        const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 Minutes
+        const INACTIVITY_LIMIT = 24 * 60 * 60 * 1000; // 24 Hours (Improved persistence)
 
         const resetTimer = () => {
             if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -140,12 +150,11 @@ export function AuthProvider({ children }) {
                 if (!Array.isArray(results)) throw new Error("Database timeout");
                 [profileResult, adminResult, organiserResult, vendorResult, providerResult] = results;
             } catch (err) {
-                console.error("AuthContext: Profile fetch timed out or failed:", err);
                 const minimalUser = {
                     id: supabaseUser.id,
                     email: supabaseUser.email,
-                    role: 'user',
-                    name: supabaseUser.email?.split('@')[0],
+                    role: user?.role || 'public', // Keep existing role if possible
+                    name: user?.name || supabaseUser.email?.split('@')[0],
                     is_pwa_mode: true
                 };
                 setUser(minimalUser);

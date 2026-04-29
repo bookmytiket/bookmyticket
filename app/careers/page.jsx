@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Briefcase, MapPin, Clock, ArrowRight, Sparkles, 
     Rocket, Users, Heart, Filter, X, CheckCircle, 
-    Upload, Loader2, Search, DollarSign, Calendar
+    Upload, Loader2, Search, DollarSign, Calendar, ChevronDown
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
@@ -159,8 +159,32 @@ export default function CareersPage() {
 }
 
 function JobCard({ job, onApply }) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const isClosingSoon = job.deadline && (new Date(job.deadline) - new Date()) < (3 * 24 * 60 * 60 * 1000) && (new Date(job.deadline) - new Date()) > 0;
     const isExpired = job.deadline && new Date(job.deadline) < new Date();
+
+    const renderList = (text, icon, title, color) => {
+        if (!text) return null;
+        const items = text.split('\n').filter(i => i.trim());
+        if (items.length === 0) return null;
+
+        return (
+            <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className={`flex items-center gap-2 mb-3 ${color}`}>
+                    {icon}
+                    <h4 className="text-sm font-black uppercase tracking-widest">{title}</h4>
+                </div>
+                <ul className="space-y-2">
+                    {items.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${color.replace('text', 'bg')}`} />
+                            {item.replace(/📌|🧠|🌟/g, '').trim()}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
 
     return (
         <div className="group p-8 bg-white rounded-[40px] border border-slate-100 hover:border-pink-500/30 transition-all hover:shadow-2xl hover:shadow-pink-500/5 flex flex-col h-full">
@@ -184,7 +208,7 @@ function JobCard({ job, onApply }) {
                 {job.title}
             </h3>
             
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="flex items-center gap-2 text-slate-500">
                     <MapPin className="w-4 h-4 text-pink-500" />
                     <span className="text-xs font-bold">{job.location}</span>
@@ -193,23 +217,26 @@ function JobCard({ job, onApply }) {
                     <DollarSign className="w-4 h-4 text-green-500" />
                     <span className="text-xs font-bold">{job.salary_range || 'Competitive'}</span>
                 </div>
-                {job.deadline && (
-                    <div className="flex items-center gap-2 text-slate-500">
-                        <Calendar className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs font-bold">Apply by {new Date(job.deadline).toLocaleDateString()}</span>
-                    </div>
-                )}
-                <div className="flex items-center gap-2 text-slate-500">
-                    <Users className="w-4 h-4 text-purple-500" />
-                    <span className="text-xs font-bold">{job.openings} Openings</span>
+            </div>
+
+            {/* Collapsible Content */}
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1000px] mb-8' : 'max-h-0'}`}>
+                <div className="pt-4 border-t border-slate-50">
+                    {renderList(job.responsibilities, <Rocket className="w-4 h-4" />, "Key Responsibilities", "text-blue-600")}
+                    {renderList(job.qualifications, <Sparkles className="w-4 h-4" />, "Required Skills & Qualifications", "text-purple-600")}
+                    {renderList(job.preferred_skills, <Heart className="w-4 h-4" />, "Preferred Skills", "text-pink-600")}
                 </div>
             </div>
 
-            <p className="text-slate-500 text-sm leading-relaxed mb-8 line-clamp-3">
-                {job.description}
-            </p>
-
-            <div className="mt-auto">
+            <div className="mt-auto flex flex-col gap-3">
+                <button 
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-pink-500 transition-colors flex items-center gap-2 mb-2"
+                >
+                    {isExpanded ? 'Show Less' : 'View Details & Requirements'} 
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                
                 <button 
                     disabled={isExpired}
                     onClick={onApply}
@@ -279,7 +306,8 @@ function ApplyModal({ job, onClose, showToast }) {
                     cover_letter: formData.cover_letter,
                     portfolio_url: formData.portfolio_url,
                     resume_url: resumeUrl,
-                    status: 'new'
+                    status: 'new',
+                    status_history: [{ status: 'new', date: new Date().toISOString() }]
                 }]);
 
             if (dbError) throw dbError;
