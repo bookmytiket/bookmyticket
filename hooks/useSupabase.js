@@ -182,3 +182,45 @@ export function useSupabaseMutation(table, type = 'insert', queryFn = (q) => q) 
 
   return [mutate, { loading, error }];
 }
+
+/**
+ * A custom hook to manage system configuration (key-value) in Supabase.
+ * @param {string} table The table name (usually system_config).
+ * @param {object} initialValue The initial value object { key, ...rest }.
+ */
+export function useSupabaseConfig(table, initialValue) {
+    const { key } = initialValue || {};
+    const { data, refresh } = useSupabaseQuery(table, (q) => key ? q.eq('key', key) : q, [key], { realtime: false });
+    const [updateConfig] = useSupabaseMutation(table, 'update', (q, p) => p.id ? q.eq('id', p.id) : (key ? q.eq('key', key) : q));
+
+    const rawData = data && data[0] ? data[0] : initialValue;
+    const config = (table === 'system_config' && rawData?.value) 
+        ? { ...rawData, ...rawData.value } 
+        : rawData;
+
+    const setConfig = async (newValue) => {
+        const payload = typeof newValue === 'function' ? newValue(config) : newValue;
+        const isKeyValueTable = table === 'system_config';
+        
+        if (config.id || (isKeyValueTable && key)) {
+            let updatePayload;
+            if (isKeyValueTable) {
+                const { id: _, key: __, value: ___, updated_at: ____, ...rest } = payload;
+                updatePayload = { key, value: rest };
+                if (config.id) updatePayload.id = config.id;
+            } else {
+                updatePayload = { ...payload };
+                if (config.id) updatePayload.id = config.id;
+            }
+            
+            Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
+            await updateConfig(updatePayload);
+            refresh();
+        } else {
+            await supabase.from(table).insert(isKeyValueTable ? { key, value: payload } : payload);
+            refresh();
+        }
+    };
+
+    return [config, setConfig];
+}

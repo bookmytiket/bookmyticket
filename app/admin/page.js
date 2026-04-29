@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
+import { useSupabaseQuery, useSupabaseMutation, useSupabaseConfig } from "@/hooks/useSupabase";
 import GstPortal from "@/app/admin/components/GstPortal";
 import { useAuth } from "@/components/AuthContext";
 import AdminCheckoutFooter from "@/app/admin/components/AdminCheckoutFooter";
@@ -12,6 +12,8 @@ import AdminPartnerRequestsTable from "@/app/admin/components/AdminPartnerReques
 import BrandingHeader from "@/components/BrandingHeader";
 import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
+import CareersAdmin from "@/app/admin/components/CareersAdmin";
+import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings";
 
 
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
@@ -38,40 +40,7 @@ const NavIcon = ({ icon: Icon, size = 18, color }) => (
     </div>
 );
 
-const useSupabaseConfig = (table, initialValue) => {
-    const { key } = initialValue || {};
-    const { data } = useSupabaseQuery(table, (q) => key ? q.eq('key', key) : q, [key]);
-    const [updateConfig] = useSupabaseMutation(table, 'update', (q, p) => p.id ? q.eq('id', p.id) : (key ? q.eq('key', key) : q));
 
-    const rawData = data && data[0] ? data[0] : initialValue;
-    const config = (table === 'system_config' && rawData?.value) 
-        ? { ...rawData, ...rawData.value } 
-        : rawData;
-
-    const setConfig = async (newValue) => {
-        const payload = typeof newValue === 'function' ? newValue(config) : newValue;
-        const isKeyValueTable = table === 'system_config';
-        
-        if (config.id || (isKeyValueTable && key)) {
-            let updatePayload;
-            if (isKeyValueTable) {
-                const { id: _, key: __, value: ___, updated_at: ____, ...rest } = payload;
-                updatePayload = { key, value: rest };
-                if (config.id) updatePayload.id = config.id;
-            } else {
-                updatePayload = { ...payload };
-                if (config.id) updatePayload.id = config.id;
-            }
-            
-            Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
-            await updateConfig(updatePayload);
-        } else {
-            await supabase.from(table).insert(isKeyValueTable ? { key, value: payload } : payload);
-        }
-    };
-
-    return [config, setConfig];
-};
 
 
 class ErrorBoundary extends React.Component {
@@ -621,12 +590,14 @@ function AdminHomePage() {
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "comm_hub"];
         const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings"];
+        const careerTabs = ["careers_admin", "careers_banner"];
 
         if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
         if (organizerTabs.includes(activeTab)) setIsOrganizersOpen(true);
         if (serviceTabs.includes(activeTab)) setIsServicesOpen(true);
         if (growthTabs.includes(activeTab)) setIsGrowthOpen(true);
         if (settingTabs.includes(activeTab)) setIsSettingsOpen(true);
+        if (careerTabs.includes(activeTab)) setIsCareersOpen(true);
     }, [activeTab]);
 
     useEffect(() => {
@@ -651,6 +622,7 @@ function AdminHomePage() {
     const [isServicesOpen, setIsServicesOpen] = useState(false);
     const [isGrowthOpen, setIsGrowthOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isCareersOpen, setIsCareersOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [openRequestActionId, setOpenRequestActionId] = useState(null);
     const [events, setEvents] = useState([]);
@@ -2095,6 +2067,18 @@ function AdminHomePage() {
 
                                 <SidebarGroupTitle title="Administration" />
                                 <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
+                                
+                                <SidebarCategoryHeader label="Careers" icon={Briefcase} isOpen={isCareersOpen} onClick={() => setIsCareersOpen(!isCareersOpen)} />
+                                {isCareersOpen && (
+                                    <div className="space-y-0.5">
+                                        {[
+                                            { label: "Job Openings", id: "careers_admin" },
+                                            { label: "Banner Settings", id: "careers_banner" }
+                                        ].map(sub => (
+                                            <SidebarSubItem key={sub.id} id={sub.id} label={sub.label} active={activeTab === sub.id} onClick={() => setActiveTab(sub.id)} />
+                                        ))}
+                                    </div>
+                                )}
 
                                 <SidebarGroupTitle title="System" />
                                 <SidebarCategoryHeader label="Settings" icon={Settings} isOpen={isSettingsOpen} onClick={() => setIsSettingsOpen(!isSettingsOpen)} />
@@ -5693,6 +5677,14 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "careers_admin" && (
+                        <CareersAdmin t={t} theme={theme} />
+                    )}
+
+                    {activeTab === "careers_banner" && (
+                        <CareersBannerSettings t={t} />
+                    )}
+
                     {activeTab === "admin_management" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
@@ -5889,9 +5881,8 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
-                            <Settings color={t.textSub} size={48} style={{ marginBottom: "16px", opacity: 0.3 }} />
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
                             <button onClick={() => setActiveTab("dashboard")} style={{ marginTop: "24px", padding: "10px 20px", borderRadius: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>Return to Dashboard</button>
