@@ -102,7 +102,7 @@ export default function Footer() {
                     {/* Brand & Get the App */}
                     <div>
                         <div style={{ marginBottom: "20px" }}>
-                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "60px", width: "auto", display: "block", filter: "invert(1) brightness(2)" }} />
+                            <img src={brandingLogo} alt="BookMyTicket" style={{ height: "45px", width: "auto", display: "block", filter: "invert(1) brightness(2)" }} />
                         </div>
                         
                         <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.1em", marginBottom: "16px", textTransform: "uppercase" }}>

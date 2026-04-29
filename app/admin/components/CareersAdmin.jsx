@@ -5,7 +5,7 @@ import { useSupabaseQuery, useSupabaseMutation } from "@/hooks/useSupabase";
 import { 
     Briefcase, Plus, Search, Filter, Edit, Trash2, 
     Users, Calendar, MapPin, ExternalLink, Download,
-    CheckCircle, XCircle, Clock, AlertCircle, ChevronRight,
+    CheckCircle, XCircle, X, Clock, AlertCircle, ChevronRight,
     ArrowLeft, FileText, Mail, Phone, Globe, Star
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
@@ -122,6 +122,12 @@ const CareersAdmin = ({ t, theme }) => {
         deadline: "",
         status: "open"
     });
+
+    // Applicant Management States
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [jobFilter, setJobFilter] = useState("all");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedApplicant, setSelectedApplicant] = useState(null);
 
     const handleEditJob = (job) => {
         setJobForm(job);
@@ -292,10 +298,6 @@ const CareersAdmin = ({ t, theme }) => {
     }
 
     if (view === "applicants") {
-        const [statusFilter, setStatusFilter] = useState("all");
-        const [jobFilter, setJobFilter] = useState("all");
-        const [searchQuery, setSearchQuery] = useState("");
-        const [selectedApplicant, setSelectedApplicant] = useState(null);
 
         const filteredApplicants = applicants.filter(app => {
             const matchesStatus = statusFilter === "all" || app.status === statusFilter;
@@ -475,9 +477,21 @@ const CareersAdmin = ({ t, theme }) => {
                                     <div>
                                         <label style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, textTransform: "uppercase", tracking: "0.05em" }}>Documents</label>
                                         <div style={{ marginTop: "12px" }}>
-                                            <a href={selectedApplicant.resume_url} target="_blank" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", borderRadius: "16px", background: "#f1f5f9", color: "#1e293b", textDecoration: "none", fontWeight: 800, fontSize: "14px" }}>
-                                                <Download size={18} /> Download Resume / CV
-                                            </a>
+                                            {selectedApplicant.resume_url === "pending_upload" ? (
+                                                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", borderRadius: "16px", background: "#f1f5f9", color: "#94a3b8", border: "1px dashed #cbd5e1", fontSize: "14px" }}>
+                                                    <AlertCircle size={18} /> File Not Uploaded (Legacy Record)
+                                                </div>
+                                            ) : (
+                                                <a 
+                                                    href={selectedApplicant.resume_url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    download
+                                                    style={{ display: "flex", alignItems: "center", gap: "12px", padding: "16px", borderRadius: "16px", background: "#f84464", color: "#ffffff", textDecoration: "none", fontWeight: 800, fontSize: "14px", boxShadow: "0 10px 20px rgba(248, 68, 100, 0.2)" }}
+                                                >
+                                                    <Download size={18} /> Download Resume / CV
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -43,21 +43,30 @@ export function useSupabaseQuery(table, queryFn = (q) => q, deps = [], options =
     lastFetchRef.current = now;
 
     const handleContentionError = async (err) => {
-      const errMsg = err.message || JSON.stringify(err);
+      const errMsg = err?.message || JSON.stringify(err);
       const isLockError = 
-        err.name === 'AbortError' || 
+        err?.name === 'AbortError' || 
         errMsg.includes('Lock') || 
         errMsg.includes('contention') || 
         errMsg.includes('stole') ||
         errMsg.includes('released');
 
-      if (isLockError && retryCountRef.current < MAX_RETRIES) {
-        // Exponential backoff with jitter
-        const delay = Math.pow(2, retryCountRef.current) * 1000 + (Math.random() * 500);
-        console.warn(`Supabase contention for ${table}, retrying in ${Math.round(delay)}ms... (Attempt ${retryCountRef.current + 1})`);
-        retryCountRef.current++;
-        setTimeout(() => fetchData(true), delay);
-        return true;
+      if (isLockError) {
+        if (retryCountRef.current < MAX_RETRIES) {
+          // Exponential backoff with jitter
+          const delay = Math.pow(2, retryCountRef.current) * 1000 + (Math.random() * 500);
+          console.warn(`Supabase contention for ${table}, retrying in ${Math.round(delay)}ms... (Attempt ${retryCountRef.current + 1})`);
+          retryCountRef.current++;
+          
+          // Clear any current error to keep UI in loading state instead of error state
+          setError(null);
+          setLoading(true);
+          
+          setTimeout(() => fetchData(true), delay);
+          return true;
+        } else {
+          console.error(`Max retries reached for ${table} contention error.`);
+        }
       }
       return false;
     };
