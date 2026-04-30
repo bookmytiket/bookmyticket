@@ -1,52 +1,38 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, ChevronRight, Shield, CheckCircle, ScrollText } from "lucide-react";
+import { X, ChevronRight, Shield, CheckCircle, ScrollText, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-/* ─── Fallback sections ─── */
 const FALLBACK = [
   {
     id: "s1", title: "Acceptance of Terms",
-    content: "By completing this booking, you agree to be bound by BookMyTicket's Terms & Conditions and Privacy Policy.",
-    bullets: ["You must be at least 18 years old.", "Accurate information must be provided at checkout.", "Tickets are non-transferable unless stated otherwise.", "You agree to follow all local laws and venue regulations."],
-    image: null,
+    content: "By using our platform, you agree to be bound by these Terms & Conditions. We facilitate bookings but are not the event organisers.",
+    bullets: ["Minimum age of 18 required.", "Accurate profile information is mandatory.", "Agreement to follow local and venue regulations."],
   },
   {
-    id: "s2", title: "Booking & Payment Policy",
-    content: "All bookings are confirmed upon successful payment. Platform convenience fees are non-refundable.",
-    bullets: ["Prices are set by Event Organisers and may vary.", "A convenience fee is charged per transaction.", "Duplicate bookings may be cancelled automatically."],
-    image: null,
+    id: "s2", title: "Partner Obligations",
+    content: "As a partner, you are responsible for the accuracy of your event listings and the quality of services provided.",
+    bullets: ["Transparent pricing is mandatory.", "Timely updates for cancellations or rescheduling.", "Compliance with tax and local business laws."],
   },
   {
-    id: "s3", title: "Refund & Cancellation",
-    content: "Refund decisions rest with the Event Organiser. BookMyTicket facilitates the process but does not guarantee refunds.",
-    bullets: ["Refund requests must be raised within the window set by the organiser.", "Platform fees are non-refundable.", "Refunds are credited within 7–10 business days."],
-    image: null,
+    id: "s3", title: "Payout & Refunds",
+    content: "Payouts are processed based on the event's completion status. BookMyTicket acts as an intermediary for secure transactions.",
+    bullets: ["Standard platform fees apply per transaction.", "Refunds are processed as per the organiser's policy.", "Payout cycle: 7-10 business days post-event."],
   },
   {
-    id: "s4", title: "Disclaimer",
-    content: "BookMyTicket is a ticketing platform assisting Event Organisers with registrations only. We are not responsible for event operations, postponement, cancellation, or refunds.",
-    bullets: [],
-    image: null,
+    id: "s4", title: "Privacy & Security",
+    content: "We prioritize your data security and use enterprise-grade encryption for all sensitive information.",
+    bullets: ["Data is encrypted at rest and in transit.", "No third-party sharing without consent.", "Regular security audits and updates."],
   },
 ];
 
-/**
- * TermsModal
- * Props:
- *   isOpen    {boolean}  — controls visibility
- *   onClose   {fn}       — called when modal closes
- *   onAccept  {fn}       — called when user accepts
- *   type      {string}   — "event" | "service"
- */
 export default function TermsModal({ isOpen, onClose, onAccept, type = "event" }) {
   const [sections, setSections] = useState(FALLBACK);
   const [meta, setMeta] = useState({});
-  const [scrolled, setScrolled] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [accepted, setAccepted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  /* ── Fetch backend content ── */
   useEffect(() => {
     if (!isOpen) return;
     (async () => {
@@ -57,12 +43,11 @@ export default function TermsModal({ isOpen, onClose, onAccept, type = "event" }
         .maybeSingle();
       if (data?.value?.sections?.length > 0) {
         setSections(data.value.sections);
-        setMeta({ lastUpdated: data.value.lastUpdated, effectiveDate: data.value.effectiveDate });
+        setMeta({ lastUpdated: data.value.lastUpdated });
       }
     })();
   }, [isOpen]);
 
-  /* ── Lock body scroll when open ── */
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -75,83 +60,61 @@ export default function TermsModal({ isOpen, onClose, onAccept, type = "event" }
       setAccepted(false);
       if (onAccept) onAccept();
       if (onClose) onClose();
-    }, 900);
+    }, 800);
   };
 
   if (!isOpen) return null;
 
-  const isService = type === "service";
-
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(15,23,42,0.7)", backdropFilter: "blur(8px)",
-        padding: "16px",
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}
-    >
-      <div style={{
-        background: "#fff", borderRadius: "28px",
-        width: "100%", maxWidth: "780px",
-        maxHeight: "90vh",
-        display: "flex", flexDirection: "column",
-        boxShadow: "0 40px 80px rgba(0,0,0,0.3)",
-        overflow: "hidden",
-        animation: "modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-      }}>
-
-        {/* ── Gradient header ── */}
-        <div style={{
-          background: "linear-gradient(135deg, #f844a4 0%, #9333ea 55%, #6366f1 100%)",
-          padding: "24px 28px",
-          position: "relative",
-          flexShrink: 0,
-        }}>
-          <button
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 transition-all duration-500 bg-slate-950/80 backdrop-blur-xl animate-in fade-in">
+      <div 
+        className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl shadow-purple-500/20 overflow-hidden flex flex-col max-h-[90vh] border border-white/20 scale-100 animate-in zoom-in-95 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Purple/Pink Gradient */}
+        <div className="relative shrink-0 p-6 sm:p-8 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 overflow-hidden">
+          {/* Abstract Background Shapes */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-400/20 rounded-full -ml-10 -mb-10 blur-2xl" />
+          
+          <button 
             onClick={onClose}
-            style={{
-              position: "absolute", top: "16px", right: "16px",
-              width: "36px", height: "36px", borderRadius: "12px",
-              background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "#fff", transition: "0.2s",
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center text-white transition-all cursor-pointer z-10"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ScrollText size={24} color="#fff" />
+          <div className="relative flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shrink-0">
+              <ScrollText size={28} className="text-white" />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>
-                Terms &amp; Conditions
+              <h2 className="text-2xl sm:text-3xl font-black italic tracking-tighter text-white uppercase leading-none mb-2">
+                Terms of <span className="text-pink-200">Service</span>
               </h2>
-              <p style={{ margin: 0, color: "rgba(255,255,255,0.75)", fontSize: "12px", fontWeight: 600 }}>
-                {isService ? "Service Booking Agreement" : "Event Booking Agreement"} · {meta.lastUpdated || "2026"}
-              </p>
+              <div className="flex items-center gap-2 text-white/70 text-[10px] font-bold uppercase tracking-widest">
+                <Shield size={12} />
+                <span>Last Updated: {meta.lastUpdated || "April 2026"}</span>
+                <span className="mx-1">•</span>
+                <span>Secure Verification</span>
+              </div>
             </div>
           </div>
 
-          {/* Section pills */}
-          <div style={{ display: "flex", gap: "8px", marginTop: "16px", overflowX: "auto", paddingBottom: "4px" }}>
+          {/* Quick Navigation Pills */}
+          <div className="flex gap-2 mt-8 overflow-x-auto pb-2 no-scrollbar">
             {sections.map((s, i) => (
               <button
                 key={s.id}
-                onClick={() => setActiveIdx(i)}
-                style={{
-                  padding: "5px 14px", borderRadius: "100px", border: "1px solid rgba(255,255,255,0.3)",
-                  background: activeIdx === i ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
-                  color: activeIdx === i ? "#9333ea" : "rgba(255,255,255,0.9)",
-                  fontSize: "11px", fontWeight: 800, cursor: "pointer",
-                  whiteSpace: "nowrap", transition: "0.2s",
-                  flexShrink: 0,
+                onClick={() => {
+                  setActiveIdx(i);
+                  document.getElementById(`section-${s.id}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
+                className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap cursor-pointer ${
+                  activeIdx === i 
+                    ? 'bg-white text-purple-600 shadow-lg' 
+                    : 'bg-white/10 text-white/80 border border-white/20 hover:bg-white/20'
+                }`}
               >
                 {i + 1}. {s.title}
               </button>
@@ -159,110 +122,106 @@ export default function TermsModal({ isOpen, onClose, onAccept, type = "event" }
           </div>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div
-          style={{ flex: 1, overflowY: "auto", padding: "0" }}
-          onScroll={(e) => setScrolled(e.target.scrollTop > 50)}
+        {/* Modal Body - Scrollable */}
+        <div 
+          className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 scroll-smooth"
+          onScroll={(e) => {
+            const currentScroll = e.target.scrollTop;
+            setScrolled(currentScroll > 20);
+          }}
         >
           {sections.map((s, i) => (
-            <div
-              key={s.id}
-              id={`modal-${s.id}`}
-              style={{
-                padding: "24px 28px",
-                borderBottom: i < sections.length - 1 ? "1px solid #f1f5f9" : "none",
-                background: activeIdx === i ? "linear-gradient(135deg,#fdf2f8,#f5f3ff)" : "#fff",
-                transition: "background 0.3s",
-              }}
+            <div 
+              key={s.id} 
+              id={`section-${s.id}`}
+              className={`p-6 rounded-3xl transition-all duration-500 border ${
+                activeIdx === i 
+                  ? 'bg-purple-50/50 border-purple-100 shadow-sm' 
+                  : 'bg-transparent border-transparent'
+              }`}
+              onMouseEnter={() => setActiveIdx(i)}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                <div style={{
-                  width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
-                  background: "linear-gradient(135deg,#f844a4,#9333ea)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontSize: "11px", fontWeight: 900,
-                }}>{i + 1}</div>
-                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>{s.title}</h3>
-              </div>
-
-              {s.image && (
-                <div style={{ marginBottom: "14px", borderRadius: "12px", overflow: "hidden", maxHeight: "180px" }}>
-                  <img src={s.image} alt={s.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors ${
+                  activeIdx === i ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-400'
+                }`}>
+                  {i + 1}
                 </div>
-              )}
-
-              {s.content && (
-                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#475569", lineHeight: 1.75, fontWeight: 500 }}>
-                  {s.content}
-                </p>
-              )}
+                <h3 className="text-lg font-black italic tracking-tight uppercase text-slate-900">{s.title}</h3>
+              </div>
+              
+              <p className="text-slate-600 text-sm leading-relaxed font-medium mb-6">
+                {s.content}
+              </p>
 
               {s.bullets?.length > 0 && (
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {s.bullets.map((b, bi) => (
-                    <li key={bi} style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                      <ChevronRight size={14} style={{ color: "#f844a4", marginTop: "3px", flexShrink: 0 }} />
-                      <span style={{ fontSize: "13px", color: "#475569", lineHeight: 1.65, fontWeight: 500 }}>{b}</span>
-                    </li>
+                <div className="grid grid-cols-1 gap-3">
+                  {s.bullets.map((bullet, bIdx) => (
+                    <div key={bIdx} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                      <div className="mt-1 shrink-0 w-1.5 h-1.5 rounded-full bg-pink-500" />
+                      <span className="text-xs font-semibold text-slate-700 leading-tight">{bullet}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           ))}
+
+          {/* Security Banner */}
+          <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex items-center gap-6">
+            <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shrink-0">
+              <AlertTriangle size={20} className="text-purple-500" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-1">Important Notice</h4>
+              <p className="text-[11px] font-medium text-slate-500 leading-tight">
+                Please read carefully. By clicking accept, you acknowledge full legal compliance with our partner protocols.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* ── Footer action ── */}
-        <div style={{
-          padding: "16px 24px",
-          borderTop: "1px solid #f1f5f9",
-          background: "#fff",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: "12px", flexWrap: "wrap",
-          flexShrink: 0,
-          boxShadow: "0 -8px 20px rgba(0,0,0,0.04)",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
-            <Shield size={14} style={{ color: "#9333ea" }} />
-            <span>BookMyTicket · Secure Platform</span>
+        {/* Modal Footer */}
+        <div className={`shrink-0 p-6 sm:px-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white transition-all ${scrolled ? 'shadow-[0_-8px_20px_rgba(0,0,0,0.03)]' : ''}`}>
+          <div className="flex items-center gap-3">
+            <CheckCircle size={16} className={accepted ? "text-green-500" : "text-slate-300"} />
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+              Protocol v4.0.2 Secure
+            </span>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button 
               onClick={onClose}
-              style={{
-                padding: "10px 20px", borderRadius: "12px",
-                border: "2px solid #e2e8f0", background: "transparent",
-                color: "#64748b", fontWeight: 700, fontSize: "13px", cursor: "pointer",
-                transition: "0.2s",
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              className="flex-1 sm:flex-none px-8 py-3.5 rounded-xl border-2 border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer"
             >
               Decline
             </button>
-            <button
+            <button 
               onClick={handleAccept}
               disabled={accepted}
-              style={{
-                padding: "10px 28px", borderRadius: "12px", border: "none",
-                background: accepted
-                  ? "linear-gradient(135deg,#22c55e,#16a34a)"
-                  : "linear-gradient(135deg,#f844a4,#9333ea)",
-                color: "#fff", fontWeight: 800, fontSize: "13px", cursor: accepted ? "default" : "pointer",
-                boxShadow: accepted ? "0 4px 12px rgba(34,197,94,0.3)" : "0 4px 16px rgba(248,68,164,0.35)",
-                transition: "all 0.3s",
-                display: "flex", alignItems: "center", gap: "8px",
-              }}
+              className={`flex-1 sm:flex-none px-10 py-3.5 rounded-xl text-white text-[11px] font-black uppercase tracking-widest italic transition-all shadow-xl cursor-pointer flex items-center justify-center gap-2 ${
+                accepted 
+                  ? 'bg-green-500 shadow-green-500/20 scale-95' 
+                  : 'bg-gradient-to-r from-pink-500 to-purple-600 shadow-purple-500/20 hover:scale-105 active:scale-95'
+              }`}
             >
-              {accepted ? <><CheckCircle size={16} /> Accepted!</> : "Accept Terms"}
+              {accepted ? (
+                <>
+                  <CheckCircle size={16} />
+                  Accepted
+                </>
+              ) : (
+                "Accept Terms"
+              )}
             </button>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes modalIn {
-          from { opacity: 0; transform: scale(0.92) translateY(24px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
+    </div>
+  );
+}
+) translateY(0); }
         }
       `}</style>
     </div>

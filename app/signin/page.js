@@ -72,7 +72,7 @@ export default function SignInPage() {
     useEffect(() => {
         // Detect if we are on a real mobile device
         const checkMobile = () => {
-            setIsRealMobile(window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+            setIsRealMobile(window.innerWidth < 640 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
@@ -560,8 +560,8 @@ export default function SignInPage() {
                 @media (max-width: 640px) {
                     .signin-wrapper { padding: 0 !important; background: #fff !important; }
                     .phone-mockup {
-                        width: 100% !important;
-                        max-width: 100% !important;
+                        width: 100vw !important;
+                        max-width: 100vw !important;
                         height: 100vh !important;
                         max-height: 100vh !important;
                         border: none !important;
@@ -569,9 +569,11 @@ export default function SignInPage() {
                         margin: 0 !important;
                         background: #ffffff !important;
                         box-shadow: none !important;
+                        position: fixed !important;
+                        inset: 0 !important;
                     }
                     .phone-notch, .phone-status-bar { display: none !important; }
-                    .no-scrollbar { padding: 20px !important; }
+                    .no-scrollbar { padding: 15px !important; }
                 }
                 /* Phone mockup frame stays consistent across all devices */
                 body { overflow-x: hidden; margin: 0; }
@@ -726,15 +728,15 @@ export default function SignInPage() {
                 
                 {/* ══ MOBILE PHONE FRAME (Mock-up) ══ */}
                 <div className="phone-mockup" style={{ 
-                    width: isRealMobile ? "100%" : "350px", 
-                    maxWidth: isRealMobile ? "100%" : "92vw",
-                    height: isRealMobile ? "100vh" : "700px", 
-                    maxHeight: isRealMobile ? "100vh" : "92vh",
+                    width: isRealMobile ? "100vw" : "320px", 
+                    maxWidth: "100vw",
+                    height: isRealMobile ? "100vh" : "600px", 
+                    maxHeight: "100vh",
                     background: "#ffffff", 
-                    borderRadius: isRealMobile ? "0" : "40px", 
-                    border: isRealMobile ? "none" : "12px solid #101010", 
+                    borderRadius: isRealMobile ? "0" : "32px", 
+                    border: isRealMobile ? "none" : "8px solid #000", 
                     position: "relative", 
-                    boxShadow: isRealMobile ? "none" : "0 40px 80px rgba(0,0,0,0.25)",
+                    boxShadow: isRealMobile ? "none" : "0 20px 50px -12px rgba(0,0,0,0.25)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
@@ -822,15 +824,15 @@ export default function SignInPage() {
                     )}
                     
                     {/* Internal Screen Content */}
-                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "8px 20px 20px", position: "relative" }}>
+                    <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "4px 16px 16px", position: "relative" }}>
                         
                         {/* Header Logo */}
-                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px", marginTop: "10px" }}>
+                        <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px", marginTop: "4px" }}>
                             <Link href="/">
                             <img
                                 src="/logo.png"
                                 alt="BookMyTicket"
-                                style={{ height: '64px', width: 'auto', objectFit: 'contain', display: 'block' }}
+                                style={{ height: '44px', width: 'auto', objectFit: 'contain', display: 'block' }}
                             />
                             </Link>
                         </div>
@@ -838,7 +840,7 @@ export default function SignInPage() {
                         {/* ══ SIGN IN ══ */}
                         {mode === "signin" && (
                             <>
-                                <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                                <div style={{ textAlign: "center", marginBottom: "8px" }}>
                                     <h1 style={{ fontSize: "26px", fontWeight: 900, color: "#1e1b4b", margin: "0 0 4px" }}>
                                         Welcome
                                     </h1>
@@ -881,7 +883,7 @@ export default function SignInPage() {
                                         disabled={loading}
                                         style={{
                                             ...submitBtn,
-                                            marginBottom: "12px",
+                                            marginBottom: "8px",
                                             opacity: loading ? 0.85 : 1,
                                             cursor: loading ? "not-allowed" : "pointer",
                                             display: "flex",
@@ -924,8 +926,8 @@ export default function SignInPage() {
                                 </form>
 
                                 {(ssoConfigs?.google || ssoConfigs?.facebook) && (
-                                    <div style={{ marginTop: "12px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", color: "#94a3b8", fontSize: "11px", fontWeight: 700 }}>
+                                    <div style={{ marginTop: "8px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", color: "#94a3b8", fontSize: "11px", fontWeight: 700 }}>
                                             <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} /> OR <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
                                         </div>
                                         <div style={{ display: "flex", gap: "12px" }}>

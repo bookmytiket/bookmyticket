@@ -138,6 +138,13 @@ export default function OnboardingPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Final Validation
+        if (!files.cancelledCheque) {
+            showToast("Original Cheque Leaf Image is Mandatory", "error");
+            return;
+        }
+
         setSubmitting(true);
         try {
             // Upload files first
@@ -156,7 +163,8 @@ export default function OnboardingPage() {
                 bank_details: {
                     bank_name: form.bankName,
                     account_number: form.accountNumber,
-                    ifsc_code: form.ifscCode
+                    ifsc_code: form.ifscCode,
+                    cheque_url: chequeUrl
                 },
                 status: "Submitted",
                 submitted_at: new Date().toISOString(),
@@ -461,11 +469,13 @@ export default function OnboardingPage() {
                                     </div>
                                 </div>
                                 <FileCard 
-                                    title="Bank Proof" 
-                                    desc="Cheque/Statement" 
+                                    title="Original Cheque Leaf" 
+                                    desc="Original Image Only (Mandatory)" 
                                     file={files.cancelledCheque}
                                     preview={previews.cancelledCheque}
                                     onChange={(e) => handleFileChange(e, 'cancelledCheque')}
+                                    accept=".png,.jpg,.jpeg"
+                                    isMandatory
                                     fullWidth
                                 />
                             </div>
@@ -562,12 +572,15 @@ function ReqItem({ icon, text, active }) {
     );
 }
 
-function FileCard({ title, desc, file, preview, onChange, fullWidth = false }) {
+function FileCard({ title, desc, file, preview, onChange, fullWidth = false, accept = ".pdf,.png,.jpg,.jpeg", isMandatory = false }) {
     return (
         <div className={`${fullWidth ? 'col-span-full' : ''} space-y-2`}>
-            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">{title}</label>
+            <div className="flex justify-between items-center px-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">{title}</label>
+                {isMandatory && <span className="text-[8px] font-black text-pink-500 uppercase tracking-widest animate-pulse">Required</span>}
+            </div>
             <label className={`relative group cursor-pointer block h-24 rounded-2xl border-2 border-dashed transition-all duration-300 ${file ? 'border-purple-500 bg-purple-50 shadow-inner' : 'border-slate-200 bg-slate-50 hover:border-pink-500/40 hover:bg-slate-100 shadow-sm'}`}>
-                <input type="file" className="hidden" onChange={onChange} accept=".pdf,.png,.jpg,.jpeg" />
+                <input type="file" className="hidden" onChange={onChange} accept={accept} />
                 
                 {preview ? (
                     <div className="absolute inset-3 rounded-[32px] overflow-hidden shadow-sm">
@@ -577,10 +590,17 @@ function FileCard({ title, desc, file, preview, onChange, fullWidth = false }) {
                                 <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 max-w-[200px] truncate">{file?.name}</span>
                             </div>
                         ) : (
-                            <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+                            <div className="relative w-full h-full">
+                                <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+                                {title.includes("Cheque") && (
+                                    <div className="absolute top-2 right-2 px-3 py-1 bg-green-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                                        <ShieldCheck size={10} /> Originality Verified
+                                    </div>
+                                )}
+                            </div>
                         )}
                         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
-                            <span className="text-[10px] font-black uppercase tracking-widest bg-white text-slate-900 px-8 py-3 rounded-full shadow-xl">Update File</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-white text-slate-900 px-8 py-3 rounded-full shadow-xl">Update Image</span>
                         </div>
                     </div>
                 ) : (

@@ -148,7 +148,7 @@ const DEFAULT_CATEGORIES = [
   "Music", "Workshop", "Festival", "Live Shows",
 ];
 
-export default function Navbar() {
+export default function Navbar({ compact = false }) {
   const { user, logout, selectedCity, updateCity } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
@@ -381,7 +381,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className={`site-header${scrolled ? " header-scrolled" : ""}`}>
+      <header className={`site-header${scrolled ? " header-scrolled" : ""}${compact ? " header-compact" : ""}`}>
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between', position: 'relative', zIndex: 100 }}>
           <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
@@ -398,7 +398,7 @@ export default function Navbar() {
               whileHover={{ y: -5, scale: 1.06, transition: { type: 'spring', stiffness: 400, damping: 12 } }}
               whileTap={{ scale: 0.95 }}
               style={{
-                height: scrolled ? '50px' : '64px',
+                height: scrolled ? '44px' : '64px',
                 width: 'auto',
                 objectFit: 'contain',
                 display: 'block',
@@ -858,10 +858,10 @@ export default function Navbar() {
         </div>
 
         {/* Sub-navbar with Animation - Premium Dynamic UI */}
-        <nav className="header-subnav" style={{ 
-          background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: scrolled ? 'none' : '1px solid rgba(0,0,0,0.05)'
+        <nav className="header-subnav" style={{ display: (compact || scrolled) ? "none" : "block", 
+          background: 'transparent',
+          backdropFilter: 'none',
+          borderBottom: '1px solid rgba(255,255,255,0.05)'
         }}>
           <div className="subnav-container" style={{ padding: '8px 0' }}>
             <div className="subnav-links" style={{ gap: '40px' }}>

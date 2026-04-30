@@ -30,7 +30,7 @@ export default function ConditionalNavbar() {
         pathname?.startsWith("/reset-password") ||
         pathname?.startsWith("/careers") ||
         pathname?.startsWith("/terms") ||
-        pathname?.startsWith("/privacy") ||
+        pathname?.startsWith("/privacy") || pathname === "/contact" ||
         pathname?.includes("/checkout")
     ) {
         return null;

@@ -14,6 +14,7 @@ import EmailCommSystem from "@/app/admin/components/EmailCommSystem";
 import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";
 import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings";
+import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries";
 
 
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
@@ -1105,6 +1106,26 @@ function AdminHomePage() {
         value: true
     });
 
+    const [contactConfig, setContactConfig] = useSupabaseConfig("system_config", {
+        key: "contact_page_settings",
+        value: {
+            header: { title: "Get in Support", description: "Have a general question for us? We're here to help with any inquiries about our services." },
+            general_support: { email: "support@bookmyticket.net", phone: "+91 90420 29927" },
+            sales_team: { india: "+91 97907 62727", uae: "+971 55 747 2927", singapore: "+60 14-210 7199" },
+            address: { line1: "4th Floor, Ramani's West Gate,", line2: "No: 402C, Viswanathapuram,", line3: "Thudiyalur, Coimbatore, Tamil Nadu", pincode: "641034" },
+            hours: { mon_fri: "9:30 AM - 6:30 PM IST", sat: "9:30 AM - 1:30 PM IST", sun: "We're offline ( Day Off )" },
+            social: { linkedin: "#", instagram: "#", facebook: "#", twitter: "#" }
+        }
+    });
+
+    const [localContact, setLocalContact] = useState(null);
+
+    useEffect(() => {
+        if (contactConfig && !localContact) {
+            setLocalContact(contactConfig);
+        }
+    }, [contactConfig]);
+
     // Bookings (ticket orders) — sync with homepage/organiser events
     const [createPromotion] = useSupabaseMutation('promotions', 'insert');
     const [removePromotion] = useSupabaseMutation('promotions', 'delete', (q, p) => q.eq('id', p.id));
@@ -2026,6 +2047,8 @@ function AdminHomePage() {
                                 <SidebarItem id="bookings" label="Bookings" icon={ShoppingCart} active={activeTab === "bookings"} onClick={() => setActiveTab("bookings")} />
                                 <SidebarItem id="meetings" label="Meetings" icon={Video} active={activeTab === "meetings"} onClick={() => setActiveTab("meetings")} />
                                 <SidebarItem id="categories" label="Categories" icon={LayoutGrid} active={activeTab === "categories"} onClick={() => setActiveTab("categories")} />
+                                <SidebarItem id="contact_inquiries" label="Contact Inquiries" icon={MessageSquare} active={activeTab === "contact_inquiries"} onClick={() => setActiveTab("contact_inquiries")} />
+                                <SidebarItem id="contact_settings" label="Contact Settings" icon={Settings} active={activeTab === "contact_settings"} onClick={() => setActiveTab("contact_settings")} />
 
                                 <SidebarGroupTitle title="Partners" />
                                 <SidebarItem id="customers" label="Customers" icon={UserCircle} active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
@@ -2083,7 +2106,7 @@ function AdminHomePage() {
                                 <SidebarItem id="gst" label="GST Reports" icon={Briefcase} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
 
                                 <SidebarGroupTitle title="Reports" />
-                                <SidebarItem id="support_tickets" label="Support Tickets" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
+                                <SidebarItem id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
                                 <SidebarItem id="branding_partners" label="Branding Partners" icon={Shield} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
                                 <SidebarItem id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
                                 <SidebarItem id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
@@ -2913,6 +2936,204 @@ function AdminHomePage() {
                                     <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                         <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Gross</p>
                                         <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0) + turfBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0)).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "contact_inquiries" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                            <AdminContactInquiries t={t} theme={theme} />
+                        </div>
+                    )}
+
+                    {activeTab === "contact_settings" && localContact && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "24px", border: `1px solid ${t.border}` }}>
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900 flex items-center gap-3">
+                                        <Edit className="text-pink-500" />
+                                        Contact Page Editor
+                                    </h3>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Manage the content and details shown on your public contact page</p>
+                                </div>
+                                <button 
+                                    onClick={async () => {
+                                        await setContactConfig(localContact);
+                                        showToast("Contact Page settings updated!", "success");
+                                    }}
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs italic shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                                >
+                                    <Save size={16} /> Save Changes
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Header & General */}
+                                <div className="space-y-6">
+                                    <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
+                                        <h4 className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-2">Main Header</h4>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Page Title</label>
+                                            <input 
+                                                type="text" 
+                                                value={localContact.header?.title || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, header: {...localContact.header, title: e.target.value}})}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sub-description</label>
+                                            <textarea 
+                                                rows={2}
+                                                value={localContact.header?.description || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, header: {...localContact.header, description: e.target.value}})}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
+                                        <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-2">General Support</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Support Email</label>
+                                                <input 
+                                                    type="email" 
+                                                    value={localContact.general_support?.email || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, general_support: {...localContact.general_support, email: e.target.value}})}
+                                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Support Phone</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.general_support?.phone || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, general_support: {...localContact.general_support, phone: e.target.value}})}
+                                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-900 p-6 rounded-3xl space-y-4 text-white">
+                                        <h4 className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-2">International Sales</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">India</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.sales_team?.india || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, india: e.target.value}})}
+                                                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">UAE</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.sales_team?.uae || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, uae: e.target.value}})}
+                                                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Singapore</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.sales_team?.singapore || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, sales_team: {...localContact.sales_team, singapore: e.target.value}})}
+                                                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white text-xs focus:ring-2 focus:ring-pink-500/10"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Address & Social */}
+                                <div className="space-y-6">
+                                    <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
+                                        <h4 className="text-[10px] font-black text-purple-500 uppercase tracking-[0.2em] mb-2">Office Address</h4>
+                                        <div className="space-y-3">
+                                            <input 
+                                                type="text" placeholder="Line 1"
+                                                value={localContact.address?.line1 || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line1: e.target.value}})}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
+                                            />
+                                            <input 
+                                                type="text" placeholder="Line 2"
+                                                value={localContact.address?.line2 || ""} 
+                                                onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line2: e.target.value}})}
+                                                className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
+                                            />
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <input 
+                                                    type="text" placeholder="Line 3"
+                                                    value={localContact.address?.line3 || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, line3: e.target.value}})}
+                                                    className="col-span-2 w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
+                                                />
+                                                <input 
+                                                    type="text" placeholder="PIN"
+                                                    value={localContact.address?.pincode || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, address: {...localContact.address, pincode: e.target.value}})}
+                                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-orange-50/50 p-6 rounded-3xl border border-orange-100 space-y-4">
+                                        <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-2">Business Hours</h4>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Mon - Fri</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.hours?.mon_fri || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, mon_fri: e.target.value}})}
+                                                    className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Saturday</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.hours?.sat || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, sat: e.target.value}})}
+                                                    className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-24 text-[9px] font-black text-slate-400 uppercase">Sunday</span>
+                                                <input 
+                                                    type="text" 
+                                                    value={localContact.hours?.sun || ""} 
+                                                    onChange={(e) => setLocalContact({...localContact, hours: {...localContact.hours, sun: e.target.value}})}
+                                                    className="flex-1 p-3 bg-white border border-orange-100 rounded-xl font-bold text-slate-900 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-6 rounded-3xl space-y-4">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Social Links</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['linkedin', 'instagram', 'facebook', 'twitter'].map(platform => (
+                                                <div key={platform} className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest capitalize">{platform}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={localContact.social?.[platform] || ""} 
+                                                        onChange={(e) => setLocalContact({...localContact, social: {...localContact.social, [platform]: e.target.value}})}
+                                                        className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-900 text-sm focus:ring-2 focus:ring-pink-500/10"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -5902,7 +6123,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
