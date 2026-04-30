@@ -904,6 +904,15 @@ nextjs-portal {
   flex-shrink: 0;
   transition: all 0.2s;
   text-transform: lowercase;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.header-logo img, .header-logo motion\.img {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .header-logo:hover {
