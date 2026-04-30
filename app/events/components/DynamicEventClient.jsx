@@ -10,7 +10,8 @@ import {
     Sparkles, Phone, Mail, MessageCircle, Timer, Award, 
     HeartPulse, Coffee, Utensils, Home, Car, Shirt, Camera, 
     Target, Trophy, Activity, FileText, Zap, Smile, ChevronRight,
-    Plus, Minus, X, DollarSign, ArrowLeft, ArrowRight, CreditCard
+    Plus, Minus, X, DollarSign, ArrowLeft, ArrowRight, CreditCard,
+    AlertTriangle
 } from 'lucide-react';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from '@/components/AuthContext';
@@ -269,7 +270,15 @@ export default function DynamicEventClient({ event }) {
                     
                     {/* Left Column: Form Content */}
                     <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-8 space-y-6">
+                        <motion.div 
+                            initial={{ clipPath: 'inset(0 100% 0 0)' }}
+                            animate={{ clipPath: 'inset(0 0% 0 0)' }}
+                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-8 space-y-6 relative overflow-hidden"
+                        >
+                            {/* Animated Background Shimmer for Masking effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+
                             <div className="space-y-0.5">
                                 <motion.h2 
                                     initial={{ opacity: 0, x: -20 }}
@@ -468,30 +477,34 @@ export default function DynamicEventClient({ event }) {
 
                                 {/* Compact Registration Disclaimer */}
                                 <div className="mt-8 pt-8 border-t border-slate-50 space-y-4">
-                                    <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
+                                    <div className="flex gap-3 text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
                                         <ShieldCheck size={14} className="shrink-0 text-[#8b5cf6]" />
-                                        <p>By registering, you agree to the marathon safety protocols and official terms. All participant data is processed securely.</p>
+                                        <p>By registering, you agree to official terms. All participant data is processed securely.</p>
                                     </div>
-                                    <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
+                                    <div className="flex gap-3 text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
+                                        <AlertTriangle size={14} className="shrink-0 text-rose-500" />
+                                        <p className="text-rose-500/80">This Ticketing Portal is a facilitator only and is not responsible for event cancellations, postponements, or organizer-side logistical changes.</p>
+                                    </div>
+                                    <div className="flex gap-3 text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
                                         <Info size={14} className="shrink-0 text-amber-500" />
-                                        <p>Tickets are non-transferable. Please ensure your T-Shirt size and Age are correct before proceeding.</p>
+                                        <p>Tickets are non-transferable. Please ensure all participant details are correct before proceeding.</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Amenities */}
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 md:p-10">
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-8">Amenities</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5">
+                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Available Amenities</h3>
+                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                                 {(config.amenities || []).map(id => {
                                     const Icon = AMENITY_ICONS[id] || Star;
                                     return (
-                                        <div key={id} className="group flex flex-col items-center gap-3 text-center">
-                                            <div className="w-14 h-14 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
-                                                <Icon size={24} />
+                                        <div key={id} className="group flex flex-col items-center gap-2 text-center">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
+                                                <Icon size={18} />
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{id}</span>
+                                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-tight leading-none">{id}</span>
                                         </div>
                                     );
                                 })}
