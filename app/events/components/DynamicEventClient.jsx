@@ -14,6 +14,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
 import { useRouter } from 'next/navigation';
+import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 
 const AMENITY_ICONS = {
     Ambulance: Activity,
@@ -70,6 +71,25 @@ export default function DynamicEventClient({ event }) {
         
         return () => clearInterval(timer);
     }, [config.countdown]);
+
+    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
+    const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
+    
+    // Fetch Organiser Config
+    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', event?.organiser_id || event?.organiserId).single(), [event?.organiser_id, event?.organiserId]);
+    
+    const feeSettings = useMemo(() => {
+        return resolveFeeSettings(
+            feeSettingsSystem,
+            organiserData?.fee_config,
+            event?.fee_config
+        );
+    }, [feeSettingsSystem, organiserData?.fee_config, event?.fee_config]);
+
+    const fees = useMemo(() => {
+        if (!selectedCategory) return { convenienceFee: 0, gst: 0, total: 0 };
+        return getFeeBreakdown(selectedCategory.price, feeSettings);
+    }, [selectedCategory, feeSettings]);
 
     const handleBooking = async () => {
         if (!selectedCategory) {
@@ -335,11 +355,17 @@ export default function DynamicEventClient({ event }) {
                                         </div>
                                         <div className="flex justify-between text-xs font-bold text-slate-500">
                                             <span>Service & Gateway Charges</span>
-                                            <span>₹{event.platformFee || 0}</span>
+                                            <span>₹{fees.convenienceFee.toFixed(2)}</span>
                                         </div>
+                                        {fees.gst > 0 && (
+                                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                                                <span>GST ({fees.gstPercent}%)</span>
+                                                <span>₹{fees.gst.toFixed(2)}</span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-50">
                                             <span>Total</span>
-                                            <span>₹{selectedCategory.price + (event.platformFee || 0)}</span>
+                                            <span>₹{fees.total.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>

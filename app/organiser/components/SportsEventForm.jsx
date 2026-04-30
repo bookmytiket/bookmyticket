@@ -5,7 +5,7 @@ import {
     Calendar, Clock, MapPin, DollarSign, Shield, CheckCircle2,
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
-    TrendingUp, Trash2, Trash, Zap
+    TrendingUp, Trash2, Trash, Zap, Wallet
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -347,6 +347,10 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             {renderInput("Start Date", "startDate", "date")}
                             {renderInput("Start Time", "startTime", "time")}
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {renderInput("Event Expiry Date", "expiryDate", "date")}
+                            <div />
+                        </div>
                         <div className="md:col-span-2">
                             {renderInput("Venue Full Address", "address", "text", "Full searchable address")}
                         </div>
@@ -390,6 +394,81 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-6">
+                            {/* 💰 Event-Specific Fee Overrides */}
+                            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                                            <Wallet size={16} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Custom Fees</p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer scale-75">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={postEvent.fee_config?.override_global || false}
+                                            onChange={e => updateField('fee_config', { 
+                                                ...(postEvent.fee_config || {}), 
+                                                override_global: e.target.checked 
+                                            })}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                {postEvent.fee_config?.override_global && (
+                                    <div className="space-y-4 pt-4 border-t border-slate-200/50">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Type</label>
+                                                <select 
+                                                    value={postEvent.fee_config?.fee_type || 'percentage'}
+                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, fee_type: e.target.value })}
+                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
+                                                >
+                                                    <option value="percentage">%</option>
+                                                    <option value="fixed">₹</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Value</label>
+                                                <input 
+                                                    type="number"
+                                                    value={postEvent.fee_config?.fee_value || 0}
+                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, fee_value: Number(e.target.value) })}
+                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="checkbox" 
+                                                id="apply_gst_sports"
+                                                checked={postEvent.fee_config?.apply_gst || false}
+                                                onChange={e => updateField('fee_config', { ...postEvent.fee_config, apply_gst: e.target.checked })}
+                                                className="w-4 h-4 rounded border-slate-200 text-blue-600 focus:ring-blue-500/20"
+                                            />
+                                            <label htmlFor="apply_gst_sports" className="text-[9px] font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Apply GST</label>
+                                        </div>
+                                        {postEvent.fee_config?.apply_gst && (
+                                            <div className="space-y-1.5">
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">GST %</label>
+                                                <input 
+                                                    type="number"
+                                                    value={postEvent.fee_config?.gst_percent || 18}
+                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, gst_percent: Number(e.target.value) })}
+                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Combined Pricing Structure */}
                             <div className="p-8 bg-slate-900 rounded-[3rem] space-y-8 shadow-2xl shadow-slate-300">
                                 <div className="space-y-6">

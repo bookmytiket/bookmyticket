@@ -45,7 +45,7 @@ class OrganiserErrorBoundary extends Component {
 import {
     LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles,
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
-    Mail, Lock, CreditCard, Code, Globe, Shield, Wallet, Upload,
+    Mail, Lock, Code, Globe, Shield, Wallet, Upload,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
     Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus, Trophy, Goal, Timer, Dribbble, Target
@@ -800,14 +800,29 @@ function OrganiserPanel() {
             const processed = eventsData.map(e => {
                 let status = e.status || 'published';
                 // Check if event has passed its date/time
-                if (status === 'published' && e.date) {
+                const configExpiry = e.dynamic_config?.basicInfo?.expiryDate || e.expiry_date;
+                const effectiveDate = configExpiry || e.date || e.startDate;
+                
+                const isAutoStatus = status === 'published' || status === 'expired';
+                if (isAutoStatus && effectiveDate) {
                     try {
-                        const eventDateTime = new Date(`${e.date}T${e.time || '23:59'}`);
-                        if (eventDateTime < now) {
-                            status = 'expired';
+                        let newStatus = 'published';
+                        let dateStr = effectiveDate;
+                        // Handle DD/MM/YYYY format
+                        if (dateStr.includes('/') && dateStr.split('/')[0].length <= 2) {
+                            const [d, m, y] = dateStr.split('/');
+                            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                         }
+                        
+                        const timeStr = e.time || e.startTime || '23:59';
+                        const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+                        
+                        if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
+                            newStatus = 'expired';
+                        }
+                        status = newStatus;
                     } catch (err) {
-                        console.error("Error parsing event date:", e.date, e.time, err);
+                        console.error("Error parsing event date:", effectiveDate, err);
                     }
                 }
                 return { ...e, id: e.id, status };
@@ -1233,6 +1248,7 @@ function OrganiserPanel() {
             category: postEvent.category || undefined,
             type: postEvent.type || undefined,
             date: firstSlot.date || today,
+            expiry_date: postEvent.expiryDate || undefined,
             time: firstSlot.time || "TBA",
             img: imgUrl,
             banner_preview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
@@ -1250,7 +1266,24 @@ function OrganiserPanel() {
             meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
-            status: postEvent.eventStatus || "published",
+            status: (() => {
+                const now = new Date();
+                const configExpiry = postEvent.dynamic_config?.basicInfo?.expiryDate || postEvent.expiryDate;
+                let dateStr = configExpiry || firstSlot.date || today;
+                
+                // Handle DD/MM/YYYY format for robustness
+                if (dateStr.includes('/') && dateStr.split('/')[0].length <= 2) {
+                    const [d, m, y] = dateStr.split('/');
+                    dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+                
+                const timeStr = firstSlot.time || "23:59";
+                const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+                
+                if (postEvent.eventStatus === "draft") return "draft";
+                if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) return "expired";
+                return "published";
+            })(),
             meeting_type: postEvent.meetingType || "internal",
             external_meeting_url: postEvent.externalMeetingUrl || undefined,
             description: postEvent.description || undefined,
@@ -2737,8 +2770,8 @@ function OrganiserPanel() {
                                                                         </div>
                                                                     </td>
                                                                     <td style={{ padding: "16px" }}>
-                                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date}</div>
-                                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time}</div>
+                                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || ev.startDate || ev.dynamic_config?.basicInfo?.regEnd || "TBA"}</div>
+                                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time || ev.startTime || "TBA"}</div>
                                                                     </td>
                                                                     <td style={{ padding: "16px" }}>
                                                                         {(ev.total_seats || ev.totalSeats) ? (
@@ -4553,10 +4586,33 @@ function OrganiserPanel() {
                                         </div>
                                         <div style={{ padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: profile.kycStatus === "KYC Approved" ? "#22c55e20" : "#f59e0b20", color: profile.kycStatus === "KYC Approved" ? "#22c55e" : "#f59e0b" }}>{profile.kycStatus.toUpperCase()}</div>
                                     </div>
+
+                                    {/* 💰 Platform Fee Transparency */}
+                                    <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px", backgroundColor: "#fdf2f8", borderRadius: "16px", border: "1px solid #fce7f3" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#fbcfe8", color: "#db2777", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                <Wallet size={20} />
+                                            </div>
+                                            <div>
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#9d174d" }}>Your Platform Fee Structure</p>
+                                                <p style={{ margin: 0, fontSize: "12px", color: "#db2777", fontWeight: 600 }}>
+                                                    {organiserData?.fee_config?.override_global 
+                                                        ? `${organiserData.fee_config.fee_type === 'percentage' ? organiserData.fee_config.fee_value + '%' : '₹' + organiserData.fee_config.fee_value} per ticket`
+                                                        : "Standard Global Fees Apply"}
+                                                    {organiserData?.fee_config?.apply_gst && ` (+ ${organiserData.fee_config.gst_percent}% GST)`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: "10px", fontWeight: 800, color: "#db2777", textTransform: "uppercase", letterSpacing: "1px", backgroundColor: "#fff", padding: "4px 10px", borderRadius: "6px", border: "1px solid #fce7f3" }}>
+                                            {organiserData?.fee_config?.override_global ? "Custom Plan" : "Standard"}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div style={{ marginTop: "32px", display: "flex", justifyContent: "flex-end" }}>
-                                    <button type="button" onClick={() => { alert("Profile updates are currently disabled. Please contact support to change profile details."); }} style={{ padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>Save Profile Changes</button>
+                                    <button type="button" onClick={() => { alert("Profile updates are currently disabled. Please contact support to change profile details."); }} style={{ padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}>
+                                        Save Profile Changes
+                                    </button>
                                 </div>
                             </div>
                         </div>

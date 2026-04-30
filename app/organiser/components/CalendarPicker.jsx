@@ -14,13 +14,24 @@ export default function CalendarPicker({ value, onChange, placeholder = "dd/mm/y
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
-    // Default to today if no value
-    const initialDate = value ? new Date(value) : new Date();
+    // Default to today if no value or invalid value
+    const getSafeDate = (val) => {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? new Date() : d;
+    };
+
+    const initialDate = getSafeDate(value);
     const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
     const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
 
     // Format display date: DD/MM/YYYY
-    const displayValue = value ? new Date(value).toLocaleDateString("en-GB") : "";
+    const getDisplayValue = (val) => {
+        if (!val) return "";
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB");
+    };
+
+    const displayValue = getDisplayValue(value);
 
     useEffect(() => {
         const handleClickOutside = (event) => {

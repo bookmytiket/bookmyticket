@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, CheckCircle } from 'lucide-react';
 import { HOME_EVENTS } from '@/app/data/homeEvents';
-import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
+import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
@@ -87,7 +87,19 @@ export default function EventBookClient({ id }) {
     }, [user, authLoading, id, router]);
 
     const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
-    const feeSettings = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
+    const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
+    
+    // Fetch Organiser Config
+    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', event?.organiser_id || event?.organiserId).single(), [event?.organiser_id, event?.organiserId]);
+    
+    const feeSettings = useMemo(() => {
+        return resolveFeeSettings(
+            feeSettingsSystem,
+            organiserData?.fee_config,
+            event?.fee_config
+        );
+    }, [feeSettingsSystem, organiserData?.fee_config, event?.fee_config]);
+
     const [selectedSeats, setSelectedSeats] = useState([]);
     
     const { data: bookingList } = useSupabaseQuery('bookings', (q) => q.eq('event_id', String(id)), [id]);

@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, MapPin, Video, CheckCircle2, Ticket } from 'lucide-react';
 
 import { HOME_EVENTS } from '@/app/data/homeEvents';
-import { getFeeBreakdown, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
+import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 import TicketTemplate from '@/components/TicketTemplate';
 import DigitalTicket from '@/components/DigitalTicket';
 import CheckoutFooterBar from '@/components/CheckoutFooterBar';
@@ -99,16 +99,38 @@ export default function CheckoutClient({ id }) {
         }
     }, [isSuccess, existingBooking, event]);
 
+    const seatsParam = searchParams.get('seats');
+    const selectedSeats = useMemo(() => {
+        try { return seatsParam ? JSON.parse(seatsParam) : []; } catch { return []; }
+    }, [seatsParam]);
+
     const ticketPrice = event?.price ?? 499;
     const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
-    const baseAmount = ticketPrice * qty;
-    const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, feeSettings), [baseAmount, feeSettings]);
+    
+    const baseAmount = useMemo(() => {
+        if (selectedSeats.length > 0) {
+            return selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : Number(seat.price) || 0), 0);
+        }
+        return ticketPrice * qty;
+    }, [selectedSeats, ticketPrice, qty]);
+
+    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', event?.organiser_id || event?.organiserId).single(), [event?.organiser_id, event?.organiserId]);
+
+    const resolvedFeeSettings = useMemo(() => {
+        return resolveFeeSettings(
+            feeSettings, // System settings from state
+            organiserData?.fee_config,
+            event?.fee_config
+        );
+    }, [feeSettings, organiserData?.fee_config, event?.fee_config]);
+
+    const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, resolvedFeeSettings), [baseAmount, resolvedFeeSettings]);
 
     const handleConfirmPay = useCallback(async () => {
         if (!event || !user) return;
         try {
             const isFree = total === 0;
-            const breakdown = getFeeBreakdown(baseAmount, feeSettings);
+            const breakdown = getFeeBreakdown(baseAmount, resolvedFeeSettings);
             
             const { data: booking, error } = await supabase
                 .from('bookings')
@@ -431,7 +453,7 @@ export default function CheckoutClient({ id }) {
                                         <span className="text-[12px] font-medium">Includes convenience fees</span>
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                                     </div>
-                                    <span className="text-[12px] font-medium text-slate-400">₹ {convenienceFee.toFixed(2)}</span>
+                                    <span className="text-[12px] font-medium text-slate-400">₹ {convenienceFee.toFixed(2)} {gst > 0 && `(+ ₹${gst.toFixed(2)} GST)`}</span>
                                 </div>
 
                                 <div className="border-t border-slate-100 pt-5 flex justify-between items-center">

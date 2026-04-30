@@ -605,7 +605,7 @@ function AdminHomePage() {
         const organizerTabs = ["all_org", "active_org", "kyc_verified", "kyc_pending", "banned_org"];
         const serviceTabs = ["all_turfs", "turf_bookings", "pool_bookings", "service_active", "service_banned"];
         const growthTabs = ["promotions", "send_notif", "email_broadcast", "comm_hub"];
-        const settingTabs = ["api_settings", "payment_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings"];
+        const settingTabs = ["api_settings", "payment_settings", "fee_settings", "email_settings", "meta_management", "email_templates", "disclaimer_settings", "sso_settings", "ticket_settings", "comm_hub", "terms_settings"];
         const careerTabs = ["careers_admin", "careers_banner"];
 
         if (homeTabs.includes(activeTab)) setIsHomeSettingsOpen(true);
@@ -1148,6 +1148,16 @@ function AdminHomePage() {
     // Archive: hide events from main list
     const [archivedHomeIds, setArchivedHomeIds] = useSupabaseConfig("system_config", { key: 'admin_archived_home_ids', value: [] });
     const [eventMetaOverrides, setEventMetaOverrides] = useSupabaseConfig("system_config", { key: 'admin_event_meta_overrides', value: {} });
+    const [feeSettingsConfig, setFeeSettingsConfig] = useSupabaseConfig("system_config", {
+        key: 'global_fee_settings',
+        value: {
+            default_fee_type: "percentage",
+            default_fee_value: 5,
+            default_gst_percent: 18,
+            enable_gst: true,
+            gst_apply_on: "fee_only"
+        }
+    });
 
     const [organizers, setOrganizers] = useState([]);
     const [createOrganizer] = useSupabaseMutation('organisers', 'insert');
@@ -1174,7 +1184,8 @@ function AdminHomePage() {
                 category: o.category || o.kyc_details?.category || "Event Organiser",
                 balance: `₹${(o.wallet_balance || 0).toFixed(2)}`,
                 kycDetails: o.kyc_details,
-                kyc_status: o.kyc_status || "NOT STARTED"
+                kyc_status: o.kyc_status || "NOT STARTED",
+                fee_config: o.fee_config
             }));
     }, [organisersArr]);
 
@@ -5801,6 +5812,109 @@ function AdminHomePage() {
                     {activeTab === "gst" && (
                         <GstPortal t={t} theme={theme} />
                     )}
+                    {activeTab === "fee_settings" && (
+                        <div style={{ maxWidth: "800px" }}>
+                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
+                                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#3b82f615", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={24} /></div>
+                                    <div>
+                                        <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Global Platform Fee & GST</h3>
+                                        <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>These settings apply to all organisers unless overridden individually.</p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Platform Fee Type</label>
+                                            <select 
+                                                value={feeSettingsConfig.default_fee_type}
+                                                onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_fee_type: e.target.value })}
+                                                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                            >
+                                                <option value="percentage">Percentage (%)</option>
+                                                <option value="fixed">Fixed Amount (₹)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Platform Fee Value</label>
+                                            <div style={{ position: "relative" }}>
+                                                <input 
+                                                    type="number"
+                                                    value={feeSettingsConfig.default_fee_value}
+                                                    onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_fee_value: Number(e.target.value) })}
+                                                    style={{ width: "100%", padding: "12px 12px 12px 36px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                />
+                                                <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: t.textSub, fontWeight: 700 }}>
+                                                    {feeSettingsConfig.default_fee_type === 'percentage' ? '%' : '₹'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#22c55e15", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={16} /></div>
+                                                <span style={{ fontWeight: 700, color: t.textMain }}>Enable GST on Bookings</span>
+                                            </div>
+                                            <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
+                                                <input type="checkbox" checked={feeSettingsConfig.enable_gst} onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, enable_gst: e.target.checked })} style={{ opacity: 0, width: 0, height: 0 }} />
+                                                <span style={{ position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: feeSettingsConfig.enable_gst ? "#22c55e" : "#cbd5e1", transition: "0.4s", borderRadius: "24px" }}>
+                                                    <span style={{ position: "absolute", content: '""', height: "18px", width: "18px", left: feeSettingsConfig.enable_gst ? "23px" : "3px", bottom: "3px", backgroundColor: "white", transition: "0.4s", borderRadius: "50%" }}></span>
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {feeSettingsConfig.enable_gst && (
+                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px", paddingTop: "20px", borderTop: `1px solid ${t.border}` }}>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>GST Percentage (%)</label>
+                                                    <input 
+                                                        type="number"
+                                                        value={feeSettingsConfig.default_gst_percent}
+                                                        onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, default_gst_percent: Number(e.target.value) })}
+                                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, textTransform: "uppercase", marginBottom: "8px" }}>Apply GST On</label>
+                                                    <select 
+                                                        value={feeSettingsConfig.gst_apply_on}
+                                                        onChange={e => setFeeSettingsConfig({ ...feeSettingsConfig, gst_apply_on: e.target.value })}
+                                                        style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px" }}
+                                                    >
+                                                        <option value="fee_only">Platform Fee Only</option>
+                                                        <option value="ticket_only">Ticket Price Only</option>
+                                                        <option value="both">Both (Fee + Ticket)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+                                        <button 
+                                            onClick={() => {
+                                                // useSupabaseConfig handles saving automatically, but we can show a toast
+                                                showToast("Global fee settings saved successfully!", "success");
+                                            }}
+                                            style={{ padding: "12px 32px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.25)" }}
+                                        >
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: "24px", padding: "20px", borderRadius: "12px", backgroundColor: "#3b82f610", border: `1px solid #3b82f630`, display: "flex", gap: "12px" }}>
+                                <Info size={20} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                <div style={{ fontSize: "13px", color: t.textMain, lineHeight: "1.5" }}>
+                                    <strong>How it works:</strong> The platform fee is added to the ticket price during checkout. If GST is enabled, it will be calculated based on your selection. Organisers can have custom fee structures which will override these global defaults.
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {activeTab === "pages" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -6513,6 +6627,83 @@ function AdminHomePage() {
                                             <option value="KYC Pending">KYC Pending</option>
                                         </select>
                                     </div>
+
+                                    {/* 💰 Organiser-Specific Fee Overrides */}
+                                    <div style={{ marginTop: "12px", padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editingOrg.fee_config?.override_global ? "20px" : "0" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#3b82f615", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><CreditCard size={16} /></div>
+                                                <span style={{ fontWeight: 700, color: t.textMain }}>Override Global Fees</span>
+                                            </div>
+                                            <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px" }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={editingOrg.fee_config?.override_global || false} 
+                                                    onChange={e => setEditingOrg({ 
+                                                        ...editingOrg, 
+                                                        fee_config: { 
+                                                            ...(editingOrg.fee_config || {}), 
+                                                            override_global: e.target.checked 
+                                                        } 
+                                                    })} 
+                                                    style={{ opacity: 0, width: 0, height: 0 }} 
+                                                />
+                                                <span style={{ position: "absolute", cursor: "pointer", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: editingOrg.fee_config?.override_global ? "#3b82f6" : "#cbd5e1", transition: "0.4s", borderRadius: "24px" }}>
+                                                    <span style={{ position: "absolute", content: '""', height: "18px", width: "18px", left: editingOrg.fee_config?.override_global ? "23px" : "3px", bottom: "3px", backgroundColor: "white", transition: "0.4s", borderRadius: "50%" }}></span>
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {editingOrg.fee_config?.override_global && (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${t.border}` }}>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                                    <div>
+                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>FEE TYPE</label>
+                                                        <select 
+                                                            value={editingOrg.fee_config?.fee_type || 'percentage'}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, fee_type: e.target.value } })}
+                                                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                        >
+                                                            <option value="percentage">Percent (%)</option>
+                                                            <option value="fixed">Fixed (₹)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>FEE VALUE</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={editingOrg.fee_config?.fee_value || 0}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, fee_value: Number(e.target.value) } })}
+                                                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            id="apply_gst_org"
+                                                            checked={editingOrg.fee_config?.apply_gst || false}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, apply_gst: e.target.checked } })}
+                                                        />
+                                                        <label htmlFor="apply_gst_org" style={{ fontSize: "12px", fontWeight: 600, color: t.textMain, cursor: "pointer" }}>Apply GST</label>
+                                                    </div>
+                                                    {editingOrg.fee_config?.apply_gst && (
+                                                        <div>
+                                                            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>GST (%)</label>
+                                                            <input 
+                                                                type="number"
+                                                                value={editingOrg.fee_config?.gst_percent || 18}
+                                                                onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, gst_percent: Number(e.target.value) } })}
+                                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
                                     <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
@@ -6523,7 +6714,8 @@ function AdminHomePage() {
                                                 id: editingOrg.id,
                                                 business_name: editingOrg.username,
                                                 wallet_balance: isNaN(balance) ? 0 : balance,
-                                                kyc_status: editingOrg.status
+                                                kyc_status: editingOrg.status,
+                                                fee_config: editingOrg.fee_config
                                             });
                                             setIsEditModalOpen(false);
                                         }}

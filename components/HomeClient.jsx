@@ -114,35 +114,47 @@ function TicketCard({ event }) {
     </div>
   );
 }
-
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
 
-const parseEventDate = (dateStr, timeStr) => {
-  if (!dateStr) return null;
+const parseEventDate = (dateStr, timeStr, event = null) => {
   try {
-    let dt = String(dateStr).trim();
-    let t = String(timeStr || '23:59').trim();
+    // Support explicit expiry_date or dynamic_config dates
+    let dt = event?.expiry_date || event?.dynamic_config?.basicInfo?.expiryDate || dateStr;
+    let t = timeStr || event?.startTime || '23:59';
 
+    if (!dt) return null;
+    dt = String(dt).trim();
+    t = String(t).trim();
+    
     // Handle DD/MM/YYYY or DD-MM-YYYY
     if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
         const separator = dt.includes('/') ? '/' : '-';
-        const [day, month, year] = dt.split(separator);
-        dt = `${year}-${month}-${day}`;
+        const parts = dt.split(separator);
+        if (parts.length === 3) {
+            const [day, month, year] = parts;
+            dt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
     }
     
     let normalizedTime = t;
-    if (t.includes(' ')) {
-        let [timePart, modifier] = t.split(' ');
-        let [hours, mins] = timePart.split(':').map(Number);
-        if (modifier === 'PM' && hours < 12) hours += 12;
-        if (modifier === 'AM' && hours === 12) hours = 0;
-        normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins || 0).padStart(2, '0')}`;
+    if (t && t.includes(' ')) {
+        let parts = t.split(' ');
+        if (parts.length >= 2) {
+            let [timePart, modifier] = parts;
+            let timeParts = timePart.split(':');
+            let hours = Number(timeParts[0]);
+            let mins = Number(timeParts[1] || 0);
+            if (modifier === 'PM' && hours < 12) hours += 12;
+            if (modifier === 'AM' && hours === 12) hours = 0;
+            normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
     }
     
     const eventDate = new Date(`${dt}T${normalizedTime}`);
     return isNaN(eventDate.getTime()) ? null : eventDate;
-  } catch (e) {
+  } catch (err) {
+    console.error("parseEventDate error:", err);
     return null;
   }
 };
@@ -339,7 +351,6 @@ function HomeClient() {
   const searchParams = useSearchParams();
   const activeCat = searchParams.get("category");
   const searchQuery = searchParams.get("q") || "";
-  const [newOrgEvents, setNewOrgEvents] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
   const [eventPartners, setEventPartners] = useState([]);
 
@@ -386,7 +397,7 @@ function HomeClient() {
         if (!isValidStatus) return false;
         
         // Date check: ensure event is not expired
-        const eventDate = parseEventDate(b.events?.date, b.events?.time);
+        const eventDate = parseEventDate(b.events?.date, b.events?.time, b.events);
         if (eventDate && eventDate < now) return false;
         
         return true;
@@ -405,18 +416,23 @@ function HomeClient() {
 
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
-    return (Array.isArray(newOrgEvents) ? newOrgEvents : [])
+    return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
       .filter(ev => {
-        // permissive status check during migration
+        // Safe status check
         const s = String(ev.status || '').toLowerCase();
-        if (s === "inactive" || s === "expired" || s === "draft") return false;
+        if (s === "inactive" || s === "draft") return false;
         
-        const eventDate = parseEventDate(ev.date || ev.rawDate, ev.time || ev.rawTime);
-        if (!eventDate) return true; // Keep if we can't parse it
+        const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
+        const now = new Date();
+
+        // If event is in the future, show it regardless of status
+        if (eventDate && eventDate > now) return true;
         
-        // Use a 2-hour buffer for "end time" if not explicitly provided
-        const endTs = ev.end_date_time || ev.endDateTime || (eventDate.getTime() + (2 * 60 * 60 * 1000));
-        return endTs > now.getTime();
+        // If it's explicitly marked as expired and in the past, hide it
+        if (s === "expired") return false;
+        
+        // Fallback for events without clear dates or just passed
+        return true;
       })
       .map((ev, idx) => {
         const loc = String(ev.location || ev.venue || ev.address || "Venue").trim();
@@ -429,19 +445,19 @@ function HomeClient() {
           ...ev,
           id: ev.id || ev._id || `org-${idx}-${Date.now()}`,
           title: ev.title || "Event",
-          img: ev.img || ev.banner_preview || ev.bannerPreview || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop",
+          img: ev.img || ev.banner_preview || ev.bannerPreview || "https://images.unsplash.com/photo-1540575861501-7ad058c647a0?w=500&h=280&fit=crop",
           rawDate: ev.date,
           rawTime: ev.time,
           date: [ev.date, ev.time].filter(Boolean).join(" ") || "TBA",
           location: loc,
-          featured: ev.featured !== false,
-          trending: ev.trending === true,
-          spotlight: ev.spotlight === true,
-          exclusive: ev.exclusive === true,
+          featured: ev.featured === true || ev.featured === "Yes",
+          trending: ev.trending === true || ev.trending === "Yes",
+          spotlight: ev.spotlight === true || ev.spotlight === "Yes",
+          exclusive: ev.exclusive === true || ev.exclusive === "Yes",
           virtual: isVirtual,
         };
       });
-  }, [newOrgEvents]);
+  }, [supabaseEvents]);
 
   const allEventsForFilter = useMemo(() => [
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
@@ -455,7 +471,6 @@ function HomeClient() {
     // 0. Filter by Selected City
     if (selectedCity && selectedCity !== "All Cities") {
       const cityLower = selectedCity.toLowerCase();
-      // Expanded city map for common variations
       const cityVariations = {
         'bengaluru': ['bangalore', 'bengaluru'],
         'bangalore': ['bangalore', 'bengaluru'],
@@ -482,7 +497,7 @@ function HomeClient() {
           evDistrict.includes(tc) || 
           evLoc.includes(tc) || 
           evVenue.includes(tc)
-        ) || !ev.city; // Show if city info is missing (Global)
+        ) || !ev.city;
       });
     }
 
@@ -505,7 +520,7 @@ function HomeClient() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     results = results.filter(ev => {
-      const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time);
+      const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time, ev);
       if (!eventDate) return true;
       
       const evDateOnly = new Date(eventDate);
@@ -530,9 +545,7 @@ function HomeClient() {
   }, [filteredEvents]);
 
 
-  useEffect(() => {
-    setNewOrgEvents(supabaseEvents);
-  }, [supabaseEvents]);
+
 
   // Fallback or old local storage cleanup (Optional: keep using convexEvents instead, logic below handles parsing well)
 

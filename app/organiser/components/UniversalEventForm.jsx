@@ -6,7 +6,7 @@ import {
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
     TrendingUp, Trash2, Trash, Zap, Map, Layout, ListTodo, MessageCircle, 
-    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown
+    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -357,7 +357,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     const [config, setConfig] = useState(postEvent.dynamic_config || {
         basicInfo: {
             eligibility: "Open to All",
-            organizerContact: ""
+            organizerContact: "",
+            regStart: "",
+            regEnd: "",
+            expiryDate: ""
         },
         location: {
             venueName: "",
@@ -395,6 +398,19 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     });
 
     useEffect(() => {
+        // Ensure basicInfo has regStart/regEnd defaults if missing
+        if (config.basicInfo && (config.basicInfo.regStart === undefined || config.basicInfo.regEnd === undefined || config.basicInfo.expiryDate === undefined)) {
+            setConfig(prev => ({
+                ...prev,
+                basicInfo: {
+                    ...prev.basicInfo,
+                    regStart: prev.basicInfo.regStart || "",
+                    regEnd: prev.basicInfo.regEnd || "",
+                    expiryDate: prev.basicInfo.expiryDate || ""
+                }
+            }));
+        }
+
         setPostEvent(prev => ({ 
             ...prev, 
             dynamic_config: config,
@@ -505,6 +521,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="grid grid-cols-2 gap-4">
                             {renderInput("Registration Starts", config.basicInfo.regStart, (v) => updateConfig('basicInfo', { ...config.basicInfo, regStart: v }), "date")}
                             {renderInput("Registration Ends", config.basicInfo.regEnd, (v) => updateConfig('basicInfo', { ...config.basicInfo, regEnd: v }), "date")}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {renderInput("Event Expiry Date", config.basicInfo.expiryDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, expiryDate: v }), "date")}
+                            <div /> {/* Spacer */}
                         </div>
                         <CustomSelect 
                             label="Eligibility"
@@ -795,9 +815,81 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {renderInput("Platform Fee (₹)", postEvent.platformFee || 0, (v) => setPostEvent(p => ({ ...p, platformFee: parseFloat(v) || 0 })), "number")}
-                        {renderInput("GST / Tax (%)", postEvent.taxPercentage || 0, (v) => setPostEvent(p => ({ ...p, taxPercentage: parseFloat(v) || 0 })), "number")}
-                        
+                        {/* 💰 Event-Specific Fee Overrides */}
+                        <div className="md:col-span-2 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
+                                        <Wallet size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Custom Platform Fees for this event</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={postEvent.fee_config?.override_global || false}
+                                        onChange={e => setPostEvent({ 
+                                            ...postEvent, 
+                                            fee_config: { 
+                                                ...(postEvent.fee_config || {}), 
+                                                override_global: e.target.checked 
+                                            } 
+                                        })}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                                </label>
+                            </div>
+
+                            {postEvent.fee_config?.override_global && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50">
+                                    <div className="space-y-2">
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Fee Type</label>
+                                        <select 
+                                            value={postEvent.fee_config?.fee_type || 'percentage'}
+                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, fee_type: e.target.value } })}
+                                            className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
+                                        >
+                                            <option value="percentage">Percentage (%)</option>
+                                            <option value="fixed">Fixed Amount (₹)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Fee Value</label>
+                                        <input 
+                                            type="number"
+                                            value={postEvent.fee_config?.fee_value || 0}
+                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, fee_value: Number(e.target.value) } })}
+                                            className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <input 
+                                            type="checkbox" 
+                                            id="apply_gst_event"
+                                            checked={postEvent.fee_config?.apply_gst || false}
+                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, apply_gst: e.target.checked } })}
+                                            className="w-5 h-5 rounded-lg border-slate-200 text-pink-500 focus:ring-pink-500/20"
+                                        />
+                                        <label htmlFor="apply_gst_event" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Apply GST on Fees</label>
+                                    </div>
+                                    {postEvent.fee_config?.apply_gst && (
+                                        <div className="space-y-2">
+                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">GST Percentage (%)</label>
+                                            <input 
+                                                type="number"
+                                                value={postEvent.fee_config?.gst_percent || 18}
+                                                onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, gst_percent: Number(e.target.value) } })}
+                                                className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <div className="md:col-span-2 py-6 border-y border-slate-50 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
