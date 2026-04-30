@@ -244,9 +244,10 @@ export async function POST(request) {
       await supabaseAdmin
         .from("partner_requests")
         .update({
-          status: "Approved",
+          status: isProfessional ? "Approved" : "KYC Initiated",
+          kyc_status: isProfessional ? "Approved" : "Pending",
           approved_at: new Date().toISOString(),
-          access_granted_at: new Date().toISOString()
+          access_granted_at: isProfessional ? new Date().toISOString() : null
         })
         .eq("id", requestId);
 
@@ -303,6 +304,59 @@ export async function POST(request) {
       }
 
       return NextResponse.json({ success: true, userId: newUserId });
+    }
+
+    if (action === "reject-partner") {
+      const { requestId, reason } = data;
+      await supabaseAdmin
+        .from("partner_requests")
+        .update({
+          status: "Rejected",
+          rejection_reason: reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", requestId);
+      
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "verify-kyc") {
+      const { requestId, organiserId, status, reason } = data;
+      
+      // Update kyc_details table
+      await supabaseAdmin
+        .from("kyc_details")
+        .update({
+          status,
+          rejection_reason: reason,
+          verified_at: status === 'Approved' ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", organiserId);
+
+      // Update organisers table
+      await supabaseAdmin
+        .from("organisers")
+        .update({
+          kyc_status: status,
+          is_approved: status === 'Approved',
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", organiserId);
+
+      // Update partner_requests table if exists
+      if (requestId) {
+        await supabaseAdmin
+          .from("partner_requests")
+          .update({
+            status: status === 'Approved' ? "Access Granted" : "KYC Rejected",
+            kyc_status: status,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", requestId);
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

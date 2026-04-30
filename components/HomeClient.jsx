@@ -622,7 +622,7 @@ function HomeClient() {
 
   return (
     <>
-      <main style={{ minHeight: '100vh', backgroundColor: '#fafafa', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '192px' : 'var(--header-h)' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#FAF9F6', color: '#111827', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: isMobile ? '192px' : 'var(--header-h)' }}>
         
         {/* Community Trust: Public Reviews Banner */}
         {/* Moved PublicReviewsBanner below for better flow */}

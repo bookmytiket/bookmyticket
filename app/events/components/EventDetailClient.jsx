@@ -96,7 +96,7 @@ export default function EventDetailClient({ id }) {
 
     if (eventLoading || !storageLoaded) {
         return (
-            <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <main className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px]">Loading Event Details...</p>
@@ -107,7 +107,7 @@ export default function EventDetailClient({ id }) {
 
     if (!event) {
         return (
-            <main className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+            <main className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 mb-6">
                     <InfoIcon size={40} />
                 </div>
@@ -123,7 +123,7 @@ export default function EventDetailClient({ id }) {
 
     if (isExpired) {
         return (
-            <main className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+            <main className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-100">
                     <Clock size={40} />
                 </div>
@@ -135,7 +135,7 @@ export default function EventDetailClient({ id }) {
     }
 
     return (
-        <main className="min-h-screen bg-[#fafbfc] pb-24">
+        <main className="min-h-screen bg-[#FAF9F6] pb-24">
             <Navbar />
             
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-8">
