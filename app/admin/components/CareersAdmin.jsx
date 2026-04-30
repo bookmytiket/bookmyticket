@@ -6,11 +6,11 @@ import {
     Briefcase, Plus, Search, Filter, Edit, Trash2, 
     Users, Calendar, MapPin, ExternalLink, Download,
     CheckCircle, XCircle, X, Clock, AlertCircle, ChevronRight,
-    ArrowLeft, FileText, Mail, Phone, Globe, Star
+    ArrowLeft, FileText, Mail, Phone, Globe, Star, Share2, ChevronDown
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
-import { ChevronDown } from "lucide-react";
+import JobPosterModal from "./JobPosterModal";
 
 const CustomDropdown = ({ value, options, onChange, placeholder, t }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -93,6 +93,8 @@ const CustomDropdown = ({ value, options, onChange, placeholder, t }) => {
 const CareersAdmin = ({ t, theme }) => {
     const [view, setView] = useState("jobs"); // 'jobs' | 'applicants' | 'job_form'
     const [selectedJob, setSelectedJob] = useState(null);
+    const [showPosterModal, setShowPosterModal] = useState(false);
+    const [lastCreatedJob, setLastCreatedJob] = useState(null);
     const { showToast } = useToast();
     const { confirm } = useConfirm();
 
@@ -141,10 +143,19 @@ const CareersAdmin = ({ t, theme }) => {
             const payload = { ...jobForm };
             if (!selectedJob) delete payload.id;
             
-            await upsertJob(payload);
-            showToast(selectedJob ? "Job updated" : "Job created", "success");
-            setView("jobs");
-            refetchJobs();
+            const result = await upsertJob(payload);
+            if (result.success) {
+                const savedJob = Array.isArray(result.data) ? result.data[0] : result.data;
+                showToast(selectedJob ? "Job updated" : "Job created", "success");
+                
+                if (!selectedJob) {
+                    setLastCreatedJob(savedJob);
+                    setShowPosterModal(true);
+                }
+                
+                setView("jobs");
+                refetchJobs();
+            }
         } catch (err) {
             showToast("Error saving job: " + err.message, "error");
         }
@@ -753,6 +764,16 @@ const CareersAdmin = ({ t, theme }) => {
                                     <td style={{ padding: "20px 24px", textAlign: "right" }}>
                                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                                             <button 
+                                                onClick={() => {
+                                                    setLastCreatedJob(job);
+                                                    setShowPosterModal(true);
+                                                }}
+                                                title="Generate Social Posters"
+                                                style={{ padding: "8px", borderRadius: "10px", background: "#f0fdf4", border: "1px solid #dcfce7", color: "#16a34a", cursor: "pointer" }}
+                                            >
+                                                <Share2 size={16} />
+                                            </button>
+                                            <button 
                                                 onClick={() => handleEditJob(job)}
                                                 style={{ padding: "8px", borderRadius: "10px", background: "#f8fafc", border: `1px solid ${t.border}`, color: "#64748b", cursor: "pointer" }}
                                             >
@@ -771,6 +792,16 @@ const CareersAdmin = ({ t, theme }) => {
                         </tbody>
                     </table>
                 )}
+            {showPosterModal && lastCreatedJob && (
+                <JobPosterModal 
+                    job={lastCreatedJob} 
+                    onClose={() => {
+                        setShowPosterModal(false);
+                        setLastCreatedJob(null);
+                    }} 
+                    t={t} 
+                />
+            )}
             </div>
         </div>
     );
