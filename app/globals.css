@@ -614,6 +614,15 @@ nextjs-portal {
 }
 
 /* Row 1 */
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   (Shared across components)
+   ═══════════════════════════════════════════ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 @keyframes purpleGlow {
   0% {
     background-position: 0% 50%;
@@ -626,6 +635,10 @@ nextjs-portal {
   100% {
     background-position: 0% 50%;
   }
+}
+
+.animate-gradient-x {
+  animation: shimmer 5s infinite linear;
 }
 
 /* ════════════ EVENT DETAIL REPSPONSIVE ════════════ */

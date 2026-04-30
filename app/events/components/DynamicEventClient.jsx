@@ -54,6 +54,15 @@ export default function DynamicEventClient({ event }) {
     const [isAgeDropdownOpen, setIsAgeDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({});
     const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0 });
+    const [notification, setNotification] = useState(null);
+
+    // Toast Timer
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     useEffect(() => {
         if (!config.countdown?.enabled || !config.countdown?.deadline) return;
@@ -78,7 +87,7 @@ export default function DynamicEventClient({ event }) {
         return () => clearInterval(timer);
     }, [config.countdown]);
 
-    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
+    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').maybeSingle(), []);
     const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
@@ -152,20 +161,23 @@ export default function DynamicEventClient({ event }) {
     }, [config.registrationForm]);
 
     const handleBooking = async () => {
-        if (!selectedCategory) return;
+        if (!selectedCategory) {
+            setNotification({ message: "Please select a category first", type: "error" });
+            return;
+        }
         const missingFields = uniqueFormFields.filter(f => f.required && !formData[f.label]).map(f => f.label);
         
         // If age rates exist but none selected (and no auto-calculation possible), prompt user
         if (normalizedAgeRates.length > 0 && !selectedAgeRate) {
             const ageField = uniqueFormFields.find(f => f.label.toLowerCase().includes('age'));
             if (!ageField || !formData[ageField.label]) {
-                alert("Please select your Age Group or enter your age.");
+                setNotification({ message: "Please select your Age Group range", type: "error" });
                 return;
             }
         }
 
         if (missingFields.length > 0) {
-            alert(`Please fill in: ${missingFields.join(', ')}`);
+            setNotification({ message: `Required: ${missingFields.join(', ')}`, type: "error" });
             return;
         }
 
@@ -177,19 +189,54 @@ export default function DynamicEventClient({ event }) {
 
     return (
         <main className={`min-h-screen bg-[#fafbfc] pb-24 ${outfit.className}`}>
-            <div className="max-w-[1100px] mx-auto px-4 pt-10">
+            {/* Custom UI Notification */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -50, x: '-50%' }}
+                        animate={{ opacity: 1, y: 30, x: '-50%' }}
+                        exit={{ opacity: 0, y: -50, x: '-50%' }}
+                        className="fixed top-0 left-1/2 z-[100] w-full max-w-md px-4"
+                    >
+                        <div className="bg-white/80 backdrop-blur-xl border border-rose-100 shadow-[0_20px_50px_rgba(236,72,153,0.15)] p-5 rounded-[2rem] flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] flex items-center justify-center text-white shrink-0 shadow-lg">
+                                <Info size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest mb-1">Attention Required</p>
+                                <p className="text-sm font-black text-slate-900 leading-tight">{notification.message}</p>
+                            </div>
+                            <button onClick={() => setNotification(null)} className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="max-w-[1100px] mx-auto px-4 pt-6">
                 
-                {/* Back Button */}
-                <div className="mb-6">
+                {/* Back Button & Category Badge */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <button 
                         onClick={() => router.back()}
-                        className="flex items-center gap-3 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-all group"
+                        className="group flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-900 transition-all"
                     >
-                        <div className="w-9 h-9 rounded-full border border-slate-100 flex items-center justify-center group-hover:border-slate-900 transition-colors">
-                            <ArrowLeft size={16} />
+                        <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+                            <ArrowLeft size={14} />
                         </div>
-                        <span>Back</span>
+                        Back to Event
                     </button>
+
+                    <div className="flex items-center gap-3">
+                        <div className="px-4 py-1.5 bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-white text-[10px] font-[900] uppercase tracking-[0.2em] rounded-full shadow-lg shadow-pink-500/20">
+                            Sports
+                        </div>
+                        <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        <div className="hidden sm:flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <Trophy size={14} className="text-amber-500" /> Marathon Event
+                        </div>
+                    </div>
                 </div>
 
                 {/* HERO BANNER */}
@@ -221,38 +268,40 @@ export default function DynamicEventClient({ event }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                     
                     {/* Left Column: Form Content */}
-                    <div className="lg:col-span-7 xl:col-span-8 space-y-10">
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 md:p-10 space-y-10">
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Registration</h2>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Provide participant details below</p>
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-8 space-y-6">
+                            <div className="space-y-0.5">
+                                <motion.h2 
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="text-xl md:text-2xl font-[900] uppercase tracking-tighter bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
+                                >
+                                    Registration
+                                </motion.h2>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Participant Details</p>
                             </div>
 
-                            <div className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {uniqueFormFields.map((field, idx) => (
-                                        <div key={idx} className="space-y-2.5">
-                                            <label className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-tight ml-1">
+                                        <div key={idx} className="space-y-1">
+                                            <label className="text-[8px] font-black text-[#8b5cf6] uppercase tracking-tight ml-1">
                                                 {field.label} {field.required && <span className="text-rose-500">*</span>}
                                             </label>
                                             {field.type === 'select' ? (
                                                 <div className="relative group">
-                                                    <select 
-                                                        className="w-full bg-slate-50 border border-slate-100 p-4 rounded-[18px] text-[13px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all appearance-none"
-                                                        onChange={e => setFormData({...formData, [field.label]: e.target.value})}
-                                                    >
-                                                        <option value="">Select Option</option>
-                                                        {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                    </select>
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none transition-transform">
-                                                        <ChevronDown size={16} />
-                                                    </div>
+                                                    <CustomSelect 
+                                                        options={field.options || []}
+                                                        value={formData[field.label]}
+                                                        onChange={(val) => setFormData({...formData, [field.label]: val})}
+                                                        placeholder={`Select`}
+                                                    />
                                                 </div>
                                             ) : (
                                                 <input 
                                                     type={field.type}
                                                     placeholder={`Enter ${field.label.toLowerCase()}`}
-                                                    className="w-full bg-slate-50 border border-slate-100 p-4 rounded-[18px] text-[13px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all placeholder:text-slate-300"
+                                                    className="w-full bg-slate-50 border border-slate-100 p-2.5 rounded-[12px] text-[11px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all placeholder:text-slate-300"
                                                     onChange={e => setFormData({...formData, [field.label]: e.target.value})}
                                                 />
                                             )}
@@ -311,15 +360,11 @@ export default function DynamicEventClient({ event }) {
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="space-y-1">
                                                             <h5 className={`text-base font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.name}</h5>
-                                                            {hasAgeRates && (
-                                                                <p className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-[#ec4899]'}`}>Age-Based Rate Only</p>
-                                                            )}
                                                         </div>
                                                         <div className="text-right">
                                                             <div className={`text-xl font-black ${isSelected ? 'text-white' : 'text-[#ec4899]'}`}>
                                                                 {priceDisplay}
                                                             </div>
-                                                            {hasAgeRates && !isSelected && <span className={`text-[8px] font-black ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>*Based on Age</span>}
                                                         </div>
                                                     </div>
 
@@ -420,6 +465,18 @@ export default function DynamicEventClient({ event }) {
                                 >
                                     Review and Book <ArrowRight size={18} />
                                 </button>
+
+                                {/* Compact Registration Disclaimer */}
+                                <div className="mt-8 pt-8 border-t border-slate-50 space-y-4">
+                                    <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
+                                        <ShieldCheck size={14} className="shrink-0 text-[#8b5cf6]" />
+                                        <p>By registering, you agree to the marathon safety protocols and official terms. All participant data is processed securely.</p>
+                                    </div>
+                                    <div className="flex gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
+                                        <Info size={14} className="shrink-0 text-amber-500" />
+                                        <p>Tickets are non-transferable. Please ensure your T-Shirt size and Age are correct before proceeding.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -447,8 +504,14 @@ export default function DynamicEventClient({ event }) {
                         {/* Summary Widget */}
                         <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl p-8 space-y-8">
                             <div className="space-y-1">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Order Details</h3>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Review your selection</p>
+                                <motion.h3 
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="text-lg font-[900] uppercase tracking-tighter bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
+                                >
+                                    Order Details
+                                </motion.h3>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Review</p>
                             </div>
 
                             {selectedCategory ? (
@@ -523,5 +586,47 @@ export default function DynamicEventClient({ event }) {
                 </div>
             </div>
         </main>
+    );
+}
+
+function CustomSelect({ options, value, onChange, placeholder }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="relative">
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full bg-slate-50 border border-slate-100 p-2.5 rounded-[12px] flex items-center justify-between cursor-pointer transition-all hover:bg-white hover:border-pink-200 ${isOpen ? 'ring-2 ring-pink-500/10 border-pink-300' : ''}`}
+            >
+                <span className={`text-[11px] font-black ${value ? 'text-slate-900' : 'text-slate-300'}`}>
+                    {value || placeholder}
+                </span>
+                <ChevronDown size={12} className={`text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : ''}`} />
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute z-[100] w-full mt-2 bg-white/95 backdrop-blur-xl border border-rose-100 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
+                    >
+                        {options.map((opt) => (
+                            <div 
+                                key={opt}
+                                onClick={() => {
+                                    onChange(opt);
+                                    setIsOpen(false);
+                                }}
+                                className={`px-5 py-3 text-[13px] font-black cursor-pointer transition-colors hover:bg-pink-50 ${value === opt ? 'text-[#ec4899] bg-pink-50/50' : 'text-slate-600 hover:text-[#ec4899]'}`}
+                            >
+                                {opt}
+                            </div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 }

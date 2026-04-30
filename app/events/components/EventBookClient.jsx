@@ -87,7 +87,13 @@ export default function EventBookClient({ id }) {
         }
     }, [user, authLoading, id, router]);
 
-    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
+    useEffect(() => {
+        if (event?.type === 'Dynamic') {
+            router.replace(`/events/detail?id=${id}`);
+        }
+    }, [event, id, router]);
+
+    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').maybeSingle(), []);
     const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
@@ -378,7 +384,7 @@ export default function EventBookClient({ id }) {
                                 >
                                     <PackageSelector 
                                         packages={event.ticketTypes || [
-                                            { id: 'gen', title: ticketName, price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+                                            { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
                                         ]}
                                         selectedPackage={selectedPackage}
                                         onSelect={setSelectedPackage}
@@ -553,5 +559,20 @@ export default function EventBookClient({ id }) {
                 availableDates={event.dateSlots?.map(s => s.date) || []}
             />
         </main>
+    );
+}
+
+function BookingDisclaimer({ type }) {
+    return (
+        <div className="space-y-4 text-[10px] font-medium text-slate-400 leading-relaxed uppercase tracking-wider">
+            <div className="flex gap-3">
+                <Info size={14} className="shrink-0 text-slate-300" />
+                <p>By proceeding with this booking, you agree to the event's terms and conditions. Tickets are non-refundable unless specified otherwise by the organizer.</p>
+            </div>
+            <div className="flex gap-3">
+                <ShieldCheck size={14} className="shrink-0 text-slate-300" />
+                <p>Ensure your participant details are accurate. Changes may not be allowed after the registration deadline.</p>
+            </div>
+        </div>
     );
 }

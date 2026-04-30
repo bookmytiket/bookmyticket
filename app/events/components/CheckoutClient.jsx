@@ -56,6 +56,15 @@ export default function CheckoutClient({ id }) {
     const [showTermsModal, setShowTermsModal] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [notification, setNotification] = useState(null);
+
+    // Toast Timer
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const bookingIdFromUrl = searchParams.get('bookingId');
     const isSuccess = searchParams.get('success') === 'true';
@@ -121,6 +130,7 @@ export default function CheckoutClient({ id }) {
     const ticketPrice = event?.price ?? 499;
     const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
     const selectedPackageName = searchParams.get('package');
+    const regDataParam = searchParams.get('regData');
     
     const baseAmount = useMemo(() => {
         if (selectedSeats.length > 0) {
@@ -149,6 +159,11 @@ export default function CheckoutClient({ id }) {
             const isFree = total === 0;
             const breakdown = getFeeBreakdown(baseAmount, resolvedFeeSettings);
             
+            let regData = {};
+            if (regDataParam) {
+                try { regData = JSON.parse(regDataParam); } catch { }
+            }
+
             const { data: booking, error } = await supabase
                 .from('bookings')
                 .insert([{
@@ -170,7 +185,8 @@ export default function CheckoutClient({ id }) {
                     customer_details: {
                         name: user.name || "Guest User",
                         email: user.identifier || user.email || "",
-                        phone: user.phone || ""
+                        phone: user.phone || "",
+                        ...regData
                     }
                 }])
                 .select()
@@ -214,7 +230,7 @@ export default function CheckoutClient({ id }) {
             }
         } catch (error) {
             console.error("Booking failed:", error);
-            alert("Booking failed. Please check your connection and try again.");
+            setNotification({ message: "Booking failed. Please check your connection and try again.", type: "error" });
         } finally {
             setIsProcessing(false);
         }
@@ -300,9 +316,37 @@ export default function CheckoutClient({ id }) {
 
     return (
         <main className="min-h-screen bg-[#FDFCFB]">
+            {/* Custom UI Notification */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -50, x: '-50%' }}
+                        animate={{ opacity: 1, y: 30, x: '-50%' }}
+                        exit={{ opacity: 0, y: -50, x: '-50%' }}
+                        className="fixed top-0 left-1/2 z-[100] w-full max-w-md px-4"
+                    >
+                        <div className="bg-white/80 backdrop-blur-xl border border-rose-100 shadow-[0_20px_50px_rgba(236,72,153,0.15)] p-5 rounded-[2rem] flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] flex items-center justify-center text-white shrink-0 shadow-lg">
+                                <Info size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest mb-1">Attention Required</p>
+                                <p className="text-sm font-black text-slate-900 leading-tight">{notification.message}</p>
+                            </div>
+                            <button onClick={() => setNotification(null)} className="w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 transition-colors">
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="max-w-[1200px] mx-auto px-6 py-12">
                 <div className="mb-12">
-                    <Link href={`/events/book?id=${id}`} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">
+                    <Link 
+                        href={event?.type === 'Dynamic' ? `/events/detail?id=${id}` : `/events/book?id=${id}`} 
+                        className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+                    >
                         <ChevronLeft size={16} /> Back to selection
                     </Link>
                 </div>
