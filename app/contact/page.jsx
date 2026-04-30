@@ -1,12 +1,17 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, Phone, MapPin, Send, MessageCircle, Clock, CheckCircle2, Shield, Globe, Linkedin, Instagram, Facebook, Twitter, ChevronDown } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, MessageCircle, Clock, CheckCircle2, Shield, Globe, Linkedin, Instagram, Facebook, Twitter, ChevronDown, AlertTriangle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 
 export default function ContactPage() {
     const [status, setStatus] = useState(null);
+    const [step, setStep] = useState("form"); // 'form' or 'otp'
+    const [otp, setOtp] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [formValues, setFormValues] = useState({});
     const [queryType, setQueryType] = useState("General Inquiry");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -48,6 +53,8 @@ export default function ContactPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
+        setError("");
         const formData = new FormData(e.target);
         const data = {
             first_name: formData.get('first_name'),
@@ -58,14 +65,53 @@ export default function ContactPage() {
             query_type: queryType,
             message: formData.get('message'),
         };
+        setFormValues(data);
 
-        const { error } = await supabase.from('contact_inquiries').insert([data]);
+        try {
+            const res = await fetch("/api/contact/send-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: data.email, phone: data.phone }),
+            });
+            const result = await res.json();
+            if (result.success) {
+                setStep("otp");
+            } else {
+                setError(result.error || "Failed to send OTP. Please try again.");
+            }
+        } catch (err) {
+            setError("An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        if (error) {
-            console.error('Error submitting inquiry:', error);
-            alert('Failed to send message. Please try again.');
-        } else {
-            setStatus('success');
+    const handleVerifyOtp = async () => {
+        if (otp.length < 6) return;
+        setLoading(true);
+        setError("");
+
+        try {
+            const res = await fetch("/api/contact/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: formValues.email,
+                    phone: formValues.phone,
+                    otp,
+                    messageData: formValues
+                }),
+            });
+            const result = await res.json();
+            if (result.success) {
+                setStatus('success');
+            } else {
+                setError(result.error || "Invalid OTP. Please try again.");
+            }
+        } catch (err) {
+            setError("Verification failed. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -225,15 +271,69 @@ export default function ContactPage() {
                         </div>
 
                         {status === 'success' ? (
-                            <div className="py-20 text-center space-y-6">
-                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-500">
+                            <div className="py-20 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-500 shadow-lg shadow-green-500/20">
                                     <CheckCircle2 className="w-10 h-10" />
                                 </div>
-                                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Message Sent!</h3>
+                                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight italic">Message Sent!</h3>
                                 <p className="text-slate-500 font-medium max-w-[300px] mx-auto">
-                                    Thank you for reaching out. Our team will get back to you shortly.
+                                    Thank you for reaching out. Our team will get back to you shortly via {formValues.email || formValues.phone}.
                                 </p>
-                                <button onClick={() => setStatus(null)} className="text-pink-500 font-bold uppercase tracking-widest text-sm hover:underline">Send another message</button>
+                                <button onClick={() => { setStatus(null); setStep("form"); setOtp(""); }} className="text-pink-500 font-black uppercase tracking-widest text-[10px] hover:underline cursor-pointer">Send another message</button>
+                            </div>
+                        ) : step === 'otp' ? (
+                            <div className="py-12 space-y-8 animate-in slide-in-from-right-4 duration-500">
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-900">Verify it's you</h3>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                        We've sent a 6-digit verification code to <br/>
+                                        <span className="text-slate-900 font-black">{formValues.email || formValues.phone}</span>
+                                    </p>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Shield size={10} className="text-pink-500" /> Enter 6-Digit Code
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            maxLength={6}
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                            placeholder="000000" 
+                                            className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-3xl tracking-[0.5em] text-center text-slate-900 focus:outline-none focus:border-pink-500/30 focus:ring-4 focus:ring-pink-500/5 transition-all" 
+                                        />
+                                    </div>
+
+                                    {error && (
+                                        <div className="flex items-center gap-3 p-4 bg-pink-50 border border-pink-100 rounded-2xl text-pink-600 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <AlertTriangle size={18} className="shrink-0" />
+                                            <p className="text-[11px] font-black uppercase tracking-widest">{error}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col gap-4">
+                                        <button 
+                                            onClick={handleVerifyOtp}
+                                            disabled={loading || otp.length < 6}
+                                            className={`w-full py-5 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs italic shadow-xl shadow-pink-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            {loading ? "Verifying..." : "Verify & Send Message"} <CheckCircle2 className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => { setStep("form"); setError(""); }}
+                                            className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all cursor-pointer"
+                                        >
+                                            ← Edit Contact Details
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="pt-8 border-t border-slate-50 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    <Shield size={12} className="text-pink-500" />
+                                    Secure Verification Protocol Active
+                                </div>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-6">
@@ -322,12 +422,24 @@ export default function ContactPage() {
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-slate-100">
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        <Shield size={12} className="text-pink-500" />
-                                        Your information is secure and encrypted
+                                    <div className="flex flex-col gap-4 w-full sm:w-auto">
+                                        {error && (
+                                            <div className="flex items-center gap-2 p-3 bg-pink-50 border border-pink-100 rounded-xl text-pink-600 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                <AlertTriangle size={14} className="shrink-0" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <Shield size={12} className="text-pink-500" />
+                                            Your information is secure and encrypted
+                                        </div>
                                     </div>
-                                    <button type="submit" className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs italic shadow-xl shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer">
-                                        Send Message <Send className="w-4 h-4" />
+                                    <button 
+                                        type="submit" 
+                                        disabled={loading}
+                                        className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs italic shadow-xl shadow-pink-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
+                                    >
+                                        {loading ? "Sending..." : "Send Message"} <Send className="w-4 h-4" />
                                     </button>
                                 </div>
                             </form>

@@ -24,4 +24,4 @@ WITH CHECK (true);
 -- Allow admins to view and manage
 CREATE POLICY "Allow admins to manage inquiries" 
 ON public.contact_inquiries FOR ALL
-USING (auth.jwt() ->> 'role' IN ('admin', 'super_admin'));
+USING (public.is_admin(auth.uid()));
