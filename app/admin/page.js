@@ -861,7 +861,7 @@ function AdminHomePage() {
     const { data: promotionsArr = [] } = useSupabaseQuery('promotions');
     
     // Structured User Management: Fetch from role-specific tables
-    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers');
+    const { data: vendorsOnly = [], refresh: refreshVendors } = useSupabaseQuery('organisers', (q) => q.select('*, profiles:id(email)'));
     
     // Merge for backward compatibility in Admin Panel
     const organisersArr = useMemo(() => {
@@ -1169,7 +1169,7 @@ function AdminHomePage() {
             .map(o => ({
                 id: o.id,
                 username: o.business_name || o.name || "Unnamed Organiser",
-                email: o.kyc_details?.email || o.user_id || o.id,
+                email: o.kyc_details?.email || o.profiles?.email || "No Email",
                 status: o.kyc_status || "NOT STARTED",
                 category: o.category || o.kyc_details?.category || "Event Organiser",
                 balance: `₹${(o.wallet_balance || 0).toFixed(2)}`,

@@ -52,7 +52,9 @@ export default function OnboardingPage() {
             return;
         }
 
-        if (user && user.kyc_status === "Approved") {
+        const kycStatus = (user?.kyc_status || "").toLowerCase();
+        const isApproved = ["approved", "active", "kyc completed", "kyc verified"].includes(kycStatus) || user?.is_approved === true;
+        if (user && isApproved) {
             router.push("/organiser");
             return;
         }

@@ -49,8 +49,12 @@ export default function RequireAuth({ children, allowedRoles }) {
       return;
     }
 
-    // KYC CHECK FOR ORGANISERS: If not approved, must complete onboarding
-    if (user.role === "organiser" && user.kyc_status !== "Approved" && !pathname.startsWith("/onboarding")) {
+    // KYC CHECK FOR ORGANISERS: If not approved, must complete onboarding (Admins/Super Admins bypass this)
+    const isAdmin = user.role === "admin" || user.role === "super_admin";
+    const kycStatus = (user.kyc_status || "").toLowerCase();
+    const isKycApproved = ["approved", "active", "kyc completed", "kyc verified"].includes(kycStatus) || user.is_approved === true;
+    
+    if (!isAdmin && user.role === "organiser" && !isKycApproved && !pathname.startsWith("/onboarding")) {
       console.log(`[RequireAuth] Organiser KYC not approved (${user.kyc_status}). Redirecting to /onboarding`);
       router.replace("/onboarding");
       return;

@@ -148,7 +148,7 @@ export default function SignInPage() {
         // Apply role-based defaults if no valid redirect OR not authorized for target
         if (isInvalidRedirect || !isAuthorized) {
             if (role === 'admin' || role === 'super_admin') {
-                destination = "/admin/dashboard";
+                destination = "/admin";
             } else if (role === 'staff') {
                 destination = "/pwa-scan";
             } else if (role === 'branding_partner') {
@@ -167,7 +167,7 @@ export default function SignInPage() {
         // ABSOLUTE SECURITY OVERRIDES (Regardless of redirectPath)
         if (role === "staff") return "/pwa-scan";
         if (role === "admin" || role === "super_admin") {
-            if (destination === "/" || destination === "/profile") return "/admin/dashboard";
+            if (destination === "/" || destination === "/profile") return "/admin";
         }
 
         return destination;

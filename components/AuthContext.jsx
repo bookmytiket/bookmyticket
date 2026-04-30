@@ -181,7 +181,10 @@ export function AuthProvider({ children }) {
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
             } else if (organiserRecord) {
-                role = 'organiser';
+                // Protect admin/super_admin role if already set via profile
+                if (role !== 'admin' && role !== 'super_admin') {
+                    role = 'organiser';
+                }
                 specializedData = organiserRecord;
             } else if (vendorRecord || providerRecord) {
                 role = 'vendor';
@@ -266,7 +269,7 @@ export function AuthProvider({ children }) {
                 // REDIRECTION LOGIC
                 if (userData.role === 'organiser') {
                     router.push('/organiser');
-                } else if (userData.role === 'admin') {
+                } else if (userData.role === 'admin' || userData.role === 'super_admin') {
                     router.push('/admin');
                 } else if (userData.role === 'vendor') {
                     router.push('/vendor');

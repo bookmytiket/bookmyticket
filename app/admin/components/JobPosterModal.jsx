@@ -63,100 +63,129 @@ const JobPosterModal = ({ job, onClose, t }) => {
                 const margin = width * 0.08;
                 const contentWidth = isLandscape ? width * 0.65 : width * 0.84;
                 
-                // A. Logo (Moved to TOP RIGHT to avoid overlap)
-                const logoW = width * (isLandscape ? 0.18 : 0.25);
+                // A. Branding (Logo)
+                // Position logo: Center top for portrait/square, top right for landscape
+                const logoW = width * (isLandscape ? 0.22 : 0.32);
                 const logoH = logoW * (logo.height / logo.width);
-                ctx.drawImage(logo, width - margin - logoW, margin * 0.6, logoW, logoH);
+                const logoX = isLandscape ? (width - margin - logoW) : (width - logoW) / 2;
+                const logoY = margin * 0.5;
+                
+                // Shadow for logo to make it pop
+                ctx.shadowColor = 'rgba(0,0,0,0.1)';
+                ctx.shadowBlur = 15;
+                ctx.drawImage(logo, logoX, logoY, logoW, logoH);
+                ctx.shadowBlur = 0;
 
-                // B. Headline
-                let currentY = isPortrait ? height * 0.22 : height * 0.08;
-                ctx.textAlign = 'left';
+                // B. Headline - Start higher
+                let currentY = isPortrait ? (logoY + logoH + height * 0.05) : (logoY + logoH + height * 0.03);
+                if (isLandscape) currentY = height * 0.1; // Reset for landscape side-by-side
+
+                ctx.textAlign = isLandscape ? 'left' : 'center';
                 ctx.fillStyle = textDark;
-                const headSize = width * (isLandscape ? 0.05 : (isPortrait ? 0.11 : 0.07));
-                ctx.font = `900 ${headSize}px system-ui, sans-serif`;
-                ctx.fillText("WE ARE", margin, currentY);
-                currentY += headSize * 1.1;
+                const headSize = width * (isLandscape ? 0.05 : (isPortrait ? 0.12 : 0.08));
+                ctx.font = `900 ${headSize}px Inter, system-ui, sans-serif`;
+                
+                const headX = isLandscape ? margin : width / 2;
+                
+                ctx.fillText("WE ARE", headX, currentY);
+                currentY += headSize * 1.05;
                 ctx.fillStyle = primary;
-                ctx.fillText("LOOKING FOR", margin, currentY);
-                currentY += height * (isPortrait ? 0.06 : 0.035);
+                ctx.fillText("LOOKING FOR", headX, currentY);
+                currentY += height * (isPortrait ? 0.08 : 0.05);
 
                 // C. Job Title Pill
                 const titleText = job.title.toUpperCase();
-                const titleSize = width * (isLandscape ? 0.022 : (isPortrait ? 0.05 : 0.04));
-                ctx.font = `800 ${titleSize}px system-ui, sans-serif`;
+                const titleSize = width * (isLandscape ? 0.024 : (isPortrait ? 0.055 : 0.045));
+                ctx.font = `800 ${titleSize}px Inter, system-ui, sans-serif`;
                 const titleMetrics = ctx.measureText(titleText);
-                const pillW = Math.min(titleMetrics.width + 60, contentWidth);
-                const pillH = titleSize * 2.2;
-                ctx.fillStyle = primary;
-                ctx.roundRect(margin, currentY, pillW, pillH, 12);
+                const pillW = Math.min(titleMetrics.width + 80, contentWidth);
+                const pillH = titleSize * 2.5;
+                const pillX = isLandscape ? margin : (width - pillW) / 2;
+
+                // Gradient for pill
+                const grd = ctx.createLinearGradient(pillX, currentY, pillX + pillW, currentY);
+                grd.addColorStop(0, primary);
+                grd.addColorStop(1, '#7c3aed');
+                ctx.fillStyle = grd;
+                
+                ctx.beginPath();
+                ctx.roundRect(pillX, currentY, pillW, pillH, 16);
                 ctx.fill();
+                
+                ctx.textAlign = 'center';
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(titleText, margin + 30, currentY + pillH/2 + (titleSize * 0.35), pillW - 60);
-                currentY += pillH + (height * (isPortrait ? 0.08 : 0.05));
+                ctx.fillText(titleText, pillX + pillW/2, currentY + pillH/2 + (titleSize * 0.35), pillW - 60);
+                currentY += pillH + (height * (isPortrait ? 0.08 : 0.06));
 
                 // D. Roles & Responsibilities
+                ctx.textAlign = 'left';
                 ctx.fillStyle = textDark;
-                const sectionHeadSize = width * (isLandscape ? 0.022 : (isPortrait ? 0.035 : 0.025));
-                ctx.font = `900 ${sectionHeadSize}px system-ui, sans-serif`;
+                const sectionHeadSize = width * (isLandscape ? 0.022 : (isPortrait ? 0.038 : 0.028));
+                ctx.font = `900 ${sectionHeadSize}px Inter, system-ui, sans-serif`;
                 ctx.fillText("ROLES & RESPONSIBILITIES:", margin, currentY);
-                currentY += sectionHeadSize * 2.5;
+                currentY += sectionHeadSize * 2.2;
 
-                const itemSize = width * (isLandscape ? 0.017 : (isPortrait ? 0.035 : 0.028));
-                ctx.font = `600 ${itemSize}px system-ui, sans-serif`;
-                const contentLines = (job.qualifications || "").split('\n').filter(q => q.trim()).slice(0, isPortrait ? 10 : 7);
+                const itemSize = width * (isLandscape ? 0.018 : (isPortrait ? 0.036 : 0.03));
+                ctx.font = `600 ${itemSize}px Inter, system-ui, sans-serif`;
+                const contentLines = (job.qualifications || "").split('\n').filter(q => q.trim()).slice(0, isPortrait ? 8 : 6);
                 
                 contentLines.forEach((line, i) => {
-                    const itemY = currentY + (i * itemSize * 2.2);
+                    const itemY = currentY + (i * itemSize * 2.4);
+                    // Bullet
                     ctx.fillStyle = primary;
-                    ctx.beginPath(); ctx.arc(margin + 5, itemY - (itemSize * 0.4), 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); 
+                    ctx.arc(margin + 10, itemY - (itemSize * 0.4), 5, 0, Math.PI * 2); 
+                    ctx.fill();
+                    
                     ctx.fillStyle = textGray;
-                    ctx.fillText(line.trim(), margin + 25, itemY, contentWidth - 40);
+                    ctx.fillText(line.trim(), margin + 35, itemY, contentWidth - 50);
                 });
 
-                // E. Footer & CTA (Landscape vs Portrait logic)
+                // E. Footer & CTA
                 if (isLandscape) {
                     // --- LANDSCAPE (LinkedIn) ---
-                    const qrSize = width * 0.11;
+                    const qrSize = width * 0.12;
                     const qrX = width * 0.7 + (width * 0.3 - qrSize) / 2;
-                    const qrY = height * 0.38;
+                    const qrY = height * 0.35;
                     
                     ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 10;
-                    ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 16); ctx.fill();
+                    ctx.shadowColor = 'rgba(0,0,0,0.08)'; ctx.shadowBlur = 20;
+                    ctx.beginPath();
+                    ctx.roundRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30, 20); 
+                    ctx.fill();
                     ctx.shadowBlur = 0;
+                    
                     if (qrCode.complete) ctx.drawImage(qrCode, qrX, qrY, qrSize, qrSize);
                     
                     ctx.textAlign = 'center'; ctx.fillStyle = textDark;
-                    ctx.font = `900 ${width * 0.015}px system-ui, sans-serif`;
-                    ctx.fillText("SCAN TO APPLY", qrX + qrSize/2, qrY + qrSize + 30);
+                    ctx.font = `900 ${width * 0.016}px Inter, system-ui, sans-serif`;
+                    ctx.fillText("SCAN TO APPLY", qrX + qrSize/2, qrY + qrSize + 40);
 
                     ctx.fillStyle = primary;
-                    ctx.font = `800 ${width * 0.015}px system-ui, sans-serif`;
-                    ctx.fillText("WWW.BOOKMYTICKET.NET/CAREERS", width * 0.85, height * 0.88);
+                    ctx.font = `800 ${width * 0.014}px Inter, system-ui, sans-serif`;
+                    ctx.fillText("WWW.BOOKMYTICKET.NET/CAREERS", width * 0.85, height * 0.9);
                 } else {
                     // --- PORTRAIT/SQUARE (WhatsApp/Instagram) ---
-                    const footerY = height - margin - (height * 0.03);
-                    
-                    // 1. QR Code (Spread out from content)
-                    const qrSize = width * 0.22;
-                    const qrX = width - margin - qrSize;
-                    const qrY = height - margin - qrSize - 60;
+                    const qrSize = width * (isPortrait ? 0.28 : 0.24);
+                    const qrX = (width - qrSize) / 2;
+                    const qrY = height - margin - qrSize - (height * 0.08);
                     
                     ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = 'rgba(0,0,0,0.05)'; ctx.shadowBlur = 10;
-                    ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 16); ctx.fill();
+                    ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 25;
+                    ctx.beginPath();
+                    ctx.roundRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 24); 
+                    ctx.fill();
                     ctx.shadowBlur = 0;
+                    
                     if (qrCode.complete) ctx.drawImage(qrCode, qrX, qrY, qrSize, qrSize);
                     
                     ctx.textAlign = 'center'; ctx.fillStyle = textDark;
-                    ctx.font = `900 ${width * 0.025}px system-ui, sans-serif`;
-                    ctx.fillText("SCAN TO APPLY", qrX + qrSize/2, qrY + qrSize + 30);
+                    ctx.font = `900 ${width * 0.03}px Inter, system-ui, sans-serif`;
+                    ctx.fillText("SCAN TO APPLY", width/2, qrY + qrSize + 50);
 
-                    // 2. Website Link
-                    ctx.textAlign = 'left';
                     ctx.fillStyle = primary;
-                    ctx.font = `800 ${width * 0.025}px system-ui, sans-serif`;
-                    ctx.fillText("WWW.BOOKMYTICKET.NET/CAREERS", margin, footerY);
+                    ctx.font = `800 ${width * 0.025}px Inter, system-ui, sans-serif`;
+                    ctx.fillText("WWW.BOOKMYTICKET.NET/CAREERS", width/2, height - margin);
                 }
                 
                 resolve();
