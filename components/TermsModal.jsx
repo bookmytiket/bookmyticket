@@ -221,9 +221,3 @@ export default function TermsModal({ isOpen, onClose, onAccept, type = "event" }
     </div>
   );
 }
-) translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-}
