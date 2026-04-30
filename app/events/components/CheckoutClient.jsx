@@ -343,12 +343,12 @@ export default function CheckoutClient({ id }) {
 
             <div className="max-w-[1200px] mx-auto px-6 py-12">
                 <div className="mb-12">
-                    <Link 
-                        href={event?.type === 'Dynamic' ? `/events/detail?id=${id}` : `/events/book?id=${id}`} 
+                    <button 
+                        onClick={() => router.push(`/events/detail?id=${id}`)}
                         className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
                     >
-                        <ChevronLeft size={16} /> Back to selection
-                    </Link>
+                        <ChevronLeft size={16} /> Back to Event Registration
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">

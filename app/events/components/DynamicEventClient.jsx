@@ -220,13 +220,13 @@ export default function DynamicEventClient({ event }) {
                 {/* Back Button & Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <button 
-                        onClick={() => router.back()}
+                        onClick={() => router.push('/events')}
                         className="group flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-900 transition-all"
                     >
                         <div className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
                             <ArrowLeft size={14} />
                         </div>
-                        Back to Event
+                        Back to Events
                     </button>
 
                     <div className="flex items-center gap-3">
@@ -244,25 +244,10 @@ export default function DynamicEventClient({ event }) {
                 <div className="relative w-full h-[300px] md:h-[380px] rounded-[3rem] overflow-hidden shadow-2xl mb-8">
                     <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
-                    <div className="absolute bottom-10 left-10 right-10 z-10 space-y-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="px-4 py-1.5 bg-[#8b5cf6] text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg">
-                                {event.category || 'Special Event'}
-                            </div>
-                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest rounded-full border border-white/20 flex items-center gap-2">
-                                <Star size={12} className="text-yellow-400 fill-yellow-400" /> 4.9 (Official)
-                            </div>
-                        </div>
-                        
-                        <h1 className="text-3xl md:text-6xl font-black text-white uppercase tracking-tighter leading-[0.85]">
+                    <div className="absolute bottom-10 left-10 right-10 z-10">
+                        <h1 className="text-3xl md:text-5xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">
                             {event.title}
                         </h1>
-
-                        <div className="flex flex-wrap items-center gap-6 text-white/70 text-[11px] font-black uppercase tracking-widest">
-                            <div className="flex items-center gap-2"><MapPin size={14} className="text-[#ec4899]" /> {event.city || "PAN INDIA"}</div>
-                            <div className="flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-400" /> VERIFIED PARTNER</div>
-                        </div>
                     </div>
                 </div>
 
