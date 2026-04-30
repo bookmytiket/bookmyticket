@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useAuth } from '@/components/AuthContext';
 import { 
     Trophy, Activity, Goal, Users, ArrowLeft, ArrowRight, Settings, 
     Calendar, Clock, MapPin, DollarSign, Shield, CheckCircle2,
@@ -83,19 +84,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                     updateConfig('categories', newCats);
                 }}
             />
-            <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Price (₹)</label>
-                <input 
-                    type="number"
-                    className="w-full bg-slate-50 border-none text-sm font-bold p-3 rounded-xl"
-                    value={category.price}
-                    onChange={e => {
-                        const newCats = [...config.categories];
-                        newCats[index].price = parseFloat(e.target.value) || 0;
-                        updateConfig('categories', newCats);
-                    }}
-                />
-            </div>
+            {/* Category-based price removed in favor of Age-based pricing */}
             <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Slots</label>
                 <input 
@@ -351,6 +340,8 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
 );
 
 const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
     
     // Default dynamic config structure
@@ -824,27 +815,31 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Custom Platform Fees for this event</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{isAdmin ? 'Custom Platform Fees for this event' : 'Platform Controlled'}</p>
                                     </div>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={postEvent.fee_config?.override_global || false}
-                                        onChange={e => setPostEvent({ 
-                                            ...postEvent, 
-                                            fee_config: { 
-                                                ...(postEvent.fee_config || {}), 
-                                                override_global: e.target.checked 
-                                            } 
-                                        })}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
-                                </label>
+                                {isAdmin ? (
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer"
+                                            checked={postEvent.fee_config?.override_global || false}
+                                            onChange={e => setPostEvent({ 
+                                                ...postEvent, 
+                                                fee_config: { 
+                                                    ...(postEvent.fee_config || {}), 
+                                                    override_global: e.target.checked 
+                                                } 
+                                            })}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+                                    </label>
+                                ) : (
+                                    <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-400 uppercase">Admin Only</div>
+                                )}
                             </div>
 
-                            {postEvent.fee_config?.override_global && (
+                            {isAdmin && postEvent.fee_config?.override_global && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50">
                                     <div className="space-y-2">
                                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Fee Type</label>

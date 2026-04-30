@@ -9,8 +9,11 @@ import {
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
+import { useAuth } from '@/components/AuthContext';
 
 const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) => {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
     
     // Ensure correct type and seating defaults on mount
@@ -403,24 +406,28 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                                         </div>
                                         <div>
                                             <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Custom Fees</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{isAdmin ? 'Custom Fees' : 'Platform Controlled'}</p>
                                         </div>
                                     </div>
-                                    <label className="relative inline-flex items-center cursor-pointer scale-75">
-                                        <input 
-                                            type="checkbox" 
-                                            className="sr-only peer"
-                                            checked={postEvent.fee_config?.override_global || false}
-                                            onChange={e => updateField('fee_config', { 
-                                                ...(postEvent.fee_config || {}), 
-                                                override_global: e.target.checked 
-                                            })}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
+                                    {isAdmin ? (
+                                        <label className="relative inline-flex items-center cursor-pointer scale-75">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer"
+                                                checked={postEvent.fee_config?.override_global || false}
+                                                onChange={e => updateField('fee_config', { 
+                                                    ...(postEvent.fee_config || {}), 
+                                                    override_global: e.target.checked 
+                                                })}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    ) : (
+                                        <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-400 uppercase">Admin Only</div>
+                                    )}
                                 </div>
 
-                                {postEvent.fee_config?.override_global && (
+                                {isAdmin && postEvent.fee_config?.override_global && (
                                     <div className="space-y-4 pt-4 border-t border-slate-200/50">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5">

@@ -1,6 +1,8 @@
 "use client";
+
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar, MapPin, Clock, Users, Languages, ShieldCheck, 
     CheckCircle, Warehouse, Info, ChevronDown, Star, Share2, 
@@ -8,13 +10,20 @@ import {
     Sparkles, Phone, Mail, MessageCircle, Timer, Award, 
     HeartPulse, Coffee, Utensils, Home, Car, Shirt, Camera, 
     Target, Trophy, Activity, FileText, Zap, Smile, ChevronRight,
-    Plus, Minus, X
+    Plus, Minus, X, DollarSign, ArrowLeft, ArrowRight, CreditCard
 } from 'lucide-react';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/components/AuthContext';
-import { useRouter } from 'next/navigation';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
+import { Outfit } from 'next/font/google';
+
+const outfit = Outfit({ 
+    subsets: ['latin'],
+    weight: ['400', '500', '600', '700', '800', '900'],
+    display: 'swap'
+});
+
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 
 const AMENITY_ICONS = {
     Ambulance: Activity,
@@ -35,20 +44,17 @@ const AMENITY_ICONS = {
     Washroom: CheckCircle2
 };
 
-const DollarSign = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-);
-
 export default function DynamicEventClient({ event }) {
     const { user } = useAuth();
     const router = useRouter();
     const config = event.dynamic_config || {};
     
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedAgeRate, setSelectedAgeRate] = useState(null);
+    const [isAgeDropdownOpen, setIsAgeDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({});
     const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0 });
 
-    // Countdown logic
     useEffect(() => {
         if (!config.countdown?.enabled || !config.countdown?.deadline) return;
         
@@ -75,8 +81,8 @@ export default function DynamicEventClient({ event }) {
     const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').single(), []);
     const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
     
-    // Fetch Organiser Config
-    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', event?.organiser_id || event?.organiserId).single(), [event?.organiser_id, event?.organiserId]);
+    const organiserId = event?.organiser_id || event?.organiserId;
+    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
     
     const feeSettings = useMemo(() => {
         return resolveFeeSettings(
@@ -86,178 +92,347 @@ export default function DynamicEventClient({ event }) {
         );
     }, [feeSettingsSystem, organiserData?.fee_config, event?.fee_config]);
 
+    // Robust age rate normalization
+    const normalizedAgeRates = useMemo(() => {
+        if (!selectedCategory) return [];
+        const rawRates = selectedCategory.ageRates || selectedCategory.agePricing || selectedCategory.age_rates || selectedCategory.age_pricing || config.ageRates || config.agePricing || [];
+        return (Array.isArray(rawRates) ? rawRates : []).map(r => ({
+            id: `${r.min || r.minAge}-${r.max || r.maxAge}`,
+            min: parseInt(r.min || r.minAge || 0),
+            max: parseInt(r.max || r.maxAge || 999),
+            price: parseFloat(r.price || 0)
+        }));
+    }, [selectedCategory, config.ageRates, config.agePricing]);
+
+    const calculatedPrice = useMemo(() => {
+        if (!selectedCategory) return 0;
+        
+        // Priority 1: User explicitly selected an age group
+        if (selectedAgeRate) return selectedAgeRate.price;
+
+        // Priority 2: Automatically calculate based on 'Age' field if it exists
+        const ageField = (config.registrationForm || []).find(f => 
+            f.label.toLowerCase().includes('age') || 
+            f.label.toLowerCase().includes('year')
+        );
+
+        if (normalizedAgeRates.length > 0) {
+            if (ageField && formData[ageField.label]) {
+                const age = parseInt(formData[ageField.label]);
+                if (!isNaN(age)) {
+                    const rate = normalizedAgeRates.find(r => age >= r.min && age <= r.max);
+                    if (rate) return rate.price;
+                }
+            }
+            // Fallback: Minimum price from age rates
+            return Math.min(...normalizedAgeRates.map(r => r.price));
+        }
+        
+        return selectedCategory.price || 0;
+    }, [selectedCategory, formData, config.registrationForm, normalizedAgeRates, selectedAgeRate]);
+
     const fees = useMemo(() => {
         if (!selectedCategory) return { convenienceFee: 0, gst: 0, total: 0 };
-        return getFeeBreakdown(selectedCategory.price, feeSettings);
-    }, [selectedCategory, feeSettings]);
+        return getFeeBreakdown(calculatedPrice, feeSettings);
+    }, [selectedCategory, calculatedPrice, feeSettings]);
+
+    const uniqueFormFields = useMemo(() => {
+        const seen = new Set();
+        return (config.registrationForm || []).filter(field => {
+            const label = field.label.toLowerCase();
+            let key = label;
+            if (label.includes('email')) key = 'email';
+            if (label.includes('phone') || label.includes('mobile') || label.includes('whatsapp')) key = 'phone';
+            if (label.includes('name')) key = 'name';
+            
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [config.registrationForm]);
 
     const handleBooking = async () => {
-        if (!selectedCategory) {
-            alert("Please select a category first.");
+        if (!selectedCategory) return;
+        const missingFields = uniqueFormFields.filter(f => f.required && !formData[f.label]).map(f => f.label);
+        
+        // If age rates exist but none selected (and no auto-calculation possible), prompt user
+        if (normalizedAgeRates.length > 0 && !selectedAgeRate) {
+            const ageField = uniqueFormFields.find(f => f.label.toLowerCase().includes('age'));
+            if (!ageField || !formData[ageField.label]) {
+                alert("Please select your Age Group or enter your age.");
+                return;
+            }
+        }
+
+        if (missingFields.length > 0) {
+            alert(`Please fill in: ${missingFields.join(', ')}`);
             return;
         }
-        // Booking logic would go here
-        console.log("Booking Category:", selectedCategory);
-        console.log("Registration Data:", formData);
+
+        const packageParam = `&package=${encodeURIComponent(selectedCategory.name)}`;
+        const regDataParam = `&regData=${encodeURIComponent(JSON.stringify(formData))}`;
+        const priceParam = `&price=${calculatedPrice}`;
+        router.push(`/events/book/checkout?id=${event.id}${packageParam}${regDataParam}${priceParam}&qty=1`);
     };
 
     return (
-        <div className="min-h-screen bg-[#fafbfc] pb-24 font-['Figtree']">
-            {/* Main Content Layout */}
-            <div className="max-w-[1300px] mx-auto px-4 md:px-8 pt-10">
+        <main className={`min-h-screen bg-[#fafbfc] pb-24 ${outfit.className}`}>
+            <div className="max-w-[1100px] mx-auto px-4 pt-10">
+                
+                {/* Back Button */}
+                <div className="mb-6">
+                    <button 
+                        onClick={() => router.back()}
+                        className="flex items-center gap-3 text-slate-400 hover:text-slate-900 font-black uppercase tracking-widest text-[10px] transition-all group"
+                    >
+                        <div className="w-9 h-9 rounded-full border border-slate-100 flex items-center justify-center group-hover:border-slate-900 transition-colors">
+                            <ArrowLeft size={16} />
+                        </div>
+                        <span>Back</span>
+                    </button>
+                </div>
+
+                {/* HERO BANNER */}
+                <div className="relative w-full h-[300px] md:h-[380px] rounded-[3rem] overflow-hidden shadow-2xl mb-8">
+                    <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover" alt={event.title} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    
+                    <div className="absolute bottom-10 left-10 right-10 z-10 space-y-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="px-4 py-1.5 bg-[#8b5cf6] text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                                {event.category || 'Special Event'}
+                            </div>
+                            <div className="px-3 py-1.5 bg-white/10 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest rounded-full border border-white/20 flex items-center gap-2">
+                                <Star size={12} className="text-yellow-400 fill-yellow-400" /> 4.9 (Official)
+                            </div>
+                        </div>
+                        
+                        <h1 className="text-3xl md:text-6xl font-black text-white uppercase tracking-tighter leading-[0.85]">
+                            {event.title}
+                        </h1>
+
+                        <div className="flex flex-wrap items-center gap-6 text-white/70 text-[11px] font-black uppercase tracking-widest">
+                            <div className="flex items-center gap-2"><MapPin size={14} className="text-[#ec4899]" /> {event.city || "PAN INDIA"}</div>
+                            <div className="flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-400" /> VERIFIED PARTNER</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                     
-                    {/* Left Column: Event Content */}
-                    <div className="lg:col-span-8 space-y-10">
-                        
-                        {/* Event Header Card */}
-                        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm p-10 md:p-14 overflow-hidden relative">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#ec4899]/5 rounded-bl-full -z-0" />
-                            
-                            <div className="relative z-10 space-y-6">
-                                <h1 className="text-[32px] md:text-[54px] font-black text-slate-900 uppercase tracking-tight leading-tight">
-                                    {event.title}
-                                </h1>
-                                
-                                <div className="flex flex-wrap items-center gap-6 text-slate-500 font-bold uppercase text-[12px] tracking-widest">
-                                    <div className="flex items-center gap-2"><Calendar size={18} className="text-[#ec4899]" /> {event.startDate}</div>
-                                    <div className="flex items-center gap-2"><Clock size={18} className="text-[#ec4899]" /> {event.startTime || "6:00 AM"}</div>
-                                    <div className="flex items-center gap-2"><MapPin size={18} className="text-[#ec4899]" /> {config.location?.venueName || "Venue TBA"}</div>
-                                </div>
-                                
-                                <div className="flex items-center gap-4 pt-4">
-                                    <div className="px-5 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl shadow-lg">
-                                        {event.category || 'Special Event'}
-                                    </div>
-                                    {config.basicInfo?.eligibility && (
-                                        <div className="px-5 py-2 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl border border-blue-100">
-                                            {config.basicInfo.eligibility}
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="pt-8 border-t border-slate-50">
-                                    <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight mb-4">Event Information:</h3>
-                                    <p className="text-[16px] font-medium text-slate-600 leading-relaxed whitespace-pre-line">
-                                        {event.description}
-                                    </p>
-                                </div>
-                                
-                                {config.communication?.whatsappLink && (
-                                    <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 space-y-3">
-                                        <div className="flex items-center gap-3 text-emerald-700 font-black uppercase text-[12px] tracking-widest">
-                                            <MessageCircle size={20} /> Join WhatsApp Channel
-                                        </div>
-                                        <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-tight leading-relaxed italic">
-                                            Your mobile number will not be visible to others for safety reasons. All updates will be shared here.
-                                        </p>
-                                        <a href={config.communication.whatsappLink} target="_blank" className="inline-block text-blue-600 font-bold text-[13px] hover:underline break-all">
-                                            {config.communication.whatsappLink}
-                                        </a>
-                                    </div>
-                                )}
+                    {/* Left Column: Form Content */}
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-10">
+                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 md:p-10 space-y-10">
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Registration</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Provide participant details below</p>
                             </div>
-                        </div>
 
-                        {/* Ticket Categories Section */}
-                        <div className="space-y-6">
-                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight px-4 flex items-center gap-3">
-                                <Trophy className="text-[#ec4899]" size={28} /> Select Category
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {(config.categories || []).map((cat, idx) => (
-                                    <div 
-                                        key={idx}
-                                        onClick={() => cat.totalSlots > 0 && setSelectedCategory(cat)}
-                                        className={`p-8 rounded-[3rem] border transition-all cursor-pointer relative overflow-hidden group ${
-                                            selectedCategory?.id === cat.id 
-                                            ? 'bg-slate-900 border-slate-900 shadow-2xl scale-[1.02]' 
-                                            : 'bg-white border-slate-100 hover:border-[#ec4899] shadow-sm'
-                                        } ${(cat.totalSlots === 0 || cat.status === 'Sold Out') ? 'opacity-60 grayscale cursor-not-allowed' : ''}`}
-                                    >
-                                        <div className="relative z-10 flex flex-col h-full justify-between gap-6">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h4 className={`text-xl font-black uppercase tracking-tight ${selectedCategory?.id === cat.id ? 'text-white' : 'text-slate-900'}`}>
-                                                        {cat.name}
-                                                    </h4>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest ${selectedCategory?.id === cat.id ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                            {cat.gender} Only
-                                                        </div>
-                                                        {cat.status === 'Fast Filling' && (
-                                                            <div className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black uppercase tracking-widest rounded-md  border border-amber-200">
-                                                                Fast Filling
-                                                            </div>
-                                                        )}
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {uniqueFormFields.map((field, idx) => (
+                                        <div key={idx} className="space-y-2.5">
+                                            <label className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-tight ml-1">
+                                                {field.label} {field.required && <span className="text-rose-500">*</span>}
+                                            </label>
+                                            {field.type === 'select' ? (
+                                                <div className="relative group">
+                                                    <select 
+                                                        className="w-full bg-slate-50 border border-slate-100 p-4 rounded-[18px] text-[13px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all appearance-none"
+                                                        onChange={e => setFormData({...formData, [field.label]: e.target.value})}
+                                                    >
+                                                        <option value="">Select Option</option>
+                                                        {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                    </select>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none transition-transform">
+                                                        <ChevronDown size={16} />
                                                     </div>
                                                 </div>
-                                                <div className={`text-2xl font-black ${selectedCategory?.id === cat.id ? 'text-white' : 'text-[#ec4899]'}`}>
-                                                    ₹{cat.price}
-                                                </div>
-                                            </div>
-                                            
-                                            {cat.prizes && cat.prizes.length > 0 && (
-                                                <div className="space-y-2 mt-4">
-                                                    {cat.prizes.map((p, pIdx) => (
-                                                        <div key={pIdx} className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-                                                            <span className={selectedCategory?.id === cat.id ? 'text-slate-400' : 'text-slate-500'}>{p.label}:</span>
-                                                            <span className={selectedCategory?.id === cat.id ? 'text-white' : 'text-slate-900'}>{p.value}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                            ) : (
+                                                <input 
+                                                    type={field.type}
+                                                    placeholder={`Enter ${field.label.toLowerCase()}`}
+                                                    className="w-full bg-slate-50 border border-slate-100 p-4 rounded-[18px] text-[13px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all placeholder:text-slate-300"
+                                                    onChange={e => setFormData({...formData, [field.label]: e.target.value})}
+                                                />
                                             )}
+                                        </div>
+                                    ))}
+                                </div>
 
-                                            {cat.agePricing && cat.agePricing.length > 0 && (
-                                                <div className="space-y-2 mt-4 pt-4 border-t border-slate-100/10">
-                                                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Age-Based Pricing</div>
-                                                    {cat.agePricing.map((ap, apIdx) => (
-                                                        <div key={apIdx} className="flex justify-between items-center text-[11px] font-bold">
-                                                            <span className={selectedCategory?.id === cat.id ? 'text-slate-400' : 'text-slate-500'}>{ap.minAge}-{ap.maxAge} Years</span>
-                                                            <span className={selectedCategory?.id === cat.id ? 'text-white' : 'text-[#ec4899]'}>₹{ap.price}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                <div className="space-y-6 pt-8 border-t border-slate-50">
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {(config.categories || []).map((cat, idx) => {
+                                            const isSelected = selectedCategory?.id === cat.id;
                                             
-                                            {cat.prize && !cat.prizes && (
-                                                <div className={`text-[11px] font-bold italic leading-relaxed whitespace-pre-line ${selectedCategory?.id === cat.id ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                    {cat.prize}
-                                                </div>
-                                            )}
+                                            // Local normalization for display
+                                            const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || config.ageRates || config.agePricing || [];
+                                            const ageRates = (Array.isArray(rawRates) ? rawRates : []).map(r => ({
+                                                min: parseInt(r.min || r.minAge || 0),
+                                                max: parseInt(r.max || r.maxAge || 999),
+                                                price: parseFloat(r.price || 0)
+                                            }));
+                                            
+                                            const hasAgeRates = ageRates.length > 0;
+                                            
+                                            let priceDisplay = "";
+                                            if (isSelected) {
+                                                priceDisplay = `₹${calculatedPrice}`;
+                                            } else if (hasAgeRates) {
+                                                const min = Math.min(...ageRates.map(r => r.price));
+                                                const max = Math.max(...ageRates.map(r => r.price));
+                                                priceDisplay = min === max ? `₹${min}` : `₹${min} - ₹${max}`;
+                                            } else {
+                                                priceDisplay = cat.price > 0 ? `₹${cat.price}` : "Free";
+                                            }
 
-                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100/10">
-                                                <div className={`text-[9px] font-bold uppercase tracking-widest ${selectedCategory?.id === cat.id ? 'text-slate-500' : 'text-slate-400'}`}>
-                                                    Slots: {cat.totalSlots}
+                                            return (
+                                                <div 
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        if (cat.totalSlots > 0) {
+                                                            setSelectedCategory(cat);
+                                                            setSelectedAgeRate(null); // Reset age selection when category changes
+                                                        }
+                                                    }}
+                                                    className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer relative group flex flex-col justify-between h-full ${
+                                                        isSelected 
+                                                        ? 'bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] border-transparent shadow-xl' 
+                                                        : 'bg-slate-50 border-slate-50 hover:border-pink-500'
+                                                    }`}
+                                                >
+                                                    {(cat.img || cat.image) && (
+                                                        <div className="w-full h-24 rounded-2xl overflow-hidden mb-4">
+                                                            <img src={cat.img || cat.image} className="w-full h-full object-cover" alt={cat.name} />
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="space-y-1">
+                                                            <h5 className={`text-base font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.name}</h5>
+                                                            {hasAgeRates && (
+                                                                <p className={`text-[9px] font-black uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-[#ec4899]'}`}>Age-Based Rate Only</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className={`text-xl font-black ${isSelected ? 'text-white' : 'text-[#ec4899]'}`}>
+                                                                {priceDisplay}
+                                                            </div>
+                                                            {hasAgeRates && !isSelected && <span className={`text-[8px] font-black ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>*Based on Age</span>}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 mb-4">
+                                                        {(cat.prizes || config.prizes || []).slice(0, 3).map((p, pIdx) => (
+                                                            <div key={pIdx} className="flex justify-between text-[9px] font-black uppercase tracking-tight">
+                                                                <span className={isSelected ? 'text-white/70' : 'text-slate-500'}>{p.label || p.name}</span>
+                                                                <span className={isSelected ? 'text-white' : 'text-slate-900'}>{p.value || p.amount}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/20">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>{cat.gender || 'All'} • {cat.totalSlots} Slots</span>
+                                                        {isSelected && <CheckCircle2 size={24} className="text-white" />}
+                                                    </div>
                                                 </div>
-                                                {(cat.totalSlots === 0 || cat.status === 'Sold Out') && (
-                                                    <div className="px-3 py-1 bg-red-500 text-white text-[9px] font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-red-200">Sold Out</div>
-                                                )}
-                                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* CUSTOM DROPDOWN STYLE FOR AGE GROUP */}
+                                {selectedCategory && normalizedAgeRates.length > 0 && (
+                                    <div className="space-y-6 pt-8 border-t border-slate-50">
+                                        <div className="space-y-1">
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Age Group</h4>
+                                            <p className="text-[8px] font-black text-[#8b5cf6] uppercase tracking-widest">Choose the range that applies to you</p>
                                         </div>
                                         
-                                        {selectedCategory?.id === cat.id && (
-                                            <div className="absolute top-4 right-4 text-white">
-                                                <CheckCircle size={20} />
+                                        <div className="relative">
+                                            <div 
+                                                onClick={() => setIsAgeDropdownOpen(!isAgeDropdownOpen)}
+                                                className={`w-full bg-slate-50 border-2 p-5 rounded-3xl flex items-center justify-between cursor-pointer transition-all ${
+                                                    selectedAgeRate ? 'border-[#ec4899]' : 'border-slate-100 hover:border-pink-200'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${selectedAgeRate ? 'bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] text-white' : 'bg-white text-slate-400'}`}>
+                                                        <Users size={22} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-widest">Selected Group</div>
+                                                        <div className="text-base font-black text-slate-900 tracking-tight">
+                                                            {selectedAgeRate ? `${selectedAgeRate.min}-${selectedAgeRate.max} Years (₹${selectedAgeRate.price})` : "Click to select Age Range"}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <ChevronDown size={20} className={`text-[#ec4899] transition-transform duration-300 ${isAgeDropdownOpen ? 'rotate-180' : ''}`} />
                                             </div>
-                                        )}
+
+                                            <AnimatePresence>
+                                                {isAgeDropdownOpen && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute z-50 w-full mt-3 bg-white/95 backdrop-blur-xl border border-[#ec4899]/20 shadow-2xl rounded-[2.5rem] overflow-hidden"
+                                                    >
+                                                        {normalizedAgeRates.map((rate) => (
+                                                            <div 
+                                                                key={rate.id}
+                                                                onClick={() => {
+                                                                    setSelectedAgeRate(rate);
+                                                                    setIsAgeDropdownOpen(false);
+                                                                }}
+                                                                className={`px-8 py-5 flex items-center justify-between cursor-pointer transition-all hover:bg-pink-50 group ${
+                                                                    selectedAgeRate?.id === rate.id ? 'bg-pink-50' : ''
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={`w-2.5 h-2.5 rounded-full transition-all ${selectedAgeRate?.id === rate.id ? 'bg-[#ec4899] scale-125' : 'bg-slate-200 group-hover:bg-pink-300'}`} />
+                                                                    <span className={`text-sm font-black transition-all ${selectedAgeRate?.id === rate.id ? 'text-[#ec4899]' : 'text-slate-700'}`}>
+                                                                        {rate.min}-{rate.max} Years
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className={`text-base font-black ${selectedAgeRate?.id === rate.id ? 'text-[#ec4899]' : 'text-slate-900'}`}>₹{rate.price}</div>
+                                                                    {selectedAgeRate?.id === rate.id && <span className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest">Active</span>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                     </div>
-                                ))}
+                                )}
+
+                                <button 
+                                    onClick={handleBooking}
+                                    disabled={!selectedCategory || (normalizedAgeRates.length > 0 && !selectedAgeRate)}
+                                    className={`w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[13px] transition-all shadow-2xl flex items-center justify-center gap-4 ${
+                                        (selectedCategory && (normalizedAgeRates.length === 0 || selectedAgeRate))
+                                        ? 'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-white shadow-pink-300/50 hover:scale-[1.02] active:scale-95' 
+                                        : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                                    }`}
+                                >
+                                    Review and Book <ArrowRight size={18} />
+                                </button>
                             </div>
                         </div>
 
-                        {/* Amenities Grid */}
-                        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm p-10 md:p-14">
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-10 flex items-center gap-3">
-                                <Sparkles className="text-[#ec4899]" size={24} /> Amenities & Benefits
-                            </h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                        {/* Amenities */}
+                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8 md:p-10">
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-8">Amenities</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                 {(config.amenities || []).map(id => {
                                     const Icon = AMENITY_ICONS[id] || Star;
                                     return (
-                                        <div key={id} className="flex items-center gap-3 group">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#ec4899] group-hover:text-white transition-all">
-                                                <Icon size={18} />
+                                        <div key={id} className="group flex flex-col items-center gap-3 text-center">
+                                            <div className="w-14 h-14 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
+                                                <Icon size={24} />
                                             </div>
                                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{id}</span>
                                         </div>
@@ -265,182 +440,88 @@ export default function DynamicEventClient({ event }) {
                                 })}
                             </div>
                         </div>
-
-                        {/* Map Section */}
-                        {config.location?.coordinates && (
-                            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm p-10 md:p-14">
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
-                                    <MapPin className="text-[#ec4899]" size={24} /> Location
-                                </h3>
-                                <p className="text-[13px] font-bold text-slate-500 uppercase tracking-tight mb-8 italic">
-                                    {config.location.address}
-                                </p>
-                                <div className="h-[300px] rounded-[2.5rem] overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                                    {/* Map Component would render here using config.location.coordinates */}
-                                    Map View: {config.location.coordinates.lat}, {config.location.coordinates.lng}
-                                </div>
-                            </div>
-                        )}
-
                     </div>
 
-                    {/* Right Column: Sticky Registration & Countdown */}
-                    <div className="lg:col-span-4 space-y-8 sticky top-24">
-                        
-                        {/* Countdown Widget */}
-                        {config.countdown?.enabled && (
-                            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 text-center space-y-6">
-                                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Booking Ends In</h4>
-                                <div className="flex items-center justify-center gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-14 h-14 rounded-full border-2 border-emerald-500 flex items-center justify-center text-lg font-black text-emerald-600">{timeLeft.days}</div>
-                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-2">Days</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-14 h-14 rounded-full border-2 border-amber-500 flex items-center justify-center text-lg font-black text-amber-600">{timeLeft.hrs}</div>
-                                        <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest mt-2">Hrs</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-14 h-14 rounded-full border-2 border-rose-500 flex items-center justify-center text-lg font-black text-rose-600">{timeLeft.min}</div>
-                                        <span className="text-[9px] font-bold text-rose-600 uppercase tracking-widest mt-2">Min</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Registration Form Widget */}
-                        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl p-8 md:p-10 space-y-8">
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Participant Details</h3>
-                            
-                            <div className="space-y-6">
-                                {(config.registrationForm || []).map((field, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                                            {field.label} {field.required && <span className="text-rose-500">*</span>}
-                                        </label>
-                                        {field.type === 'select' ? (
-                                            <select 
-                                                className="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#ec4899]/10"
-                                                onChange={e => setFormData({...formData, [field.label]: e.target.value})}
-                                            >
-                                                <option value="">Choose One</option>
-                                                {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                            </select>
-                                        ) : field.type === 'file' ? (
-                                            <input 
-                                                type="file"
-                                                className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-[10px] font-bold uppercase"
-                                                onChange={e => setFormData({...formData, [field.label]: e.target.files[0]})}
-                                            />
-                                        ) : (
-                                            <input 
-                                                type={field.type}
-                                                placeholder={field.label}
-                                                className="w-full bg-slate-50 border border-slate-100 p-4 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#ec4899]/10"
-                                                onChange={e => setFormData({...formData, [field.label]: e.target.value})}
-                                            />
-                                        )}
-                                    </div>
-                                ))}
+                    {/* Right Column Sidebar */}
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-12">
+                        {/* Summary Widget */}
+                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl p-8 space-y-8">
+                            <div className="space-y-1">
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Order Details</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Review your selection</p>
                             </div>
 
-                            {/* Price Summary */}
-                            {selectedCategory && (
-                                <div className="pt-6 border-t border-slate-50 space-y-4">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Price Details</h4>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-xs font-bold text-slate-500">
-                                            <span>{selectedCategory.name} Ticket</span>
-                                            <span>₹{selectedCategory.price}</span>
+                            {selectedCategory ? (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-end">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest">Payable Amount</p>
+                                            <div className="text-4xl font-black text-slate-900 tracking-tighter">₹{fees.total.toFixed(2)}</div>
                                         </div>
-                                        <div className="flex justify-between text-xs font-bold text-slate-500">
-                                            <span>Service & Gateway Charges</span>
-                                            <span>₹{fees.convenienceFee.toFixed(2)}</span>
+                                        <div className="text-[#ec4899] pb-1">
+                                            <ShieldCheck size={32} />
                                         </div>
-                                        {fees.gst > 0 && (
-                                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
-                                                <span>GST ({fees.gstPercent}%)</span>
-                                                <span>₹{fees.gst.toFixed(2)}</span>
+                                    </div>
+                                    <div className="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-5">
+                                        <div className="flex justify-between text-xs font-black uppercase tracking-tight">
+                                            <span className="text-slate-500">{selectedCategory.name}</span>
+                                            <span className="text-slate-900">₹{calculatedPrice}</span>
+                                        </div>
+                                        {selectedAgeRate && (
+                                            <div className="flex justify-between text-[10px] font-black text-[#ec4899] uppercase tracking-widest">
+                                                <span>Age Group: {selectedAgeRate.min}-{selectedAgeRate.max}</span>
+                                                <span>Active</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-50">
-                                            <span>Total</span>
-                                            <span>₹{fees.total.toFixed(2)}</span>
+                                        <div className="flex justify-between text-xs font-black uppercase tracking-tight">
+                                            <span className="text-slate-500">Fees + GST</span>
+                                            <span className="text-slate-900">₹{fees.convenienceFee.toFixed(2)}</span>
                                         </div>
                                     </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 px-6 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+                                    <Trophy size={40} className="mx-auto text-slate-300 mb-4 opacity-50" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Selection</p>
                                 </div>
                             )}
 
-                            <button 
-                                onClick={handleBooking}
-                                disabled={!selectedCategory}
-                                className={`w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-[0.3em] shadow-2xl transition-all ${
-                                    selectedCategory 
-                                    ? 'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-white shadow-pink-200 hover:scale-[1.02] active:scale-95' 
-                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                }`}
-                            >
-                                Book Now
-                            </button>
-                            
-                            <div className="flex flex-col items-center gap-3 pt-4 italic">
-                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
-                                    <ShieldCheck size={14} className="text-emerald-500" /> Secure Encryption Active
+                            <div className="flex flex-col items-center gap-3 pt-6 border-t border-slate-50">
+                                <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    <CreditCard size={14} className="text-blue-500" /> Secure Payment
                                 </div>
-                                <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                                <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                     <Zap size={14} className="text-amber-500" /> Instant Confirmation
                                 </div>
                             </div>
                         </div>
 
+                        {/* Countdown Sidebar */}
+                        {config.countdown?.enabled && (
+                            <div className="bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] rounded-[40px] p-10 text-center space-y-6 shadow-2xl shadow-pink-200/50">
+                                <h4 className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">Registration Deadline</h4>
+                                <div className="flex items-center justify-center gap-6">
+                                    <div className="text-center">
+                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.days}</div>
+                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">DAYS</div>
+                                    </div>
+                                    <div className="w-px h-8 bg-white/20" />
+                                    <div className="text-center">
+                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.hrs}</div>
+                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">HRS</div>
+                                    </div>
+                                    <div className="w-px h-8 bg-white/20" />
+                                    <div className="text-center">
+                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.min}</div>
+                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">MIN</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                </div>
-
-                {/* --- SEO ENHANCEMENT SECTION --- */}
-                <div className="mt-20 border-t border-slate-100 pt-20 pb-20">
-                    <div className="max-w-[900px] mx-auto text-slate-600">
-                        <h2 className="text-3xl font-bold text-slate-900 mb-8 uppercase tracking-tight">Everything You Need to Know About {event.title}</h2>
-                        
-                        <div className="prose prose-slate max-w-none space-y-6 text-[16px] leading-relaxed">
-                            <p>
-                                Need <strong>online event registration</strong> for <strong>{event.title}</strong>? BookMyTicket is your <strong>premium event booking</strong> partner for all things events in <strong>{event.city || "your city"}</strong>. This page provides all the essential information you need to register, prepare, and enjoy this spectacular event.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-800 mt-10">Safe and Secure Registration</h3>
-                            <p>
-                                Registering for {event.title} on BookMyTicket is 100% secure. Our <strong>secure checkout ticketing</strong> system uses advanced encryption to protect your personal and payment information. For dynamic events that require participant details, our form is designed to be quick and easy to fill out, ensuring you can secure your spot before slots run out.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-800 mt-10">Event Overview & Highlights</h3>
-                            <p>
-                                {event.title} is more than just an event; it's an experience. Scheduled for <strong>{event.startDate}</strong>, it brings together people with a shared passion for {event.category}. 
-                                {event.description.length < 300 && (
-                                    <span> Expect a day filled with engagement, learning, and entertainment. Whether you're participating in the main activities or enjoying the amenities, there's something for everyone.</span>
-                                )}
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-800 mt-10">Preparation Checklist</h3>
-                            <ul className="list-disc pl-5 space-y-3">
-                                <li><strong>Check Your Email:</strong> Once you complete your booking, you'll receive a confirmation email with all the details.</li>
-                                <li><strong>Join the Community:</strong> If there's a WhatsApp group link provided, make sure to join it for real-time updates from the organisers.</li>
-                                <li><strong>Required Documents:</strong> If the event requires ID proof or specific certificates, keep them handy for the registration desk.</li>
-                                <li><strong>Know the Venue:</strong> Familiarise yourself with <strong>{config.location?.venueName || "the venue"}</strong>. Plan your travel in advance to ensure a stress-free arrival.</li>
-                            </ul>
-
-                            <h3 className="text-xl font-bold text-slate-800 mt-10">Why Choose BookMyTicket for Dynamic Events?</h3>
-                            <p>
-                                BookMyTicket offers a specialized interface for events that require more than just a ticket. From marathons and sports tournaments to workshops and conferences, our platform handles complex registration forms and slot management with ease. We provide organisers with the tools they need to manage participants effectively, ensuring a professional experience for you.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-800 mt-10">Need Assistance?</h3>
-                            <p>
-                                Our support team is available 24/7 to help you with any queries regarding your booking for {event.title}. Whether it's a payment issue or a question about the event schedule, we're here to ensure your journey from booking to attendance is smooth and enjoyable.
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }

@@ -26,13 +26,34 @@ const DEFAULT_REFUND = [
     "Follow venue guidelines for a safe experience."
 ];
 
-function parseEventDate(dateStr, timeStr) {
+function parseEventDate(dateStr, timeStr, event = null) {
     try {
-        if (!dateStr) return null;
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return null;
-        return d;
-    } catch (_) { return null; }
+        let dt = event?.expiry_date || event?.dynamic_config?.basicInfo?.expiryDate || dateStr;
+        let t = timeStr || event?.startTime || '23:59';
+        if (!dt) return null;
+        dt = String(dt).trim();
+        t = String(t).trim();
+        if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+            const separator = dt.includes('/') ? '/' : '-';
+            const parts = dt.split(separator);
+            if (parts.length === 3) dt = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        let normalizedTime = t;
+        if (t && t.includes(' ')) {
+            let parts = t.split(' ');
+            if (parts.length >= 2) {
+                let [timePart, modifier] = parts;
+                let timeParts = timePart.split(':');
+                let hours = Number(timeParts[0]);
+                let mins = Number(timeParts[1] || 0);
+                if (modifier === 'PM' && hours < 12) hours += 12;
+                if (modifier === 'AM' && hours === 12) hours = 0;
+                normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+            }
+        }
+        const eventDate = new Date(`${dt}T${normalizedTime}`);
+        return isNaN(eventDate.getTime()) ? null : eventDate;
+    } catch (err) { return null; }
 }
 
 export default function EventDetailClient({ id }) {
@@ -47,7 +68,7 @@ export default function EventDetailClient({ id }) {
     , [id]);
 
     const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
-        user ? q.select('*').eq('userId', user.id).eq('eventId', id) : q.select('*').limit(0)
+        user ? q.select('*').eq('user_id', user.id).eq('event_id', id) : q.select('*').limit(0)
     , [user, id]);
 
     const existingBooking = userBookings && userBookings.length > 0;
@@ -118,7 +139,7 @@ export default function EventDetailClient({ id }) {
         );
     }
 
-    const eventDate = parseEventDate(event.rawDate || event.date, event.rawTime || event.time);
+    const eventDate = parseEventDate(event.rawDate || event.date, event.rawTime || event.time, event);
     const isExpired = eventDate ? eventDate < new Date() : false;
 
     if (isExpired) {
