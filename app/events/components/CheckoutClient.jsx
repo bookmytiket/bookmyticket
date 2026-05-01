@@ -57,6 +57,10 @@ export default function CheckoutClient({ id }) {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponError, setCouponError] = useState('');
+    const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
     // Toast Timer
     useEffect(() => {
@@ -151,7 +155,56 @@ export default function CheckoutClient({ id }) {
         );
     }, [feeSettings, organiserData?.fee_config, event?.fee_config]);
 
-    const { convenienceFee, gst, total, gstPercent } = useMemo(() => getFeeBreakdown(baseAmount, resolvedFeeSettings), [baseAmount, resolvedFeeSettings]);
+    const discountAmount = useMemo(() => {
+        if (!appliedCoupon) return 0;
+        if (appliedCoupon.type === 'percent') {
+            return (baseAmount * appliedCoupon.value) / 100;
+        } else {
+            return Math.min(baseAmount, appliedCoupon.value);
+        }
+    }, [baseAmount, appliedCoupon]);
+
+    const { convenienceFee, gst, total, gstPercent } = useMemo(() => {
+        const discountedBase = Math.max(0, baseAmount - discountAmount);
+        return getFeeBreakdown(discountedBase, resolvedFeeSettings);
+    }, [baseAmount, discountAmount, resolvedFeeSettings]);
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode || !user || !event) return;
+        setIsValidatingCoupon(true);
+        setCouponError('');
+        
+        try {
+            const res = await fetch('/api/coupons/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: couponCode.trim().toUpperCase(),
+                    userId: user.id,
+                    ticketCount: qty,
+                    eventId: event.id
+                })
+            });
+            const data = await res.json();
+            if (data.valid) {
+                setAppliedCoupon(data.coupon);
+                setNotification({ message: `Coupon ${data.coupon.code} applied successfully!`, type: 'success' });
+            } else {
+                setCouponError(data.message || "Invalid coupon");
+                setAppliedCoupon(null);
+            }
+        } catch (err) {
+            setCouponError("Failed to validate coupon");
+        } finally {
+            setIsValidatingCoupon(false);
+        }
+    };
+
+    const removeCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponCode('');
+        setCouponError('');
+    };
 
     const handleConfirmPay = async () => {
         if (!event || !user || !termsAccepted || isProcessing) return;
@@ -179,6 +232,8 @@ export default function CheckoutClient({ id }) {
                     partner_bonus: breakdown.partnerBonus,
                     platform_revenue: breakdown.platformRevenue,
                     partner_total: breakdown.partnerTotal,
+                    discount_amount: discountAmount,
+                    coupon_id: appliedCoupon?.id || null,
                     total_price: total,
                     status: isFree ? 'Confirmed' : 'Pending',
                     scanned: false,
@@ -472,36 +527,78 @@ export default function CheckoutClient({ id }) {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4">Order Summary</h4>
-                                    
-                                    <div className="space-y-3">
-                                        {selectedSeats.length > 0 ? (
-                                            selectedSeats.map(seat => (
-                                                <div key={seat.id} className="flex justify-between items-center text-sm font-bold">
-                                                    <span className="text-slate-500">Seat {seat.id} ({seat.catName})</span>
-                                                    <span className="text-slate-900">₹{seat.price}</span>
+                                    <div className="space-y-4">
+                                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4">Order Summary</h4>
+                                        
+                                        <div className="space-y-3">
+                                            {selectedSeats.length > 0 ? (
+                                                selectedSeats.map(seat => (
+                                                    <div key={seat.id} className="flex justify-between items-center text-sm font-bold">
+                                                        <span className="text-slate-500">Seat {seat.id} ({seat.catName})</span>
+                                                        <span className="text-slate-900">₹{seat.price}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="flex justify-between items-center text-sm font-bold">
+                                                    <span className="text-slate-500">{selectedPackageName || "Ticket"} × {qty}</span>
+                                                    <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
                                                 </div>
-                                            ))
-                                        ) : (
-                                            <div className="flex justify-between items-center text-sm font-bold">
-                                                <span className="text-slate-500">{selectedPackageName || "Ticket"} × {qty}</span>
-                                                <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
 
-                                    <div className="space-y-3 pt-4 border-t border-slate-50">
-                                        <div className="flex justify-between text-xs font-bold text-slate-400">
-                                            <span>Platform Fee</span>
-                                            <span>₹{convenienceFee.toFixed(2)}</span>
+                                        {/* Coupon Section */}
+                                        <div className="pt-4 border-t border-slate-50">
+                                            {!appliedCoupon ? (
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Have a Coupon?</p>
+                                                    <div className="flex gap-2">
+                                                        <input 
+                                                            type="text" 
+                                                            value={couponCode}
+                                                            onChange={(e) => setCouponCode(e.target.value)}
+                                                            placeholder="Enter Code"
+                                                            className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none uppercase"
+                                                        />
+                                                        <button 
+                                                            onClick={handleApplyCoupon}
+                                                            disabled={isValidatingCoupon || !couponCode}
+                                                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all"
+                                                        >
+                                                            {isValidatingCoupon ? '...' : 'Apply'}
+                                                        </button>
+                                                    </div>
+                                                    {couponError && <p className="text-[10px] font-bold text-rose-500 uppercase tracking-tight">{couponError}</p>}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                                    <div className="flex items-center gap-2 text-emerald-600">
+                                                        <Sparkles size={16} />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">{appliedCoupon.code} Applied</span>
+                                                    </div>
+                                                    <button onClick={removeCoupon} className="text-slate-400 hover:text-rose-500 transition-colors">
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between text-xs font-bold text-slate-400">
-                                            <span>GST ({gstPercent}%)</span>
-                                            <span>₹{gst.toFixed(2)}</span>
+
+                                        <div className="space-y-3 pt-4 border-t border-slate-50">
+                                            {appliedCoupon && (
+                                                <div className="flex justify-between text-xs font-bold text-emerald-600">
+                                                    <span>Coupon Discount</span>
+                                                    <span>- ₹{discountAmount.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between text-xs font-bold text-slate-400">
+                                                <span>Platform Fee</span>
+                                                <span>₹{convenienceFee.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs font-bold text-slate-400">
+                                                <span>GST ({gstPercent}%)</span>
+                                                <span>₹{gst.toFixed(2)}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
                                 <div className="pt-8 border-t-[3px] border-dotted border-slate-100">
                                     <div className="flex justify-between items-end">

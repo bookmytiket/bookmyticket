@@ -73,6 +73,44 @@ export async function POST(request) {
                 status: 'active'
             });
 
+            // 4a. Record Coupon Usage
+            if (booking.coupon_id) {
+                await supabaseAdmin.from('coupon_usage').insert({
+                    user_id: booking.user_id,
+                    coupon_id: booking.coupon_id,
+                    booking_id: bookingId
+                });
+            }
+
+            // 4b. Credit Organiser Wallet
+            const creditAmount = booking.base_amount - (booking.discount_amount || 0);
+            const organiserId = booking.events?.organiser_id;
+
+            if (organiserId && creditAmount > 0) {
+                // Get or create wallet
+                const { data: wallet } = await supabaseAdmin
+                    .from('wallets')
+                    .select('id, balance')
+                    .eq('organiser_id', organiserId)
+                    .single();
+
+                if (wallet) {
+                    await supabaseAdmin
+                        .from('wallets')
+                        .update({ balance: wallet.balance + creditAmount })
+                        .eq('id', wallet.id);
+
+                    // Record transaction
+                    await supabaseAdmin.from('wallet_transactions').insert({
+                        organiser_id: organiserId,
+                        booking_id: bookingId,
+                        amount: creditAmount,
+                        type: 'credit',
+                        description: `Earnings from booking ${bookingId}`
+                    });
+                }
+            }
+
             // 5. Trigger Notifications
             try {
                 const customerDetails = booking.customer_details || {};

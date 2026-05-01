@@ -17,7 +17,7 @@ import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings"
 import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries";
 
 
-import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare } from "lucide-react";
+import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark } from "lucide-react";
 import { HOME_EVENTS, HERO_BANNER_SLIDES } from "@/app/data/homeEvents";
 import { eventMatchesCategory } from "@/app/utils/categoryMatch";
 import { hashPassword } from "@/app/utils/hashPassword";
@@ -562,6 +562,245 @@ const MapPin = ({ size, style }) => (
         <circle cx="12" cy="10" r="3"></circle>
     </svg>
 );
+
+
+const CouponManager = ({ t, theme }) => {
+    const { data: coupons = [], loading, refetch } = useSupabaseQuery('coupons', q => q.order('created_at', { ascending: false }));
+    const [upsertCoupon] = useSupabaseMutation('coupons', 'upsert');
+    const [deleteCoupon] = useSupabaseMutation('coupons', 'delete', (q, p) => q.eq('id', p.id));
+    const { showToast } = useToast();
+    const [showModal, setShowModal] = useState(false);
+    const [formData, setFormData] = useState({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
+    const [editingId, setEditingId] = useState(null);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                ...formData,
+                code: formData.code.toUpperCase(),
+                value: parseFloat(formData.value),
+                min_tickets: parseInt(formData.min_tickets),
+                usage_limit_per_user: parseInt(formData.usage_limit_per_user),
+                expiry_date: formData.expiry_date || null
+            };
+            if (editingId) payload.id = editingId;
+            
+            await upsertCoupon(payload);
+            showToast(`Coupon ${editingId ? 'updated' : 'created'} successfully`, "success");
+            setShowModal(false);
+            setEditingId(null);
+            setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
+            refetch();
+        } catch (err) {
+            showToast("Error saving coupon: " + err.message, "error");
+        }
+    };
+
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading coupons...</div>;
+
+    return (
+        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Advanced Coupon Management</h3>
+                <button 
+                    onClick={() => { setEditingId(null); setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true }); setShowModal(true); }}
+                    style={{ padding: "8px 16px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                    <Plus size={18} /> Create Coupon
+                </button>
+            </div>
+
+            <div className="table-container">
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Code</th>
+                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Discount</th>
+                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Conditions</th>
+                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Status</th>
+                            <th style={{ padding: "12px", color: t.textSub, fontSize: "12px", fontWeight: 700, textTransform: "uppercase" }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {coupons.length === 0 ? (
+                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No coupons found.</td></tr>
+                        ) : coupons.map((c) => (
+                            <tr key={c.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                <td style={{ padding: "12px", fontWeight: 700, color: t.textMain }}>{c.code}</td>
+                                <td style={{ padding: "12px" }}>
+                                    <span style={{ padding: "4px 8px", backgroundColor: "#ec489915", color: "#ec4899", borderRadius: "6px", fontSize: "11px", fontWeight: 800 }}>
+                                        {c.type === 'percent' ? `${c.value}% OFF` : `₹${c.value} OFF`}
+                                    </span>
+                                </td>
+                                <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>
+                                    <div>Min Tickets: {c.min_tickets}</div>
+                                    <div>Limit/User: {c.usage_limit_per_user}</div>
+                                    {c.expiry_date && <div>Expires: {new Date(c.expiry_date).toLocaleDateString()}</div>}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                    <span className={`badge ${c.is_active ? 'badge-green' : 'badge-red'}`}>
+                                        {c.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                    </span>
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button onClick={() => { setEditingId(c.id); setFormData({ ...c, expiry_date: c.expiry_date ? new Date(c.expiry_date).toISOString().split('T')[0] : '' }); setShowModal(true); }} style={{ color: t.textSub, background: "none", border: "none", cursor: "pointer" }}><Edit size={16} /></button>
+                                        <button onClick={() => deleteCoupon({ id: c.id }).then(() => refetch())} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {showModal && (
+                <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
+                    <div style={{ backgroundColor: t.cardBg, width: "100%", maxWidth: "500px", borderRadius: "24px", padding: "32px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px" }}>
+                            <h3 style={{ fontSize: "20px", fontWeight: 800 }}>{editingId ? 'Edit' : 'New'} Coupon</h3>
+                            <button onClick={() => setShowModal(false)} style={{ color: t.textSub, background: "none", border: "none", cursor: "pointer" }}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Coupon Code</label>
+                                <input required value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }} />
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Type</label>
+                                    <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }}>
+                                        <option value="percent">Percent (%)</option>
+                                        <option value="fixed">Fixed (₹)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Value</label>
+                                    <input required type="number" value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }} />
+                                </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Min Tickets</label>
+                                    <input required type="number" value={formData.min_tickets} onChange={e => setFormData({...formData, min_tickets: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Limit per User</label>
+                                    <input required type="number" value={formData.usage_limit_per_user} onChange={e => setFormData({...formData, usage_limit_per_user: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }} />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: "11px", fontWeight: 800, color: t.textSub, marginBottom: "6px", textTransform: "uppercase" }}>Expiry Date</label>
+                                <input type="date" value={formData.expiry_date} onChange={e => setFormData({...formData, expiry_date: e.target.value})} style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', color: t.textMain }} />
+                            </div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                                <input type="checkbox" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
+                                <span style={{ fontSize: "13px", fontWeight: 700 }}>Active</span>
+                            </label>
+                            <button type="submit" style={{ marginTop: "12px", padding: "14px", borderRadius: "12px", background: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", color: "#fff", border: "none", fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px", cursor: "pointer" }}>
+                                {editingId ? 'Update' : 'Create'} Coupon
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+const PayoutRequestsTable = ({ t, theme }) => {
+    const { data: requests = [], loading, refetch } = useSupabaseQuery('withdraw_requests', (q) => q.select('*, wallets(balance), organisers:organiser_id(business_name, id)'));
+    const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
+    const [updateWallet] = useSupabaseMutation('wallets', 'update', (q, p) => q.eq('organiser_id', p.organiser_id));
+    const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
+    const { showToast } = useToast();
+
+    const handleAction = async (request, newStatus) => {
+        try {
+            if (newStatus === 'approved') {
+                const { data: wallet, error: walletError } = await supabase.from('wallets').select('balance').eq('organiser_id', request.organiser_id).single();
+                if (walletError || !wallet) {
+                    showToast("Wallet not found", "error");
+                    return;
+                }
+                if (wallet.balance < request.amount) {
+                    showToast("Insufficient organiser balance", "error");
+                    return;
+                }
+
+                // 1. Update request status to 'approved'
+                await updateStatus({ id: request.id, status: 'approved' });
+
+                // 2. Deduct from wallet
+                await updateWallet({ organiser_id: request.organiser_id, balance: wallet.balance - request.amount });
+
+                // 3. Record transaction
+                await addTransaction({
+                    organiser_id: request.organiser_id,
+                    amount: request.amount,
+                    type: 'debit',
+                    description: `Payout Approved`,
+                    reference_id: request.id
+                });
+
+                showToast("Payout approved", "success");
+            } else if (newStatus === 'rejected') {
+                await updateStatus({ id: request.id, status: 'rejected' });
+                showToast("Payout rejected", "info");
+            }
+            refetch();
+        } catch (err) {
+            showToast("Action failed: " + err.message, "error");
+        }
+    };
+
+    if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading payout requests...</div>;
+
+    return (
+        <div className="table-container">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                    <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Organiser</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Requested Amount</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Wallet Balance</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                        <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {requests.length === 0 ? (
+                        <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No payout requests found.</td></tr>
+                    ) : requests.map((req) => (
+                        <tr key={req.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                            <td style={{ padding: "12px" }}>
+                                <div style={{ fontWeight: 700, color: t.textMain }}>{req.organisers?.business_name || req.organisers?.name || 'Organiser'}</div>
+                                <div style={{ fontSize: "11px", color: t.textSub }}>{new Date(req.created_at).toLocaleString()}</div>
+                            </td>
+                            <td style={{ padding: "12px", fontWeight: 800, color: "#ec4899" }}>₹{req.amount.toLocaleString()}</td>
+                            <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{req.wallets?.balance?.toLocaleString() || '0'}</td>
+                            <td style={{ padding: "12px" }}>
+                                <span className={`badge ${req.status === 'approved' ? 'badge-green' : req.status === 'pending' ? 'badge-yellow' : 'badge-red'}`}>
+                                    {req.status.toUpperCase()}
+                                </span>
+                            </td>
+                            <td style={{ padding: "12px" }}>
+                                {req.status === 'pending' && (
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <button onClick={() => handleAction(req, 'approved')} style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "#10b981", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>Approve</button>
+                                        <button onClick={() => handleAction(req, 'rejected')} style={{ padding: "6px 12px", borderRadius: "6px", backgroundColor: "#ef4444", color: "#fff", border: "none", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>Reject</button>
+                                    </div>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 
 function AdminHomePage() {
@@ -2103,6 +2342,7 @@ function AdminHomePage() {
                                 {isGrowthOpen && (
                                     <div className="space-y-0.5">
                                         {[
+                                            { label: "Coupon Codes", id: "coupons" },
                                             { label: "Promotions", id: "promotions" },
                                             { label: "Push Notifications", id: "send_notif" },
                                             { label: "Email Broadcast", id: "email_broadcast" },
@@ -2115,6 +2355,7 @@ function AdminHomePage() {
                                 
                                 <SidebarGroupTitle title="Finance" />
                                 <SidebarItem id="gst" label="GST Reports" icon={Briefcase} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
+                                <SidebarItem id="payout_requests" label="Payout Requests" icon={Landmark} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
 
                                 <SidebarGroupTitle title="Reports" />
                                 <SidebarItem id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
@@ -2860,6 +3101,10 @@ function AdminHomePage() {
                             </div>
 
                         </div>
+                    )}
+
+                    {activeTab === "coupons" && (
+                        <CouponManager t={t} theme={theme} />
                     )}
 
                     {activeTab === "promotions" && (
@@ -5818,6 +6063,9 @@ function AdminHomePage() {
 
                     {activeTab === "gst" && (
                         <GstPortal t={t} theme={theme} />
+                    )}
+                    {activeTab === "payout_requests" && (
+                        <PayoutRequestsTable t={t} theme={theme} />
                     )}
                     {activeTab === "fee_settings" && (
                         <div style={{ maxWidth: "800px" }}>

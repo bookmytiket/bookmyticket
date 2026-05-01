@@ -20,6 +20,7 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
+import WalletDashboard from "./components/WalletDashboard";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -2664,8 +2665,8 @@ function OrganiserPanel() {
                                     </div>
                                     <div style={{ border: `1px solid ${t.border}`, borderRadius: "12px", overflow: "hidden" }}>
                                         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", backgroundColor: t.bg, borderBottom: `1px solid ${t.border}` }}>
-                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                                                <div key={day} style={{ textAlign: "center", padding: "8px 0", fontSize: "10px", fontWeight: 900, color: t.textSub }}>{day}</div>
+                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                                <div key={i} style={{ textAlign: "center", padding: "8px 0", fontSize: "10px", fontWeight: 900, color: t.textSub }}>{day}</div>
                                             ))}
                                         </div>
                                         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
@@ -4911,6 +4912,9 @@ function OrganiserPanel() {
                         </div>
                     );
                 }
+                case "withdraw":
+                case "transactions":
+                    return <WalletDashboard user={user} />;
                 default:
                     return <div>Coming Soon</div>;
             }

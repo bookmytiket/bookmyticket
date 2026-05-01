@@ -37,7 +37,7 @@ const MetricCard = ({ title, value, icon: Icon, trend, trendValue, color, isDark
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', position: 'relative', zIndex: 1 }}>
             <div style={{ padding: '12px', background: `${color}20`, borderRadius: '16px', color: color }}>
-                <Icon size={24} />
+                {Icon && <Icon size={24} />}
             </div>
             {trend && (
                 <div style={{ 
@@ -317,7 +317,6 @@ export default function BookingAnalytics({ events = [], bookings = [], theme = '
                 <MetricCard 
                     title="Extra Yield (2%)" 
                     value={`₹${stats.totalBonus.toLocaleString()}`} 
-                    icon={Sparkles} 
                     color="#10b981"
                     isDark={isDark}
                 />
