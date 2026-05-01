@@ -454,7 +454,7 @@ const TurfBookingsTable = ({ t }) => {
 };
 
 const PoolBookingsTable = ({ t }) => {
-    const { data: bookings = [], loading, refetch } = useSupabaseQuery('pool_bookings', (q) => q.select('*, swimming_pools(name, city), profiles:user_id(full_name, phone)').order('created_at', { ascending: false }));
+    const { data: bookings = [], loading, refresh } = useSupabaseQuery('pool_bookings', (q) => q.select('*, swimming_pools(name, city), profiles:user_id(full_name, phone)').order('created_at', { ascending: false }));
     const [updateStatus] = useSupabaseMutation('pool_bookings', 'update', (q, p) => q.eq('id', p.id));
     const { showToast } = useToast();
 
@@ -465,7 +465,7 @@ const PoolBookingsTable = ({ t }) => {
         try {
             await updateStatus({ id, status: newStatus });
             showToast(`Request ${newStatus.toLowerCase()} successfully`, "success");
-            refetch();
+            refresh();
         } catch (err) {
             showToast("Error updating status: " + err.message, "error");
         }
@@ -565,7 +565,7 @@ const MapPin = ({ size, style }) => (
 
 
 const CouponManager = ({ t, theme }) => {
-    const { data: coupons = [], loading, refetch } = useSupabaseQuery('coupons', q => q.order('created_at', { ascending: false }));
+    const { data: coupons = [], loading, refresh } = useSupabaseQuery('coupons', q => q.order('created_at', { ascending: false }));
     const [upsertCoupon] = useSupabaseMutation('coupons', 'upsert');
     const [deleteCoupon] = useSupabaseMutation('coupons', 'delete', (q, p) => q.eq('id', p.id));
     const { showToast } = useToast();
@@ -591,7 +591,7 @@ const CouponManager = ({ t, theme }) => {
             setShowModal(false);
             setEditingId(null);
             setFormData({ code: '', type: 'percent', value: '', min_tickets: 1, usage_limit_per_user: 1, expiry_date: '', is_active: true });
-            refetch();
+            refresh();
         } catch (err) {
             showToast("Error saving coupon: " + err.message, "error");
         }
@@ -646,7 +646,7 @@ const CouponManager = ({ t, theme }) => {
                                 <td style={{ padding: "12px" }}>
                                     <div style={{ display: "flex", gap: "8px" }}>
                                         <button onClick={() => { setEditingId(c.id); setFormData({ ...c, expiry_date: c.expiry_date ? new Date(c.expiry_date).toISOString().split('T')[0] : '' }); setShowModal(true); }} style={{ color: t.textSub, background: "none", border: "none", cursor: "pointer" }}><Edit size={16} /></button>
-                                        <button onClick={() => deleteCoupon({ id: c.id }).then(() => refetch())} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                        <button onClick={() => deleteCoupon({ id: c.id }).then(() => refresh())} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={16} /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -711,7 +711,7 @@ const CouponManager = ({ t, theme }) => {
 
 
 const PayoutRequestsTable = ({ t, theme }) => {
-    const { data: requests = [], loading, refetch } = useSupabaseQuery('withdraw_requests', (q) => q.select('*, wallets(balance), organisers:organiser_id(business_name, id)'));
+    const { data: requests = [], loading, refresh } = useSupabaseQuery('withdraw_requests', (q) => q.select('*, wallets(balance), organisers:organiser_id(business_name, id)'));
     const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
     const [updateWallet] = useSupabaseMutation('wallets', 'update', (q, p) => q.eq('organiser_id', p.organiser_id));
     const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
@@ -750,7 +750,7 @@ const PayoutRequestsTable = ({ t, theme }) => {
                 await updateStatus({ id: request.id, status: 'rejected' });
                 showToast("Payout rejected", "info");
             }
-            refetch();
+            refresh();
         } catch (err) {
             showToast("Action failed: " + err.message, "error");
         }
@@ -6492,7 +6492,7 @@ function AdminHomePage() {
                         </div>
                     )}
 
-                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
+                    {(["dashboard", "branding", "categories", "subnav", "events_settings", "event_partners", "pages", "sections", "all_org", "active_org", "banned_org", "email_unverified", "mobile_unverified", "kyc_unverified", "kyc_pending", "kyc_verified", "with_balance", "org_requests", "partner_requests", "service_active", "service_banned", "send_notif", "payment_settings", "ticket_settings", "comm_hub", "email_settings", "email_templates", "disclaimer_settings", "sso_settings", "api_settings", "meta_management", "all_events", "customers", "bookings", "all_turfs", "turf_active", "turf_banned", "turf_bookings", "pool_bookings", "gst", "coupons", "promotions", "financials", "support_tickets", "branding_partners", "hero", "video", "video_banner", "mobile_banners", "site_branding", "memories", "copyright", "meeting_settings", "admin_management", "ad_popups", "meetings", "checkout_footer", "careers_admin", "careers_banner", "contact_inquiries", "contact_settings"].includes(activeTab)) ? null : (
                         <div style={{ backgroundColor: t.cardBg, padding: "60px 24px", textAlign: "center", borderRadius: "10px", border: `1px solid ${t.border}` }}>
                             <h2 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain }}>{activeTab.replace(/_/g, ' ').toUpperCase()}</h2>
                             <p style={{ color: t.textSub, marginTop: "8px", maxWidth: "350px", margin: "8px auto", fontSize: "14px" }}>This management module is currently being configured. You will be able to manage these settings shortly.</p>
