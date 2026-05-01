@@ -8,7 +8,7 @@ import {
     Calendar, MapPin, Video, CheckCircle2, Ticket, 
     ShieldCheck, CreditCard, ChevronLeft, Info, 
     ArrowRight, Mail, Phone, User, ExternalLink,
-    Star, Sparkles, Download, Home, MessageSquare
+    Star, Sparkles, Download, Home, MessageSquare, X
 } from 'lucide-react';
 
 import { HOME_EVENTS } from '@/app/data/homeEvents';
@@ -242,6 +242,26 @@ export default function CheckoutClient({ id }) {
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
                     <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px]">Validating Checkout...</p>
+                </div>
+            </main>
+        );
+    }
+
+    if (!event && !eventLoading) {
+        return (
+            <main className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
+                <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center space-y-6">
+                    <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto">
+                        <Info size={40} />
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Event Not Found</h2>
+                    <p className="text-slate-500 font-medium">The event you are looking for might have been removed or is no longer available.</p>
+                    <button 
+                        onClick={() => router.push('/events')}
+                        className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all"
+                    >
+                        Browse Other Events
+                    </button>
                 </div>
             </main>
         );

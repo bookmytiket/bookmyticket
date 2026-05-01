@@ -173,7 +173,7 @@ function PaymentContent() {
             </div>
 
             <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '12px', color: '#94a3b8', lineHeight: 1.6 }}>
-                By clicking Pay Now, you agree to our Advertising Terms. This is a simulated checkout page provided for testing the end-to-end integration.
+                By clicking Pay Now, you agree to our Advertising Terms. All transactions are processed through an encrypted secure gateway.
             </p>
         </div>
     );

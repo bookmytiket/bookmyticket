@@ -4134,7 +4134,7 @@ function AdminHomePage() {
                                                         {openActionDropdown === org.id && (
                                                             <div style={{ position: "absolute", right: "20px", top: "45px", backgroundColor: theme === 'light' ? '#fff' : '#1e293b', border: `1px solid ${t.border}`, borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", zIndex: 100, width: "160px", overflow: "hidden" }}>
                                                                     <button onClick={(e) => { e.stopPropagation(); setEditingOrg(org); setIsEditModalOpen(true); setOpenActionDropdown(null); }} style={{ width: "100%", padding: "12px 16px", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", color: t.textMain, fontSize: "13px", fontWeight: 500 }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = theme === 'light' ? '#f1f5f9' : '#334155'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
-                                                                        <Save size={16} /> Edit Profile
+                                                                        <Edit size={16} /> Edit Profile
                                                                     </button>
                                                                 {(org.kyc_status === 'KYC Pending' || org.kyc_status === 'Pending' || org.kyc_status === 'Submitted' || org.kyc_status === 'Start Onboarding') && (
                                                                     <>
@@ -6578,55 +6578,62 @@ function AdminHomePage() {
                     {/* Edit Organizer Modal */}
                     {isEditModalOpen && editingOrg && (
                         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-                            <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "16px", width: "100%", maxWidth: "500px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: t.textMain }}>Edit Organiser Profile</h3>
+                            <div style={{ backgroundColor: theme === 'light' ? '#fff' : '#0f172a', padding: "32px", borderRadius: "24px", width: "100%", maxWidth: "900px", maxHeight: "90vh", overflowY: "auto", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+                                    <div>
+                                        <h3 style={{ fontSize: "24px", fontWeight: 900, margin: 0, color: t.textMain }}>Edit Organiser Profile</h3>
+                                        <p style={{ fontSize: "13px", color: t.textSub, marginTop: "4px" }}>Modify account details and specific fee structures</p>
+                                    </div>
                                     <button onClick={() => setIsEditModalOpen(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={20} /></button>
                                 </div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Full Name</label>
-                                        <input
-                                            type="text"
-                                            value={editingOrg.username}
-                                            onChange={(e) => setEditingOrg({ ...editingOrg, username: e.target.value })}
-                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Full Name</label>
+                                            <input
+                                                type="text"
+                                                value={editingOrg.username}
+                                                onChange={(e) => setEditingOrg({ ...editingOrg, username: e.target.value })}
+                                                style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px", fontWeight: 500 }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email / User ID</label>
+                                            <input
+                                                type="email"
+                                                value={editingOrg.email}
+                                                disabled
+                                                style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#0f172a', color: t.textSub, cursor: "not-allowed", fontSize: "14px" }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Wallet Balance (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''))}
+                                                onChange={(e) => setEditingOrg({ ...editingOrg, balance: `₹${e.target.value}` })}
+                                                style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px", fontWeight: 500 }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</label>
+                                            <select
+                                                value={editingOrg.status}
+                                                onChange={(e) => setEditingOrg({ ...editingOrg, status: e.target.value })}
+                                                style={{ width: "100%", padding: "12px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "14px", fontWeight: 500 }}
+                                            >
+                                                <option value="Active">Active</option>
+                                                <option value="Inactive">Inactive</option>
+                                                <option value="Banned">Banned</option>
+                                                <option value="Rejected">Rejected</option>
+                                                <option value="KYC Completed">KYC Completed</option>
+                                                <option value="Submitted">Submitted (Under Review)</option>
+                                                <option value="KYC Pending">KYC Pending</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Email / User ID</label>
-                                        <input
-                                            type="email"
-                                            value={editingOrg.email}
-                                            disabled
-                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#f8fafc' : '#0f172a', color: t.textSub, cursor: "not-allowed" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Wallet Balance (₹)</label>
-                                        <input
-                                            type="number"
-                                            value={parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''))}
-                                            onChange={(e) => setEditingOrg({ ...editingOrg, balance: `₹${e.target.value}` })}
-                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: t.textSub, marginBottom: "8px" }}>Status (Active/Inactive)</label>
-                                        <select
-                                            value={editingOrg.status}
-                                            onChange={(e) => setEditingOrg({ ...editingOrg, status: e.target.value })}
-                                            style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain }}
-                                        >
-                                            <option value="Active">Active</option>
-                                            <option value="Inactive">Inactive</option>
-                                            <option value="Banned">Banned</option>
-                                            <option value="Rejected">Rejected</option>
-                                            <option value="KYC Completed">KYC Completed</option>
-                                            <option value="Submitted">Submitted (Under Review)</option>
-                                            <option value="KYC Pending">KYC Pending</option>
-                                        </select>
-                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
                                     {/* 💰 Organiser-Specific Fee Overrides */}
                                     <div style={{ marginTop: "12px", padding: "20px", borderRadius: "12px", backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', border: `1px solid ${t.border}` }}>
@@ -6705,8 +6712,9 @@ function AdminHomePage() {
                                         )}
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
-                                    <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                                </div>
+                                <div style={{ display: "flex", gap: "16px", marginTop: "40px", paddingTop: "24px", borderTop: `1px solid ${t.border}` }}>
+                                    <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `1px solid ${t.border}`, backgroundColor: "transparent", color: t.textMain, fontWeight: 700, cursor: "pointer", fontSize: "16px" }}>Cancel</button>
                                     <button
                                         onClick={async () => {
                                             const balance = parseFloat(String(editingOrg.balance).replace(/[^\d.-]/g, ''));
@@ -6718,8 +6726,9 @@ function AdminHomePage() {
                                                 fee_config: editingOrg.fee_config
                                             });
                                             setIsEditModalOpen(false);
+                                            showToast("Organiser profile updated!", "success");
                                         }}
-                                        style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                                        style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "16px", boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)" }}
                                     >
                                         Save Changes
                                     </button>

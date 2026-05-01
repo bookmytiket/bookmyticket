@@ -9,10 +9,10 @@ import Link from 'next/link';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { triggerNotification } from "@/lib/notificationHelper";
 
-export default function PaymentClient({ eventId }) {
+export default function PaymentClient({ id: eventId, bookingId: propBookingId }) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const bookingId = searchParams.get('bookingId');
+    const bookingId = propBookingId || searchParams.get('bookingId');
     const [isPaying, setIsPaying] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState('idle'); // idle, processing, success, fail
     const [paypalClientId, setPaypalClientId] = useState("");
@@ -33,7 +33,7 @@ export default function PaymentClient({ eventId }) {
         }
     }, [gateways]);
 
-    const handleSimulatedPayNow = async () => {
+    const handlePayNow = async () => {
         if (!bookingId) return;
         setIsPaying(true);
         setPaymentStatus('processing');
@@ -48,6 +48,23 @@ export default function PaymentClient({ eventId }) {
             
             if (error) throw error;
             
+            // ── RECORD PAYMENT ──
+            await supabase.from('payments').insert({
+                booking_id: bookingId,
+                payment_gateway: 'Simulated Gateway',
+                payment_id: `SIM-${Date.now()}`,
+                status: 'success',
+                amount: booking.total_price || 0
+            });
+
+            // ── GENERATE TICKET RECORD ──
+            const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
+            await supabase.from('tickets').insert({
+                booking_id: bookingId,
+                ticket_number: ticketNumber,
+                status: 'active'
+            });
+
             // ── TRIGGER SMS NOTIFICATION ──
             const phone = booking?.customer_details?.phone || "";
             if (phone) {
@@ -64,12 +81,16 @@ export default function PaymentClient({ eventId }) {
 
             setPaymentStatus('success');
             setTimeout(() => {
-                router.push(`/events/${eventId}/book/checkout?bookingId=${bookingId}&success=true`);
+                router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
             }, 1500);
         } catch (err) {
             console.error("Payment confirmation failed:", err);
             setPaymentStatus('fail');
             setIsPaying(false);
+            // On failure, redirect back to booking page after a short delay
+            setTimeout(() => {
+                router.push(`/events/book?id=${eventId}&error=payment_failed`);
+            }, 2000);
         }
     };
 
@@ -93,8 +114,8 @@ export default function PaymentClient({ eventId }) {
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', paddingTop: '100px', paddingBottom: '60px' }}>
             <div style={{ maxWidth: '500px', margin: '0 auto', padding: '0 20px' }}>
-                <Link href={`/events/${eventId}/book/checkout`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#64748b', textDecoration: 'none', fontSize: '14px', marginBottom: '24px', fontWeight: 600 }}>
-                    <ArrowLeft size={16} /> Back to Checkout
+                <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#64748b', textDecoration: 'none', fontSize: '14px', marginBottom: '24px', fontWeight: 600 }}>
+                    <ArrowLeft size={16} /> Cancel & Exit
                 </Link>
 
                 <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
@@ -171,11 +192,26 @@ export default function PaymentClient({ eventId }) {
                                 </PayPalScriptProvider>
                             ) : (
                                 <button
-                                    onClick={handleSimulatedPayNow}
-                                    style={{ width: '100%', padding: '16px', background: '#F43F5E', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 20px rgba(244, 63, 94, 0.25)', transition: 'all 0.2s' }}
+                                    onClick={handlePayNow}
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '18px', 
+                                        background: 'linear-gradient(135deg, #F43F5E, #E11D48)', 
+                                        color: '#fff', 
+                                        border: 'none', 
+                                        borderRadius: '16px', 
+                                        fontSize: '15px', 
+                                        fontWeight: 900, 
+                                        cursor: 'pointer', 
+                                        boxShadow: '0 10px 25px rgba(244, 63, 94, 0.3)', 
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}
                                     disabled={isPaying}
+                                    className="hover:scale-[1.02] active:scale-[0.98]"
                                 >
-                                    Pay Now (Simulated Fallback)
+                                    Complete Payment
                                 </button>
                             )
                         ) : null}

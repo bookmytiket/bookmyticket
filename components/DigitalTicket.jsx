@@ -19,7 +19,7 @@ import BrandingHeader from "./BrandingHeader";
 import * as htmlToImage from 'html-to-image';
 import jsPDF from 'jspdf';
 
-export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
+export default function DigitalTicket({ booking, event, ticket, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
   // Fetch branding for Powered By logo via API to bypass RLS
   const [branding, setBranding] = React.useState({ powered_by_logo_url: '/logo.png' });
   React.useEffect(() => {
@@ -87,7 +87,8 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
     if (!booking || !event) return null;
     const isScanned = booking.scanned || booking.status === "Scanned";
     const bookingId = booking._id || booking.id;
-    const shortId = bookingId?.slice(-8).toUpperCase();
+    const ticketNumber = ticket?.ticket_number || bookingId?.slice(-8).toUpperCase();
+    const shortId = ticketNumber;
     const customerName = booking.customer_name || "Valued Customer";
 
     // Robust helper to convert image to base64 with canvas fallback
@@ -300,7 +301,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                             
                             <div className={`p-4 flex items-center justify-center w-full transition-all  ${!isRevealed && !isCapturing ? 'blur-xl scale-90 opacity-20' : 'blur-0 scale-100 opacity-100'}`}>
                                 <QRCodeSVG 
-                                    value={bookingId} 
+                                    value={ticket?.ticket_number || bookingId} 
                                     size={100} 
                                     level="H" 
                                     fgColor={isScanned ? "#cbd5e1" : "#0f172a"} 
@@ -309,7 +310,7 @@ export default function DigitalTicket({ booking, event, terms = DEFAULT_TICKET_T
                             <div className="w-full bg-slate-900 py-2 px-1">
                                 <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Booking ID</p>
                                 <div className={`transition-all  ${!isRevealed && !isCapturing ? 'blur-md opacity-20' : 'blur-0 opacity-100'}`}>
-                                    <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{shortId}</p>
+                                    <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{ticketNumber}</p>
                                 </div>
                             </div>
                         </div>

@@ -1,7 +1,8 @@
 "use client";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import EventBookClient from '../components/EventBookClient';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 
 export default function EventBookingPage() {
@@ -37,5 +38,24 @@ export default function EventBookingPage() {
         );
     }
 
-    return <EventBookClient id={id} />;
+    const error = searchParams.get('error');
+    const [showError, setShowError] = useState(!!error);
+
+    return (
+        <>
+            {showError && error === 'payment_failed' && (
+                <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] bg-rose-50 border border-rose-100 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="w-10 h-10 bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+                        <CheckCircle2 size={20} className="rotate-45" /> 
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Payment Declined</h4>
+                        <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Transaction could not be completed. Please try again.</p>
+                    </div>
+                    <button onClick={() => setShowError(false)} className="ml-4 text-slate-400 hover:text-slate-900 transition-colors font-black text-xs">✕</button>
+                </div>
+            )}
+            <EventBookClient id={id} />
+        </>
+    );
 }
