@@ -2,40 +2,44 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthContext";
 
 function AuthCallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user, loading: authLoading } = useAuth();
     const nextUrl = searchParams.get("next") || "/";
 
     useEffect(() => {
-        // Supabase client-side JS automatically handles the OAuth code/token in the URL.
-        // We listen for the SIGNED_IN event or check if the session exists, then redirect.
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                router.replace(nextUrl);
+        if (!authLoading && user) {
+            // Determine final destination
+            let dest = nextUrl;
+            
+            // If we're going to home or profile, but we have a special role, override
+            if (dest === "/" || dest === "/profile") {
+                const role = user.role?.toLowerCase();
+                if (role === "admin" || role === "super_admin") dest = "/admin";
+                else if (role === "staff") dest = "/pwa-scan";
+                else if (role === "branding_partner") dest = "/branding/dashboard";
+                else if (role === "vendor") dest = "/vendor/dashboard";
+                else if (role === "organiser" || role === "organizer") dest = "/organiser";
             }
-        };
+            
+            console.log("AuthCallback: Redirecting to", dest);
+            router.replace(dest);
+        }
+    }, [user, authLoading, router, nextUrl]);
 
-        checkSession();
-
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === "SIGNED_IN" || session) {
-                router.replace(nextUrl);
-            }
-        });
-
-        // Fallback: If no event fires within 3 seconds, redirect to home.
+    // Fallback timer if auth seems stuck
+    useEffect(() => {
         const timer = setTimeout(() => {
-            router.replace(nextUrl);
-        }, 3000);
-
-        return () => {
-            authListener?.subscription.unsubscribe();
-            clearTimeout(timer);
-        };
-    }, [router, nextUrl]);
+            if (authLoading) {
+                console.warn("AuthCallback: Auth still loading after 5s, forcing redirect to", nextUrl);
+                router.replace(nextUrl);
+            }
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, [authLoading, nextUrl, router]);
 
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' }}>

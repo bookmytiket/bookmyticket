@@ -8,6 +8,7 @@ import { CreditCard, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { triggerNotification } from "@/lib/notificationHelper";
+import { load } from "@cashfreepayments/cashfree-js";
 
 export default function PaymentClient({ id: eventId, bookingId: propBookingId }) {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
     const [isPaying, setIsPaying] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState('idle'); // idle, processing, success, fail
     const [paypalClientId, setPaypalClientId] = useState("");
+    const [cashfree, setCashfree] = useState(null);
 
     const { data: booking } = useSupabaseQuery('bookings', (q) => 
         q.eq('id', bookingId).single(),
@@ -25,72 +27,82 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
     const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 
     useEffect(() => {
+        // Handle return from Cashfree
+        const status = searchParams.get('status');
+        if (status === 'PAID' || status === 'SUCCESS') {
+            setPaymentStatus('success');
+            setTimeout(() => {
+                router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
+            }, 1500);
+        } else if (status === 'FAILED') {
+            setPaymentStatus('fail');
+            triggerNotification({
+                type: "ERROR",
+                data: { message: "Payment was declined by your bank." }
+            });
+        }
+
         if (gateways) {
             const paypalConfig = gateways.find(g => g.name === "PayPal" && g.is_enabled);
             if (paypalConfig && paypalConfig.config && paypalConfig.config.apiKey) {
                 setPaypalClientId(paypalConfig.config.apiKey);
             }
         }
+        
+        // Initialize Cashfree
+        const initCashfree = async () => {
+            const cf = await load({
+                mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION" ? "production" : "sandbox"
+            });
+            setCashfree(cf);
+        };
+        initCashfree();
     }, [gateways]);
 
-    const handlePayNow = async () => {
-        if (!bookingId) return;
+    const handleCashfree = async () => {
+        if (!bookingId || !cashfree) return;
         setIsPaying(true);
         setPaymentStatus('processing');
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
         try {
-            const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'Confirmed' })
-                .eq('id', bookingId);
-            
-            if (error) throw error;
-            
-            // ── RECORD PAYMENT ──
-            await supabase.from('payments').insert({
-                booking_id: bookingId,
-                payment_gateway: 'Simulated Gateway',
-                payment_id: `SIM-${Date.now()}`,
-                status: 'success',
-                amount: booking.total_price || 0
+            // 1. Create Order via API
+            const response = await fetch('/api/cashfree/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingId,
+                    amount: booking.total_price,
+                    customerName: booking.customer_details?.name || 'Customer',
+                    customerEmail: booking.customer_details?.email || 'customer@example.com',
+                    customerPhone: booking.customer_details?.phone || '9999999999',
+                    eventName: booking.event_name
+                })
             });
 
-            // ── GENERATE TICKET RECORD ──
-            const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
-            await supabase.from('tickets').insert({
-                booking_id: bookingId,
-                ticket_number: ticketNumber,
-                status: 'active'
+            const data = await response.json();
+            if (data.error) throw new Error(data.details || data.error);
+
+            // 2. Open Cashfree Checkout in Modal for better UX
+            const checkoutOptions = {
+                paymentSessionId: data.payment_session_id,
+                redirectTarget: "_modal", 
+            };
+
+            console.log("Opening Cashfree checkout...");
+            await cashfree.checkout(checkoutOptions).then((result) => {
+                if (result.error) {
+                    throw new Error(result.error.message);
+                }
+                if (result.redirect) {
+                    console.log("Redirecting to payment page...");
+                }
             });
-
-            // ── TRIGGER SMS NOTIFICATION ──
-            const phone = booking?.customer_details?.phone || "";
-            if (phone) {
-                triggerNotification({
-                    phoneNumber: phone,
-                    type: "BOOKING",
-                    data: {
-                        eventName: booking?.event_name || "Event",
-                        date: booking?.event_date || "Confirmed",
-                        bookingId: bookingId
-                    }
-                });
-            }
-
-            setPaymentStatus('success');
-            setTimeout(() => {
-                router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
-            }, 1500);
+            
         } catch (err) {
-            console.error("Payment confirmation failed:", err);
+            console.error("Cashfree Payment Error:", err);
             setPaymentStatus('fail');
             setIsPaying(false);
-            // On failure, redirect back to booking page after a short delay
-            setTimeout(() => {
-                router.push(`/events/book?id=${eventId}&error=payment_failed`);
-            }, 2000);
+            alert("Payment Initialization Failed: " + err.message);
         }
     };
 
@@ -191,28 +203,42 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                                     />
                                 </PayPalScriptProvider>
                             ) : (
-                                <button
-                                    onClick={handlePayNow}
-                                    style={{ 
-                                        width: '100%', 
-                                        padding: '18px', 
-                                        background: 'linear-gradient(135deg, #F43F5E, #E11D48)', 
-                                        color: '#fff', 
-                                        border: 'none', 
-                                        borderRadius: '16px', 
-                                        fontSize: '15px', 
-                                        fontWeight: 900, 
-                                        cursor: 'pointer', 
-                                        boxShadow: '0 10px 25px rgba(244, 63, 94, 0.3)', 
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em'
-                                    }}
-                                    disabled={isPaying}
-                                    className="hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    Complete Payment
-                                </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <button
+                                        onClick={handleCashfree}
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '18px', 
+                                            background: '#111827', 
+                                            color: '#fff', 
+                                            border: 'none', 
+                                            borderRadius: '16px', 
+                                            fontSize: '15px', 
+                                            fontWeight: 900, 
+                                            cursor: 'pointer', 
+                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px'
+                                        }}
+                                        disabled={isPaying || !cashfree}
+                                    >
+                                        Pay with Cashfree
+                                    </button>
+                                    
+                                    <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                                        <p style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Supported Methods</p>
+                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '8px', opacity: 0.6 }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>UPI</span>
+                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>CARDS</span>
+                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>NETBANKING</span>
+                                        </div>
+                                    </div>
+                                </div>
                             )
                         ) : null}
                     </div>

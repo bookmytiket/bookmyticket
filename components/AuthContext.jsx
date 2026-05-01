@@ -22,34 +22,10 @@ export function AuthProvider({ children }) {
                 try {
                     const parsed = JSON.parse(cachedUser);
                     setUser(parsed);
-                    // Optimistic loading: if we have a cached user, let the app render
-                    // while we verify the session in the background.
                     setLoading(false);
                 } catch (e) {
                     console.error("Error parsing cached user:", e);
                 }
-            }
-
-            if (!supabase) {
-                console.warn("AuthContext: Supabase client not initialized.");
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const sessionPromise = supabase.auth.getSession();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Session fetch timeout")), 8000));
-                
-                const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
-                
-                if (session) {
-                    const userData = await fetchAndSetUser(session.user);
-                    if ((userData?.is_temporary_password || userData?.force_password_change) && !window.location.pathname.includes("/change-password")) {
-                        router.push("/change-password");
-                    }
-                }
-            } catch (err) {
-                console.error("AuthContext: Error getting initial session:", err.message);
             }
 
             const storedCity = localStorage.getItem("selectedCity");
@@ -61,22 +37,19 @@ export function AuthProvider({ children }) {
             } catch (err) {
                 console.error("Error parsing stored hierarchy:", err);
             }
-            
-            setLoading(false);
         };
 
         initializeAuth();
 
         let subscription = null;
         if (supabase) {
+            // onAuthStateChange handles initial session load automatically
             const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'SIGNED_IN' && !user) {
-                    setLoading(true);
-                }
-
+                console.log(`[AuthContext] Auth Event: ${event}`);
+                
                 if (session) {
                     await fetchAndSetUser(session.user);
-                } else if (event === 'SIGNED_OUT') {
+                } else {
                     setUser(null);
                     localStorage.removeItem("user");
                 }

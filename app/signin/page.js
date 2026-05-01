@@ -68,8 +68,10 @@ export default function SignInPage() {
     const [batteryLevel, setBatteryLevel] = useState(85);
     const [isCharging, setIsCharging] = useState(false);
     const [isRealMobile, setIsRealMobile] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         // Detect if we are on a real mobile device
         const checkMobile = () => {
             setIsRealMobile(window.innerWidth < 640 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
@@ -148,39 +150,32 @@ export default function SignInPage() {
         // Apply role-based defaults if no valid redirect OR not authorized for target
         if (isInvalidRedirect || !isAuthorized) {
             if (role === 'admin' || role === 'super_admin') {
-                destination = "/admin";
+                return "/admin";
             } else if (role === 'staff') {
-                destination = "/pwa-scan";
+                return "/pwa-scan";
             } else if (role === 'branding_partner') {
-                destination = "/branding/dashboard";
+                return "/branding/dashboard";
             } else if (role === "organiser" || role === "organizer") {
-                // If they have organiser role but are a professional service, send to vendor dashboard
                 const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
-                destination = isProfessional ? "/vendor/dashboard" : "/organiser";
+                return isProfessional ? "/vendor/dashboard" : "/organiser";
             } else if (role === "vendor") {
-                destination = "/vendor/dashboard";
+                return "/vendor/dashboard";
             } else {
-                destination = "/profile";
+                return "/profile";
             }
-        }
-
-        // ABSOLUTE SECURITY OVERRIDES (Regardless of redirectPath)
-        if (role === "staff") return "/pwa-scan";
-        if (role === "admin" || role === "super_admin") {
-            if (destination === "/" || destination === "/profile") return "/admin";
         }
 
         return destination;
     };
 
     // REDIRECT GUARD: If already logged in, go to redirectPath or home
-    // useEffect(() => {
-    //     if (!authLoading && user) {
-    //         const destination = getRedirectDestination(user, redirectPath);
-    //         console.log("SignInPage: Auto-redirect determined as:", destination);
-    //         router.replace(destination);
-    //     }
-    // }, [user, authLoading, router, redirectPath]);
+    useEffect(() => {
+        if (!authLoading && user && mounted) {
+            const destination = getRedirectDestination(user, redirectPath);
+            console.log("SignInPage: Auto-redirecting to:", destination);
+            router.replace(destination);
+        }
+    }, [user, authLoading, router, redirectPath, mounted]);
 
 
     // Sign In

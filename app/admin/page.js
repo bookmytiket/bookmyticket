@@ -683,7 +683,7 @@ function AdminHomePage() {
     });
 
 
-    const { data: rawPaymentGateways = [], loading: gatewaysLoading } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: false });
+    const { data: rawPaymentGateways = [], loading: gatewaysLoading } = useSupabaseQuery('payment_gateways', q => q, [], { realtime: true });
     const [addPaymentGateway] = useSupabaseMutation('payment_gateways', 'insert');
     const [patchPaymentGateway] = useSupabaseMutation('payment_gateways', 'update', (q, p) => q.eq('id', p.id));
     const [removePaymentGateway] = useSupabaseMutation('payment_gateways', 'delete', (q, p) => q.eq('id', p.id));
@@ -4372,6 +4372,7 @@ function AdminHomePage() {
                                     { name: "Stripe", desc: "Global payments, Cards, Apple Pay", color: "#6366f1" },
                                     { name: "PayPal", desc: "Global payments, Wallet, PayPal Credit", color: "#003087" },
                                     { name: "Razorpay", desc: "Cards, UPI, Netbanking (India)", color: "#339af0" },
+                                    { name: "Cashfree", desc: "UPI, Cards, EMI & Netbanking (India)", color: "#111827" },
                                     { name: "PayU", desc: "Enterprise checkout & UPI solutions", color: "#a4c639" },
                                     { name: "PhonePe", desc: "Direct UPI & merchant payments", color: "#6739b7" },
                                     { name: "Paytm", desc: "Wallet, UPI & Netbanking payments", color: "#00b9f1" }
@@ -4550,7 +4551,7 @@ function AdminHomePage() {
                                             <button type="button" onClick={() => setPaymentGatewayConfig(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textSub, padding: "4px" }}><X size={20} /></button>
                                         </div>
                                         <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", cursor: "pointer" }}>
-                                            <input type="checkbox" checked={!!paymentGatewayConfig.isEnabled} onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, isEnabled: e.target.checked })} />
+                                            <input type="checkbox" checked={!!paymentGatewayConfig.is_enabled} onChange={(e) => setPaymentGatewayConfig({ ...paymentGatewayConfig, is_enabled: e.target.checked })} />
                                             <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Enable this gateway</span>
                                         </label>
                                         <div style={{ marginBottom: "12px" }}>
@@ -4594,22 +4595,28 @@ function AdminHomePage() {
                                             <button
                                                 type="button"
                                                 onClick={async () => {
-                                                    if (paymentGatewayConfig._id) {
-                                                        await patchPaymentGatewayMutation({
-                                                            id: paymentGatewayConfig._id,
-                                                            isEnabled: paymentGatewayConfig.isEnabled,
-                                                            config: paymentGatewayConfig.config,
-                                                            testMode: paymentGatewayConfig.testMode
-                                                        });
-                                                    } else {
-                                                        await addPaymentGatewayMutation({
-                                                            name: paymentGatewayConfig.name,
-                                                            isEnabled: paymentGatewayConfig.isEnabled,
-                                                            config: paymentGatewayConfig.config,
-                                                            testMode: paymentGatewayConfig.testMode
-                                                        });
+                                                    try {
+                                                        if (paymentGatewayConfig.id) {
+                                                            await patchPaymentGateway({
+                                                                id: paymentGatewayConfig.id,
+                                                                is_enabled: paymentGatewayConfig.is_enabled,
+                                                                config: paymentGatewayConfig.config,
+                                                                test_mode: paymentGatewayConfig.test_mode
+                                                            });
+                                                        } else {
+                                                            await addPaymentGateway({
+                                                                name: paymentGatewayConfig.name,
+                                                                is_enabled: paymentGatewayConfig.is_enabled,
+                                                                config: paymentGatewayConfig.config,
+                                                                test_mode: paymentGatewayConfig.test_mode
+                                                            });
+                                                        }
+                                                        setPaymentGatewayConfig(null);
+                                                        showToast("Settings saved!", "success");
+                                                    } catch (err) {
+                                                        console.error("Save Error:", err);
+                                                        showToast("Failed to save: " + err.message, "error");
                                                     }
-                                                    setPaymentGatewayConfig(null);
                                                 }}
                                                 style={{ padding: "8px 16px", borderRadius: "8px", border: "none", backgroundColor: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: "14px", fontWeight: 600 }}>Save</button>
                                         </div>

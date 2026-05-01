@@ -401,16 +401,9 @@ function OrganiserPanel() {
 
         const checkAuth = async () => {
             if (!user) {
-                // If it's a deep-link for editing, check if we have a session at all
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    console.log("OrganiserPanel: Session exists but user context still loading. Waiting...");
-                    return; 
-                }
-
                 const params = new URLSearchParams(window.location.search);
                 if (params.get("editId")) {
-                    console.log("OrganiserPanel: editId detected, but no session. Waiting...");
+                    console.log("OrganiserPanel: editId detected, but no user. Waiting for auth state to stabilize...");
                     return; 
                 }
                 router.push("/signin?redirect=" + encodeURIComponent(window.location.pathname + window.location.search));
