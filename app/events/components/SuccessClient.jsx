@@ -22,8 +22,15 @@ export default function SuccessClient({ eventId, bookingId }) {
         [bookingId]
     );
 
+    const { data: branding, loading: brandingLoading } = useSupabaseQuery('site_branding', (q) => 
+        q.single(),
+        []
+    );
+
+    const eventLoading = false; // Placeholder if not defined
+
     useEffect(() => {
-        if (!bookingLoading && !eventLoading && !ticketLoading && booking && event && !celebrated) {
+        if (!bookingLoading && !brandingLoading && !ticketLoading && booking && event && !celebrated) {
             confetti({
                 particleCount: 150,
                 spread: 70,
@@ -32,9 +39,9 @@ export default function SuccessClient({ eventId, bookingId }) {
             });
             setCelebrated(true);
         }
-    }, [bookingLoading, eventLoading, ticketLoading, booking, event, celebrated]);
+    }, [bookingLoading, brandingLoading, ticketLoading, booking, event, celebrated]);
 
-    if (bookingLoading || eventLoading || ticketLoading) {
+    if (bookingLoading || brandingLoading || ticketLoading) {
         return (
             <div className="min-h-screen bg-[#FDFCFB] flex flex-col items-center justify-center p-8">
                 <div className="w-16 h-16 border-4 border-slate-100 border-t-pink-500 rounded-full animate-spin mb-4" />
@@ -82,6 +89,7 @@ export default function SuccessClient({ eventId, bookingId }) {
                             booking={booking} 
                             event={event} 
                             ticket={ticket}
+                            branding={branding}
                             showDownload={true} 
                         />
                     )}

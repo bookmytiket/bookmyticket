@@ -48,7 +48,8 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                     { label: "DISTANCE", value: booking.metadata?.distance || event.distance || "21K" },
                     { label: "TEAM", value: booking.metadata?.team_name || "PRO" }
                 ],
-                gradient: "from-[#064e3b] via-[#020617] to-[#020617]"
+                gradient: "from-[#064e3b] via-[#020617] to-[#020617]",
+                titleStyle: { fontFamily: "'Impact', 'Arial Black', sans-serif", letterSpacing: "-0.05em", transform: "skewX(-10deg)" }
             };
         }
         if (c.includes('concert') || c.includes('music')) {
@@ -62,7 +63,8 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                     { label: "ZONE", value: booking.metadata?.zone || "Platinum" },
                     { label: "ENTRY", value: "Gate 4" }
                 ],
-                gradient: "from-[#2e1065] via-[#4c1d95] to-[#020617]"
+                gradient: "from-[#2e1065] via-[#4c1d95] to-[#020617]",
+                titleStyle: { textShadow: "0 0 20px rgba(234, 179, 8, 0.5)", letterSpacing: "-0.02em" }
             };
         }
         if (c.includes('corporate') || c.includes('business')) {
@@ -76,7 +78,8 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                     { label: "ROLE", value: booking.customer_details?.designation || "Delegate" },
                     { label: "HALL", value: "A-12" }
                 ],
-                gradient: "from-[#1e1b4b] via-[#4c1d95] to-[#020617]"
+                gradient: "from-[#1e1b4b] via-[#4c1d95] to-[#020617]",
+                titleStyle: { fontWeight: "300", letterSpacing: "0.05em" }
             };
         }
         // Default Sports/Event - Using Yellow and Purple
@@ -90,7 +93,8 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                 { label: "STAND", value: "North Wing" },
                 { label: "GATE", value: "01" }
             ],
-            gradient: "from-[#4c1d95] via-[#1e1b4b] to-[#020617]"
+            gradient: "from-[#4c1d95] via-[#1e1b4b] to-[#020617]",
+            titleStyle: { fontWeight: "900", letterSpacing: "-0.03em" }
         };
     };
 
@@ -152,7 +156,10 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                                     {details.icon}
                                     <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${details.accent}`}>{details.label}</p>
                                 </div>
-                                <h2 className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white italic leading-[0.9] break-words">
+                                <h2 
+                                    className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white italic leading-[0.9] break-words"
+                                    style={details.titleStyle}
+                                >
                                     {event.title}
                                 </h2>
                             </div>
@@ -173,26 +180,64 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                     </div>
 
                     {/* Footer Details */}
-                    <div className="flex items-end justify-between border-t border-white/10 pt-8 mt-auto">
-                        <div className="flex gap-8">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-white/40">
-                                    <Calendar size={12} />
-                                    <p className="text-[9px] font-black uppercase tracking-widest">Date</p>
+                    <div className="flex items-end justify-between border-t border-white/10 pt-6 mt-auto">
+                        <div className="flex flex-col gap-4">
+                            {/* Sponsors Section */}
+                            <div className="space-y-1.5">
+                                <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Official Sponsors</p>
+                                <div className="flex items-center gap-4">
+                                    {(branding?.sponsor_logo_1 || branding?.sponsor_logo_2 || branding?.partner_logo_1 || branding?.partner_logo_2) ? (
+                                        <>
+                                            {[
+                                                branding?.sponsor_logo_1,
+                                                branding?.sponsor_logo_2,
+                                                branding?.partner_logo_1,
+                                                branding?.partner_logo_2
+                                            ].filter(Boolean).map((logo, idx) => (
+                                                <div key={idx} className="h-6 opacity-60 grayscale hover:grayscale-0 transition-all">
+                                                    <img src={logo} className="h-full w-auto object-contain" alt="Sponsor" />
+                                                </div>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-2 opacity-30 grayscale transition-all">
+                                                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center border border-white/10">
+                                                    <ShieldCheck size={12} className="text-white/40" />
+                                                </div>
+                                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Sponsor</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 opacity-30 grayscale transition-all">
+                                                <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center border border-white/10">
+                                                    <Zap size={12} className="text-white/40" />
+                                                </div>
+                                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Partner</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
-                                <p className="text-sm font-black text-white">{event.date || "TBA"}</p>
                             </div>
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-white/40">
-                                    <MapPin size={12} />
-                                    <p className="text-[9px] font-black uppercase tracking-widest">Venue</p>
+                            
+                            <div className="flex gap-8 pt-2">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-white/40">
+                                        <Calendar size={10} />
+                                        <p className="text-[8px] font-black uppercase tracking-widest">Date</p>
+                                    </div>
+                                    <p className="text-xs font-black text-white">{event.date || "TBA"}</p>
                                 </div>
-                                <p className="text-sm font-black text-white truncate max-w-[150px]">{event.location?.split(',')[0]}</p>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-white/40">
+                                        <MapPin size={10} />
+                                        <p className="text-[8px] font-black uppercase tracking-widest">Venue</p>
+                                    </div>
+                                    <p className="text-xs font-black text-white truncate max-w-[120px]">{event.location?.split(',')[0]}</p>
+                                </div>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Pass Price</p>
-                            <p className={`text-3xl font-black ${details.accent}`}>₹{booking.total_price}</p>
+                            <p className={`text-2xl font-black ${details.accent}`}>₹{booking.total_price}</p>
                         </div>
                     </div>
                 </div>
@@ -204,23 +249,32 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                 </div>
 
                 {/* Right Section: Stub */}
-                <div className="flex-1 bg-white/5 p-10 flex flex-col items-center justify-center relative">
+                <div className="flex-1 bg-white/5 p-8 flex flex-col items-center justify-center relative">
                     <div 
                         className={`p-3 bg-gradient-to-tr from-yellow-400 to-purple-600 rounded-2xl shadow-2xl transition-all cursor-pointer ${!isRevealed && !isCapturing ? 'blur-md grayscale opacity-20' : ''}`}
                         onClick={() => setIsRevealed(!isRevealed)}
                     >
                         <div className="bg-white p-1 rounded-xl">
-                            <QRCodeSVG value={ticketNumber} size={132} level="H" fgColor="#2e1065" />
+                            <QRCodeSVG value={ticketNumber} size={110} level="H" fgColor="#2e1065" />
                         </div>
                     </div>
 
-                    <div className="mt-8 text-center space-y-1">
+                    <div className="mt-6 text-center space-y-1">
                         <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Ticket ID</p>
-                        <p className={`text-xl font-mono font-black italic tracking-tighter ${details.accent}`}>#{ticketNumber}</p>
+                        <p className={`text-lg font-mono font-black italic tracking-tighter ${details.accent}`}>#{ticketNumber}</p>
+                    </div>
+
+                    {/* Powered By Section */}
+                    <div className="mt-auto pt-4 flex flex-col items-center gap-1.5 opacity-30">
+                        <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Powered By</p>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5 shadow-inner">
+                            <img src={branding?.powered_by_logo_url || "/logo.png"} className="h-3 w-auto brightness-0 invert opacity-80" alt="Logo" />
+                            <span className="text-[7px] font-black text-white uppercase tracking-[0.2em]">{branding?.name || "BookMyTicket"}</span>
+                        </div>
                     </div>
 
                     <div className="absolute top-1/2 -right-4 -translate-y-1/2 rotate-90 whitespace-nowrap">
-                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/10">ID: {booking.id.slice(0, 16)}</p>
+                        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/5">ID: {booking.id.slice(0, 16)}</p>
                     </div>
                 </div>
 

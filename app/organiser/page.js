@@ -1485,19 +1485,18 @@ function OrganiserPanel() {
 
     const styles = (
         <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
             .admin-container { 
                 display: flex; 
                 min-height: 100vh; 
-                background-color: #f8fafc; 
-                color: #0f172a;
-                font-family: 'Figtree', sans-serif;
+                background: linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%); 
+                color: #ffffff;
                 -webkit-font-smoothing: antialiased;
             }
             .sidebar {
                 width: 280px;
-                background-color: #ffffff;
-                color: #64748b;
+                background-color: rgba(2, 6, 23, 0.3);
+                backdrop-filter: blur(30px);
+                color: rgba(255, 255, 255, 0.6);
                 display: flex;
                 flex-direction: column;
                 position: fixed;
@@ -1505,15 +1504,16 @@ function OrganiserPanel() {
                 left: 0;
                 top: 0;
                 z-index: 100;
-                border-right: 1px solid #e2e8f0;
-                box-shadow: 20px 0 50px rgba(226, 232, 240, 0.4);
+                border-right: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.2);
             }
             .sidebar-logo {
                 padding: 24px 30px;
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                border-bottom: 1px solid #f8fafc;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                filter: brightness(0) invert(1);
             }
             .sidebar-category {
                 padding: 24px 30px 12px;
@@ -1532,7 +1532,7 @@ function OrganiserPanel() {
                 cursor: pointer;
                 font-size: 14px;
                 font-weight: 600;
-                color: #64748b;
+                color: rgba(255, 255, 255, 0.6);
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 border: none;
                 background: none;
@@ -1541,15 +1541,15 @@ function OrganiserPanel() {
                 letter-spacing: -0.01em;
             }
             .sidebar-item:hover {
-                background-color: #f8fafc;
-                color: #0f172a;
+                background-color: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
                 transform: translateX(6px);
             }
             .sidebar-item.active {
-                background-color: #0f172a!important;
-                color: #ffffff!important;
-                font-weight: 800;
-                box-shadow: 0 15px 30px -5px rgba(15, 23, 42, 0.15);
+                background: linear-gradient(90deg, rgba(236, 72, 153, 0.2), rgba(219, 39, 119, 0.1));
+                color: #ffffff;
+                border: 1px solid rgba(236, 72, 153, 0.3);
+                box-shadow: 0 0 20px rgba(236, 72, 153, 0.1);
             }
             .sidebar-dropdown-item {
                 display: flex;
@@ -1583,13 +1583,13 @@ function OrganiserPanel() {
                 flex-direction: column;
                 min-width: 0;
                 position: relative;
-                background-color: #f8fafc;
+                background: transparent;
             }
             .top-header {
                 height: 48px;
-                background-color: rgba(255, 255, 255, 0.8);
+                background-color: rgba(255, 255, 255, 0.05);
                 backdrop-filter: blur(20px);
-                border-bottom: 1px solid #e2e8f0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -1601,18 +1601,18 @@ function OrganiserPanel() {
             .top-header-search {
                 display: flex;
                 align-items: center;
-                background-color: #f1f5f9;
+                background-color: rgba(255, 255, 255, 0.05);
                 border-radius: 16px;
                 padding: 10px 20px;
                 width: 320px;
                 gap: 12px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 transition: all 0.3s;
             }
             .top-header-search:focus-within {
-                border-color: #ec4899;
-                background-color: #ffffff;
-                box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.05);
+                border-color: #facc15;
+                background-color: rgba(255, 255, 255, 0.1);
+                box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.1);
             }
             .top-header-search input {
                 background: none;
@@ -1685,22 +1685,23 @@ function OrganiserPanel() {
                 .detail-grid { grid-template-columns: 1fr; }
             }
             .overview-card {
-                background-color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
                 padding: 28px 20px;
                 border-radius: 24px;
-                border: 1px solid #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 text-align: center;
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
             }
             .overview-card:hover {
                 transform: translateY(-8px);
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                border-color: #ec489950;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 0 20px rgba(250, 204, 21, 0.2);
+                border-color: rgba(250, 204, 21, 0.4);
             }
             .overview-card-icon {
                 width: 54px;
@@ -1713,15 +1714,16 @@ function OrganiserPanel() {
                 box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
             }
             .welcome-banner {
-                background-color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
                 border-radius: 28px;
                 padding: 32px;
                 margin-bottom: 32px;
                 display: flex;
                 align-items: center;
                 gap: 24px;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                 position: relative;
                 overflow: hidden;
             }
@@ -4924,7 +4926,7 @@ function OrganiserPanel() {
         };
 
         return (
-            <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
+            <div style={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%)', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased', color: '#ffffff' }}>
                 {styles}
                 {/* Create Event Modal */}
                 {showCreateEvent && (
@@ -5496,7 +5498,7 @@ function OrganiserPanel() {
 
     // Restricted Sidebar for Stages (MFA/KYC/Pending)
     const renderRestrictedSidebar = (children) => (
-        <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased', overflow: "hidden" }}>
+        <div style={{ display: 'flex', height: '100vh', background: 'linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%)', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased', overflow: "hidden", color: '#ffffff' }}>
             {styles}
             <aside className="sidebar">
                 <div className="sidebar-logo">

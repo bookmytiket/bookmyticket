@@ -254,7 +254,7 @@ export default function BrandingPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Logo */}
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <img src="/logo.png" alt="BookMyTicket" style={{ height: 56, width: 'auto', display: 'block' }} />
+            <img src="/logo.png" alt="BookMyTicket" style={{ height: 72, width: 'auto', display: 'block' }} />
           </Link>
           {/* Nav links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -395,7 +395,7 @@ export default function BrandingPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <h2 style={{ fontSize: 38, fontWeight: 900, color: '#111827', letterSpacing: -0.5, marginBottom: 12 }}>
-              Why Choose <span style={{ background: 'linear-gradient(135deg,#4f46e5,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Ticket9 Branding</span>
+              Why Choose <span style={{ background: 'linear-gradient(135deg,#4f46e5,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>BookMyTicket Branding</span>
             </h2>
             <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 480, margin: '0 auto' }}>Everything you need to make your brand unforgettable at every live event.</p>
           </div>
@@ -445,7 +445,7 @@ export default function BrandingPage() {
       {/* ── CTA ── */}
       <section style={{ background: 'linear-gradient(135deg,#4f46e5 0%,#7c3aed 60%,#ec4899 100%)', padding: '80px 24px', textAlign: 'center' }}>
         <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', marginBottom: 16, letterSpacing: -0.5 }}>Ready to Transform Your Brand?</h2>
-        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.8)', marginBottom: 32 }}>Join 100+ brands already growing with Ticket9 Branding</p>
+        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.8)', marginBottom: 32 }}>Join 100+ brands already growing with BookMyTicket Branding</p>
         <Link href="/branding/signin" style={{ display: 'inline-block', background: '#fff', color: '#4f46e5', padding: '16px 40px', borderRadius: 12, fontWeight: 800, fontSize: 16, textDecoration: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', transition: 'all 0.2s' }}>
           Get Started Free →
         </Link>

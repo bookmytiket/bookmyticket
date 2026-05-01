@@ -87,9 +87,9 @@ export default function DashboardLayout({ children }) {
       <aside style={{ width: 260, background: C.sidebar, borderRight: `1px solid ${C.sidebarBorder}`, display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, padding: '24px 16px' }}>
         
         {/* Logo */}
-        <div style={{ padding: '4px 4px 24px' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: 24, fontWeight: 900, color: '#1e1b4b', gap: 4 }}>
-             ticket<span style={{ color: '#ff5862' }}>9</span>
+        <div style={{ padding: '8px 0 32px', textAlign: 'center' }}>
+          <Link href="/" style={{ textDecoration: "none", display: "inline-block" }}>
+            <img src="/logo.png" alt="BookMyTicket" style={{ height: 60, width: "auto", objectFit: "contain" }} />
           </Link>
         </div>
 
@@ -133,15 +133,15 @@ export default function DashboardLayout({ children }) {
 
         {/* Header */}
         <header style={{
-          height: 64, background: '#ffffff', borderBottom: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          height: 80, background: '#ffffff', borderBottom: `1px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '0 28px', position: 'sticky', top: 0, zIndex: 10,
         }}>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 4 }}>
-             ticket<span style={{ color: '#ff5862' }}>9</span>
-          </div>
+          <Link href="/" style={{ textDecoration: "none", display: "inline-block" }}>
+            <img src="/logo.png" alt="BookMyTicket" style={{ height: 48, width: "auto", objectFit: "contain" }} />
+          </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ position: 'absolute', right: 28, display: 'flex', alignItems: 'center', gap: 16 }}>
             <button 
               style={{ 
                 background: '#fff', color: '#1e1b4b', border: '1px solid #e5e7eb', 

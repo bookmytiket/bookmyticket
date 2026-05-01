@@ -12,7 +12,7 @@ const SLIDES = [
   {
     title: "Welcome back to Sponsor Connect",
     badge: "Inside Sponsor Connect",
-    desc: "Ticket9's sponsor connect is not just a platform — it's where real-world engagement begins. Every login opens doors to visibility, connection, and impact.",
+    desc: "BookMyTicket's sponsor connect is not just a platform — it's where real-world engagement begins. Every login opens doors to visibility, connection, and impact.",
   },
   {
     title: "Reach Thousands of Event-goers",
@@ -90,19 +90,34 @@ export default function BrandingSignIn() {
     setError('');
     setLoading(true);
     try {
-      const hashed = await hashPassword(password);
-      const { data: userData, error: dbError } = await supabase
-        .from('users').select('*').eq('identifier', email).maybeSingle();
-      if (dbError || !userData) { setError('Invalid credentials.'); return; }
-      if (userData.password !== hashed) { setError('Invalid credentials.'); return; }
-      if (userData.role === 'branding_partner' || isServiceProvider(userData.category)) {
-        await login(email, hashed, userData.role || 'branding_partner', userData);
+      const result = await login(email, password);
+      if (result.success) {
+        // AuthContext handles redirection, but we can add a fallback if needed
+        if (result.user.role === 'branding_partner' || result.user.role === 'organiser' || result.user.role === 'vendor') {
+           router.push('/branding/dashboard'); // Or wherever branding partners go now
+        }
       } else {
-        setError('This account is not registered as a branding partner.');
+        setError(result.error || 'Invalid credentials.');
       }
     } catch (err) {
       setError(err.message || 'An error occurred.');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/branding/dashboard`
+        }
+      });
+      if (authError) throw authError;
+    } catch (err) {
+      setError(err.message || "Google Sign-In failed.");
       setLoading(false);
     }
   };
@@ -124,14 +139,34 @@ export default function BrandingSignIn() {
     setError('');
     setLoading(true);
     try {
-      const hashed = await hashPassword(password);
-      const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
-      const { data: newUser, error: insertError } = await supabase.from('users').insert({
-        email, identifier: email, password: hashed,
-        full_name: name, username, role: 'branding_partner',
-      }).select('id').single();
-      if (insertError) throw insertError;
-      await login(email, hashed, 'branding_partner', { id: newUser.id, fullName: name });
+      // Use the standard signup API which handles Supabase Auth + Profiles
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: name,
+          role: 'branding_partner' // Note: API might need update to accept role
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // If the role needs to be branding_partner, update it in profiles
+        // (API route currently defaults to 'user')
+        await supabase
+          .from('profiles')
+          .update({ role: 'branding_partner' })
+          .eq('id', data.userId);
+
+        const loginRes = await login(email, password);
+        if (loginRes.success) {
+          router.push('/branding/dashboard');
+        }
+      } else {
+        throw new Error(data.error || 'Signup failed');
+      }
     } catch (err) {
       setError(err.message || 'Signup failed. Please try again.');
     } finally {
@@ -181,6 +216,25 @@ export default function BrandingSignIn() {
         }
         .signin-btn-primary:hover { background: #2d2a5d; }
         .signin-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .signin-btn-google {
+          width: 100%;
+          padding: 12px;
+          background: #fff;
+          color: #374151;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          transition: all 0.2s;
+          margin-top: 16px;
+          font-family: 'Inter', sans-serif;
+        }
+        .signin-btn-google:hover { background: #f9fafb; border-color: #d1d5db; }
         .signin-label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
         .slide-dot { width: 8px; height: 8px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s; }
       `}</style>
@@ -244,7 +298,7 @@ export default function BrandingSignIn() {
           {/* Logo moved centrally above text */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
             <Link href="/branding" style={{ textDecoration: "none", display: "inline-block" }}>
-              <img src="/logo.png" alt="bookmyticket" style={{ height: 60, width: "auto", objectFit: "contain" }} />
+              <img src="/logo.png" alt="BookMyTicket" style={{ height: 80, width: "auto", objectFit: "contain" }} />
             </Link>
           </div>
 
@@ -257,7 +311,7 @@ export default function BrandingSignIn() {
               <p style={{ fontSize: 14, color: "#6b7280", textAlign: "center", marginBottom: 32 }}>
                 {mode === "signin"
                   ? "Log in to manage your sponsorships, coupons, and events in one place."
-                  : "Join 100+ brands already growing with Ticket9 Branding."}
+                  : "Join 100+ brands already growing with BookMyTicket Branding."}
               </p>
 
               <form onSubmit={mode === "signin" ? handleLogin : handleSignupSendOTP}>
@@ -324,6 +378,22 @@ export default function BrandingSignIn() {
                   {loading ? "Please wait..." : (mode === "signin" ? "Sign In" : "Continue →")}
                 </button>
               </form>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0" }}>
+                <div style={{ flex: 1, height: "1px", background: "#e5e7eb" }} />
+                <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 500 }}>OR</span>
+                <div style={{ flex: 1, height: "1px", background: "#e5e7eb" }} />
+              </div>
+
+              <button 
+                type="button" 
+                className="signin-btn-google" 
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" style={{ width: 18, height: 18 }} />
+                Continue with Google
+              </button>
 
               <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#6b7280" }}>
                 {mode === "signin" ? "Haven't signed up yet? " : "Already have an account? "}

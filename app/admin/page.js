@@ -133,7 +133,7 @@ const SubscribersTable = ({ t, theme }) => {
             </thead>
             <tbody>
                 {subscribers.map((subs) => (
-                    <tr key={subs.id} style={{ backgroundColor: theme === 'light' ? '#fff' : t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                    <tr key={subs.id} style={{ backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}`, boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.1)" }}>
                         <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                 <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#ec489920", display: "flex", alignItems: "center", justifyContent: "center", color: "#ec4899" }}>
@@ -1285,12 +1285,8 @@ function AdminHomePage() {
                 .from('branding')
                 .getPublicUrl(fileName);
 
-            if (type === 'logo') {
-                setLocalBranding(prev => ({ ...prev, logo_url: publicUrl }));
-            } else {
-                setLocalBranding(prev => ({ ...prev, powered_by_logo_url: publicUrl }));
-            }
-            showToast(`${type === 'logo' ? 'Site logo' : 'Powered By logo'} uploaded successfully!`, "success");
+            setLocalBranding(prev => ({ ...prev, [`${type}_url`]: publicUrl }));
+            showToast(`${type.replace('_', ' ')} uploaded successfully!`, "success");
         } catch (err) {
             console.error("Upload error:", err);
             showToast("Upload failed: " + err.message, "error");
@@ -1997,15 +1993,13 @@ function AdminHomePage() {
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
     return (
-        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased' }}>
+        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: t.bg }}>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
                 .admin-container { 
                     display: flex; 
                     min-height: 100vh; 
                     background-color: #f8fafc; 
                     color: #0f172a;
-                    font-family: 'Figtree', sans-serif;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     transition: all 0.3s ease;
@@ -2110,6 +2104,20 @@ function AdminHomePage() {
                     flex: 1;
                     padding: 24px;
                     min-width: 0;
+                    position: relative;
+                    background: linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%);
+                    min-height: 100vh;
+                }
+                .main-content::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: radial-gradient(circle at 50% -20%, #facc1508, transparent 70%);
+                    pointer-events: none;
+                    z-index: 0;
                 }
                 @media (max-width: 1024px) {
                     .sidebar { transform: translateX(-100%); width: 280px; }
@@ -2122,22 +2130,56 @@ function AdminHomePage() {
                     .sidebar-overlay.visible { display: block; }
                 }
                 .widget-card {
-                    background-color: ${t.cardBg};
-                    border-radius: 16px;
-                    border: 1px solid ${t.border};
-                    padding: 16px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    background: rgba(255, 255, 255, 0.03);
+                    backdrop-filter: blur(30px);
+                    border-radius: 24px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    padding: 24px;
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
+                    z-index: 1;
+                }
+                .widget-card::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+                    opacity: 0;
+                    transition: opacity 0.4s;
                 }
                 .widget-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                    transform: translateY(-8px) scale(1.02);
+                    border-color: rgba(255, 255, 255, 0.2);
+                    background: rgba(255, 255, 255, 0.05);
                 }
+                .widget-card:hover::before {
+                    opacity: 1;
+                }
+                /* Neon Glow Border Effect for specific card */
+                .widget-card.glow-yellow {
+                    border-color: rgba(250, 204, 21, 0.4);
+                    box-shadow: 0 0 20px rgba(250, 204, 21, 0.1);
+                }
+                .widget-card.glow-pink { border-color: rgba(236, 72, 153, 0.3); }
+                .widget-card.glow-purple { border-color: rgba(139, 92, 246, 0.3); }
+                .widget-card.glow-blue { border-color: rgba(59, 130, 246, 0.3); }
+
                 .stats-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 12px;
-                    margin-bottom: 24px;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 32px;
+                }
+                .sparkline {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 40px;
+                    opacity: 0.4;
+                    pointer-events: none;
                 }
                 .section-card {
                     background-color: ${t.cardBg};
@@ -2202,28 +2244,27 @@ function AdminHomePage() {
 
             
             {/* Sidebar Overlay (mobile only) */}
+
+            {/* Sidebar Overlay (mobile only) */}
             {isSidebarOpen && (
-                <div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+                <div className="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-md" onClick={() => setIsSidebarOpen(false)} />
             )}
 
-            {/* Sidebar Navigation - always visible on desktop, slide-in on mobile */}
-            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 bg-white border-r border-slate-200 transition-transform  transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl shadow-slate-200/50 flex flex-col flex-shrink-0`}>
+            {/* Sidebar Navigation */}
+            <aside className={`fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-60 border-r transition-transform transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col flex-shrink-0`} style={{ backgroundColor: t.sidebar, borderColor: t.sidebarBorder }}>
                 {/* Header */}
-                <div className="h-16 flex items-center justify-center border-b border-slate-50 bg-white">
+                <div className="h-16 flex items-center justify-center border-b" style={{ borderColor: t.sidebarBorder }}>
                     <div className="flex items-center cursor-pointer" onClick={() => setActiveTab("dashboard")}>
-                        <img src="/logo.png" alt="BookMyTicket" className="h-14 w-auto" />
+                        <img src="/logo.png" alt="BookMyTicket" className="h-12 w-auto" />
                     </div>
                 </div>
                 
                 {/* Side Sub-Header (Service Role) */}
-                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
-                        <Sparkles size={40} className="text-pink-500" />
-                    </div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1.5">Admin Portal</p>
+                <div className="px-4 py-3 border-b" style={{ borderColor: t.sidebarBorder }}>
+                    <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: t.textSub }}>Admin Portal</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full  shadow-sm shadow-green-500/50"></div>
-                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Super Admin</span>
+                        <div className="w-2 h-2 bg-green-500 rounded-full shadow-sm"></div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textMain }}>Super Admin</span>
                     </div>
                 </div>
 
@@ -2231,36 +2272,44 @@ function AdminHomePage() {
                     {/* Render Helper */}
                     {(() => {
                         const SidebarItem = ({ id, label, icon: Icon, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all  group relative ${ active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-[1.02]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
-                                <Icon size={18} className={active ? 'text-pink-500' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
+                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all  group relative ${ active ? 'bg-slate-900 text-white shadow-2xl shadow-yellow-500/20 scale-[1.02] ring-1 ring-yellow-500/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:scale-[1.02]' }`}>
+                                <Icon size={18} className={active ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-slate-300 group-hover:text-slate-900'} strokeWidth={active ? 3 : 2} />
                                 <span className={`text-[11px] uppercase tracking-widest whitespace-nowrap ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
-                                {active && <div className="absolute right-4 w-1 h-4 bg-pink-500 rounded-full"></div>}
+                                {active && <div className="absolute right-4 w-1 h-4 bg-yellow-400 rounded-full shadow-[0_0_12px_rgba(250,204,21,0.8)]"></div>}
                             </button>
                         );
                         const SidebarGroupTitle = ({ title }) => (
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 mb-1 px-4 first:mt-2">{title}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest mt-6 mb-2 px-4" style={{ color: t.textSub, opacity: 0.5 }}>{title}</p>
                         );
                         const SidebarCategoryHeader = ({ label, icon: Icon, isOpen, onClick, badge }) => (
                             <button 
                                 onClick={onClick}
-                                className={`w-full flex items-center justify-between px-4 py-2 mt-2 transition-all  group ${isOpen ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`w-full flex items-center justify-between px-4 py-2 mt-1 transition-all group`}
+                                style={{ color: isOpen ? t.activeLink : t.textSub }}
                             >
                                 <div className="flex items-center space-x-3">
-                                    <Icon size={18} className={isOpen ? "text-pink-500" : "text-slate-300 group-hover:text-slate-400"} strokeWidth={2.5} />
-                                    <span className={`text-[11px] uppercase tracking-[0.2em] whitespace-nowrap ${isOpen ? 'font-black' : 'font-bold'}`}>{label}</span>
+                                    <Icon size={18} className={isOpen ? "text-blue-500" : "opacity-40"} />
+                                    <span className={`text-[11px] uppercase tracking-wider ${isOpen ? 'font-bold' : 'font-semibold'}`}>{label}</span>
                                     {badge > 0 && (
-                                        <span className="ml-2 px-2 py-0.5 bg-pink-500 text-white text-[9px] font-black rounded-full shadow-lg shadow-pink-500/20 animate-pulse">
+                                        <span className="ml-2 px-2 py-0.5 bg-pink-500 text-white text-[9px] font-bold rounded-full">
                                             {badge}
                                         </span>
                                     )}
                                 </div>
-                                <ChevronDown size={14} className={`transition-transform  ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-300'}`} />
+                                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                             </button>
                         );
                         const SidebarSubItem = ({ id, label, onClick, active }) => (
-                            <button onClick={onClick} className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-xl transition-all  group ${ active ? 'bg-pink-50 text-pink-600 font-black scale-[1.01]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800' }`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-pink-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></div>
-                                <span className="text-[10px] uppercase tracking-widest font-bold whitespace-nowrap">{label}</span>
+                            <button 
+                                onClick={onClick} 
+                                className={`w-full flex items-center space-x-3 px-4 py-1.5 pl-10 rounded-lg transition-all`}
+                                style={{ 
+                                    color: active ? t.activeLink : t.textSub,
+                                    backgroundColor: active ? `${t.activeLink}15` : 'transparent'
+                                }}
+                            >
+                                <div className={`w-1 h-1 rounded-full ${active ? 'bg-blue-500' : 'bg-current opacity-20'}`}></div>
+                                <span className={`text-[10px] uppercase tracking-wider ${active ? 'font-bold' : 'font-medium'}`}>{label}</span>
                             </button>
                         );
 
@@ -2278,7 +2327,6 @@ function AdminHomePage() {
                                             { label: "Hero Banner", id: "hero" },
                                             { label: "Mobile Banners", id: "mobile_banners" },
                                             { label: "Video Banner", id: "video_banner" },
-                                            { label: "Site Branding", id: "site_branding" },
                                             { label: "Featured Events", id: "events_settings" },
                                             { label: "Event Partners", id: "event_partners" },
                                             { label: "Recent Memories", id: "memories" },
@@ -2359,13 +2407,13 @@ function AdminHomePage() {
 
                                 <SidebarGroupTitle title="Reports" />
                                 <SidebarItem id="support_tickets" label="Ticket System" icon={MessageCircle} active={activeTab === "support_tickets"} onClick={() => setActiveTab("support_tickets")} />
-                                <SidebarItem id="branding_partners" label="Branding Partners" icon={Shield} active={activeTab === "branding_partners"} onClick={() => setActiveTab("branding_partners")} />
                                 <SidebarItem id="pages" label="Pages" icon={FileText} active={activeTab === "pages"} onClick={() => setActiveTab("pages")} />
                                 <SidebarItem id="ad_popups" label="Ad Popups" icon={Megaphone} active={activeTab === "ad_popups"} onClick={() => setActiveTab("ad_popups")} />
                                 <SidebarItem id="checkout_footer" label="Checkout Footer" icon={LayoutGrid} active={activeTab === "checkout_footer"} onClick={() => setActiveTab("checkout_footer")} />
 
                                 <SidebarGroupTitle title="Administration" />
                                 <SidebarItem id="admin_management" label="Team Management" icon={Shield} active={activeTab === "admin_management"} onClick={() => setActiveTab("admin_management")} />
+                                <SidebarItem id="site_branding" label="Branding & Logos" icon={Sparkles} active={activeTab === "site_branding"} onClick={() => setActiveTab("site_branding")} />
                                 
                                 <SidebarCategoryHeader label="Careers" icon={Briefcase} isOpen={isCareersOpen} onClick={() => setIsCareersOpen(!isCareersOpen)} badge={newApplicantsCount} />
                                 {isCareersOpen && (
@@ -2405,65 +2453,65 @@ function AdminHomePage() {
                 </nav>
 
                 {/* Footer - Profile Minimal */}
-                <div className="p-4 border-t border-slate-50 bg-slate-50/50 mt-auto">
-                    <div className="bg-white rounded-[1.2rem] p-3 mb-2 flex items-center space-x-3 border border-slate-100 shadow-sm group cursor-pointer hover:border-pink-500/30 transition-all">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-500 border border-pink-200 overflow-hidden shadow-inner font-bold text-xs">
+                <div className="p-4 border-t mt-auto" style={{ borderColor: t.sidebarBorder }}>
+                    <div className="rounded-xl p-2.5 mb-2 flex items-center space-x-3 border shadow-sm" style={{ backgroundColor: t.cardBg, borderColor: t.border }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs border" style={{ backgroundColor: t.header, color: t.textMain, borderColor: t.border }}>
                             A
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <p className="text-[9px] font-black text-slate-900 truncate uppercase tracking-tight italic">Admin User</p>
-                            <p className="text-[8px] font-black text-slate-300 truncate uppercase tracking-[0.2em] mt-0.5">Verified</p>
+                            <p className="text-[10px] font-bold truncate uppercase tracking-tight" style={{ color: t.textMain }}>Admin User</p>
+                            <p className="text-[9px] font-medium truncate uppercase tracking-widest" style={{ color: t.textSub }}>Verified</p>
                         </div>
                     </div>
-                    <div className="mb-2" />
                     <button 
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-[0.8rem] bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02] transition-all  shadow-xl shadow-pink-500/20 group"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:opacity-90 transition-all shadow-md"
                     >
-                        <LogOut size={12} strokeWidth={3} className="text-white" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Sign Out</span>
+                        <LogOut size={12} strokeWidth={2.5} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Sign Out</span>
                     </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-transparent">
                 
                 {/* Top Header */}
-                <header className="h-16 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-8 lg:px-12">
+                <header className="h-16 sticky top-0 z-40 border-b flex items-center justify-between px-8 lg:px-12" style={{ backgroundColor: t.header, borderColor: t.border }}>
                     <div className="flex items-center space-x-8">
                         <button 
                             onClick={() => setIsSidebarOpen(true)}
-                            className="p-3 rounded-2xl bg-slate-50 text-slate-400 lg:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
+                            className="p-2 rounded-lg lg:hidden transition-all border"
+                            style={{ backgroundColor: t.cardBg, color: t.textSub, borderColor: t.border }}
                         >
-                            <Menu size={22} />
+                            <Menu size={20} />
                         </button>
                         <div>
-                            <div className="flex items-center gap-2.5 mb-0.5">
-                                <div className="w-1 h-3.5 bg-pink-500 rounded-full"></div>
-                                <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <div className="w-1 h-4 bg-yellow-400 rounded-full"></div>
+                                <h1 className="text-xl font-bold tracking-tight uppercase" style={{ color: t.textMain }}>
                                     {activeTab.replace('_', ' ')}
                                 </h1>
                             </div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-3.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: t.textSub }}>
                                 Admin Dashboard Overview
                             </p>
                         </div>
                     </div>
 
                     <div className="flex items-center space-x-4">
-                        <button className="relative p-3 rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all border border-slate-100 shadow-sm">
-                            <Bell size={20} />
-                            <span className="absolute top-3 right-3 w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
-                            <span className="absolute top-3 right-3 w-2 h-2 bg-pink-500 rounded-full border border-white"></span>
+                        <button className="relative p-2 rounded-lg border transition-all" style={{ backgroundColor: t.cardBg, color: t.textSub, borderColor: t.border }}>
+                            <Bell size={18} />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full border-2" style={{ borderColor: t.header }}></span>
                         </button>
                         
-                        <div className="hidden md:flex items-center space-x-4 ml-4 pl-4 border-l border-slate-200">
+                        <div className="hidden md:flex items-center space-x-4 ml-4 pl-4 border-l" style={{ borderColor: t.border }}>
                             <div className="text-right">
-                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight italic">Admin User</p>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Platform Admin</p>
+                                <p className="text-xs font-bold uppercase" style={{ color: t.textMain }}>Admin User</p>
+                                <p className="text-[10px] font-medium uppercase" style={{ color: t.textSub }}>Platform Admin</p>
                             </div>
-                            <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black shadow-lg shadow-slate-900/20">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold border shadow-sm" style={{ backgroundColor: t.cardBg, color: t.textMain, borderColor: t.border }}>
                                 A
                             </div>
                         </div>
@@ -2474,30 +2522,17 @@ function AdminHomePage() {
                 <main className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === "dashboard" && (
                         <>
-                            {/* Welcome Banner */}
-                            <div style={{ 
-                                background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                                borderRadius: "20px",
-                                padding: "24px",
+                                <div className="widget-card" style={{ 
+                                padding: "32px", 
+                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)',
+                                borderRadius: "20px", 
                                 marginBottom: "24px",
-                                position: "relative",
-                                overflow: "hidden",
-                                border: `1px solid ${t.border}`,
-                                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)"
+                                border: `1px solid ${t.border}`
                             }}>
-                                <div style={{ position: "relative", zIndex: 2 }}>
-                                    <h2 style={{ fontSize: "28px", fontWeight: 900, color: t.textMain, marginBottom: "8px", letterSpacing: "-0.03em" }}>Welcome back, Admin! 👋</h2>
-                                    <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "500px", lineHeight: "1.5", fontWeight: 500 }}>
-                                        Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
-                                    </p>
-                                    <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-                                        <button onClick={() => setActiveTab("org_requests")} style={{ padding: "10px 20px", borderRadius: "12px", background: ACCENT_GRADIENT, color: "#fff", border: "none", fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 20px -5px rgba(59, 130, 246, 0.4)", transition: "all 0.2s", fontSize: "12px" }}>View Requests</button>
-                                        <button onClick={() => setActiveTab("all_events")} style={{ padding: "10px 20px", borderRadius: "12px", background: theme === 'dark' ? "rgba(255,255,255,0.05)" : "#fff", color: t.textMain, border: `1px solid ${t.border}`, fontWeight: 800, cursor: "pointer", transition: "all 0.2s", fontSize: "12px" }}>Manage Events</button>
-                                    </div>
-                                </div>
-                                {/* Modern Abstract Background Element */}
-                                <div style={{ position: "absolute", top: "-50px", right: "-50px", width: "400px", height: "400px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_BLUE}15 0%, transparent 70%)`, pointerEvents: "none" }}></div>
-                                <div style={{ position: "absolute", bottom: "-100px", left: "10%", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${ACCENT_PINK}10 0%, transparent 70%)`, pointerEvents: "none" }}></div>
+                                <h2 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, marginBottom: "8px" }}>Welcome back, Admin! 👋</h2>
+                                <p style={{ fontSize: "14px", color: t.textSub, maxWidth: "500px" }}>
+                                    Here's what's happening with your platform today. You have pending ad requests and thousands of active events.
+                                </p>
                             </div>
 
                             <div className="stats-grid">
@@ -2512,10 +2547,10 @@ function AdminHomePage() {
                                 ].map((stat, i) => (
                                     <div key={i} className="widget-card" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: `${stat.color}15`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color }}>
+                                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: `${stat.color}25`, display: "flex", alignItems: "center", justifyContent: "center", color: stat.color, border: `1px solid ${stat.color}40` }}>
                                                 <stat.icon size={20} />
                                             </div>
-                                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#22c55e", backgroundColor: "#f0fdf4", padding: "2px 6px", borderRadius: "4px" }}>{stat.trend}</span>
+                                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#4ade80", backgroundColor: "rgba(34, 197, 94, 0.1)", padding: "2px 8px", borderRadius: "6px", border: "1px solid rgba(34, 197, 94, 0.2)" }}>{stat.trend}</span>
                                         </div>
                                         <div>
                                             <p style={{ margin: 0, fontSize: "13px", fontWeight: 500, color: t.textSub }}>{stat.label}</p>
@@ -2798,8 +2833,31 @@ function AdminHomePage() {
                                     </thead>
                                     <tbody>
                                         {allEvents.length > 0 ? allEvents.map((ev) => (
-                                            <tr key={ev.id + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>{ev.title}</td>
+                                            <tr key={ev.id + (ev.source || "")} style={{ borderBottom: `1px solid ${t.border}`, transition: "all 0.2s" }} className="hover:bg-slate-50/50">
+                                                <td style={{ padding: "16px 12px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: theme === 'light' ? '#f1f5f9' : '#1e293b', overflow: "hidden", border: `1px solid ${t.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                            {ev.thumbnail ? (
+                                                                <img src={ev.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                            ) : (
+                                                                <ImageIcon size={18} style={{ opacity: 0.3, color: t.textSub }} />
+                                                            )}
+                                                        </div>
+                                                        <div style={{ display: "flex", flexDirection: "column" }}>
+                                                            <span style={{ 
+                                                                fontWeight: 800, 
+                                                                fontSize: "14px",
+                                                                color: t.textMain,
+                                                                letterSpacing: "-0.01em",
+                                                                ...(ev.category?.toLowerCase().includes('marathon') && { color: "#10b981", textTransform: "uppercase", fontStyle: "italic" }),
+                                                                ...(ev.category?.toLowerCase().includes('concert') && { color: "#8b5cf6", fontWeight: 900 }),
+                                                            }}>
+                                                                {ev.title}
+                                                            </span>
+                                                            <span style={{ fontSize: "10px", color: t.textSub, fontWeight: 500, opacity: 0.7 }}>ID: {ev.id.slice(0, 8).toUpperCase()}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{ev.venue || ev.location || "—"}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{ev.date}{ev.time ? ` ${ev.time}` : ""}</td>
                                                 <td style={{ padding: "12px" }}>
@@ -2960,7 +3018,7 @@ function AdminHomePage() {
                                     </thead>
                                     <tbody>
                                         {turfPartners.length > 0 ? turfPartners.map((org) => (
-                                            <tr key={org.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                                            <tr key={org.id} style={{ backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}`, boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.1)" }}>
                                                 <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                                         <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#3b82f6" }}>
@@ -4067,39 +4125,44 @@ function AdminHomePage() {
                                         />
                                         <p style={{ fontSize: "11px", color: t.textSub, marginTop: "4px", marginBottom: 0 }}>This is used to construct full image URLs in transactional emails.</p>
                                     </div>
-                                    <div style={{ padding: "16px", backgroundColor: "#f1f5f9", borderRadius: "12px", marginTop: "10px" }}>
-                                        <h4 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", color: "#334155" }}>"Powered By" Branding</h4>
-                                        <div style={{ marginBottom: "12px" }}>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Powered By Logo URL</label>
-                                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. /powered-by.png"
-                                                    value={localBranding.powered_by_logo_url || ""}
-                                                    onChange={(e) => setLocalBranding({ ...localBranding, powered_by_logo_url: e.target.value })}
-                                                    style={{ flex: 1, padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "#fff", color: "#1e293b" }}
-                                                />
-                                                <label style={{ padding: "8px 12px", backgroundColor: "#e2e8f0", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: 700, fontSize: "11px", color: "#1e293b" }}>
-                                                    <Upload size={14} />
-                                                    <input 
-                                                        type="file" 
-                                                        accept="image/*" 
-                                                        style={{ display: "none" }} 
-                                                        onChange={(e) => handleBrandingUpload(e.target.files[0], 'powered_by')}
-                                                    />
-                                                </label>
-                                            </div>
+                                    
+                                    <div style={{ backgroundColor: theme === 'light' ? '#f8fafc' : '#1e293b', padding: "20px", borderRadius: "16px", border: `1px solid ${t.border}`, marginTop: "10px" }}>
+                                        <h4 style={{ fontSize: "15px", fontWeight: 800, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <Shield size={18} className="text-blue-500" />
+                                            Official Partners & Sponsors
+                                        </h4>
+                                        
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                            {[
+                                                { label: "Sponsor Logo 1", key: "sponsor_logo_1" },
+                                                { label: "Sponsor Logo 2", key: "sponsor_logo_2" },
+                                                { label: "Partner Logo 1", key: "partner_logo_1" },
+                                                { label: "Partner Logo 2", key: "partner_logo_2" }
+                                            ].map((item) => (
+                                                <div key={item.key}>
+                                                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, marginBottom: "6px", color: t.textSub, textTransform: "uppercase" }}>{item.label}</label>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                        <div style={{ height: "60px", width: "100%", borderRadius: "8px", border: `1px dashed ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#0f172a', display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                                                            {localBranding[`${item.key}_url`] ? (
+                                                                <img src={localBranding[`${item.key}_url`]} alt="Preview" style={{ height: "100%", width: "100%", objectFit: "contain", padding: "4px" }} />
+                                                            ) : (
+                                                                <span style={{ fontSize: "10px", color: t.textSub, opacity: 0.5 }}>No Logo</span>
+                                                            )}
+                                                        </div>
+                                                        <label style={{ padding: "6px 12px", backgroundColor: t.header, borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontWeight: 700, fontSize: "10px", color: t.textMain, border: `1px solid ${t.border}` }}>
+                                                            <Upload size={12} /> Upload
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                style={{ display: "none" }} 
+                                                                onChange={(e) => handleBrandingUpload(e.target.files[0], item.key)}
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "6px" }}>Powered By Link URL</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. https://bookmyticket.net"
-                                                value={localBranding.powered_by_link || ""}
-                                                onChange={(e) => setLocalBranding({ ...localBranding, powered_by_link: e.target.value })}
-                                                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: "#fff", color: "#1e293b" }}
-                                            />
-                                        </div>
+                                        <p style={{ fontSize: "10px", color: t.textSub, marginTop: "12px", fontStyle: "italic" }}>* These logos will appear globally on all digital tickets.</p>
                                     </div>
                                     <button 
                                         onClick={async (e) => {
@@ -4124,7 +4187,11 @@ function AdminHomePage() {
                                                     logo_url: finalUrl,
                                                     site_url: finalSiteUrl,
                                                     powered_by_logo_url: localBranding.powered_by_logo_url,
-                                                    powered_by_link: localBranding.powered_by_link
+                                                    powered_by_link: localBranding.powered_by_link,
+                                                    sponsor_logo_1: localBranding.sponsor_logo_1_url,
+                                                    sponsor_logo_2: localBranding.sponsor_logo_2_url,
+                                                    partner_logo_1: localBranding.partner_logo_1_url,
+                                                    partner_logo_2: localBranding.partner_logo_2_url
                                                 };
 
                                                 await updateSiteBranding(payload);
@@ -4224,79 +4291,6 @@ function AdminHomePage() {
                             >
                                 Save Pricing
                             </button>
-                        </div>
-                    )}
-
-                    {activeTab === "branding_partners" && (
-                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Branding Partners KYC</h3>
-                                <p style={{ fontSize: "13px", color: t.textSub }}>{allBrandingKYC.length} total applications</p>
-                            </div>
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Org Name</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Location</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Tax IDs</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
-                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {allBrandingKYC.length > 0 ? allBrandingKYC.map((kyc) => (
-                                            <tr key={kyc.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                <td style={{ padding: "12px" }}>
-                                                    <div style={{ fontWeight: 700 }}>{kyc.org_name}</div>
-                                                    <div style={{ fontSize: "11px", color: t.textSub }}>ID: {kyc.brand_id ? kyc.brand_id.slice(-8) : 'N/A'}</div>
-                                                </td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>
-                                                    {kyc.city}, {kyc.state}
-                                                </td>
-                                                <td style={{ padding: "12px", fontSize: "13px" }}>
-                                                    <div>GST: {kyc.gst_number}</div>
-                                                    <div>PAN: {kyc.pan_number}</div>
-                                                </td>
-                                                <td style={{ padding: "12px" }}>
-                                                    <span style={{ 
-                                                        fontSize: "11px", 
-                                                        padding: "4px 10px", 
-                                                        borderRadius: "20px", 
-                                                        fontWeight: 700,
-                                                        backgroundColor: kyc.status === "Verified" ? "#22c55e22" : kyc.status === "Rejected" ? "#ef444422" : "#f59e0b22",
-                                                        color: kyc.status === "Verified" ? "#22c55e" : kyc.status === "Rejected" ? "#ef4444" : "#f59e0b"
-                                                    }}>
-                                                        {kyc.status}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "12px" }}>
-                                                    {kyc.status === "Pending Review" || kyc.status === "Verification Pending" ? (
-                                                        <div style={{ display: "flex", gap: "8px" }}>
-                                                            <button 
-                                                                onClick={() => verifyKYCMutation({ id: kyc.id, status: "Verified" })}
-                                                                style={{ padding: "6px 12px", backgroundColor: "#22c55e", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => verifyKYCMutation({ id: kyc.id, status: "Rejected" })}
-                                                                style={{ padding: "6px 12px", backgroundColor: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ fontSize: "12px", color: t.textSub }}>No actions available</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )) : (
-                                            <tr><td colSpan="5" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No Branding Partner KYC requests found.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
                         </div>
                     )}
 
