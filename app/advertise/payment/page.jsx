@@ -28,28 +28,96 @@ function PaymentContent() {
             });
     }, [bannerId]);
 
+    const loadScript = (src) => {
+        return new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const handlePayNow = async () => {
-        if (!bannerId) return;
+        if (!bannerId || !pkg) return;
         setIsPaying(true);
         setPaymentStatus('processing');
 
-        // Simulate network delay for "Gateway" processing
-        await new Promise(resolve => setTimeout(resolve, 2500));
-
         try {
-            const { error } = await supabase.from('advertise_banners').update({ status: 'paid' }).eq('id', bannerId);
-            if (error) throw error;
-            setPaymentStatus('success');
+            // 1. Load Razorpay Script
+            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+            if (!res) throw new Error("Razorpay SDK failed to load.");
 
-            // Redirect back to advertise page after a short delay showing success
-            setTimeout(() => {
-                router.push('/advertise?success=true');
-            }, 2000);
+            // 2. Create Order
+            const response = await fetch('/api/razorpay/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: bannerId,
+                    amount: pkg.price,
+                    type: "advertise"
+                })
+            });
+
+            const order = await response.json();
+            if (order.error) throw new Error(order.error);
+
+            // 3. Open Razorpay Checkout
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: order.amount,
+                currency: order.currency,
+                name: "BookMyTicket Advertise",
+                description: `Payment for ${pkg.name} Banner`,
+                image: "/logo.png",
+                order_id: order.id,
+                handler: async function (response) {
+                    // 4. Verify Payment
+                    const verifyRes = await fetch('/api/razorpay/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            id: bannerId,
+                            type: "advertise"
+                        })
+                    });
+
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.success) {
+                        setPaymentStatus('success');
+                        setTimeout(() => {
+                            router.push('/advertise?success=true');
+                        }, 2000);
+                    } else {
+                        throw new Error(verifyData.error || "Verification failed");
+                    }
+                },
+                prefill: {
+                    name: `${banner.firstName} ${banner.lastName}`,
+                    email: banner.email || "",
+                    contact: banner.phone || ""
+                },
+                theme: {
+                    color: "#f84464"
+                },
+                modal: {
+                    ondismiss: function() {
+                        setIsPaying(false);
+                        setPaymentStatus('idle');
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
         } catch (err) {
-            console.error("Payment finalization failed:", err);
+            console.error("Razorpay Error:", err);
             setPaymentStatus('idle');
             setIsPaying(false);
-            alert("Payment failed. Please try again.");
+            alert("Payment failed: " + err.message);
         }
     };
 

@@ -1,25 +1,26 @@
 import Razorpay from "razorpay";
 import { NextResponse } from "next/server";
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 export async function POST(request) {
     try {
-        const { bookingId, amount, currency = "INR" } = await request.json();
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
 
-        if (!bookingId || !amount) {
+        const { id, amount, currency = "INR", type = "booking" } = await request.json();
+
+        if (!id || !amount) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
         const options = {
             amount: Math.round(amount * 100), // Razorpay expects amount in paise
             currency,
-            receipt: `receipt_${bookingId}`,
+            receipt: `receipt_${type}_${id}`,
             notes: {
-                bookingId: bookingId
+                id: id,
+                type: type
             }
         };
 
