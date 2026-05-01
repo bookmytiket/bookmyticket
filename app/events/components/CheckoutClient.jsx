@@ -61,6 +61,23 @@ export default function CheckoutClient({ id }) {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [couponError, setCouponError] = useState('');
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+    const [showCouponsModal, setShowCouponsModal] = useState(false);
+
+    const { data: availableCoupons } = useSupabaseQuery('coupons', (q) => 
+        q.select('*').eq('is_active', true).order('created_at', { ascending: false }),
+        []
+    );
+
+    const validCoupons = useMemo(() => {
+        if (!availableCoupons) return [];
+        return availableCoupons.filter(c => {
+            if (c.expiry_date && new Date(c.expiry_date) < new Date()) return false;
+            if (c.applicable_events && c.applicable_events.length > 0) {
+                if (!c.applicable_events.includes(id)) return false;
+            }
+            return true;
+        });
+    }, [availableCoupons, id]);
 
     // Toast Timer
     useEffect(() => {
@@ -169,8 +186,10 @@ export default function CheckoutClient({ id }) {
         return getFeeBreakdown(discountedBase, resolvedFeeSettings);
     }, [baseAmount, discountAmount, resolvedFeeSettings]);
 
-    const handleApplyCoupon = async () => {
-        if (!couponCode || !user || !event) return;
+    const handleApplyCoupon = async (directCode = null) => {
+        const codeToUse = (typeof directCode === 'string' ? directCode : couponCode).trim().toUpperCase();
+        if (!codeToUse || !user || !event) return;
+        
         setIsValidatingCoupon(true);
         setCouponError('');
         
@@ -179,7 +198,7 @@ export default function CheckoutClient({ id }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    code: couponCode.trim().toUpperCase(),
+                    code: codeToUse,
                     userId: user.id,
                     ticketCount: qty,
                     eventId: event.id
@@ -550,7 +569,17 @@ export default function CheckoutClient({ id }) {
                                         <div className="pt-4 border-t border-slate-50">
                                             {!appliedCoupon ? (
                                                 <div className="space-y-2">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Have a Coupon?</p>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Have a Coupon?</p>
+                                                        {validCoupons.length > 0 && (
+                                                            <button 
+                                                                onClick={() => setShowCouponsModal(true)}
+                                                                className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline"
+                                                            >
+                                                                (View All)
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                     <div className="flex gap-2">
                                                         <input 
                                                             type="text" 
@@ -631,6 +660,94 @@ export default function CheckoutClient({ id }) {
                 onAccept={() => setTermsAccepted(true)}
                 type="event"
             />
+
+            {/* Available Coupons Modal */}
+            <AnimatePresence>
+                {showCouponsModal && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[80vh]"
+                        >
+                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                                        Available <span className="text-pink-500">Offers</span>
+                                    </h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select a coupon to apply</p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowCouponsModal(false)}
+                                    className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-slate-50 transition-all text-slate-400"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                                {validCoupons.length === 0 ? (
+                                    <div className="py-12 text-center space-y-4">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto">
+                                            <Ticket size={32} />
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No active coupons available</p>
+                                    </div>
+                                ) : (
+                                    validCoupons.map((coupon) => (
+                                        <button
+                                            key={coupon.id}
+                                            onClick={() => {
+                                                setCouponCode(coupon.code);
+                                                setShowCouponsModal(false);
+                                                handleApplyCoupon(coupon.code);
+                                            }}
+                                            className="w-full group text-left p-6 bg-slate-50 hover:bg-pink-50 rounded-3xl border border-slate-100 hover:border-pink-200 transition-all space-y-3 relative overflow-hidden"
+                                        >
+                                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
+                                                <Sparkles size={40} className="text-pink-500" />
+                                            </div>
+
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <span className="inline-block px-3 py-1 bg-pink-500 text-white text-[10px] font-black rounded-lg uppercase tracking-widest">
+                                                        {coupon.type === 'percent' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                                                    </span>
+                                                    <h4 className="text-lg font-black text-slate-900 uppercase tracking-tighter block">{coupon.code}</h4>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-pink-500 shadow-sm group-hover:scale-110 transition-transform">
+                                                    <ArrowRight size={18} />
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex flex-wrap gap-4 pt-2">
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                    <Ticket size={12} className="text-slate-300" /> Min {coupon.min_tickets} Tickets
+                                                </div>
+                                                {coupon.expiry_date && (
+                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                        <Calendar size={12} className="text-slate-300" /> Exp: {new Date(coupon.expiry_date).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-slate-50 border-t border-slate-100">
+                                <button 
+                                    onClick={() => setShowCouponsModal(false)}
+                                    className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }
