@@ -15,5 +15,14 @@ export default function EventCheckoutPage() {
         );
     }
 
-    return <CheckoutClient id={id} />;
+    return (
+        <React.Suspense fallback={
+            <div style={{ paddingTop: '150px', textAlign: 'center' }}>
+                <div className="w-12 h-12 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin mx-auto" />
+                <p style={{ marginTop: '20px', color: '#64748b', fontWeight: 'bold' }}>LOADING SECURE CHECKOUT...</p>
+            </div>
+        }>
+            <CheckoutClient id={id} />
+        </React.Suspense>
+    );
 }

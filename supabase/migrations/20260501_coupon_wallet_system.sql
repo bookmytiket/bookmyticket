@@ -106,3 +106,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE TRIGGER on_profile_role_update
   AFTER INSERT OR UPDATE OF role ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_organiser_wallet();
+
+-- Initialize wallets for existing organisers/vendors
+INSERT INTO public.wallets (organiser_id)
+SELECT id FROM public.profiles 
+WHERE role IN ('organiser', 'vendor')
+ON CONFLICT (organiser_id) DO NOTHING;

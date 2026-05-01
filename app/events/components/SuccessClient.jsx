@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
-import { CheckCircle2, Home, Download, Share2, Ticket as TicketIcon } from 'lucide-react';
+import { CheckCircle2, Home, Download, Share2, Ticket as TicketIcon, FileText } from 'lucide-react';
 import Link from 'next/link';
 import DigitalTicket from '@/components/DigitalTicket';
+import DigitalInvoice from '@/components/DigitalInvoice';
 import confetti from 'canvas-confetti';
 
 export default function SuccessClient({ eventId, bookingId }) {
     const [celebrated, setCelebrated] = useState(false);
+    const [showInvoice, setShowInvoice] = useState(false);
 
     const { data: booking, loading: bookingLoading } = useSupabaseQuery('bookings', (q) => 
         q.eq('id', bookingId).single(),
@@ -70,12 +72,30 @@ export default function SuccessClient({ eventId, bookingId }) {
 
                 {/* Ticket Display */}
                 <div className="mb-12">
-                    <DigitalTicket 
-                        booking={booking} 
-                        event={event} 
-                        ticket={ticket}
-                        showDownload={true} 
-                    />
+                    {showInvoice ? (
+                        <DigitalInvoice 
+                            booking={booking} 
+                            event={event} 
+                        />
+                    ) : (
+                        <DigitalTicket 
+                            booking={booking} 
+                            event={event} 
+                            ticket={ticket}
+                            showDownload={true} 
+                        />
+                    )}
+                </div>
+
+                {/* View Switcher */}
+                <div className="flex justify-center mb-12">
+                    <button 
+                        onClick={() => setShowInvoice(!showInvoice)}
+                        className="flex items-center gap-2 px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all"
+                    >
+                        {showInvoice ? <TicketIcon size={14} /> : <FileText size={14} />}
+                        {showInvoice ? "View E-Ticket" : "View Tax Invoice"}
+                    </button>
                 </div>
 
                 {/* Quick Actions */}

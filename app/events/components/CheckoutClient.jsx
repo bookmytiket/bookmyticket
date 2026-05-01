@@ -8,7 +8,7 @@ import {
     Calendar, MapPin, Video, CheckCircle2, Ticket, 
     ShieldCheck, CreditCard, ChevronLeft, Info, 
     ArrowRight, Mail, Phone, User, ExternalLink,
-    Star, Sparkles, Download, Home, MessageSquare, X
+    Star, Sparkles, Download, Home, MessageSquare, X, Plus, Minus
 } from 'lucide-react';
 
 import { HOME_EVENTS } from '@/app/data/homeEvents';
@@ -49,6 +49,24 @@ export default function CheckoutClient({ id }) {
     , [id]);
 
     const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
+
+    const { data: availableCoupons } = useSupabaseQuery('coupons', (q) => 
+        q.select('*').eq('is_active', true).order('created_at', { ascending: false }),
+        []
+    );
+    
+    const seatsParam = searchParams.get('seats');
+    const selectedSeats = useMemo(() => {
+        try { return seatsParam ? JSON.parse(seatsParam) : []; } catch { return []; }
+    }, [seatsParam]);
+
+    const ticketPriceParam = searchParams.get('price');
+    
+    const initialQty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
+    const [qty, setQty] = useState(initialQty);
+    const selectedPackageName = searchParams.get('package');
+    const regDataParam = searchParams.get('regData');
+
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
     const [bookingDone, setBookingDone] = useState(false);
@@ -62,11 +80,25 @@ export default function CheckoutClient({ id }) {
     const [couponError, setCouponError] = useState('');
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
     const [showCouponsModal, setShowCouponsModal] = useState(false);
+    
+    const event = useMemo(() => {
+        if (!rawEvent) return null;
+        return {
+            ...rawEvent,
+            id: rawEvent.id,
+            img: rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
+            title: rawEvent.title || 'Event',
+            date: rawEvent.date || 'TBA',
+            time: rawEvent.time || '',
+            location: rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue',
+        };
+    }, [rawEvent]);
 
-    const { data: availableCoupons } = useSupabaseQuery('coupons', (q) => 
-        q.select('*').eq('is_active', true).order('created_at', { ascending: false }),
-        []
-    );
+    const ticketPrice = useMemo(() => {
+        if (ticketPriceParam) return parseFloat(ticketPriceParam);
+        return event?.price ?? 499;
+    }, [ticketPriceParam, event?.price]);
+    
 
     const validCoupons = useMemo(() => {
         if (!availableCoupons) return [];
@@ -75,9 +107,13 @@ export default function CheckoutClient({ id }) {
             if (c.applicable_events && c.applicable_events.length > 0) {
                 if (!c.applicable_events.includes(id)) return false;
             }
+            // Check ticket limits
+            if (qty < (c.min_tickets || 1)) return false;
+            if (c.max_tickets && qty > c.max_tickets) return false;
+            
             return true;
         });
-    }, [availableCoupons, id]);
+    }, [availableCoupons, id, qty]);
 
     // Toast Timer
     useEffect(() => {
@@ -104,19 +140,22 @@ export default function CheckoutClient({ id }) {
             setStorageLoaded(true);
         }
     }, [rawFeeSettings]);
+    
+    // Auto-revalidate coupon on qty change
+    useEffect(() => {
+        if (appliedCoupon) {
+            if (qty < (appliedCoupon.min_tickets || 1)) {
+                setAppliedCoupon(null);
+                setCouponError(`Minimum ${appliedCoupon.min_tickets} tickets required for this coupon`);
+                setNotification({ message: `Coupon removed: Minimum ${appliedCoupon.min_tickets} tickets required`, type: 'info' });
+            } else if (appliedCoupon.max_tickets && qty > appliedCoupon.max_tickets) {
+                setAppliedCoupon(null);
+                setCouponError(`Maximum ${appliedCoupon.max_tickets} tickets allowed for this coupon`);
+                setNotification({ message: `Coupon removed: Maximum ${appliedCoupon.max_tickets} tickets allowed`, type: 'info' });
+            }
+        }
+    }, [qty, appliedCoupon]);
 
-    const event = useMemo(() => {
-        if (!rawEvent) return null;
-        return {
-            ...rawEvent,
-            id: rawEvent.id,
-            img: rawEvent.img || rawEvent.bannerPreview || DEFAULT_IMG,
-            title: rawEvent.title || 'Event',
-            date: rawEvent.date || 'TBA',
-            time: rawEvent.time || '',
-            location: rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue',
-        };
-    }, [rawEvent]);
 
     useEffect(() => {
         if (isSuccess && existingBooking && existingBooking.status === "Confirmed") {
@@ -140,20 +179,6 @@ export default function CheckoutClient({ id }) {
         }
     }, [isSuccess, existingBooking, event]);
 
-    const seatsParam = searchParams.get('seats');
-    const selectedSeats = useMemo(() => {
-        try { return seatsParam ? JSON.parse(seatsParam) : []; } catch { return []; }
-    }, [seatsParam]);
-
-    const ticketPriceParam = searchParams.get('price');
-    const ticketPrice = useMemo(() => {
-        if (ticketPriceParam) return parseFloat(ticketPriceParam);
-        return event?.price ?? 499;
-    }, [ticketPriceParam, event?.price]);
-    
-    const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
-    const selectedPackageName = searchParams.get('package');
-    const regDataParam = searchParams.get('regData');
     
     const baseAmount = useMemo(() => {
         if (selectedSeats.length > 0) {
@@ -307,7 +332,8 @@ export default function CheckoutClient({ id }) {
             }
         } catch (error) {
             console.error("Booking failed:", error);
-            setNotification({ message: "Booking failed. Please check your connection and try again.", type: "error" });
+            const errorMsg = error.message || "Booking failed. Please check your connection and try again.";
+            setNotification({ message: errorMsg, type: "error" });
         } finally {
             setIsProcessing(false);
         }
@@ -559,7 +585,24 @@ export default function CheckoutClient({ id }) {
                                                 ))
                                             ) : (
                                                 <div className="flex justify-between items-center text-sm font-bold">
-                                                    <span className="text-slate-500">{selectedPackageName || "Ticket"} × {qty}</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-slate-500">{selectedPackageName || "Ticket"}</span>
+                                                        <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5 w-fit">
+                                                            <button 
+                                                                onClick={() => setQty(Math.max(1, qty - 1))}
+                                                                className="text-slate-400 hover:text-pink-500 transition-colors"
+                                                            >
+                                                                <Minus size={12} />
+                                                            </button>
+                                                            <span className="text-xs text-slate-900 font-black min-w-[12px] text-center">{qty}</span>
+                                                            <button 
+                                                                onClick={() => setQty(qty + 1)}
+                                                                className="text-slate-400 hover:text-pink-500 transition-colors"
+                                                            >
+                                                                <Plus size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                     <span className="text-slate-900">₹{baseAmount.toFixed(2)}</span>
                                                 </div>
                                             )}

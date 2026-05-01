@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video } from "lucide-react";
+import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video, X } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { isVirtualEvent } from "@/app/utils/eventUtils";
 import { supabase } from "@/lib/supabase";
 import JoinNowButton from "@/components/JoinNowButton";
 import DigitalTicket from "@/components/DigitalTicket";
+import DigitalInvoice from "@/components/DigitalInvoice";
 
 const THEME = {
     bg: "#f8fafc",
@@ -36,6 +37,7 @@ export default function ProfilePage() {
     }, []);
     const [bookingFilter, setBookingFilter] = useState("all");
     const [viewTicketModal, setViewTicketModal] = useState(null);
+    const [viewInvoiceModal, setViewInvoiceModal] = useState(null);
 
     const [eventBookingsList, setEventBookingsList] = useState([]);
     const [vendorBookingsList, setVendorBookingsList] = useState([]);
@@ -207,6 +209,12 @@ export default function ProfilePage() {
                                                     className="text-pink-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
                                                 >
                                                     {booking.isVendorBooking ? "Booking Details" : "View Ticket"}
+                                                </button>
+                                                <button 
+                                                    onClick={() => setViewInvoiceModal(booking)}
+                                                    className="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                                >
+                                                    Invoice
                                                 </button>
                                                 <JoinNowButton 
                                                     eventId={booking.eventId} 
@@ -434,19 +442,9 @@ export default function ProfilePage() {
                     <div style={{ width: "100%", maxWidth: "850px", position: "relative" }} onClick={e => e.stopPropagation()}>
                         <button 
                             onClick={() => setViewTicketModal(null)} 
-                            style={{ 
-                                position: "absolute", 
-                                top: "-40px", 
-                                right: "0", 
-                                background: "none", 
-                                border: "none", 
-                                color: "#fff", 
-                                cursor: "pointer", 
-                                fontSize: "24px",
-                                zIndex: 1001
-                            }}
+                            className="absolute top-4 right-4 z-[100] p-2 bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 hover:text-purple-900 transition-all rounded-full"
                         >
-                            ✕
+                            <X size={20} />
                         </button>
                         
                         <DigitalTicket 
@@ -456,7 +454,8 @@ export default function ProfilePage() {
                                 img: viewTicketModal.eventImg || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
                                 date: viewTicketModal.eventDate || "—",
                                 time: viewTicketModal.eventTime || "—",
-                                location: viewTicketModal.eventLocation || "Venue"
+                                location: viewTicketModal.eventLocation || "Venue",
+                                category: viewTicketModal.events?.category || "Event"
                             }}
                             showDownload={true}
                         />
@@ -470,6 +469,28 @@ export default function ProfilePage() {
                                 />
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* View Invoice Modal */}
+            {viewInvoiceModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 11000, padding: "20px", backdropFilter: "blur(12px)", overflowY: "auto" }} onClick={() => setViewInvoiceModal(null)}>
+                    <div style={{ width: "100%", maxWidth: "900px", position: "relative" }} onClick={e => e.stopPropagation()}>
+                        <button 
+                            onClick={() => setViewInvoiceModal(null)} 
+                            className="absolute top-4 right-4 z-[100] p-2 bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 hover:text-pink-600 transition-all rounded-full"
+                        >
+                            <X size={20} />
+                        </button>
+                        
+                        <DigitalInvoice 
+                            booking={viewInvoiceModal}
+                            event={{
+                                title: viewInvoiceModal.eventName || "Event Booking",
+                                date: viewInvoiceModal.eventDate || "—",
+                                location: viewInvoiceModal.eventLocation || "Venue"
+                            }}
+                        />
                     </div>
                 </div>
             )}

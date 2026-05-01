@@ -1,370 +1,250 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { useSupabaseQuery } from "@/hooks/useSupabase";
-import { Calendar,
-    MapPin,
-    Ticket,
-    CheckCircle2,
-    Clock,
-    AlertCircle,
+import { 
     ShieldCheck,
     Download,
-    Loader2
+    Loader2,
+    Calendar,
+    MapPin,
+    Trophy,
+    Music,
+    Users,
+    Briefcase,
+    Zap
 } from "lucide-react"; 
-
-import { DEFAULT_TICKET_TERMS } from "@/app/utils/ticketTerms";
-import BrandingHeader from "./BrandingHeader";
 import * as htmlToImage from 'html-to-image';
-import jsPDF from 'jspdf';
 
-export default function DigitalTicket({ booking, event, ticket, terms = DEFAULT_TICKET_TERMS, showDownload = false }) {
-  // Fetch branding for Powered By logo via API to bypass RLS
-  const [branding, setBranding] = React.useState({ powered_by_logo_url: '/logo.png' });
-  React.useEffect(() => {
-      fetch('/api/branding')
-          .then(res => res.json())
-          .then(data => { if (data.powered_by_logo_url) setBranding(data); })
-          .catch(console.error);
-  }, []);
-    const ticketRef = React.useRef(null);
-    const [downloading, setDownloading] = React.useState(false);
-    const [isCapturing, setIsCapturing] = React.useState(false);
-    const [isRevealed, setIsRevealed] = React.useState(false);
-    const [isTabActive, setIsTabActive] = React.useState(true);
+export default function DigitalTicket({ booking, event, ticket, showDownload = true, branding = {} }) {
+    const [isRevealed, setIsRevealed] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const [isCapturing, setIsCapturing] = useState(false);
+    const [isTabActive, setIsTabActive] = useState(true);
+    const ticketRef = useRef(null);
 
-    // Security: Tab Visibility Detection
-    React.useEffect(() => {
-        const handleVisibilityChange = () => {
-            setIsTabActive(!document.hidden);
-        };
-        const handleFocus = () => setIsTabActive(true);
-        const handleBlur = () => setIsTabActive(false);
-
-        document.addEventListener("visibilitychange", handleVisibilityChange);
-        window.addEventListener("focus", handleFocus);
-        window.addEventListener("blur", handleBlur);
-
-        return () => {
-            document.removeEventListener("visibilitychange", handleVisibilityChange);
-            window.removeEventListener("focus", handleFocus);
-            window.removeEventListener("blur", handleBlur);
-        };
-    }, []);
-
-    // Security: Prevent Right-click and Print
-    React.useEffect(() => {
-        const preventActions = (e) => {
-            // Prevent Right Click
-            if (e.type === "contextmenu") {
-                e.preventDefault();
-                return false;
-            }
-            // Prevent Ctrl+P
-            if (e.ctrlKey && (e.key === "p" || e.keyCode === 80)) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                alert("Printing is restricted for security reasons.");
-                return false;
-            }
-            // Prevent Ctrl+S
-            if (e.ctrlKey && (e.key === "s" || e.keyCode === 83)) {
-                e.preventDefault();
-                return false;
-            }
-        };
-
-        window.addEventListener("contextmenu", preventActions);
-        window.addEventListener("keydown", preventActions);
-
-        return () => {
-            window.removeEventListener("contextmenu", preventActions);
-            window.removeEventListener("keydown", preventActions);
-        };
+    useEffect(() => {
+        const handleVisibility = () => setIsTabActive(!document.hidden);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => document.removeEventListener("visibilitychange", handleVisibility);
     }, []);
 
     if (!booking || !event) return null;
-    const isScanned = booking.scanned || booking.status === "Scanned";
-    const bookingId = booking._id || booking.id;
-    const ticketNumber = ticket?.ticket_number || bookingId?.slice(-8).toUpperCase();
-    const shortId = ticketNumber;
-    const customerName = booking.customer_name || "Valued Customer";
 
-    // Robust helper to convert image to base64 with canvas fallback
-    const toBase64 = async (imgElement) => {
-        const url = imgElement.src;
-        try {
-            // Method 1: Fetch
-            const response = await fetch(url, { mode: 'cors' });
-            const blob = await response.blob();
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            console.warn("Fetch failed, trying canvas fallback:", e);
-            try {
-                // Method 2: Canvas (if already loaded)
-                const canvas = document.createElement('canvas');
-                canvas.width = imgElement.naturalWidth || imgElement.width;
-                canvas.height = imgElement.naturalHeight || imgElement.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(imgElement, 0, 0);
-                return canvas.toDataURL('image/jpeg', 0.9);
-            } catch (canvasError) {
-                console.error("Canvas fallback also failed:", canvasError);
-                return url;
-            }
+    const ticketNumber = ticket?.ticket_number || (booking.id || "").slice(-8).toUpperCase();
+    
+    // Dynamic Content Mapping based on Category
+    const getCategoryDetails = (category) => {
+        const c = String(category || 'Event').toLowerCase();
+        
+        if (c.includes('marathon') || c.includes('sport')) {
+            return {
+                label: "Marathon",
+                icon: <Trophy className="text-emerald-400" size={20} />,
+                neonColor: "shadow-emerald-500/50",
+                accent: "text-emerald-400",
+                fields: [
+                    { label: "BIB NUMBER", value: booking.metadata?.bib_number || `BIB-${ticketNumber.slice(-3)}` },
+                    { label: "DISTANCE", value: booking.metadata?.distance || event.distance || "21K" },
+                    { label: "TEAM", value: booking.metadata?.team_name || "PRO" }
+                ],
+                gradient: "from-[#064e3b] via-[#020617] to-[#020617]"
+            };
         }
+        if (c.includes('concert') || c.includes('music')) {
+            return {
+                label: "Concert",
+                icon: <Music className="text-yellow-400" size={20} />,
+                neonColor: "shadow-yellow-500/50",
+                accent: "text-yellow-400",
+                fields: [
+                    { label: "ARTIST", value: event.artist_name || "Headliner" },
+                    { label: "ZONE", value: booking.metadata?.zone || "Platinum" },
+                    { label: "ENTRY", value: "Gate 4" }
+                ],
+                gradient: "from-[#2e1065] via-[#4c1d95] to-[#020617]"
+            };
+        }
+        if (c.includes('corporate') || c.includes('business')) {
+            return {
+                label: "Corporate",
+                icon: <Briefcase className="text-purple-400" size={20} />,
+                neonColor: "shadow-purple-500/50",
+                accent: "text-purple-400",
+                fields: [
+                    { label: "COMPANY", value: booking.customer_details?.company || "Organization" },
+                    { label: "ROLE", value: booking.customer_details?.designation || "Delegate" },
+                    { label: "HALL", value: "A-12" }
+                ],
+                gradient: "from-[#1e1b4b] via-[#4c1d95] to-[#020617]"
+            };
+        }
+        // Default Sports/Event - Using Yellow and Purple
+        return {
+            label: "Event",
+            icon: <Zap className="text-yellow-400" size={20} />,
+            neonColor: "shadow-yellow-500/50",
+            accent: "text-yellow-400",
+            fields: [
+                { label: "STADIUM", value: event.location?.split(',')[0] || "Venue" },
+                { label: "STAND", value: "North Wing" },
+                { label: "GATE", value: "01" }
+            ],
+            gradient: "from-[#4c1d95] via-[#1e1b4b] to-[#020617]"
+        };
     };
+
+    const details = getCategoryDetails(event.category);
 
     const downloadTicket = async () => {
         if (!ticketRef.current) return;
-        
-        // Ensure ticket is revealed before capturing
-        const originalRevealed = isRevealed;
         setIsRevealed(true);
-        
         setDownloading(true);
         setIsCapturing(true);
-
-        // Pre-convert images in the DOM to avoid CORS issues during capture
-        const images = ticketRef.current.querySelectorAll('img');
-        const originalSrcs = [];
         
         try {
-            // Store and replace with base64
-            for (let img of images) {
-                originalSrcs.push({ img, src: img.src });
-                if (img.src && !img.src.startsWith('data:')) {
-                    const b64 = await toBase64(img);
-                    img.src = b64;
-                }
-            }
-
-            // More generous wait time for all assets to render correctly
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Capture dimensions from the DOM to ensure exact framing
-            const element = ticketRef.current;
-            const width = element.offsetWidth;
-            const height = element.offsetHeight;
-
-            // Using toJpeg with explicit dimensions to avoid cropping/alignment issues
-            const dataUrl = await htmlToImage.toJpeg(element, {
-                quality: 1.0,
-                pixelRatio: 3, 
-                backgroundColor: '#fff',
-                cacheBust: true,
-                includeFonts: true,
-                width: width,
-                height: height,
-                style: {
-                    transform: 'none',
-                    margin: '0',
-                    padding: '0',
-                    width: `${width}px`,
-                    height: `${height}px`,
-                }
+            await new Promise(resolve => setTimeout(resolve, 800));
+            // Capturing at 1200x600 for High Quality as requested
+            const dataUrl = await htmlToImage.toJpeg(ticketRef.current, { 
+                quality: 1.0, 
+                pixelRatio: 2,
+                width: 1200,
+                height: 600
             });
-            
             const link = document.createElement('a');
-            link.download = `Ticket-${(event.title || 'Event').replace(/\s+/g, '-')}-${shortId}.jpg`;
+            link.download = `Ticket-${event.title}-${ticketNumber}.jpg`;
             link.href = dataUrl;
             link.click();
         } catch (error) {
             console.error('Download failed:', error);
-            alert('Failed to generate ticket image. Please refresh and try again.');
         } finally {
-            // Restore original srcs
-            for (let item of originalSrcs) {
-                item.img.src = item.src;
-            }
-            setIsRevealed(originalRevealed);
             setIsCapturing(false);
             setDownloading(false);
         }
     };
 
-    const cacheBuster = `v=${Date.now()}`;
-    const getFinalSrc = (src) => {
-        if (!src || src === "undefined" || src === "null") return "https://images.unsplash.com/photo-1540575467063-178a50c2df87";
-        if (src.startsWith('data:')) return src;
-        // Only add cache buster to internal or supabase URLs
-        if (src.includes('bookmyticket') || src.startsWith('/')) {
-            const separator = src.includes('?') ? '&' : '?';
-            return `${src}${separator}${cacheBuster}`;
-        }
-        return src;
-    };
-
-    const containerStyle = {
-        width: "100%",
-        maxWidth: isCapturing ? "700px" : "800px",
-        margin: isCapturing ? "0" : "0 auto",
-        backgroundColor: "#fff",
-        borderRadius: isCapturing ? "0" : "20px",
-        overflow: "hidden",
-        boxShadow: "none",
-        fontFamily: "'Inter', sans-serif",
-        position: "relative",
-        border: isCapturing ? "none" : "1px solid #e2e8f0",
-        filter: (!isTabActive && !isCapturing) ? "blur(15px)" : "none",
-        transition: "filter 0.3s ease",
-        userSelect: "none",
-    };
-
     return (
-        <div className="flex flex-col items-center w-full relative">
-            {/* Security Warning for Mobile/Web */}
-            {!isCapturing && !isTabActive && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none">
-                    <div className="bg-slate-900/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 ">
-                        <ShieldCheck className="text-pink-500" size={24} />
-                        <p className="text-white font-black uppercase italic tracking-widest text-xs">Security Protocol Active</p>
-                    </div>
-                </div>
-            )}
+        <div className="flex flex-col items-center w-full mx-auto p-4 max-w-5xl">
+            {/* Standard Size Container (800x400) */}
+            <div 
+                ref={ticketRef}
+                className={`relative w-full flex flex-row transition-all duration-500 overflow-hidden shadow-2xl ${isCapturing ? 'rounded-none' : 'rounded-3xl'} ${!isTabActive && !isCapturing ? 'blur-2xl' : ''} ${details.neonColor} border border-white/10 bg-gradient-to-br ${details.gradient}`}
+                style={{ 
+                    aspectRatio: "2/1",
+                    minHeight: "350px",
+                    maxWidth: "800px"
+                }}
+            >
+                {/* Texture Overlay */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
 
-            <div className="digital-ticket-container select-none" style={containerStyle} ref={ticketRef}>
-                <div className="flex flex-col md:flex-row w-full relative z-10">
-                    {/* Left Section: Event Image */}
-                    <div className="w-full md:w-[30%] relative min-h-[160px] md:min-h-[240px]">
-                        <img 
-                            src={getFinalSrc(event?.img)} 
-                            alt={event.title}
-                            crossOrigin="anonymous"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
-                    </div>
+                {/* Neon Glow Effects */}
+                <div className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-[100px] opacity-20 ${details.accent.replace('text-', 'bg-')}`} />
+                <div className={`absolute -bottom-24 -right-24 w-64 h-64 rounded-full blur-[100px] opacity-20 ${details.accent.replace('text-', 'bg-')}`} />
 
-                    {/* Middle Section: Event Details */}
-                    <div className="w-full md:w-[45%] p-4 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-slate-200 relative text-center md:text-left">
-                        {/* Branding Header integrated here */}
-                        <div className="mb-4 md:mb-6 w-full flex justify-center items-center">
-                            <BrandingHeader />
+                {/* Left Section: Main Body */}
+                <div className="flex-[2] p-10 flex flex-col justify-between relative z-10">
+                    <div className="space-y-6">
+                        {/* Header */}
+                        <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1 space-y-1 max-w-[75%]">
+                                <div className="flex items-center gap-2">
+                                    {details.icon}
+                                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${details.accent}`}>{details.label}</p>
+                                </div>
+                                <h2 className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tighter text-white italic leading-[0.9] break-words">
+                                    {event.title}
+                                </h2>
+                            </div>
+                            <div className="flex-shrink-0">
+                                <img src="/logo.png" className="h-12 w-auto brightness-0 invert object-contain opacity-80" alt="Logo" />
+                            </div>
                         </div>
 
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
-                                {event.title}
-                            </h2>
-
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                        <Calendar size={12} className="text-rose-500" /> Date
-                                    </p>
-                                    <p className="text-sm font-extrabold text-slate-800">{event.date}</p>
+                        {/* Dynamic Metadata Fields */}
+                        <div className="grid grid-cols-3 gap-8 pt-2">
+                            {details.fields.map((f, i) => (
+                                <div key={i} className="space-y-0.5">
+                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{f.label}</p>
+                                    <p className="text-base md:text-lg font-black text-white uppercase tracking-tight leading-tight">{f.value}</p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                        <Clock size={12} className="text-rose-500" /> Time
-                                    </p>
-                                    <p className="text-sm font-extrabold text-slate-800">{event.time || "TBA"}</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 mb-6">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center md:justify-start gap-1.5">
-                                    <MapPin size={12} className="text-rose-500" /> Venue
-                                </p>
-                                <p className="text-sm font-extrabold text-slate-800 line-clamp-1">{event.location}</p>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Right Section: QR & ID */}
-                    <div className="w-full md:w-[25%] bg-slate-50/50 p-4 md:p-8 flex flex-col items-center justify-center text-center">
-                        <div className={`mb-6 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm ${
-                            isScanned 
-                            ? "bg-rose-100 text-rose-600 border border-rose-200" 
-                            : "bg-emerald-100 text-emerald-600 border border-emerald-200"
-                        }`}>
-                            {isScanned ? "Used" : "Active"}
-                        </div>
-
-                        <div 
-                            className="w-full max-w-[140px] bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col items-center cursor-pointer relative group"
-                            onClick={() => setIsRevealed(!isRevealed)}
-                        >
-                            {!isRevealed && !isCapturing && (
-                                <div className="absolute inset-0 z-20 bg-slate-900/40 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all group-hover:bg-slate-900/50">
-                                    <ShieldCheck className="text-white mb-2" size={24} />
-                                    <p className="text-[8px] font-black text-white uppercase tracking-widest leading-tight">Tap to<br/>Reveal QR</p>
+                    {/* Footer Details */}
+                    <div className="flex items-end justify-between border-t border-white/10 pt-8 mt-auto">
+                        <div className="flex gap-8">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 text-white/40">
+                                    <Calendar size={12} />
+                                    <p className="text-[9px] font-black uppercase tracking-widest">Date</p>
                                 </div>
-                            )}
-                            
-                            <div className={`p-4 flex items-center justify-center w-full transition-all  ${!isRevealed && !isCapturing ? 'blur-xl scale-90 opacity-20' : 'blur-0 scale-100 opacity-100'}`}>
-                                <QRCodeSVG 
-                                    value={ticket?.ticket_number || bookingId} 
-                                    size={100} 
-                                    level="H" 
-                                    fgColor={isScanned ? "#cbd5e1" : "#0f172a"} 
-                                />
+                                <p className="text-sm font-black text-white">{event.date || "TBA"}</p>
                             </div>
-                            <div className="w-full bg-slate-900 py-2 px-1">
-                                <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Booking ID</p>
-                                <div className={`transition-all  ${!isRevealed && !isCapturing ? 'blur-md opacity-20' : 'blur-0 opacity-100'}`}>
-                                    <p className="text-[10px] font-black text-white font-mono tracking-tighter italic">#{ticketNumber}</p>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 text-white/40">
+                                    <MapPin size={12} />
+                                    <p className="text-[9px] font-black uppercase tracking-widest">Venue</p>
                                 </div>
+                                <p className="text-sm font-black text-white truncate max-w-[150px]">{event.location?.split(',')[0]}</p>
                             </div>
                         </div>
-                        <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                            {isRevealed ? "Tap to Hide" : "Secure Information"}
-                        </p>
+                        <div className="text-right">
+                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Pass Price</p>
+                            <p className={`text-3xl font-black ${details.accent}`}>₹{booking.total_price}</p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Normal UI Footer Bar */}
-                {!isCapturing && (
-                    <div className="bg-slate-900 px-8 py-3 flex items-center justify-between text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] relative z-10">
-                        <div className="flex items-center gap-3">
-                            <span className="text-rose-500">Security:</span>
-                            <span>Screenshots Restricted</span>
-                        </div>
-                        
-                        {/* Centered Logo - UI Size */}
-                        <div className="flex-1 flex justify-center">
-                            <img src={getFinalSrc(branding.logo_url || "/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '40px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
-                        </div>
+                {/* Vertical Divider */}
+                <div className="w-px border-l border-dashed border-white/10 relative z-20">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-8 rounded-full bg-slate-950 border border-white/10" />
+                </div>
 
-                        {showDownload && (
-                            <button 
-                                onClick={downloadTicket}
-                                disabled={downloading}
-                                className="download-button-exclude flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-all"
-                                style={{ border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
-                            >
-                                {downloading ? <Loader2 size={12} className="animate-spin text-white" /> : <Download size={12} className="text-white" />}
-                                <span style={{ color: '#fff' }}>{downloading ? 'Preparing...' : 'Save Ticket'}</span>
-                            </button>
-                        )}
+                {/* Right Section: Stub */}
+                <div className="flex-1 bg-white/5 p-10 flex flex-col items-center justify-center relative">
+                    <div 
+                        className={`p-3 bg-gradient-to-tr from-yellow-400 to-purple-600 rounded-2xl shadow-2xl transition-all cursor-pointer ${!isRevealed && !isCapturing ? 'blur-md grayscale opacity-20' : ''}`}
+                        onClick={() => setIsRevealed(!isRevealed)}
+                    >
+                        <div className="bg-white p-1 rounded-xl">
+                            <QRCodeSVG value={ticketNumber} size={132} level="H" fgColor="#2e1065" />
+                        </div>
                     </div>
-                )}
 
-                {/* Capture-only Branding Watermark */}
-                {isCapturing && (
-                    <div style={{ 
-                        backgroundColor: '#111827', 
-                        padding: '30px 30px', 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '12px',
-                        borderTop: '1px solid rgba(255,255,255,0.1)'
-                    }}>
-                        <img src={getFinalSrc(branding.logo_url || "/logo.png")} alt="Logo" crossOrigin="anonymous" style={{ height: '60px', width: 'auto', filter: 'brightness(0) invert(1)' }} />
-                        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '3px' }}>
-                            Authorized Digital Ticket • BookMyTicket
-                        </div>
+                    <div className="mt-8 text-center space-y-1">
+                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Ticket ID</p>
+                        <p className={`text-xl font-mono font-black italic tracking-tighter ${details.accent}`}>#{ticketNumber}</p>
+                    </div>
+
+                    <div className="absolute top-1/2 -right-4 -translate-y-1/2 rotate-90 whitespace-nowrap">
+                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/10">ID: {booking.id.slice(0, 16)}</p>
+                    </div>
+                </div>
+
+                {/* Security Shield Overlay */}
+                {!isTabActive && !isCapturing && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-3xl">
+                        <ShieldCheck className={details.accent} size={64} />
                     </div>
                 )}
             </div>
+
+            {/* Actions */}
+            {showDownload && (
+                <div className="mt-10 no-print">
+                    <button 
+                        onClick={downloadTicket}
+                        disabled={downloading}
+                        className={`flex items-center gap-3 px-14 py-4 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] hover:scale-105 active:scale-95 transition-all shadow-2xl ${details.neonColor}`}
+                    >
+                        {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                        {downloading ? "Rendering High-Quality..." : "Download Digital Pass"}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

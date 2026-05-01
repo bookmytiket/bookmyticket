@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
 import WalletDashboard from "./components/WalletDashboard";
+import CouponManagement from "./components/CouponManagement";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -4915,6 +4916,8 @@ function OrganiserPanel() {
                 case "withdraw":
                 case "transactions":
                     return <WalletDashboard user={user} />;
+                case "coupons":
+                    return <CouponManagement user={user} />;
                 default:
                     return <div>Coming Soon</div>;
             }
@@ -5264,6 +5267,12 @@ function OrganiserPanel() {
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                         <ArrowLeftRight size={18} />
                                         <span>Transactions</span>
+                                    </div>
+                                </button>
+                                <button onClick={() => setActiveTab("coupons")} className={`sidebar-item ${activeTab === "coupons" ? "active" : ""}`}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Ticket size={18} />
+                                        <span>Coupons</span>
                                     </div>
                                 </button>
                             </>
