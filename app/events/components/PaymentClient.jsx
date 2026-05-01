@@ -10,6 +10,17 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { triggerNotification } from "@/lib/notificationHelper";
 import { load } from "@cashfreepayments/cashfree-js";
 
+// Helper to load external scripts
+const loadScript = (src) => {
+    return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
 export default function PaymentClient({ id: eventId, bookingId: propBookingId }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -103,6 +114,87 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
             setPaymentStatus('fail');
             setIsPaying(false);
             alert("Payment Initialization Failed: " + err.message);
+        }
+    };
+    
+    const handleRazorpay = async () => {
+        if (!bookingId) return;
+        setIsPaying(true);
+        setPaymentStatus('processing');
+
+        try {
+            // 1. Load Razorpay Script
+            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+            if (!res) throw new Error("Razorpay SDK failed to load.");
+
+            // 2. Create Order
+            const response = await fetch('/api/razorpay/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingId,
+                    amount: booking.total_price
+                })
+            });
+
+            const order = await response.json();
+            if (order.error) throw new Error(order.error);
+
+            // 3. Open Razorpay Checkout
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: order.amount,
+                currency: order.currency,
+                name: "BookMyTicket",
+                description: `Payment for ${booking.event_name}`,
+                image: "/logo.png",
+                order_id: order.id,
+                handler: async function (response) {
+                    // 4. Verify Payment
+                    const verifyRes = await fetch('/api/razorpay/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            bookingId
+                        })
+                    });
+
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.success) {
+                        setPaymentStatus('success');
+                        setTimeout(() => {
+                            router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
+                        }, 1500);
+                    } else {
+                        throw new Error(verifyData.error || "Verification failed");
+                    }
+                },
+                prefill: {
+                    name: booking.customer_details?.name || "",
+                    email: booking.customer_details?.email || "",
+                    contact: booking.customer_details?.phone || ""
+                },
+                theme: {
+                    color: "#111827"
+                },
+                modal: {
+                    ondismiss: function() {
+                        setIsPaying(false);
+                        setPaymentStatus('idle');
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+        } catch (err) {
+            console.error("Razorpay Error:", err);
+            setPaymentStatus('fail');
+            setIsPaying(false);
+            alert("Payment failed: " + err.message);
         }
     };
 
@@ -205,11 +297,11 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <button
-                                        onClick={handleCashfree}
+                                        onClick={handleRazorpay}
                                         style={{ 
                                             width: '100%', 
                                             padding: '18px', 
-                                            background: '#111827', 
+                                            background: 'linear-gradient(135deg, #2b3148 0%, #111827 100%)', 
                                             color: '#fff', 
                                             border: 'none', 
                                             borderRadius: '16px', 
@@ -217,7 +309,35 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                                             fontWeight: 900, 
                                             cursor: 'pointer', 
                                             boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            transition: 'all 0.3s ease',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px',
+                                            marginBottom: '8px'
+                                        }}
+                                        disabled={isPaying}
+                                    >
+                                        <img src="https://razorpay.com/favicon.png" style={{ width: '20px', height: '20px' }} alt="" />
+                                        Pay with Razorpay
+                                    </button>
+
+                                    <button
+                                        onClick={handleCashfree}
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '18px', 
+                                            background: '#fff', 
+                                            color: '#111827', 
+                                            border: '1px solid #e2e8f0', 
+                                            borderRadius: '16px', 
+                                            fontSize: '15px', 
+                                            fontWeight: 900, 
+                                            cursor: 'pointer', 
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)', 
+                                            transition: 'all 0.3s ease',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.05em',
                                             display: 'flex',

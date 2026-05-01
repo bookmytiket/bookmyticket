@@ -1,10 +1,19 @@
-import { Cashfree } from "cashfree-pg";
+import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// Configure Cashfree SDK
+const cashfree = new Cashfree(
+    process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION" 
+        ? CFEnvironment.PRODUCTION 
+        : CFEnvironment.SANDBOX,
+    process.env.CASHFREE_APP_ID,
+    process.env.CASHFREE_SECRET_KEY
 );
 
 export async function POST(request) {
@@ -16,7 +25,7 @@ export async function POST(request) {
 
         // Verify Signature
         try {
-            Cashfree.PGVerifyWebhookSignature(signature, payload, timestamp);
+            cashfree.PGVerifyWebhookSignature(signature, payload, timestamp);
         } catch (err) {
             console.error("Cashfree Webhook Signature Verification Failed:", err.message);
             return NextResponse.json({ error: "Invalid signature" }, { status: 400 });

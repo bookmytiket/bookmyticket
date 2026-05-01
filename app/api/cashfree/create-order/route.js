@@ -1,12 +1,14 @@
-import { Cashfree } from "cashfree-pg";
+import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { NextResponse } from "next/server";
 
 // Configure Cashfree SDK
-Cashfree.XClientId = process.env.CASHFREE_APP_ID;
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-Cashfree.XEnvironment = process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION" 
-    ? Cashfree.Environment.PRODUCTION 
-    : Cashfree.Environment.SANDBOX;
+const cashfree = new Cashfree(
+    process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION" 
+        ? CFEnvironment.PRODUCTION 
+        : CFEnvironment.SANDBOX,
+    process.env.CASHFREE_APP_ID,
+    process.env.CASHFREE_SECRET_KEY
+);
 
 export async function POST(request) {
     try {
@@ -37,7 +39,7 @@ export async function POST(request) {
             order_note: `Payment for ${eventName || 'Event Booking'}`
         };
 
-        const response = await Cashfree.PGCreateOrder("2023-08-01", requestData);
+        const response = await cashfree.PGCreateOrder("2023-08-01", requestData);
         
         return NextResponse.json(response.data);
     } catch (err) {
