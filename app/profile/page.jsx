@@ -41,6 +41,7 @@ export default function ProfilePage() {
 
     const [eventBookingsList, setEventBookingsList] = useState([]);
     const [vendorBookingsList, setVendorBookingsList] = useState([]);
+    const [siteBranding, setSiteBranding] = useState({});
 
     useEffect(() => {
         if (!user?.id) return;
@@ -74,6 +75,11 @@ export default function ProfilePage() {
                     _id: b.id
                 }))));
         }
+
+        // Fetch site branding via API for ticket sponsor logos (bypasses RLS)
+        fetch('/api/branding')
+            .then(res => res.json())
+            .then(data => { if (data && !data.error) setSiteBranding(data); });
     }, [user?.identifier, user?.email, user.id]);
 
     // Removed forced redirect for organisers/staff to allow them to view personal bookings and join meetings
@@ -458,6 +464,7 @@ export default function ProfilePage() {
                                 category: viewTicketModal.events?.category || "Event"
                             }}
                             showDownload={true}
+                            branding={siteBranding}
                         />
 
                         {/* Meeting Access Button if applicable */}

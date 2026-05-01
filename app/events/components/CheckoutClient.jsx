@@ -49,6 +49,13 @@ export default function CheckoutClient({ id }) {
     , [id]);
 
     const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
+    const [siteBranding, setSiteBranding] = useState(null);
+
+    useEffect(() => {
+        fetch('/api/branding')
+            .then(res => res.json())
+            .then(data => { if (data && !data.error) setSiteBranding(data); });
+    }, []);
 
     const { data: availableCoupons } = useSupabaseQuery('coupons', (q) => 
         q.select('*').eq('is_active', true).order('created_at', { ascending: false }),
@@ -408,6 +415,7 @@ export default function CheckoutClient({ id }) {
                                     meetingUrl: event.meetingUrl
                                 }} 
                                 showDownload={true}
+                                branding={siteBranding}
                             />
                         </div>
 

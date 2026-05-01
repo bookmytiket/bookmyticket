@@ -370,11 +370,17 @@ function HomeClient() {
   const homeSectionsOrder = Array.isArray(homeSectionsOrderRaw) ? homeSectionsOrderRaw : [
     "Hero Banner", "Sub Navigation", "Featured Events", "Venue Events", "Coming Soon", "Spotlight", "Top Hand-picked"
   ];
-  const siteBranding = parseConfig(getConfigValue('admin_site_branding')) || {
+  const [siteBranding, setSiteBranding] = useState({
     name: "book my ticket",
-    logoColor: "#111111",
-    logoUrl: "/logo.png"
-  };
+    logo_color: "#111111",
+    logo_url: "/logo.png"
+  });
+
+  useEffect(() => {
+    fetch('/api/branding')
+        .then(res => res.json())
+        .then(data => { if (data && !data.error) setSiteBranding(data); });
+  }, []);
   const metaSettings = parseConfig(getConfigValue('admin_meta_settings')) || {
     global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
   };
@@ -1394,6 +1400,7 @@ function HomeClient() {
                     time: viewTicketModal.eventTime || viewTicketModal.time,
                     location: viewTicketModal.eventLocation || viewTicketModal.location || "Venue"
                 }}
+                branding={siteBranding}
             />
           </div>
         </div>

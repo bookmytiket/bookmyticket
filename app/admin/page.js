@@ -1224,7 +1224,7 @@ function AdminHomePage() {
     }, [emailSettingsArr]);
 
     // Site Branding
-    const [updateSiteBranding] = useSupabaseMutation('site_branding', 'update', (q, p) => q.eq('id', p.id));
+    const [updateSiteBranding] = useSupabaseMutation('site_branding', 'upsert');
 
     const siteBranding = useMemo(() => siteBrandingArr[0] || {
         name: "book my ticket",
@@ -1243,9 +1243,23 @@ function AdminHomePage() {
 
     useEffect(() => {
         if (siteBrandingArr[0]) {
-            setLocalBranding(siteBrandingArr[0]);
+            const b = siteBrandingArr[0];
+            setLocalBranding({
+                ...b,
+                sponsor_logo_1_url: b.sponsor_logo_1,
+                sponsor_logo_2_url: b.sponsor_logo_2,
+                partner_logo_1_url: b.partner_logo_1,
+                partner_logo_2_url: b.partner_logo_2,
+            });
         }
     }, [siteBrandingArr]);
+
+    const handleDeleteLogo = (type) => {
+        setLocalBranding(prev => ({
+            ...prev,
+            [`${type}_url`]: null
+        }));
+    };
 
     const metaSettings = useMemo(() => ({
         global: {
@@ -4149,15 +4163,26 @@ function AdminHomePage() {
                                                                 <span style={{ fontSize: "10px", color: t.textSub, opacity: 0.5 }}>No Logo</span>
                                                             )}
                                                         </div>
-                                                        <label style={{ padding: "6px 12px", backgroundColor: t.header, borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontWeight: 700, fontSize: "10px", color: t.textMain, border: `1px solid ${t.border}` }}>
-                                                            <Upload size={12} /> Upload
-                                                            <input 
-                                                                type="file" 
-                                                                accept="image/*" 
-                                                                style={{ display: "none" }} 
-                                                                onChange={(e) => handleBrandingUpload(e.target.files[0], item.key)}
-                                                            />
-                                                        </label>
+                                                        <div style={{ display: "flex", gap: "8px" }}>
+                                                            <label style={{ flex: 1, padding: "6px 12px", backgroundColor: t.header, borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontWeight: 700, fontSize: "10px", color: t.textMain, border: `1px solid ${t.border}` }}>
+                                                                <Upload size={12} /> Upload
+                                                                <input 
+                                                                    type="file" 
+                                                                    accept="image/*" 
+                                                                    style={{ display: "none" }} 
+                                                                    onChange={(e) => handleBrandingUpload(e.target.files[0], item.key)}
+                                                                />
+                                                            </label>
+                                                            {localBranding[`${item.key}_url`] && (
+                                                                <button 
+                                                                    onClick={() => handleDeleteLogo(item.key)}
+                                                                    style={{ padding: "6px 12px", backgroundColor: "#fef2f2", color: "#dc2626", borderRadius: "6px", border: "1px solid #fee2e2", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                    title="Remove Logo"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

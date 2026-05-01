@@ -13,19 +13,29 @@ export default function SuccessClient({ eventId, bookingId }) {
     const [showInvoice, setShowInvoice] = useState(false);
 
     const { data: booking, loading: bookingLoading } = useSupabaseQuery('bookings', (q) => 
-        q.eq('id', bookingId).single(),
+        q.select('*, events(*)').eq('id', bookingId).single(),
         [bookingId]
     );
+
+    const event = booking?.events;
 
     const { data: ticket, loading: ticketLoading } = useSupabaseQuery('tickets', (q) => 
         q.eq('booking_id', bookingId).maybeSingle(),
         [bookingId]
     );
 
-    const { data: branding, loading: brandingLoading } = useSupabaseQuery('site_branding', (q) => 
-        q.single(),
-        []
-    );
+    const [branding, setBranding] = useState(null);
+    const [brandingLoading, setBrandingLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('/api/branding')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) setBranding(data);
+                setBrandingLoading(false);
+            })
+            .catch(() => setBrandingLoading(false));
+    }, []);
 
     const eventLoading = false; // Placeholder if not defined
 

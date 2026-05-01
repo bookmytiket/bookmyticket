@@ -194,7 +194,7 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                                                 branding?.partner_logo_1,
                                                 branding?.partner_logo_2
                                             ].filter(Boolean).map((logo, idx) => (
-                                                <div key={idx} className="h-6 opacity-60 grayscale hover:grayscale-0 transition-all">
+                                                <div key={idx} className="h-7 hover:scale-110 transition-all duration-300">
                                                     <img src={logo} className="h-full w-auto object-contain" alt="Sponsor" />
                                                 </div>
                                             ))}
