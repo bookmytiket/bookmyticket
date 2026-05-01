@@ -84,7 +84,7 @@ export default function CouponCreationPage() {
       const bannerUrl = bannerFile ? URL.createObjectURL(bannerFile) : form.couponImage;
       const logoUrl   = logoFile   ? URL.createObjectURL(logoFile)   : form.brandLogo;
 
-      const { error } = await supabase.from('brand_coupons').insert({
+      const { error } = await supabase.from('branding_coupons').insert({
         brand_id:        user.id || 'default_brand',
         title:           form.couponTitle,
         description:     form.description,

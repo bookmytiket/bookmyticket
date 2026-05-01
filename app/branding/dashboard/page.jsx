@@ -45,7 +45,7 @@ export default function BrandingDashboard() {
     supabase.from('brand_kyc').select('status').eq('brand_id', user.id).maybeSingle()
       .then(({ data }) => { if (data?.status) setKycStatus(data.status); });
     // Coupons
-    supabase.from('brand_coupons').select('*').eq('brand_id', user.id)
+    supabase.from('branding_coupons').select('*').eq('brand_id', user.id)
       .then(({ data }) => setMyCoupons(data || []));
     // Subscription
     supabase.from('brand_subscriptions').select('*').eq('brand_id', user.id).maybeSingle()

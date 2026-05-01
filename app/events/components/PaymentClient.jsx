@@ -216,155 +216,350 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', paddingTop: '100px', paddingBottom: '60px' }}>
-            <div style={{ maxWidth: '500px', margin: '0 auto', padding: '0 20px' }}>
-                <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#64748b', textDecoration: 'none', fontSize: '14px', marginBottom: '24px', fontWeight: 600 }}>
-                    <ArrowLeft size={16} /> Cancel & Exit
-                </Link>
+        <div style={{ 
+            height: '100vh', 
+            background: '#fdfbf7', 
+            display: 'flex',
+            flexDirection: 'column',
+            fontFamily: 'inherit',
+            position: 'relative',
+            overflow: 'hidden',
+            color: '#111827'
+        }}>
+            {/* Dynamic Mesh Background */}
+            <div style={{ 
+                position: 'absolute', 
+                top: 0, left: 0, right: 0, bottom: 0, 
+                zIndex: 0,
+                background: `
+                    radial-gradient(at 0% 0%, rgba(255, 28, 247, 0.05) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, rgba(0, 224, 255, 0.05) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(255, 28, 247, 0.05) 0px, transparent 50%),
+                    radial-gradient(at 0% 100%, rgba(0, 224, 255, 0.05) 0px, transparent 50%)
+                `,
+                filter: 'blur(80px)',
+                animation: 'meshMove 15s ease-in-out infinite alternate'
+            }}></div>
 
-                <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
-                    <div style={{ background: '#111827', padding: '32px 24px', textAlign: 'center', color: '#fff' }}>
-                        <div style={{ width: '64px', height: '64px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                            <CreditCard size={32} color="#fff" />
-                        </div>
-                        <h1 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 8px 0' }}>Secure Checkout</h1>
-                        <p style={{ margin: 0, fontSize: '14px', opacity: 0.8 }}>Booking ID: #{bookingId.slice(-6).toUpperCase()}</p>
+            {/* Header / Navbar style */}
+            <div style={{ 
+                height: '80px',
+                padding: '0 40px', 
+                borderBottom: '1px solid rgba(0, 0, 0, 0.03)', 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: '32px',
+                zIndex: 1000,
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(20px)',
+                flexShrink: 0,
+                position: 'relative'
+            }}>
+                <button 
+                    onClick={() => router.push('/')}
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        color: '#111827', 
+                        background: '#fff',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        padding: '10px 20px',
+                        borderRadius: '14px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.transform = 'translateX(-4px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)'; }}
+                >
+                    <ArrowLeft size={18} />
+                    Back
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ 
+                        width: '42px', 
+                        height: '42px', 
+                        background: 'linear-gradient(135deg, #FF1CF7 0%, #b249f8 100%)', 
+                        borderRadius: '14px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        boxShadow: '0 8px 20px rgba(255, 28, 247, 0.2)',
+                        animation: 'pulse 2s infinite'
+                    }}>
+                        <CreditCard size={22} color="#fff" />
                     </div>
+                    <div>
+                        <h1 className="shimmer-text" style={{ fontSize: '20px', fontWeight: 900, color: '#111827', margin: 0, letterSpacing: '-0.03em' }}>Secure Checkout</h1>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking Ref: <span style={{ color: '#b249f8' }}>#{bookingId.slice(-6).toUpperCase()}</span></p>
+                    </div>
+                </div>
+            </div>
 
-                    <div style={{ padding: '24px' }}>
-                        <div style={{ marginBottom: '24px' }}>
-                            <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>Payment Summary</h2>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <span style={{ color: '#475569', fontSize: '15px' }}>{booking.event_name || 'Event'} (x{booking.ticket_count})</span>
-                                <span style={{ fontWeight: 700, color: '#111827' }}>₹{(booking.total_price || 0).toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-                                <span style={{ fontWeight: 800, color: '#111827', fontSize: '18px' }}>Total Amount</span>
-                                <span style={{ fontWeight: 900, color: '#111827', fontSize: '20px' }}>₹{(booking.total_price || 0).toFixed(2)}</span>
-                            </div>
+            <div style={{ 
+                flex: 1, 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 420px',
+                zIndex: 10,
+                position: 'relative',
+                minHeight: 0
+            }}>
+                {/* Main Payment Section */}
+                <div style={{ padding: '60px 80px', overflowY: 'auto' }}>
+                    <div style={{ maxWidth: '600px' }}>
+                        <div style={{ marginBottom: '48px' }}>
+                            <h2 style={{ fontSize: '42px', fontWeight: 900, color: '#111827', marginBottom: '12px', letterSpacing: '-0.04em', lineHeight: '1.1' }}>Complete Your Payment</h2>
+                            <p style={{ color: '#64748b', fontSize: '18px', fontWeight: 500 }}>Select your preferred payment method to secure your tickets.</p>
                         </div>
 
                         {paymentStatus === 'processing' && (
-                            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '16px', borderRadius: '12px', marginBottom: '24px', textAlign: 'center' }}>
-                                <div className="spinner" style={{ width: '24px', height: '24px', border: '3px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }}></div>
-                                <p style={{ margin: 0, fontSize: '14px', color: '#1e40af', fontWeight: 600 }}>Processing your payment securely...</p>
+                            <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '32px', borderRadius: '28px', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)' }}>
+                                <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                <p style={{ margin: 0, fontSize: '18px', color: '#1e40af', fontWeight: 700 }}>Processing Transaction...</p>
                             </div>
                         )}
 
                         {paymentStatus === 'success' && (
-                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '16px', borderRadius: '12px', marginBottom: '24px', textAlign: 'center' }}>
-                                <ShieldCheck size={32} color="#22c55e" style={{ marginBottom: '8px' }} />
-                                <p style={{ margin: 0, fontSize: '14px', color: '#15803d', fontWeight: 700 }}>Payment Successful!</p>
+                            <div style={{ background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.1)', padding: '32px', borderRadius: '28px', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)' }}>
+                                <ShieldCheck size={48} color="#22c55e" />
+                                <p style={{ margin: 0, fontSize: '18px', color: '#15803d', fontWeight: 800 }}>Payment Confirmed!</p>
                             </div>
                         )}
 
                         {paymentStatus === 'idle' || paymentStatus === 'fail' ? (
-                            paypalClientId ? (
-                                <PayPalScriptProvider options={{ "client-id": paypalClientId, currency: "USD" }}>
-                                    <PayPalButtons
-                                        style={{ layout: "vertical" }}
-                                        createOrder={(data, actions) => {
-                                            return actions.order.create({
-                                                purchase_units: [{ amount: { value: booking.totalPrice.toFixed(2) } }],
-                                            });
-                                        }}
-                                        onApprove={async (data, actions) => {
-                                            setIsPaying(true);
-                                            setPaymentStatus('processing');
-                                            try {
-                                                const details = await actions.order.capture();
-                                                if (details.status === "COMPLETED") {
-                                                    const { error } = await supabase
-                                                        .from('bookings')
-                                                        .update({ status: 'Confirmed' })
-                                                        .eq('id', bookingId);
-                                                    if (error) throw error;
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                {/* PayPal Gateway */}
+                                {paypalClientId && (
+                                    <div style={{ borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.05)', background: '#fff', padding: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                                        <PayPalScriptProvider options={{ "client-id": paypalClientId, currency: "USD" }}>
+                                            <PayPalButtons
+                                                style={{ layout: "vertical", shape: "rect", height: 60 }}
+                                                createOrder={(data, actions) => {
+                                                    return actions.order.create({
+                                                        purchase_units: [{ amount: { value: (booking.total_price || 0).toFixed(2) } }],
+                                                    });
+                                                }}
+                                                onApprove={async (data, actions) => {
+                                                    setIsPaying(true);
+                                                    setPaymentStatus('processing');
+                                                    try {
+                                                        const details = await actions.order.capture();
+                                                        if (details.status === "COMPLETED") {
+                                                            const { error } = await supabase
+                                                                .from('bookings')
+                                                                .update({ status: 'Confirmed' })
+                                                                .eq('id', bookingId);
+                                                            if (error) throw error;
 
-                                                    setPaymentStatus('success');
-                                                    setTimeout(() => router.push(`/events/${eventId}/book/checkout?bookingId=${bookingId}&success=true`), 1500);
-                                                } else {
-                                                    setPaymentStatus('fail');
-                                                }
-                                            } catch (error) {
-                                                setPaymentStatus('fail');
-                                            } finally {
-                                                setIsPaying(false);
-                                            }
-                                        }}
-                                        onError={() => setPaymentStatus('fail')}
-                                    />
-                                </PayPalScriptProvider>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            setPaymentStatus('success');
+                                                            setTimeout(() => router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`), 1500);
+                                                        } else {
+                                                            setPaymentStatus('fail');
+                                                        }
+                                                    } catch (error) {
+                                                        setPaymentStatus('fail');
+                                                    } finally {
+                                                        setIsPaying(false);
+                                                    }
+                                                }}
+                                                onError={() => setPaymentStatus('fail')}
+                                            />
+                                        </PayPalScriptProvider>
+                                    </div>
+                                )}
+
+                                {/* Razorpay Gateway */}
+                                {gateways?.find(g => g.name === "Razorpay" && g.is_enabled) && (
                                     <button
                                         onClick={handleRazorpay}
+                                        className="glossy-button"
                                         style={{ 
                                             width: '100%', 
-                                            padding: '18px', 
-                                            background: 'linear-gradient(135deg, #2b3148 0%, #111827 100%)', 
+                                            padding: '24px', 
+                                            background: 'linear-gradient(135deg, #FF1CF7 0%, #b249f8 100%)', 
                                             color: '#fff', 
                                             border: 'none', 
-                                            borderRadius: '16px', 
-                                            fontSize: '15px', 
+                                            borderRadius: '24px', 
+                                            fontSize: '18px', 
                                             fontWeight: 900, 
                                             cursor: 'pointer', 
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
-                                            transition: 'all 0.3s ease',
+                                            boxShadow: '0 15px 35px rgba(255, 28, 247, 0.25)', 
+                                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                             textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
+                                            letterSpacing: '0.1em',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '10px',
-                                            marginBottom: '8px'
+                                            gap: '16px',
+                                            position: 'relative',
+                                            overflow: 'hidden'
                                         }}
                                         disabled={isPaying}
+                                        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 20px 45px rgba(255, 28, 247, 0.35)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(255, 28, 247, 0.25)'; }}
                                     >
-                                        <img src="https://razorpay.com/favicon.png" style={{ width: '20px', height: '20px' }} alt="" />
+                                        <img src="https://razorpay.com/favicon.png" style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }} alt="" />
                                         Pay with Razorpay
                                     </button>
+                                )}
 
+                                {/* Cashfree Gateway */}
+                                {gateways?.find(g => g.name === "Cashfree" && g.is_enabled) && (
                                     <button
                                         onClick={handleCashfree}
                                         style={{ 
                                             width: '100%', 
-                                            padding: '18px', 
+                                            padding: '22px', 
                                             background: '#fff', 
                                             color: '#111827', 
-                                            border: '1px solid #e2e8f0', 
-                                            borderRadius: '16px', 
-                                            fontSize: '15px', 
-                                            fontWeight: 900, 
+                                            border: '1px solid rgba(0,0,0,0.08)', 
+                                            borderRadius: '24px', 
+                                            fontSize: '17px', 
+                                            fontWeight: 800, 
                                             cursor: 'pointer', 
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)', 
-                                            transition: 'all 0.3s ease',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
+                                            transition: 'all 0.4s ease',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '10px'
+                                            gap: '16px',
+                                            boxShadow: '0 8px 20px rgba(0,0,0,0.02)'
                                         }}
                                         disabled={isPaying || !cashfree}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; }}
                                     >
+                                        <div style={{ width: '26px', height: '26px', background: '#fff', borderRadius: '8px', padding: '4px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            <img src="https://www.cashfree.com/favicon.ico" style={{ width: '100%', height: '100%' }} alt="" />
+                                        </div>
                                         Pay with Cashfree
                                     </button>
-                                    
-                                    <div style={{ textAlign: 'center', marginTop: '12px' }}>
-                                        <p style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Supported Methods</p>
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '8px', opacity: 0.6 }}>
-                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>UPI</span>
-                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>CARDS</span>
-                                            <span style={{ fontSize: '10px', fontWeight: 800 }}>NETBANKING</span>
-                                        </div>
+                                )}
+
+                                {/* No Gateways Warning */}
+                                {!paypalClientId && 
+                                 !gateways?.find(g => g.name === "Razorpay" && g.is_enabled) && 
+                                 !gateways?.find(g => g.name === "Cashfree" && g.is_enabled) && (
+                                    <div style={{ padding: '40px', background: 'rgba(239, 68, 68, 0.03)', border: '1px solid rgba(239, 68, 68, 0.08)', borderRadius: '32px', textAlign: 'center', backdropFilter: 'blur(10px)' }}>
+                                        <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '20px', margin: '0 auto', animation: 'bounce 2s infinite' }} />
+                                        <p style={{ margin: 0, fontSize: '18px', color: '#991b1b', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                                            No Active Gateways
+                                        </p>
+                                        <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#ef4444', fontWeight: 600 }}>
+                                            Please contact support to complete your booking.
+                                        </p>
                                     </div>
-                                </div>
-                            )
+                                )}
+                            </div>
                         ) : null}
+
+                        <div style={{ marginTop: '60px', display: 'flex', gap: '40px', opacity: 0.6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <ShieldCheck size={18} color="#22c55e" />
+                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 800, letterSpacing: '0.05em' }}>SSL SECURE</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <CreditCard size={18} color="#b249f8" />
+                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 800, letterSpacing: '0.05em' }}>PCI COMPLIANT</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar Order Summary */}
+                <div style={{ 
+                    background: 'rgba(252, 249, 242, 0.6)', 
+                    padding: '40px 48px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    overflowY: 'hidden',
+                    borderLeft: '1px solid rgba(0,0,0,0.03)',
+                    backdropFilter: 'blur(30px)'
+                }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: '32px' }}>Transaction Overview</h3>
+                    
+                    <div style={{ marginBottom: '32px', position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: '-20px', top: '0', bottom: '0', width: '4px', background: 'linear-gradient(to bottom, #FF1CF7, #b249f8)', borderRadius: '2px' }}></div>
+                        <p style={{ fontSize: '22px', fontWeight: 900, color: '#111827', margin: '0 0 6px 0', letterSpacing: '-0.03em' }}>{booking.event_name || 'Event Ticket'}</p>
+                        <p style={{ fontSize: '14px', color: '#64748b', margin: 0, fontWeight: 600 }}>{booking.ticket_count}x Official Registration</p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '15px', fontWeight: 600 }}>
+                            <span>Standard Rate</span>
+                            <span>₹{(booking?.base_amount || 0).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '15px', fontWeight: 600 }}>
+                            <span>Platform Fee</span>
+                            <span>₹{(booking?.platform_charge || 0).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '15px', fontWeight: 600 }}>
+                            <span>GST ({booking?.gst_percent || 0}%)</span>
+                            <span>₹{(booking?.gst_amount || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div style={{ 
+                        padding: '32px 0', 
+                        borderTop: '2px dashed rgba(0,0,0,0.06)', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'baseline',
+                        marginTop: 'auto'
+                    }}>
+                        <span style={{ fontSize: '17px', fontWeight: 800, color: '#111827' }}>Total Payable</span>
+                        <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '36px', fontWeight: 900, color: '#111827', letterSpacing: '-0.04em' }}>₹{(booking.total_price || 0).toFixed(2)}</span>
+                            <p style={{ fontSize: '11px', color: '#FF1CF7', margin: '2px 0 0', fontWeight: 900, letterSpacing: '0.1em' }}>INR</p>
+                        </div>
+                    </div>
+
+                    <div style={{ paddingTop: '24px' }}>
+                        <p style={{ fontSize: '10px', color: '#94a3b8', lineHeight: '1.7', fontWeight: 600 }}>
+                            Secure encrypted transaction powered by global standards. By proceeding, you agree to our terms and conditions.
+                        </p>
                     </div>
                 </div>
             </div>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+                @keyframes meshMove { 
+                    0% { transform: translate(0, 0) scale(1); }
+                    100% { transform: translate(20px, 20px) scale(1.1); }
+                }
+                @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+                .shimmer-text {
+                    background: linear-gradient(90deg, #111827 0%, #4b5563 50%, #111827 100%);
+                    background-size: 200% auto;
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    animation: shimmer 3s linear infinite;
+                }
+                @keyframes shimmer { to { background-position: 200% center; } }
+                .glossy-button::after {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+                    transform: rotate(45deg);
+                    animation: glossy 3s infinite;
+                }
+                @keyframes glossy { 0% { left: -100%; } 100% { left: 100%; } }
+                body { margin: 0; padding: 0; overflow: hidden; background: #fdfbf7; }
+            `}</style>
         </div>
     );
 }
+
+
+
+
+

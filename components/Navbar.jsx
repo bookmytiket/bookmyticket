@@ -282,7 +282,7 @@ export default function Navbar({ compact = false }) {
   };
 
   const CouponFlipTicker = ({ isScrolled = false, isMobileMode = false }) => {
-    const { data: supabaseCoupons } = useSupabaseQuery('brand_coupons', (q) => q, []);
+    const { data: supabaseCoupons } = useSupabaseQuery('branding_coupons', (q) => q, []);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const coupons = useMemo(() => {

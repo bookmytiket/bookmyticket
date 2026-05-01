@@ -28,7 +28,7 @@ export default function CheckoutScreen() {
 
   // Migrated to Supabase
   const { data: supabaseEvents } = useSupabaseQuery('events', (q) => q.select('*').or('status.eq.Active,status.eq.published'));
-  const { data: supabaseConfig } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings'));
+  const { data: supabaseConfig } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle());
 
   const isSeating = selectedSeats.length > 0;
   const [qty, setQty] = useState(isSeating ? selectedSeats.length : 1);
@@ -38,12 +38,8 @@ export default function CheckoutScreen() {
   const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
 
   useEffect(() => {
-    if (supabaseConfig && supabaseConfig.length > 0) {
-      const rawFeeSettings = supabaseConfig[0].value;
-      try {
-        const parsed = typeof rawFeeSettings === 'string' ? JSON.parse(rawFeeSettings) : rawFeeSettings;
-        if (parsed) setFeeSettings((p) => ({ ...p, ...parsed }));
-      } catch (_) {}
+    if (supabaseConfig) {
+      setFeeSettings((p) => ({ ...p, ...supabaseConfig }));
     }
   }, [supabaseConfig]);
 
@@ -167,12 +163,8 @@ export default function CheckoutScreen() {
           <Text style={styles.rowVal}>₹{baseAmount.toFixed(0)}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Convenience fee</Text>
-          <Text style={styles.rowVal}>₹{convenienceFee.toFixed(0)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>GST</Text>
-          <Text style={styles.rowVal}>₹{gst.toFixed(0)}</Text>
+          <Text style={styles.rowLabel}>Fees + GST</Text>
+          <Text style={styles.rowVal}>₹{(convenienceFee + gst).toFixed(0)}</Text>
         </View>
         <View style={[styles.row, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>

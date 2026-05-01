@@ -60,3 +60,31 @@ BEGIN
         ALTER TABLE public.pool_bookings ADD COLUMN partner_total FLOAT8 DEFAULT 0;
     END IF;
 END $$;
+
+-- Patch missing base_amount and platform_charge for Events bookings
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='base_amount') THEN
+        ALTER TABLE public.bookings ADD COLUMN base_amount FLOAT8 DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='platform_charge') THEN
+        ALTER TABLE public.bookings ADD COLUMN platform_charge FLOAT8 DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='partner_bonus') THEN
+        ALTER TABLE public.bookings ADD COLUMN partner_bonus FLOAT8 DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='platform_revenue') THEN
+        ALTER TABLE public.bookings ADD COLUMN platform_revenue FLOAT8 DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='partner_total') THEN
+        ALTER TABLE public.bookings ADD COLUMN partner_total FLOAT8 DEFAULT 0;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='gst_percent') THEN
+        ALTER TABLE public.bookings ADD COLUMN gst_percent FLOAT8 DEFAULT 0;
+    END IF;
+END $$;

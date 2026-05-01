@@ -6715,6 +6715,21 @@ function AdminHomePage() {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {editingOrg.fee_config?.apply_gst && (
+                                                    <div>
+                                                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: t.textSub, marginBottom: "6px" }}>APPLY GST ON</label>
+                                                        <select 
+                                                            value={editingOrg.fee_config?.gst_apply_on || 'fee_only'}
+                                                            onChange={e => setEditingOrg({ ...editingOrg, fee_config: { ...editingOrg.fee_config, gst_apply_on: e.target.value } })}
+                                                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: `1px solid ${t.border}`, backgroundColor: theme === 'light' ? '#fff' : '#1e293b', color: t.textMain, fontSize: "13px" }}
+                                                        >
+                                                            <option value="fee_only">Platform Fee Only</option>
+                                                            <option value="ticket_only">Ticket Price Only</option>
+                                                            <option value="both">Both (Fee + Ticket)</option>
+                                                        </select>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

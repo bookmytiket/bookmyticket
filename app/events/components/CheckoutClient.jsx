@@ -48,7 +48,7 @@ export default function CheckoutClient({ id }) {
         q.select('*').eq('id', id).maybeSingle()
     , [id]);
 
-    const { data: rawFeeSettings } = useSupabaseQuery('system_config', (q) => q.eq('key', 'admin_fee_settings').single(), []);
+    const { data: rawFeeSettings } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
     const [storageLoaded, setStorageLoaded] = useState(false);
     const [feeSettings, setFeeSettings] = useState(DEFAULT_FEE_SETTINGS);
     const [bookingDone, setBookingDone] = useState(false);
@@ -77,10 +77,7 @@ export default function CheckoutClient({ id }) {
 
     useEffect(() => {
         if (rawFeeSettings) {
-            try {
-                const parsedFees = typeof rawFeeSettings.value === "string" ? JSON.parse(rawFeeSettings.value) : rawFeeSettings.value;
-                if (parsedFees) setFeeSettings(prev => ({ ...prev, ...parsedFees }));
-            } catch (_) { }
+            setFeeSettings(prev => ({ ...prev, ...rawFeeSettings }));
             setStorageLoaded(true);
         } else if (rawFeeSettings === null) {
             setStorageLoaded(true);
@@ -127,7 +124,12 @@ export default function CheckoutClient({ id }) {
         try { return seatsParam ? JSON.parse(seatsParam) : []; } catch { return []; }
     }, [seatsParam]);
 
-    const ticketPrice = event?.price ?? 499;
+    const ticketPriceParam = searchParams.get('price');
+    const ticketPrice = useMemo(() => {
+        if (ticketPriceParam) return parseFloat(ticketPriceParam);
+        return event?.price ?? 499;
+    }, [ticketPriceParam, event?.price]);
+    
     const qty = Math.max(1, parseInt(searchParams.get('qty') || '1', 10) || 1);
     const selectedPackageName = searchParams.get('package');
     const regDataParam = searchParams.get('regData');
@@ -149,7 +151,7 @@ export default function CheckoutClient({ id }) {
         );
     }, [feeSettings, organiserData?.fee_config, event?.fee_config]);
 
-    const { convenienceFee, gst, total } = useMemo(() => getFeeBreakdown(baseAmount, resolvedFeeSettings), [baseAmount, resolvedFeeSettings]);
+    const { convenienceFee, gst, total, gstPercent } = useMemo(() => getFeeBreakdown(baseAmount, resolvedFeeSettings), [baseAmount, resolvedFeeSettings]);
 
     const handleConfirmPay = async () => {
         if (!event || !user || !termsAccepted || isProcessing) return;
@@ -173,6 +175,7 @@ export default function CheckoutClient({ id }) {
                     base_amount: breakdown.baseAmount,
                     platform_charge: breakdown.convenienceFee,
                     gst_amount: breakdown.gst,
+                    gst_percent: breakdown.gstPercent,
                     partner_bonus: breakdown.partnerBonus,
                     platform_revenue: breakdown.platformRevenue,
                     partner_total: breakdown.partnerTotal,
@@ -490,15 +493,13 @@ export default function CheckoutClient({ id }) {
 
                                     <div className="space-y-3 pt-4 border-t border-slate-50">
                                         <div className="flex justify-between text-xs font-bold text-slate-400">
-                                            <span>Convenience Fee</span>
+                                            <span>Platform Fee</span>
                                             <span>₹{convenienceFee.toFixed(2)}</span>
                                         </div>
-                                        {gst > 0 && (
-                                            <div className="flex justify-between text-xs font-bold text-slate-400">
-                                                <span>GST</span>
-                                                <span>₹{gst.toFixed(2)}</span>
-                                            </div>
-                                        )}
+                                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                                            <span>GST ({gstPercent}%)</span>
+                                            <span>₹{gst.toFixed(2)}</span>
+                                        </div>
                                     </div>
                                 </div>
 

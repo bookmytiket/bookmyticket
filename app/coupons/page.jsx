@@ -13,7 +13,7 @@ import Footer from "@/components/Footer";
 export default function CouponsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
-    const { data: dbCoupons, loading: dbLoading } = useSupabaseQuery('brand_coupons', (q) => q, []);
+    const { data: dbCoupons, loading: dbLoading } = useSupabaseQuery('branding_coupons', (q) => q, []);
     const [coupons, setCoupons] = useState([]);
     const [copying, setCopying] = useState(null);
 

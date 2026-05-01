@@ -54,7 +54,7 @@ export default function DynamicEventClient({ event }) {
     const [selectedAgeRate, setSelectedAgeRate] = useState(null);
     const [isAgeDropdownOpen, setIsAgeDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({});
-    const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0 });
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
     const [notification, setNotification] = useState(null);
 
     // Toast Timer
@@ -75,12 +75,13 @@ export default function DynamicEventClient({ event }) {
             
             if (diff <= 0) {
                 clearInterval(timer);
-                setTimeLeft({ days: 0, hrs: 0, min: 0 });
+                setTimeLeft({ days: 0, hrs: 0, min: 0, sec: 0 });
             } else {
                 setTimeLeft({
                     days: Math.floor(diff / (1000 * 60 * 60 * 24)),
                     hrs: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-                    min: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                    min: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                    sec: Math.floor((diff % (1000 * 60)) / 1000)
                 });
             }
         }, 1000);
@@ -88,8 +89,8 @@ export default function DynamicEventClient({ event }) {
         return () => clearInterval(timer);
     }, [config.countdown]);
 
-    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').maybeSingle(), []);
-    const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
+    const { data: feeSettingsRaw } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
+    const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
     const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
@@ -353,10 +354,10 @@ export default function DynamicEventClient({ event }) {
                                                     
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="space-y-1">
-                                                            <h5 className={`text-base font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.name}</h5>
+                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-[#fde047]' : 'text-slate-900'}`}>{cat.name}</h5>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className={`text-xl font-black ${isSelected ? 'text-white' : 'text-[#ec4899]'}`}>
+                                                            <div className={`text-xl font-bold tracking-tight ${isSelected ? 'text-[#fde047]' : 'text-[#ec4899]'}`}>
                                                                 {priceDisplay}
                                                             </div>
                                                         </div>
@@ -364,16 +365,16 @@ export default function DynamicEventClient({ event }) {
 
                                                     <div className="space-y-2 mb-4">
                                                         {(cat.prizes || config.prizes || []).slice(0, 3).map((p, pIdx) => (
-                                                            <div key={pIdx} className="flex justify-between text-[9px] font-black uppercase tracking-tight">
-                                                                <span className={isSelected ? 'text-white/70' : 'text-slate-500'}>{p.label || p.name}</span>
-                                                                <span className={isSelected ? 'text-white' : 'text-slate-900'}>{p.value || p.amount}</span>
+                                                            <div key={pIdx} className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                                                                <span className={isSelected ? 'text-white/90' : 'text-slate-500'}>{p.label || p.name}</span>
+                                                                <span className={isSelected ? 'text-[#fde047]' : 'text-slate-900'}>{p.value || p.amount}</span>
                                                             </div>
                                                         ))}
                                                     </div>
 
                                                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/20">
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>{cat.gender || 'All'} • {cat.totalSlots} Slots</span>
-                                                        {isSelected && <CheckCircle2 size={24} className="text-white" />}
+                                                        <span className={`text-[11px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-slate-400'}`}>{cat.gender || 'All'} • {cat.totalSlots} Slots</span>
+                                                        {isSelected && <CheckCircle2 size={24} className="text-[#fde047]" />}
                                                     </div>
                                                 </div>
                                             );
@@ -453,7 +454,7 @@ export default function DynamicEventClient({ event }) {
                                     disabled={!selectedCategory || (normalizedAgeRates.length > 0 && !selectedAgeRate)}
                                     className={`w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[13px] transition-all shadow-2xl flex items-center justify-center gap-4 ${
                                         (selectedCategory && (normalizedAgeRates.length === 0 || selectedAgeRate))
-                                        ? 'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-white shadow-pink-300/50 hover:scale-[1.02] active:scale-95' 
+                                        ? 'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-[#fde047] shadow-pink-300/50 hover:scale-[1.02] active:scale-95' 
                                         : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                                     }`}
                                 >
@@ -478,23 +479,6 @@ export default function DynamicEventClient({ event }) {
                             </div>
                         </motion.div>
 
-                        {/* Amenities */}
-                        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5">
-                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Available Amenities</h3>
-                            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                                {(config.amenities || []).map(id => {
-                                    const Icon = AMENITY_ICONS[id] || Star;
-                                    return (
-                                        <div key={id} className="group flex flex-col items-center gap-2 text-center">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
-                                                <Icon size={18} />
-                                            </div>
-                                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-tight leading-none">{id}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right Column Sidebar */}
@@ -534,9 +518,13 @@ export default function DynamicEventClient({ event }) {
                                                 <span>Active</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-xs font-black uppercase tracking-tight">
-                                            <span className="text-slate-500">Fees + GST</span>
+                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
+                                            <span className="text-slate-500">Platform Fee</span>
                                             <span className="text-slate-900">₹{fees.convenienceFee.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
+                                            <span className="text-slate-500">GST ({fees.gstPercent}%)</span>
+                                            <span className="text-slate-900">₹{fees.gst.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -563,22 +551,45 @@ export default function DynamicEventClient({ event }) {
                                 <h4 className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">Registration Deadline</h4>
                                 <div className="flex items-center justify-center gap-6">
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.days}</div>
-                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">DAYS</div>
+                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.days}</div>
+                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">DAYS</div>
                                     </div>
                                     <div className="w-px h-8 bg-white/20" />
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.hrs}</div>
-                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">HRS</div>
+                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.hrs}</div>
+                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">HRS</div>
                                     </div>
                                     <div className="w-px h-8 bg-white/20" />
                                     <div className="text-center">
-                                        <div className="text-3xl font-black text-white leading-none">{timeLeft.min}</div>
-                                        <div className="text-[9px] font-black text-white/50 mt-1 uppercase">MIN</div>
+                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.min}</div>
+                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">MIN</div>
+                                    </div>
+                                    <div className="w-px h-8 bg-white/20" />
+                                    <div className="text-center">
+                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.sec}</div>
+                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">SEC</div>
                                     </div>
                                 </div>
                             </div>
                         )}
+
+                        {/* Amenities Moved to Sidebar */}
+                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6">
+                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-5 text-center">Available Amenities</h3>
+                            <div className="grid grid-cols-3 gap-y-6 gap-x-2">
+                                {(config.amenities || []).map(id => {
+                                    const Icon = AMENITY_ICONS[id] || Star;
+                                    return (
+                                        <div key={id} className="group flex flex-col items-center gap-2 text-center">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#ec4899] group-hover:bg-[#ec4899] group-hover:text-white transition-all shadow-sm">
+                                                <Icon size={18} />
+                                            </div>
+                                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tight leading-none">{id}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                 </div>

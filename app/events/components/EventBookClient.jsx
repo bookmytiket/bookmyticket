@@ -93,8 +93,8 @@ export default function EventBookClient({ id }) {
         }
     }, [event, id, router]);
 
-    const { data: feeSettingsRaw } = useSupabaseQuery('system_config', (q) => q.eq('key', 'fee_settings').maybeSingle(), []);
-    const feeSettingsSystem = (feeSettingsRaw && feeSettingsRaw.value) || DEFAULT_FEE_SETTINGS;
+    const { data: feeSettingsRaw } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
+    const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
     const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
@@ -197,7 +197,8 @@ export default function EventBookClient({ id }) {
             : '';
         const qtyParam = !isSeating ? `&qty=${quantity}` : '';
         const packageParam = selectedPackage ? `&package=${encodeURIComponent(selectedPackage.title || selectedPackage.name)}` : '';
-        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}`);
+        const priceParam = !isSeating ? `&price=${currentPrice}` : '';
+        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}`);
     };
 
     return (
@@ -495,12 +496,8 @@ export default function EventBookClient({ id }) {
                                         <span>₹{baseAmount.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[13px] font-bold text-slate-500">
-                                        <span className="flex items-center gap-2">Platform Fee <Info size={12} className="text-slate-300" /></span>
-                                        <span>₹{convenienceFee.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[13px] font-bold text-slate-500">
-                                        <span>Service Tax</span>
-                                        <span>₹{gst.toFixed(2)}</span>
+                                        <span>Fees + GST</span>
+                                        <span>₹{(convenienceFee + gst).toFixed(2)}</span>
                                     </div>
                                 </div>
 

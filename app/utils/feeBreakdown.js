@@ -19,42 +19,56 @@ export function resolveFeeSettings(systemSettings = {}, organiserConfig = {}, ev
     convenienceFeeType: systemSettings.convenienceFeeType || DEFAULT_FEE_SETTINGS.convenienceFeeType,
     convenienceFeeValue: Number(systemSettings.convenienceFeeValue) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue,
     gstPercent: Number(systemSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent,
+    gstApplyOn: systemSettings.gstApplyOn || systemSettings.gst_apply_on || 'fee_only',
     applyGst: true // System default usually applies GST
   };
 
   // Organiser Override
   if (organiserConfig?.override_global) {
-    finalConfig.convenienceFeeType = organiserConfig.fee_type === 'percentage' ? 'percent' : 'fixed';
-    finalConfig.convenienceFeeValue = Number(organiserConfig.fee_value);
-    finalConfig.applyGst = !!organiserConfig.apply_gst;
-    finalConfig.gstPercent = Number(organiserConfig.gst_percent) || 0;
+    if (organiserConfig.fee_type) finalConfig.convenienceFeeType = organiserConfig.fee_type === 'percentage' ? 'percent' : 'fixed';
+    if (organiserConfig.fee_value !== undefined) finalConfig.convenienceFeeValue = Number(organiserConfig.fee_value);
+    if (organiserConfig.apply_gst !== undefined) finalConfig.applyGst = !!organiserConfig.apply_gst;
+    if (organiserConfig.gst_percent !== undefined) finalConfig.gstPercent = Number(organiserConfig.gst_percent);
+    if (organiserConfig.gst_apply_on) finalConfig.gstApplyOn = organiserConfig.gst_apply_on;
   }
 
   // Event Override (highest priority)
   if (eventConfig?.override_global) {
-    finalConfig.convenienceFeeType = eventConfig.fee_type === 'percentage' ? 'percent' : 'fixed';
-    finalConfig.convenienceFeeValue = Number(eventConfig.fee_value);
-    finalConfig.applyGst = !!eventConfig.apply_gst;
-    finalConfig.gstPercent = Number(eventConfig.gst_percent) || 0;
+    if (eventConfig.fee_type) finalConfig.convenienceFeeType = eventConfig.fee_type === 'percentage' ? 'percent' : 'fixed';
+    if (eventConfig.fee_value !== undefined) finalConfig.convenienceFeeValue = Number(eventConfig.fee_value);
+    if (eventConfig.apply_gst !== undefined) finalConfig.applyGst = !!eventConfig.apply_gst;
+    if (eventConfig.gst_percent !== undefined) finalConfig.gstPercent = Number(eventConfig.gst_percent);
+    if (eventConfig.gst_apply_on) finalConfig.gstApplyOn = eventConfig.gst_apply_on;
   }
 
   return finalConfig;
 }
 
 export function getFeeBreakdown(baseAmount, feeSettings = {}) {
-  // Support both old and new field names for backward compatibility during transition
-  const type = feeSettings.convenienceFeeType || (feeSettings.fee_type === 'percentage' ? 'percent' : 'fixed') || DEFAULT_FEE_SETTINGS.convenienceFeeType;
-  const feeVal = Number(feeSettings.convenienceFeeValue ?? feeSettings.fee_value) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue;
-  const applyGst = feeSettings.applyGst !== undefined ? feeSettings.applyGst : (feeSettings.apply_gst !== undefined ? feeSettings.apply_gst : true);
-  const gstPct = applyGst ? (Number(feeSettings.gstPercent ?? feeSettings.gst_percent) ?? DEFAULT_FEE_SETTINGS.gstPercent) : 0;
+  // Support both snake_case (DB) and camelCase (code) field names
+  const type = feeSettings.convenience_fee_type || feeSettings.convenienceFeeType || (feeSettings.fee_type === 'percentage' ? 'percent' : 'fixed') || DEFAULT_FEE_SETTINGS.convenienceFeeType;
+  const feeVal = Number(feeSettings.convenience_fee_value ?? feeSettings.convenienceFeeValue ?? feeSettings.fee_value) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue;
+  const applyGst = feeSettings.apply_gst !== undefined ? feeSettings.apply_gst : (feeSettings.applyGst !== undefined ? feeSettings.applyGst : true);
+  const gstPct = applyGst ? (Number(feeSettings.gst_percent ?? feeSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent) : 0;
+  const gstApplyOn = feeSettings.gst_apply_on ?? feeSettings.gstApplyOn ?? 'fee_only';
   
-  const partnerSharePct = Number(feeSettings.partnerSharePercent) || DEFAULT_FEE_SETTINGS.partnerSharePercent;
+  const partnerSharePct = Number(feeSettings.partner_share_percent ?? feeSettings.partnerSharePercent) || DEFAULT_FEE_SETTINGS.partnerSharePercent;
 
   // Step 1: Platform Charge (Convenience Fee)
   const convenienceFee = baseAmount > 0 ? (type === 'fixed' ? feeVal : (baseAmount * feeVal) / 100) : 0;
   
-  // Step 2: GST on Platform Charge ONLY
-  const gst = convenienceFee > 0 ? (convenienceFee * gstPct) / 100 : 0;
+  // Step 2: GST Calculation based on mode
+  let gst = 0;
+  if (gstPct > 0) {
+    if (gstApplyOn === 'ticket_only') {
+      gst = (baseAmount * gstPct) / 100;
+    } else if (gstApplyOn === 'both') {
+      gst = ((baseAmount + convenienceFee) * gstPct) / 100;
+    } else {
+      // Default: fee_only
+      gst = (convenienceFee * gstPct) / 100;
+    }
+  }
   
   // Step 3: Partner Share from Platform Charge
   const partnerBonus = baseAmount > 0 ? (baseAmount * partnerSharePct) / 100 : 0;
@@ -73,5 +87,6 @@ export function getFeeBreakdown(baseAmount, feeSettings = {}) {
     platformRevenue,
     partnerTotal,
     gstPercent: gstPct,
+    gstApplyOn
   };
 }
