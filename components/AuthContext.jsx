@@ -281,7 +281,7 @@ export function AuthProvider({ children }) {
         if (supabase) {
             try { await supabase.auth.signOut(); } catch (err) { console.error(err); }
         }
-        router.replace("/signin");
+        router.replace("/");
     };
 
     return (

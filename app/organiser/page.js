@@ -1263,20 +1263,33 @@ function OrganiserPanel() {
             exclusive: postEvent.isExclusive === "Yes" ? true : false,
             status: (() => {
                 const now = new Date();
-                const configExpiry = postEvent.dynamic_config?.basicInfo?.expiryDate || postEvent.expiryDate;
-                let dateStr = configExpiry || firstSlot.date || today;
+                now.setHours(0, 0, 0, 0); // Compare against start of today
 
-                // Handle DD/MM/YYYY format for robustness
-                if (dateStr.includes('/') && dateStr.split('/')[0].length <= 2) {
-                    const [d, m, y] = dateStr.split('/');
-                    dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                // Prioritize End Date, then Expiry Date, then Start Date
+                const configBasic = postEvent.dynamic_config?.basicInfo || {};
+                const configExpiry = configBasic.expiryDate || postEvent.expiryDate;
+                let dateStr = postEvent.endDate || configBasic.endDate || configExpiry || firstSlot.date || today;
+
+                // Handle DD/MM/YYYY or DD-MM-YYYY format for robustness
+                if (typeof dateStr === 'string' && (dateStr.includes('/') || dateStr.includes('-'))) {
+                    const separator = dateStr.includes('/') ? '/' : '-';
+                    const parts = dateStr.split(separator);
+                    if (parts[0].length <= 2) {
+                        const [d, m, y] = parts;
+                        dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    }
                 }
 
-                const timeStr = firstSlot.time || "23:59";
+                const timeStr = postEvent.endTime || configBasic.endTime || firstSlot.time || "23:59";
                 const eventDateTime = new Date(`${dateStr}T${timeStr}`);
 
                 if (postEvent.eventStatus === "draft") return "draft";
-                if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) return "expired";
+                // Only expire if the date is strictly in the past (before today)
+                if (!isNaN(eventDateTime.getTime())) {
+                    const checkDate = new Date(eventDateTime);
+                    checkDate.setHours(0, 0, 0, 0);
+                    if (checkDate < now) return "expired";
+                }
                 return "published";
             })(),
             meeting_type: postEvent.meetingType || "internal",

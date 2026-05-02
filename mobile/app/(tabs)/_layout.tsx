@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View, Text } from 'react-native';
-import { Home, Calendar, Ticket, User } from 'lucide-react-native';
+import { Home, Calendar, Ticket, User, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -56,6 +56,15 @@ export default function TabLayout() {
           title: 'Events',
           tabBarLabel: 'EVENTS',
           tabBarIcon: ({ color }) => <Calendar size={22} color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="services"
+        options={{
+          title: 'Services',
+          tabBarLabel: 'SERVICES',
+          tabBarIcon: ({ color }) => <Sparkles size={22} color={color} />,
         }}
       />
       

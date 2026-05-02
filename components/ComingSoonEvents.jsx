@@ -90,7 +90,8 @@ export default function ComingSoonEvents({ events = [] }) {
     const COMING_SOON_EVENTS = (events || []).filter(e => {
         const eventDate = parseEventDate(e.date || e.rawDate, e.time || e.rawTime);
         if (!eventDate) return false;
-        return (e.featured || e.trending) && eventDate >= now;
+        // Show any upcoming event regardless of featured/trending status
+        return eventDate >= now;
     }).slice(0, 5);
 
     const event = COMING_SOON_EVENTS[idx] || {};

@@ -29,17 +29,28 @@ export default function EventsScreen() {
     });
   }, []);
 
-  const { data: events, loading, refresh } = useSupabaseQuery(
+  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useSupabaseQuery(
     'events',
     (q) => q.order('created_at', { ascending: false }),
     [],
     { realtime: true }
   );
 
-  const filteredEvents = useMemo(() => {
-    if (!events) return [];
+  const { data: professionals, loading: prosLoading, refresh: refreshPros } = useSupabaseQuery(
+    'service_providers',
+    (q) => q.eq('status', 'active'),
+    [],
+    { realtime: true }
+  );
+
+  const loading = eventsLoading || prosLoading;
+  const refresh = () => { refreshEvents(); refreshPros(); };
+
+  const filteredItems = useMemo(() => {
     const now = new Date();
-    let list = events.filter(ev => {
+    
+    // Process Events
+    let eventList = (events || []).filter(ev => {
       const s = String(ev.status || '').toLowerCase();
       if (s === "draft" || s === "inactive") return false;
       
@@ -51,14 +62,21 @@ export default function EventsScreen() {
         return val;
       };
       const dynamicConfig = safeParse(ev.dynamic_config) || {};
-      let dt = ev.date || ev.start_date || ev.startDate || ev.expiry_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
+      const configBasic = dynamicConfig.basicInfo || {};
+      let dt = ev.end_date || ev.endDate || configBasic.endDate || ev.expiry_date || configBasic.expiryDate || ev.date || ev.start_date || ev.startDate || configBasic.date || configBasic.basicInfo?.date;
       if (!dt) return true;
       
       let eventDate: Date | null = null;
       try {
-        if (dt.includes('/')) {
-          const [d, m, y] = dt.split('/');
-          eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
+        if (String(dt).includes('/') || String(dt).includes('-')) {
+          const sep = String(dt).includes('/') ? '/' : '-';
+          const parts = String(dt).split(sep);
+          if (parts[0].length <= 2) {
+            const [d, m, y] = parts;
+            eventDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T23:59:59`);
+          } else {
+            eventDate = new Date(dt);
+          }
         } else {
           eventDate = new Date(dt);
         }
@@ -69,8 +87,25 @@ export default function EventsScreen() {
       return true;
     });
 
+    // Process Professionals
+    let proList = (professionals || []).map(p => {
+      const settings = typeof p.advanced_settings === 'string' ? JSON.parse(p.advanced_settings) : (p.advanced_settings || {});
+      return {
+        ...p,
+        title: p.business_name,
+        name: p.business_name,
+        img: p.image_url,
+        location: p.city || 'Online',
+        venue: p.city || 'Online',
+        price: p.starting_price || p.pricing || 0,
+        settings
+      };
+    });
+
+    let combined = [...eventList, ...proList];
+
     if (userLocation) {
-      list = list.filter(e => {
+      combined = combined.filter(e => {
         const safeParse = (val: any) => {
           if (!val) return null;
           if (typeof val === 'string') {
@@ -94,7 +129,7 @@ export default function EventsScreen() {
     }
 
     if (selectedCategory !== 'All') {
-      list = list.filter((e) => {
+      combined = combined.filter((e) => {
         const safeParse = (val: any) => {
           if (!val) return null;
           if (typeof val === 'string') {
@@ -107,24 +142,18 @@ export default function EventsScreen() {
         return cat === selectedCategory.toLowerCase();
       });
     }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter((e) => {
-        const safeParse = (val: any) => {
-          if (!val) return null;
-          if (typeof val === 'string') {
-            try { return JSON.parse(val); } catch (err) { return null; }
-          }
-          return val;
-        };
-        const dynamicConfig = safeParse(e.dynamic_config) || {};
-        const title = String(e.name || e.title || dynamicConfig.basicInfo?.eventName || dynamicConfig.title || '').toLowerCase();
-        const venue = String(e.venue || e.location || e.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || '').toLowerCase();
+      combined = combined.filter((e) => {
+        const title = String(e.name || e.title || '').toLowerCase();
+        const venue = String(e.venue || e.location || e.city || '').toLowerCase();
         return title.includes(q) || venue.includes(q);
       });
     }
-    return list;
-  }, [events, selectedCategory, searchQuery, userLocation]);
+
+    return combined;
+  }, [events, professionals, selectedCategory, searchQuery, userLocation]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -191,7 +220,7 @@ export default function EventsScreen() {
 
       {/* Grid */}
       <FlatList
-        data={loading ? Array(6).fill({}) : filteredEvents}
+        data={loading ? Array(6).fill({}) : filteredItems}
         numColumns={2}
         keyExtractor={(item, index) => item.id ?? `skeleton-${index}`}
         contentContainerStyle={styles.listContent}
@@ -204,19 +233,26 @@ export default function EventsScreen() {
           ) : (
             <EventCard
               event={item}
-              onPress={() =>
-                router.push({
-                  pathname: '/events/[id]',
-                  params: { id: item.id },
-                })
-              }
+              onPress={() => {
+                if (item.business_name) {
+                  router.push({
+                    pathname: '/services/[id]',
+                    params: { id: item.id },
+                  });
+                } else {
+                  router.push({
+                    pathname: '/events/[id]',
+                    params: { id: item.id },
+                  });
+                }
+              }}
             />
           )
         }
         ListHeaderComponent={() => (
           <View style={styles.resultsHeader}>
             <Text style={[styles.resultCount, { color: colors.muted }]}>
-              {filteredEvents.length} Experiences found
+              {filteredItems.length} Experiences found
             </Text>
             <Pressable style={styles.filterBtn}>
               <SlidersHorizontal size={14} color={colors.text} />

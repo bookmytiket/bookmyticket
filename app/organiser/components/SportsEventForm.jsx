@@ -5,7 +5,7 @@ import {
     Calendar, Clock, MapPin, DollarSign, Shield, CheckCircle2,
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
-    TrendingUp, Trash2, Trash, Zap, Wallet
+    TrendingUp, Trash2, Trash, Zap, Wallet, Sparkles
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -351,6 +351,10 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             {renderInput("Start Time", "startTime", "time")}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
+                            {renderInput("End Date", "endDate", "date")}
+                            {renderInput("End Time", "endTime", "time")}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
                             {renderInput("Event Expiry Date", "expiryDate", "date")}
                             <div />
                         </div>
@@ -400,6 +404,54 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             {/* 💰 Event-Specific Fee Overrides */}
                             <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
                                 <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                                            <Shield size={16} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Admin Controls</h3>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Exclusive & Featured Options</p>
+                                        </div>
+                                    </div>
+                                    {!isAdmin && <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-400 uppercase">Admin Only</div>}
+                                </div>
+
+                                {isAdmin && (
+                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200/50">
+                                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles size={14} className="text-amber-500" />
+                                                <span className="text-[10px] font-bold uppercase text-slate-700">Exclusive</span>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer scale-75">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="sr-only peer"
+                                                    checked={postEvent.is_exclusive || false}
+                                                    onChange={e => updateField('is_exclusive', e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100">
+                                            <div className="flex items-center gap-2">
+                                                <Zap size={14} className="text-blue-500" />
+                                                <span className="text-[10px] font-bold uppercase text-slate-700">Spotlight</span>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer scale-75">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="sr-only peer"
+                                                    checked={postEvent.is_spotlight || false}
+                                                    onChange={e => updateField('is_spotlight', e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-4 flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
                                             <Wallet size={16} />
@@ -574,7 +626,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             onClick={onPublish} 
                             className="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-2xl shadow-blue-500/40 hover:scale-105 transition-all"
                         >
-                            Publish Event Now
+                            {isEditing ? "Update Changes" : "Publish Event Now"}
                         </button>
                     </div>
                 </div>

@@ -28,6 +28,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react-native';
+import { getFeeBreakdown } from '@/lib/feeBreakdown';
 
 export default function BookEventScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -50,15 +51,49 @@ export default function BookEventScreen() {
   const [currentBookingId, setCurrentBookingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) fetchEvent();
+    if (!id) return;
+
+    // Initial fetch
+    fetchEvent();
+
+    // Real-time subscription
+    const channel = supabase
+      .channel(`event-updates-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Real-time event update:', payload);
+          setEvent(payload.new);
+          processEventData(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
-  useEffect(() => {
-    if (user) {
-      setName(user.user_metadata?.full_name || '');
-      setEmail(user.email || '');
-    }
-  }, [user]);
+  const processEventData = (data: any) => {
+    // Pre-select first tier
+    const safeParse = (val: any) => {
+      if (!val) return null;
+      if (typeof val === 'string') {
+        try { return JSON.parse(val); } catch (e) { return null; }
+      }
+      return val;
+    };
+    const parsedConfig = safeParse(data.dynamic_config) || {};
+    const parsedTickets = safeParse(data.tickets) || parsedConfig.tickets || [];
+    const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+    if (tiers.length > 0) setSelectedTier(tiers[0]);
+  };
 
   const fetchEvent = async () => {
     setLoading(true);
@@ -70,19 +105,7 @@ export default function BookEventScreen() {
         .single();
       if (error) throw error;
       setEvent(data);
-
-      // Pre-select first tier
-      const safeParse = (val: any) => {
-        if (!val) return null;
-        if (typeof val === 'string') {
-          try { return JSON.parse(val); } catch (e) { return null; }
-        }
-        return val;
-      };
-      const parsedConfig = safeParse(data.dynamic_config) || {};
-      const parsedTickets = safeParse(data.tickets) || parsedConfig.tickets || [];
-      const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
-      if (tiers.length > 0) setSelectedTier(tiers[0]);
+      processEventData(data);
     } catch (err) {
       console.error('Error fetching event for booking:', err);
     } finally {
@@ -102,9 +125,19 @@ export default function BookEventScreen() {
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
   
   const tierPrice = selectedTier ? Number(selectedTier.price || 0) : Number(event?.price || 0);
-  const subtotal = tierPrice * quantity;
-  const convenienceFee = event?.is_free ? 0 : Math.round(subtotal * 0.02);
-  const total = subtotal + convenienceFee;
+  const { subtotal, convenienceFee, gst, total } = (() => {
+    const base = tierPrice * quantity;
+    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0 };
+    
+    // Use shared fee breakdown logic
+    const breakdown = getFeeBreakdown(base, event?.fee_config || {});
+    return {
+      subtotal: base,
+      convenienceFee: breakdown.convenienceFee,
+      gst: breakdown.gst,
+      total: breakdown.total
+    };
+  })();
 
   const handleBook = async () => {
     if (!name.trim() || !email.trim()) {
@@ -439,10 +472,20 @@ export default function BookEventScreen() {
           {convenienceFee > 0 && (
             <RNView style={styles.breakdownRow}>
               <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-                Convenience fee (2%)
+                Convenience fee
               </Text>
               <Text style={[styles.breakdownValue, { color: colors.text }]}>
                 ₹{convenienceFee.toLocaleString('en-IN')}
+              </Text>
+            </RNView>
+          )}
+          {gst > 0 && (
+            <RNView style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
+                GST
+              </Text>
+              <Text style={[styles.breakdownValue, { color: colors.text }]}>
+                ₹{gst.toLocaleString('en-IN')}
               </Text>
             </RNView>
           )}

@@ -202,38 +202,49 @@ export default function HomeScreen() {
     { realtime: true }
   );
 
-  const activeEvents = useMemo(() => {
-    if (!events) return [];
-    const now = new Date();
-    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
+  const { data: professionals } = useSupabaseQuery(
+    'service_providers',
+    (q) => q.eq('status', 'active'),
+    [],
+    { realtime: true }
+  );
 
-    return events.filter(ev => {
+  const activeProfessionals = useMemo(() => {
+    if (!professionals) return [];
+    
+    const safeParse = (val: any) => {
+      if (!val) return {};
+      if (typeof val === 'string') {
+        try { return JSON.parse(val); } catch (err) { return {}; }
+      }
+      return val;
+    };
+
+    return professionals
+      .map(p => ({ ...p, settings: safeParse(p.advanced_settings) }))
+      .filter(p => Number(p.settings.rating || 0) >= 4)
+      .sort((a, b) => Number(b.settings.rating) - Number(a.settings.rating))
+      .slice(0, 10);
+  }, [professionals]);
+
+  const allLiveEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return (Array.isArray(events) ? events : []).filter(ev => {
       const s = String(ev.status || '').toLowerCase();
-      if (s === "draft" || s === "inactive") return false;
-      
+      if (s === "inactive" || s === "draft" || s === "expired") return false;
+
       const safeParse = (val: any) => {
         if (!val) return null;
         if (typeof val === 'string') {
-          try { return JSON.parse(val); } catch (e) { return null; }
+          try { return JSON.parse(val); } catch (err) { return null; }
         }
         return val;
       };
-      const dynamicConfig = safeParse(ev.dynamic_config) || {};
+      const dynamicConfig = safeParse(ev.dynamic_config);
       
-      // 1. Location Filter (Match Web Portal logic)
-      if (cityFilter) {
-        const loc = String(ev.location || ev.venue || ev.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || '').toLowerCase();
-        const isVirtual = ev.virtual === true || 
-                 String(ev.type || '').toLowerCase() === "online" || 
-                 String(ev.type || '').toLowerCase() === "virtual" ||
-                 loc.includes("online") || loc.includes("virtual");
-                 
-        if (!loc.includes(cityFilter) && !isVirtual) {
-          return false;
-        }
-      }
-      
-      // 2. Date/Expiry Filter
+      // Date/Expiry Filter
       let dt = ev.date || ev.start_date || ev.startDate || ev.expiry_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
       if (!dt) return true;
 
@@ -247,13 +258,36 @@ export default function HomeScreen() {
         }
       } catch (e) { return true; }
 
-      // If future, show it. If past and expired, hide it.
-      if (eventDate && eventDate > now) return true;
-      if (s === "expired") return false;
+      if (eventDate) {
+        const evDateOnly = new Date(eventDate);
+        evDateOnly.setHours(0, 0, 0, 0);
+        return evDateOnly >= today;
+      }
       
       return true;
     });
-  }, [events, userLocation]);
+  }, [events]);
+
+  const activeEvents = useMemo(() => {
+    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
+
+    return allLiveEvents.filter(ev => {
+      // Spotlight/Exclusive/Virtual events show everywhere
+      const isVirtual = ev.virtual === true || ev.virtual === "Yes";
+      const isSpotlight = ev.is_spotlight === true || ev.spotlight === true || ev.spotlight === "Yes";
+      const isExclusive = ev.is_exclusive === true || ev.exclusive === true || ev.exclusive === "Yes";
+
+      if (isVirtual || isSpotlight || isExclusive) return true;
+
+      if (cityFilter) {
+        const loc = String(ev.city || ev.location || ev.venue || '').toLowerCase();
+        if (!loc.includes(cityFilter)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [allLiveEvents, userLocation]);
 
   const heroSlides = useMemo(() => {
     if (!banners || banners.length === 0) return [];
@@ -274,12 +308,22 @@ export default function HomeScreen() {
   }, [couponsRaw]);
 
   const featuredEvents = useMemo(() => {
-    const featured = activeEvents.filter(e => e.featured);
+    const featured = activeEvents.filter(e => e.is_exclusive || e.is_spotlight || e.featured);
     return featured.length > 0 ? featured : activeEvents.slice(0, 5);
   }, [activeEvents]);
 
+  const spotlightEvents = useMemo(() => {
+    return activeEvents.filter(e => e.is_spotlight).slice(0, 5);
+  }, [activeEvents]);
+
+  const justInEventsList = useMemo(() => {
+    return [...allLiveEvents]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 5);
+  }, [allLiveEvents]);
+
   const comingSoonEvents = useMemo(() => {
-    const upcoming = activeEvents.filter(e => e.featured || e.trending);
+    const upcoming = activeEvents.filter(e => e.featured || e.trending || e.is_spotlight);
     return upcoming.length > 0 ? upcoming.slice(0, 5) : activeEvents.slice(0, 5);
   }, [activeEvents]);
 
@@ -340,13 +384,6 @@ export default function HomeScreen() {
             />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffda00' }}>
-            <Pressable 
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ffda00' }}
-              onPress={() => setIsLocationModalOpen(true)}
-            >
-              <MapPin size={16} color="#000" />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#000', backgroundColor: '#ffda00' }}>{userLocation}</Text>
-            </Pressable>
             {user ? (
               <View style={[styles.avatar, { backgroundColor: '#f84464' }]}>
                 <Text style={styles.avatarText}>{user.email?.slice(0, 1).toUpperCase() || 'U'}</Text>
@@ -497,6 +534,126 @@ export default function HomeScreen() {
           />
         </View>
 
+        {/* Spotlight Events (Premium/Admin Highlighted) */}
+        {spotlightEvents.length > 0 && (
+          <View style={[styles.section, { paddingBottom: 10 }]}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={20} color="#ffda00" />
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Spotlight ✨</Text>
+              </View>
+            </View>
+            <FlatList
+              data={spotlightEvents}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => `spotlight-${item.id}`}
+              contentContainerStyle={{ paddingLeft: 20, gap: 12 }}
+              renderItem={({ item }) => (
+                <Pressable 
+                  onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
+                  style={{ width: 280, height: 160, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
+                >
+                  <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800' }} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} />
+                  <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
+                  <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }} numberOfLines={1}>{item.title}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <MapPin size={12} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{item.city || 'Location TBA'}</Text>
+                    </View>
+                  </View>
+                  <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#ffda00', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' }}>Exclusive</Text>
+                  </View>
+                </Pressable>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Professional Services Section (Mehendi Artists, etc.) */}
+        {activeProfessionals.length > 0 && (
+          <View style={[styles.section, { marginBottom: 10 }]}>
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'column', gap: 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4', letterSpacing: 1, textTransform: 'uppercase' }}>Professional Services</Text>
+                </View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Top <Text style={{ color: '#a855f7' }}>Artists</Text> & Pros</Text>
+              </View>
+              <Pressable onPress={() => router.push('/services')}>
+                <Text style={[styles.seeAll, { color: colors.tint }]}>See All</Text>
+              </Pressable>
+            </View>
+            <FlatList
+              data={activeProfessionals}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => `pro-${item.id}`}
+              contentContainerStyle={{ paddingLeft: 20, gap: 16 }}
+              renderItem={({ item }) => (
+                <Pressable 
+                  style={{ width: 180, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}
+                  onPress={() => router.push({ pathname: "/services/[id]", params: { id: item.id } })}
+                >
+                  <View style={{ height: 120, position: 'relative' }}>
+                    <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }} style={{ width: '100%', height: '100%' }} />
+                    <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: '#22c55e', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 8, fontWeight: '900', color: '#fff' }}>AVAILABLE</Text>
+                    </View>
+                    <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                      <Star size={10} fill="#fbbf24" color="#fbbf24" />
+                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#000' }}>{item.settings.rating || '5.0'}</Text>
+                    </View>
+                  </View>
+                  <View style={{ padding: 10 }}>
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#f844a4', textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: colors.text }} numberOfLines={1}>{item.business_name}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <MapPin size={10} color={colors.muted} />
+                        <Text style={{ fontSize: 10, color: colors.muted }}>{item.city || 'Online'}</Text>
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#10b981' }}>₹{Number(item.starting_price || item.pricing || 1999).toLocaleString()}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Ad Banner Slot */}
+        {banners && banners.some(b => {
+          const m = typeof b.metadata === 'string' ? JSON.parse(b.metadata) : b.metadata;
+          return m?.is_ad;
+        }) && (
+          <View style={{ paddingHorizontal: 20, marginVertical: 10 }}>
+            {banners.filter(b => {
+              const m = typeof b.metadata === 'string' ? JSON.parse(b.metadata) : b.metadata;
+              return m?.is_ad;
+            }).slice(0, 1).map((ad, i) => (
+              <Pressable 
+                key={i}
+                style={{ height: 100, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#f844a4' }}
+                onPress={() => {
+                  const m = typeof ad.metadata === 'string' ? JSON.parse(ad.metadata) : ad.metadata;
+                  if (m?.url) router.push(m.url);
+                }}
+              >
+                <Image source={{ uri: ad.image_url }} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={StyleSheet.absoluteFill} />
+                <View style={{ padding: 16 }}>
+                  <Text style={{ color: '#fde047', fontSize: 8, fontWeight: '900', letterSpacing: 1 }}>SPONSORED</Text>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', marginTop: 4 }}>{ad.title}</Text>
+                  <Text style={{ color: '#fff', fontSize: 10, opacity: 0.8 }}>{ad.sub_text}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* Featured Events List */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -623,6 +780,76 @@ export default function HomeScreen() {
             />
           </View>
         )}
+
+        {/* New Section: Just In (Unfiltered latest events) */}
+        <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Just In ⚡</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>The latest events added to BookMyTicket</Text>
+              </View>
+            </View>
+
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 16 }}
+            >
+              {justInEventsList && justInEventsList.length > 0 ? (
+                justInEventsList.map((item, idx) => (
+                  <EventCard 
+                    key={item.id || idx} 
+                    event={item} 
+                    onPress={() => router.push({
+                      pathname: "/events/[id]",
+                      params: { id: item.id }
+                    })}
+                  />
+                ))
+              ) : (
+                <View style={{ width: width - 40, padding: 40, alignItems: 'center', backgroundColor: colors.card, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border }}>
+                   <Text style={{ color: colors.muted, fontWeight: '600' }}>Loading fresh events...</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+        {/* New Section: Events Near You (ALL events) */}
+        <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Events Near You 📍</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>Handpicked for you in {userLocation}</Text>
+              </View>
+              <Pressable onPress={() => router.push('/events')}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.tint }}>See All</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 16 }}
+            >
+              {activeEvents.length > 0 ? (
+                activeEvents.map((item, idx) => (
+                  <EventCard 
+                    key={item.id || idx} 
+                    event={item} 
+                    onPress={() => router.push({
+                      pathname: "/events/[id]",
+                      params: { id: item.id }
+                    })}
+                  />
+                ))
+              ) : (
+                <View style={{ width: width - 40, padding: 40, alignItems: 'center', backgroundColor: colors.card, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border }}>
+                   <Ticket size={32} color={colors.muted} />
+                   <Text style={{ marginTop: 12, color: colors.muted, fontWeight: '600' }}>No events in your city yet</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
 
         {/* Explore Popular Events Section */}
         {popularEvents.length > 0 && (

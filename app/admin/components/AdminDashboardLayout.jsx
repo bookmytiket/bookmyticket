@@ -157,6 +157,7 @@ export default function AdminDashboardLayout({ children, activeTab: initialActiv
                                 { label: "Mobile Banners", id: "mobile_banners" },
                                 { label: "Video Banner", id: "video_banner" },
                                 { label: "Site Branding", id: "site_branding" },
+                                { label: "Exclusive Events", id: "exclusive_settings" },
                                 { label: "Featured Events", id: "events_settings" },
                                 { label: "Event Partners", id: "event_partners" },
                                 { label: "Maintenance Mode", id: "maintenance" }

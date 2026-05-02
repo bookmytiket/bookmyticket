@@ -7,7 +7,7 @@ import {
     ChevronRight, Info, HeartPulse, GraduationCap, Briefcase, Timer, Target,
     Bike, Award, Utensils, Shirt, Coffee, Car, Smile, Camera, Home, FileText,
     TrendingUp, Trash2, Trash, Zap, Map, Layout, ListTodo, MessageCircle, 
-    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet
+    Save, Eye, Globe, Lock, Share2, Phone, Mail, Bell, Gift, Scissors, HelpCircle, Ticket, ShieldCheck, Plus, ChevronDown, Wallet, Sparkles
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
@@ -351,7 +351,9 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             organizerContact: "",
             regStart: "",
             regEnd: "",
-            expiryDate: ""
+            expiryDate: "",
+            endDate: "",
+            endTime: ""
         },
         location: {
             venueName: "",
@@ -508,6 +510,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="grid grid-cols-2 gap-4">
                             {renderInput("Event Date", postEvent.startDate, (v) => setPostEvent(p => ({ ...p, startDate: v })), "date")}
                             {renderInput("Event Time", postEvent.startTime, (v) => setPostEvent(p => ({ ...p, startTime: v })), "time")}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {renderInput("End Date", config.basicInfo.endDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, endDate: v }), "date")}
+                            {renderInput("End Time", config.basicInfo.endTime, (v) => updateConfig('basicInfo', { ...config.basicInfo, endTime: v }), "time")}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             {renderInput("Registration Starts", config.basicInfo.regStart, (v) => updateConfig('basicInfo', { ...config.basicInfo, regStart: v }), "date")}
@@ -806,6 +812,68 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* 🌟 Admin Special Statuses */}
+                        <div className="md:col-span-2 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                                        <Sparkles size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Admin Special Status</h3>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Highlight this event on the platform</p>
+                                    </div>
+                                </div>
+                                {!isAdmin && <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-400 uppercase">Admin Only</div>}
+                            </div>
+
+                            {isAdmin && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50">
+                                    <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
+                                                <Award size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Exclusive Event</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Premium Badge</p>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer"
+                                                checked={postEvent.is_exclusive || false}
+                                                onChange={e => setPostEvent({ ...postEvent, is_exclusive: e.target.checked })}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                                                <Zap size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Spotlight</p>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Top of Feed</p>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer"
+                                                checked={postEvent.is_spotlight || false}
+                                                onChange={e => setPostEvent({ ...postEvent, is_spotlight: e.target.checked })}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* 💰 Event-Specific Fee Overrides */}
                         <div className="md:col-span-2 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
                             <div className="flex items-center justify-between mb-6">
@@ -958,9 +1026,9 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             
                             <button 
                                 onClick={onPublish}
-                                className="w-full py-6 bg-[#ec4899] text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.3em] shadow-2xl shadow-pink-200 hover:scale-105 active:scale-95 transition-all"
+                                className="w-full py-6 bg-[#ec4899] text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-pink-200 hover:scale-105 active:scale-95 transition-all"
                             >
-                                Publish Event
+                                {isEditing ? "Update Changes" : "Publish Event"}
                             </button>
                         </div>
                     </div>

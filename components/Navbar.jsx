@@ -467,22 +467,33 @@ export default function Navbar({ compact = false }) {
           </div>
 
           {/* Location Selection Button */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
+            whileTap={{ scale: 0.95 }}
             className="nav-loc-btn hide-mobile"
             onClick={() => setLocOpen(true)}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
+              gap: '8px',
+              background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(241, 245, 249, 0.8)',
+              border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+              padding: '8px 16px',
+              borderRadius: '14px',
               cursor: 'pointer',
               color: scrolled ? '#fff' : '#1e293b',
-              marginRight: 'auto'
+              marginRight: 'auto',
+              marginLeft: '10px',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(8px)'
             }}
           >
-            <div suppressHydrationWarning style={{ fontWeight: 700, fontSize: '15px' }}>{mounted ? (selectedCity || "Select Location") : "Select Location"}</div>
-          </button>
+            <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
+            <div suppressHydrationWarning style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em' }}>
+              {mounted ? (selectedCity || "Select Location") : "Select Location"}
+            </div>
+            <ChevronDown size={14} opacity={0.5} />
+          </motion.button>
 
           {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
@@ -603,21 +614,6 @@ export default function Navbar({ compact = false }) {
           </div>
 
           <div className="header-actions-area" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button
-              className="show-mobile"
-              onClick={() => setLocOpen(true)}
-              style={{ background: 'none', border: 'none', padding: '6px 2px', color: scrolled ? '#fff' : '#1e293b' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={scrolled ? "#fff" : "#ef4444"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <span suppressHydrationWarning style={{ fontSize: '13px', fontWeight: 600, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {mounted ? (selectedCity || "Select") : "Select"}
-                </span>
-              </div>
-            </button>
             {mounted && user ? (
               <div style={{ position: 'relative' }}>
                 <div

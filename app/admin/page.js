@@ -2819,6 +2819,48 @@ function AdminHomePage() {
                         </div>
                     )}
 
+                    {activeTab === "exclusive_settings" && (
+                        <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                <h3 style={{ fontSize: "18px", fontWeight: 700 }}>Exclusive Events Management</h3>
+                            </div>
+                            <div style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `1px solid ${t.border}`, textAlign: "left" }}>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Event Title</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Category</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: "12px", color: t.textSub, fontSize: "13px", fontWeight: 600 }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allEvents.filter(e => e.is_exclusive).map((ev) => (
+                                            <tr key={ev.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                <td style={{ padding: "12px", fontWeight: 700, color: t.textMain }}>{ev.title}</td>
+                                                <td style={{ padding: "12px", fontSize: "12px" }}>{ev.category}</td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#f59e0b15", color: "#f59e0b", fontWeight: 800 }}>EXCLUSIVE</span>
+                                                </td>
+                                                <td style={{ padding: "12px" }}>
+                                                    <button 
+                                                        onClick={() => updateEvent({ id: ev.id, is_exclusive: false })}
+                                                        style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}
+                                                    >
+                                                        Remove Exclusive
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {allEvents.filter(e => e.is_exclusive).length === 0 && (
+                                            <tr><td colSpan="4" style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No exclusive events found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === "all_events" && (
                         <div style={{ backgroundColor: t.cardBg, padding: "24px", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
@@ -2879,24 +2921,62 @@ function AdminHomePage() {
                                                 </td>
                                                 <td style={{ padding: "12px", fontSize: "12px", color: t.textSub }}>{ev.source === "organiser" ? "Organiser" : "Homepage"}</td>
                                                 <td style={{ padding: "12px" }}>
-                                                    {(() => {
-                                                        const eventDateStr = ev.date;
-                                                        const eventTimeStr = ev.time || "23:59";
-                                                        let isExpired = false;
-                                                        try {
-                                                            const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
-                                                            isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
-                                                        } catch (e) {
-                                                            isExpired = false;
-                                                        }
-                                                        
-                                                        if (isExpired || ev.status === 'expired') {
-                                                            return <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#ef444415", color: "#ef4444" }}>EXPIRED</span>;
-                                                        }
-                                                        return <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>ACTIVE</span>;
-                                                    })()}
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                        {(() => {
+                                                            const eventDateStr = ev.date;
+                                                            const eventTimeStr = ev.time || "23:59";
+                                                            let isExpired = false;
+                                                            try {
+                                                                const eDate = new Date(`${eventDateStr}T${eventTimeStr.includes(':') ? eventTimeStr : eventTimeStr + ':00'}`);
+                                                                isExpired = !isNaN(eDate.getTime()) && eDate < new Date();
+                                                            } catch (e) {
+                                                                isExpired = false;
+                                                            }
+                                                            
+                                                            if (isExpired || ev.status === 'expired') {
+                                                                return <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#ef444415", color: "#ef4444", fontWeight: 700, textAlign: "center" }}>EXPIRED</span>;
+                                                            }
+                                                            return <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e", fontWeight: 700, textAlign: "center" }}>ACTIVE</span>;
+                                                        })()}
+                                                        <div style={{ display: "flex", gap: "4px" }}>
+                                                            {ev.is_exclusive && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "6px", backgroundColor: "#f59e0b", color: "#fff", fontWeight: 800 }}>EXCLUSIVE</span>}
+                                                            {ev.is_spotlight && <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "6px", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800 }}>SPOTLIGHT</span>}
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td style={{ padding: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                                    {ev.source === "organiser" && (
+                                                        <div style={{ display: "flex", gap: "6px", marginBottom: "4px", width: "100%" }}>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await updateEvent({ id: ev.id, is_exclusive: !ev.is_exclusive });
+                                                                        showToast(`Event ${!ev.is_exclusive ? 'marked' : 'removed'} as Exclusive`, "success");
+                                                                    } catch (err) {
+                                                                        showToast("Error updating status", "error");
+                                                                    }
+                                                                }}
+                                                                style={{ padding: "4px 8px", borderRadius: "6px", border: `1px solid ${ev.is_exclusive ? '#f59e0b' : t.border}`, backgroundColor: ev.is_exclusive ? '#fff7ed' : 'transparent', color: ev.is_exclusive ? '#f59e0b' : t.textSub, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                                                                title="Toggle Exclusive"
+                                                            >
+                                                                <Sparkles size={12} /> Excl
+                                                            </button>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await updateEvent({ id: ev.id, is_spotlight: !ev.is_spotlight });
+                                                                        showToast(`Event ${!ev.is_spotlight ? 'marked' : 'removed'} as Spotlight`, "success");
+                                                                    } catch (err) {
+                                                                        showToast("Error updating status", "error");
+                                                                    }
+                                                                }}
+                                                                style={{ padding: "4px 8px", borderRadius: "6px", border: `1px solid ${ev.is_spotlight ? '#3b82f6' : t.border}`, backgroundColor: ev.is_spotlight ? '#eff6ff' : 'transparent', color: ev.is_spotlight ? '#3b82f6' : t.textSub, fontSize: "10px", fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                                                                title="Toggle Spotlight"
+                                                            >
+                                                                <Zap size={12} /> Spot
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                     {ev.source === "organiser" && (
                                                         <>
                                                             <button 

@@ -8,7 +8,7 @@ function buildRedirectUrl(pathname, searchParams) {
   const qs = searchParams?.toString();
   const full = qs ? `${pathname}?${qs}` : pathname;
   // If the path is branding related, send to branding signin
-  if (pathname?.startsWith("/branding") || pathname?.startsWith("/organiser") || pathname?.startsWith("/vendor")) {
+  if (pathname?.startsWith("/branding")) {
     return `/branding/signin?redirect=${encodeURIComponent(full)}`;
   }
   return `/signin?redirect=${encodeURIComponent(full)}`;

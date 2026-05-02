@@ -31,22 +31,34 @@ import DigitalTicket from '@/components/DigitalTicket';
 import BrandCouponsSection from '@/components/BrandCouponsSection';
 import ServiceCategories from '@/components/ServiceCategories';
 import PublicReviewsBanner from '@/components/PublicReviewsBanner';
+import TopRatedServices from '@/components/TopRatedServices';
 import { resolveBannerRedirect } from '@/lib/bannerHelper';
 
-function TicketCard({ event }) {
+function TicketCard({ event, router }) {
   return (
-    <div style={{ 
-      backgroundColor: "#fff", 
-      borderRadius: "20px", 
-      overflow: "hidden", 
-      border: "1px solid #f1f5f9", 
-      boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      cursor: 'pointer'
-    }}>
+    <div 
+      onClick={() => {
+        if (router) {
+          router.push(`/events/detail?id=${event.id || event._id}`);
+        } else {
+          window.location.href = `/events/detail?id=${event.id || event._id}`;
+        }
+      }}
+      style={{ 
+        backgroundColor: "#fff", 
+        borderRadius: "20px", 
+        overflow: "hidden", 
+        border: "1px solid #f1f5f9", 
+        boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: 'pointer'
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-8px)'}
+      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+    >
       <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', backgroundColor: '#f8fafc' }}>
         <img 
           src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=660&fit=crop"} 
@@ -421,41 +433,24 @@ function HomeClient() {
   const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
   const supabaseEvents = useMemo(() => supabaseEventsRaw || EMPTY_ARRAY, [supabaseEventsRaw]);
 
-  const normalizedOrgEvents = useMemo(() => {
-    const now = new Date();
-    const cityFilter = selectedCity && selectedCity !== "India" ? selectedCity.toLowerCase() : null;
+  const { data: serviceProviders } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), []);
+
+  const allLiveEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
       .filter(ev => {
-        // Safe status check
         const s = String(ev.status || '').toLowerCase();
-        if (s === "inactive" || s === "draft") return false;
-        
-        // Location filter (Web Portal)
-        if (cityFilter) {
-          const loc = String(ev.location || ev.venue || ev.city || '').toLowerCase();
-          const isVirtual = ev.virtual === true || 
-                 String(ev.type || '').toLowerCase() === "online" || 
-                 String(ev.type || '').toLowerCase() === "virtual" ||
-                 loc.includes("online") || loc.includes("virtual");
-                 
-          // Only show events that match the city, or are online events
-          if (!loc.includes(cityFilter) && !isVirtual) {
-            return false;
-          }
-        }
-        
-        const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
-        const now = new Date();
+        if (s === "inactive" || s === "draft" || s === "expired") return false;
 
-        // If event is in the future, show it regardless of status
-        if (eventDate && eventDate > now) return true;
-        
-        // If it's explicitly marked as expired and in the past, hide it
-        if (s === "expired") return false;
-        
-        // Fallback for events without clear dates or just passed
-        return true;
+        const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
+        if (eventDate) {
+            const evDateOnly = new Date(eventDate);
+            evDateOnly.setHours(0, 0, 0, 0);
+            return evDateOnly >= today;
+        }
+        return true; // Keep events with no date for safety, or mark as TBA
       })
       .map((ev, idx) => {
         const loc = String(ev.location || ev.venue || ev.address || "Venue").trim();
@@ -477,10 +472,16 @@ function HomeClient() {
           trending: ev.trending === true || ev.trending === "Yes",
           spotlight: ev.spotlight === true || ev.spotlight === "Yes",
           exclusive: ev.exclusive === true || ev.exclusive === "Yes",
+          is_spotlight: ev.is_spotlight === true,
+          is_exclusive: ev.is_exclusive === true,
           virtual: isVirtual,
         };
       });
   }, [supabaseEvents]);
+
+  const normalizedOrgEvents = useMemo(() => {
+    return allLiveEvents;
+  }, [allLiveEvents]);
 
   const allEventsForFilter = useMemo(() => [
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
@@ -508,19 +509,23 @@ function HomeClient() {
       const targetCities = cityVariations[cityLower] || [cityLower];
 
       results = results.filter(ev => {
-        if (ev.virtual === true || ev.featured === true || ev.spotlight === true) return true;
+        // Spotlight/Featured/Virtual events show everywhere
+        if (ev.virtual === true || ev.featured === true || ev.spotlight === true || ev.is_spotlight === true || ev.is_exclusive === true) return true;
         
         const evCity = String(ev.city || '').toLowerCase().trim();
         const evLoc = String(ev.location || '').toLowerCase().trim();
         const evVenue = String(ev.venue || '').toLowerCase().trim();
         const evDistrict = String(ev.district || '').toLowerCase().trim();
 
+        // If no city/location info at all, show it anyway
+        if (!evCity && !evLoc && !evVenue && !evDistrict) return true;
+
         return targetCities.some(tc => 
           evCity.includes(tc) || 
           evDistrict.includes(tc) || 
           evLoc.includes(tc) || 
           evVenue.includes(tc)
-        ) || !ev.city;
+        );
       });
     }
 
@@ -553,13 +558,13 @@ function HomeClient() {
     return results;
   }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);
 
-  const featuredEventsList = useMemo(() => filteredEvents.filter((e) => e.featured), [filteredEvents]);
+  const featuredEventsList = useMemo(() => filteredEvents.filter((e) => e.featured || e.is_spotlight || e.is_exclusive), [filteredEvents]);
 
   const trendingEventsList = useMemo(() => filteredEvents.filter((e) => e.trending), [filteredEvents]);
 
-  const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight), [filteredEvents]);
+  const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight || e.is_spotlight), [filteredEvents]);
 
-  const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive), [filteredEvents]);
+  const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive || e.is_exclusive), [filteredEvents]);
 
   const popularEventsList = useMemo(() => filteredEvents, [filteredEvents]);
 
@@ -572,6 +577,12 @@ function HomeClient() {
 
   // Fallback or old local storage cleanup (Optional: keep using convexEvents instead, logic below handles parsing well)
 
+
+  const justInEventsList = useMemo(() => {
+    return [...allLiveEvents]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 4);
+  }, [allLiveEvents]);
 
   const heroSlidesConfig = getConfigValue("admin_hero_slides");
   const eventPartnersConfig = getConfigValue("admin_event_partners");
@@ -792,9 +803,7 @@ function HomeClient() {
                 gap: '12px'
               }}>
                 {filteredEvents.map(ev => (
-                  <div key={ev.id} onClick={() => router.push(`/events/detail?id=${ev.id}`)} style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}>
-                    <TicketCard event={ev} />
-                  </div>
+                  <TicketCard key={ev.id} event={ev} router={router} />
                 ))}
               </div>
             ) : (
@@ -820,13 +829,98 @@ function HomeClient() {
             />
 
             {/* 1) Recently Viewed */}
-            <RecentlyViewedEvents liveEvents={supabaseEvents} />
+            <RecentlyViewedEvents liveEvents={allLiveEvents} />
 
             {/* 2) Featured Events */}
             <FeaturedEvents events={featuredEventsList} />
 
             {/* 3) Coming Soon */}
             <ComingSoonEvents events={filteredEvents} />
+
+            {/* 3.2) Just In (Recently Published) */}
+            <section style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
+                <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                        <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
+                            Just <span style={{
+                                background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                display: 'inline-block'
+                            }}>In</span> ⚡
+                        </h2>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>The latest events added to BookMyTicket</p>
+                    </div>
+                </div>
+                
+                <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", 
+                    gap: "24px" 
+                }}>
+                    {justInEventsList.length > 0 ? (
+                        justInEventsList.map(event => (
+                            <TicketCard key={event.id} event={event} router={router} />
+                        ))
+                    ) : (
+                        <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af', border: '1px dashed #e2e8f0', borderRadius: '16px' }}>
+                            Loading fresh events...
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* 3.5) Events Near You (ALL published events) */}
+            <section style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
+                <div style={{ marginBottom: '32px' }}>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.1, fontFamily: 'var(--font-heading)' }}>
+                        Events <span style={{
+                            background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            display: 'inline-block'
+                        }}>Near You</span> 📍
+                    </h2>
+                    <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0, fontWeight: 500 }}>Discover everything happening in {selectedCity}</p>
+                </div>
+                
+                <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", 
+                    gap: "24px" 
+                }}>
+                    {filteredEvents.length > 0 ? (
+                        filteredEvents.slice(0, 8).map(event => (
+                            <TicketCard key={event.id} event={event} router={router} />
+                        ))
+                    ) : (
+                        <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#9ca3af', border: '1px dashed #e2e8f0', borderRadius: '16px' }}>
+                            No events found in this area.
+                        </div>
+                    )}
+                </div>
+                
+                {filteredEvents.length > 8 && (
+                    <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                        <Link href="/events" style={{
+                            display: 'inline-block',
+                            padding: '12px 32px',
+                            background: 'linear-gradient(135deg, #f84464 0%, #ec4899 100%)',
+                            color: '#fff',
+                            fontWeight: 800,
+                            borderRadius: '12px',
+                            textDecoration: 'none',
+                            boxShadow: '0 10px 20px rgba(248, 68, 164, 0.2)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            View All Events
+                        </Link>
+                    </div>
+                )}
+            </section>
 
             {/* 4) Explore Popular Events */}
             <div id="explore-popular-events">
@@ -1102,6 +1196,9 @@ function HomeClient() {
 
             {/* 6) Virtual Events */}
             <VirtualEvents events={normalizedOrgEvents} />
+
+            {/* Top Rated Professional Services */}
+            <TopRatedServices professionals={serviceProviders} />
 
              {/* Branding & Others */}
             <div style={{ width: '100%' }}>
