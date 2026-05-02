@@ -10,7 +10,7 @@ export async function POST(request) {
     );
 
     try {
-        const { email, password, full_name, phone } = await request.json();
+        const { email, password, full_name, phone, role } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(request) {
             email_confirm: true,
             user_metadata: {
                 full_name: (full_name || '').trim(),
-                role: 'user',
+                role: role || 'user',
             },
         });
 
@@ -76,7 +76,8 @@ export async function POST(request) {
                 .from('profiles')
                 .update({ 
                     full_name: (full_name || '').trim(),
-                    phone: phone 
+                    phone: phone,
+                    role: role || 'user'
                 })
                 .eq('id', data.user.id);
         }

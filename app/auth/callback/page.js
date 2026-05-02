@@ -15,14 +15,20 @@ function AuthCallbackContent() {
             // Determine final destination
             let dest = nextUrl;
             
-            // If we're going to home or profile, but we have a special role, override
-            if (dest === "/" || dest === "/profile") {
-                const role = user.role?.toLowerCase();
+            const role = user.role?.toLowerCase();
+
+            // USER SPECIFIC OVERRIDES (MANDATORY)
+            // 2. Normal users from events page go to profile
+            if ((role === 'public' || role === 'user') && dest?.includes('/events')) {
+                dest = "/profile";
+            }
+            // 3. Role-based defaults for home/profile redirects
+            else if (dest === "/" || dest === "/profile") {
                 if (role === "admin" || role === "super_admin") dest = "/admin";
                 else if (role === "staff") dest = "/pwa-scan";
-                else if (role === "branding_partner") dest = "/branding/dashboard";
                 else if (role === "vendor") dest = "/vendor/dashboard";
                 else if (role === "organiser" || role === "organizer") dest = "/organiser";
+                else dest = "/profile";
             }
             
             console.log("AuthCallback: Redirecting to", dest);

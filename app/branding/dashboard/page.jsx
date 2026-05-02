@@ -23,6 +23,7 @@ export default function BrandingDashboard() {
   const [subscription, setSubscription] = useState(null);
   const [banner, setBanner] = useState(null);
   const [platformPrices] = useState({ monthlyPrice: 999, yearlyPrice: 9999 });
+  const [myBookings, setMyBookings] = useState([]);
 
   const isVerified = kycStatus === 'Verified';
   const isPending  = kycStatus === 'Verification Pending';
@@ -53,6 +54,9 @@ export default function BrandingDashboard() {
     // Banner
     supabase.from('brand_banners').select('*').eq('brand_id', user.id).maybeSingle()
       .then(({ data }) => { setBanner(data); setRedirectUrl(data?.redirect_url || ''); });
+    // Personal Bookings
+    supabase.from('bookings').select('*, events(*)').eq('user_id', user.id)
+      .then(({ data }) => setMyBookings(data || []));
   }, [user?.id]);
 
   const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
@@ -322,12 +326,40 @@ export default function BrandingDashboard() {
         </>
       )}
 
-      {/* Placeholder for other tabs */}
-      {['stores', 'reports', 'settings', 'help', 'scanner'].includes(activeTab) && (
-        <div style={{ background: C.card, borderRadius: 16, padding: 40, textAlign: 'center', border: `1px solid ${C.border}` }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>{activeTab.toUpperCase()} Section</h3>
-          <p style={{ color: C.muted, fontSize: 14 }}>This section is currently under development.</p>
-        </div>
+      {activeTab === 'my_booking' && (
+        <>
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px', color: C.text }}>My Tickets</h1>
+            <p style={{ margin: 0, color: C.muted, fontSize: 13 }}>Personal event tickets and bookings.</p>
+          </div>
+          {myBookings && myBookings.length > 0 ? (
+            <div style={{ display: 'grid', gap: 16 }}>
+              {myBookings.map((b, i) => (
+                <div key={i} style={{ background: '#fff', borderRadius: 16, padding: 20, border: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                      <Ticket size={24} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: C.text }}>{b.events?.title || 'Event Booking'}</h4>
+                      <p style={{ margin: '4px 0 0', fontSize: 12, color: C.muted }}>{b.events?.date} • {b.ticket_count} Tickets</p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 4 }}>₹{b.total_price}</div>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#10b981', background: '#f0fdf4', padding: '4px 8px', borderRadius: 6 }}>{b.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: C.card, borderRadius: 16, padding: 60, textAlign: 'center', border: `1px solid ${C.border}` }}>
+              <Ticket size={48} style={{ color: C.subtext, marginBottom: 16 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>No tickets found</h3>
+              <p style={{ color: C.muted, fontSize: 14 }}>You haven't booked any tickets yet. Explore events on the home page!</p>
+            </div>
+          )}
+        </>
       )}
 
       {showCouponModal && <DistributeChannelModal onClose={() => setShowCouponModal(false)} />}

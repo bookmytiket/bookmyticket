@@ -144,7 +144,7 @@ export default function SuccessClient({ eventId, bookingId }) {
                 </div>
 
                 <div className="mt-16 text-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Powered by BookMyTicket Secure Gateway</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Sponsors & Partners</p>
                     <div className="flex justify-center gap-8 opacity-40">
                          <div className="flex items-center gap-2 text-[9px] font-bold text-slate-900"><TicketIcon size={12}/> Verified Ticket</div>
                          <div className="flex items-center gap-2 text-[9px] font-bold text-slate-900"><CheckCircle2 size={12}/> Entry Guaranteed</div>

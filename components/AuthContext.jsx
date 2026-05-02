@@ -115,17 +115,21 @@ export function AuthProvider({ children }) {
                     try { return await supabase.from('service_providers').select('*').eq('id', supabaseUser.id).maybeSingle(); }
                     catch (e) { return { data: null, error: e }; }
                 })(),
+                (async () => {
+                    try { return await supabase.from('brand_kyc').select('*').eq('brand_id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
+                })(),
             ]);
 
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error("Database timeout")), 10000)
             );
 
-            let profileResult, adminResult, organiserResult, vendorResult, providerResult;
+            let profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult;
             try {
                 const results = await Promise.race([fetchPromise, timeoutPromise]);
                 if (!Array.isArray(results)) throw new Error("Database timeout");
-                [profileResult, adminResult, organiserResult, vendorResult, providerResult] = results;
+                [profileResult, adminResult, organiserResult, vendorResult, providerResult, brandResult] = results;
             } catch (err) {
                 const minimalUser = {
                     id: supabaseUser.id,
@@ -143,6 +147,7 @@ export function AuthProvider({ children }) {
             const organiserRecord = organiserResult?.data || null;
             const vendorRecord    = vendorResult?.data || null;
             const providerRecord  = providerResult?.data || null;
+            const brandRecord     = brandResult?.data || null;
 
             let role = (profile?.role || supabaseUser.user_metadata?.role || 'user').toLowerCase().replace(/\s+/g, '_');
             if (role === 'organizer') role = 'organiser';
@@ -153,6 +158,9 @@ export function AuthProvider({ children }) {
             if (adminRecord) {
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
+            } else if (brandRecord) {
+                role = 'branding_partner';
+                specializedData = brandRecord;
             } else if (organiserRecord) {
                 // Protect admin/super_admin role if already set via profile
                 if (role !== 'admin' && role !== 'super_admin') {
@@ -239,14 +247,6 @@ export function AuthProvider({ children }) {
             if (error) throw error;
             const userData = await fetchAndSetUser(data.user);
             if (userData) {
-                // REDIRECTION LOGIC
-                if (userData.role === 'organiser') {
-                    router.push('/organiser');
-                } else if (userData.role === 'admin' || userData.role === 'super_admin') {
-                    router.push('/admin');
-                } else if (userData.role === 'vendor') {
-                    router.push('/vendor');
-                }
                 return { success: true, user: userData };
             }
             return { success: false, error: "Profile not found" };

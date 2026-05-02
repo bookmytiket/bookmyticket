@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/AuthContext';
 import Footer from '@/components/Footer';
 
 /* ─── Inline SVG Icons ─── */
@@ -220,11 +221,26 @@ export default function BrandingPage() {
   const [scrollY, setScrollY] = useState(0);
 
 
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!loading && mounted && user) {
+      if (["branding_partner", "vendor", "admin", "super_admin"].includes(user.role)) {
+        router.push("/branding/dashboard");
+      }
+    }
+  }, [user, loading, router, mounted]);
 
   const navbarBg = scrollY > 20 ? 'rgba(255,255,255,0.95)' : '#fff';
 

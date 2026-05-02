@@ -84,9 +84,12 @@ export default function ProfilePage() {
 
     // Removed forced redirect for organisers/staff to allow them to view personal bookings and join meetings
     // Automatically redirect to signin if user is not found and loading is complete
+    // REDIRECT GUARD: Branding users belong to the branding portal, not normal profile
     useEffect(() => {
-        if (!loading && !user && mounted) {
-            router.push("/signin?redirect=/profile");
+        if (!loading && mounted) {
+            if (!user) {
+                router.push("/signin?redirect=/profile");
+            }
         }
     }, [user, loading, router, mounted]);
 

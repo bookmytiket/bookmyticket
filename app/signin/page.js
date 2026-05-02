@@ -147,19 +147,20 @@ export default function SignInPage() {
             (!isOrganiserPath || ["organiser", "staff", "admin", "super_admin"].includes(role)) &&
             (!isVendorPath || ["vendor", "organiser", "admin", "super_admin"].includes(role));
 
+        // USER SPECIFIC OVERRIDES (MANDATORY)
+        // 2. Normal users from events page go to profile
+        if ((role === 'public' || role === 'user') && destination?.includes('/events')) {
+            return "/profile";
+        }
+
         // Apply role-based defaults if no valid redirect OR not authorized for target
         if (isInvalidRedirect || !isAuthorized) {
             if (role === 'admin' || role === 'super_admin') {
                 return "/admin";
             } else if (role === 'staff') {
                 return "/pwa-scan";
-            } else if (role === 'branding_partner') {
+            } else if (role === 'branding_partner' || role === 'organiser' || role === 'organizer' || role === 'vendor') {
                 return "/branding/dashboard";
-            } else if (role === "organiser" || role === "organizer") {
-                const isProfessional = user.type === "professional_service" || isServiceProvider(user.kyc_details?.category || user.category);
-                return isProfessional ? "/vendor/dashboard" : "/organiser";
-            } else if (role === "vendor") {
-                return "/vendor/dashboard";
             } else {
                 return "/profile";
             }

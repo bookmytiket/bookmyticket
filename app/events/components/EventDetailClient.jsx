@@ -26,13 +26,21 @@ const DEFAULT_REFUND = [
     "Follow venue guidelines for a safe experience."
 ];
 
-function parseEventDate(dateStr, timeStr, event = null) {
+function parseEventDate(dateStr, timeStr) {
     try {
-        let dt = event?.expiry_date || event?.dynamic_config?.basicInfo?.expiryDate || dateStr;
-        let t = timeStr || event?.startTime || '23:59';
+        // Use the actual event date/time, NOT expiry_date
+        let dt = dateStr;
+        let t = timeStr || '23:59';
         if (!dt) return null;
         dt = String(dt).trim();
         t = String(t).trim();
+        // Handle 'YYYY-MM-DD HH:MM' combined format
+        if (dt.includes(' ') && !dt.includes('T')) {
+            const parts = dt.split(' ');
+            dt = parts[0];
+            if (!t || t === '23:59') t = parts[1] || '23:59';
+        }
+        // Handle DD/MM/YYYY or DD-MM-YYYY
         if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
             const separator = dt.includes('/') ? '/' : '-';
             const parts = dt.split(separator);
@@ -139,7 +147,8 @@ export default function EventDetailClient({ id }) {
         );
     }
 
-    const eventDate = parseEventDate(event.rawDate || event.date, event.rawTime || event.time, event);
+    const eventDate = parseEventDate(event.rawDate || event.date, event.rawTime || event.time);
+    // Only mark as expired if date is clearly in the past; future-dated events always show booking
     const isExpired = eventDate ? eventDate < new Date() : false;
 
     if (isExpired) {
@@ -219,9 +228,24 @@ export default function EventDetailClient({ id }) {
                             </div>
                             
                             {existingBooking ? (
-                                <button onClick={() => router.push('/bookings')} className="w-full py-7 bg-slate-900 text-white rounded-[32px] font-bold uppercase tracking-widest text-[13px] shadow-xl hover:scale-[1.02] transition-all">
-                                    View My Tickets
-                                </button>
+                                <div className="flex flex-col gap-4">
+                                    <button 
+                                        onClick={() => router.push('/profile?tab=my_booking')} 
+                                        className="w-full py-6 bg-slate-900 text-white rounded-[32px] font-bold uppercase tracking-widest text-[13px] shadow-xl hover:scale-[1.02] transition-all"
+                                    >
+                                        View My Tickets
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            const bookUrl = `/events/book?id=${id}`;
+                                            if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                            else router.push(bookUrl);
+                                        }}
+                                        className="w-full py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[32px] font-bold uppercase tracking-[0.2em] text-[13px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                    >
+                                        Book More Tickets
+                                    </button>
+                                </div>
                             ) : (
                                 <button 
                                     onClick={() => {

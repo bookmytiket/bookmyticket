@@ -264,12 +264,21 @@ export default function DigitalTicket({ booking, event, ticket, showDownload = t
                         <p className={`text-lg font-mono font-black italic tracking-tighter ${details.accent}`}>#{ticketNumber}</p>
                     </div>
 
-                    {/* Powered By Section */}
-                    <div className="mt-auto pt-4 flex flex-col items-center gap-1.5 opacity-30">
-                        <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Powered By</p>
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5 shadow-inner">
-                            <img src={branding?.powered_by_logo_url || "/logo.png"} className="h-3 w-auto brightness-0 invert opacity-80" alt="Logo" />
-                            <span className="text-[7px] font-black text-white uppercase tracking-[0.2em]">{branding?.name || "BookMyTicket"}</span>
+                    {/* Sponsors & Partners Section */}
+                    <div className="mt-auto pt-4 flex flex-col items-center gap-1.5 opacity-40">
+                        <p className="text-[7px] font-black text-white uppercase tracking-[0.3em]">Sponsors & Partners</p>
+                        <div className="flex items-center gap-4 px-4 py-2 rounded-full bg-white/5 border border-white/5 shadow-inner">
+                             {[
+                                branding?.sponsor_logo_1,
+                                branding?.sponsor_logo_2,
+                                branding?.partner_logo_1,
+                                branding?.partner_logo_2
+                             ].filter(Boolean).slice(0, 2).map((logo, idx) => (
+                                <img key={idx} src={logo} className="h-4 w-auto brightness-0 invert opacity-80" alt="Logo" />
+                             ))}
+                             {![branding?.sponsor_logo_1, branding?.sponsor_logo_2, branding?.partner_logo_1, branding?.partner_logo_2].some(Boolean) && (
+                                <span className="text-[7px] font-black text-white uppercase tracking-[0.2em]">{branding?.name || "BookMyTicket"}</span>
+                             )}
                         </div>
                     </div>
 

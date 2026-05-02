@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
+    "dev:all": "npm run dev & (cd mobile && npm start)",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

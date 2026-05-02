@@ -21,6 +21,7 @@ export default function BrandingHeader({ style = {} }) {
   return (
     <div style={{
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '12px',
@@ -28,22 +29,30 @@ export default function BrandingHeader({ style = {} }) {
       ...style
     }}>
       <span style={{ 
-        fontSize: '12px', 
+        fontSize: '11px', 
         fontWeight: '800', 
         color: '#94a3b8', 
         textTransform: 'uppercase', 
-        letterSpacing: '1px' 
+        letterSpacing: '2px' 
       }}>
-        Powered By
+        Sponsors & Partners
       </span>
-      <a href={branding.powered_by_link || '#'} target="_blank" rel="noopener noreferrer">
-        <img 
-          src={`${branding.powered_by_logo_url}?v=${Date.now()}`} 
-          alt="Branding" 
-          crossOrigin="anonymous"
-          style={{ height: '80px', objectFit: 'contain' }} 
-        />
-      </a>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {[
+          branding.sponsor_logo_1,
+          branding.sponsor_logo_2,
+          branding.partner_logo_1,
+          branding.partner_logo_2
+        ].filter(Boolean).map((logo, idx) => (
+          <img 
+            key={idx}
+            src={`${logo}?v=${Date.now()}`} 
+            alt="Sponsor" 
+            crossOrigin="anonymous"
+            style={{ height: '40px', objectFit: 'contain', opacity: 0.8 }} 
+          />
+        ))}
+      </div>
     </div>
   );
 }

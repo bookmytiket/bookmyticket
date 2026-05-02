@@ -92,9 +92,10 @@ export default function BrandingSignIn() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        // AuthContext handles redirection, but we can add a fallback if needed
-        if (result.user.role === 'branding_partner' || result.user.role === 'organiser' || result.user.role === 'vendor') {
-           router.push('/branding/dashboard'); // Or wherever branding partners go now
+        if (['branding_partner', 'organiser', 'vendor', 'admin', 'super_admin'].includes(result.user.role)) {
+           router.push('/branding/dashboard'); 
+        } else {
+           router.push('/profile');
         }
       } else {
         setError(result.error || 'Invalid credentials.');
@@ -147,19 +148,12 @@ export default function BrandingSignIn() {
           email,
           password,
           full_name: name,
-          role: 'branding_partner' // Note: API might need update to accept role
+          role: 'branding_partner'
         })
       });
 
       const data = await res.json();
       if (data.success) {
-        // If the role needs to be branding_partner, update it in profiles
-        // (API route currently defaults to 'user')
-        await supabase
-          .from('profiles')
-          .update({ role: 'branding_partner' })
-          .eq('id', data.userId);
-
         const loginRes = await login(email, password);
         if (loginRes.success) {
           router.push('/branding/dashboard');

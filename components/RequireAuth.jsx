@@ -7,6 +7,10 @@ import { useAuth } from "@/components/AuthContext";
 function buildRedirectUrl(pathname, searchParams) {
   const qs = searchParams?.toString();
   const full = qs ? `${pathname}?${qs}` : pathname;
+  // If the path is branding related, send to branding signin
+  if (pathname?.startsWith("/branding") || pathname?.startsWith("/organiser") || pathname?.startsWith("/vendor")) {
+    return `/branding/signin?redirect=${encodeURIComponent(full)}`;
+  }
   return `/signin?redirect=${encodeURIComponent(full)}`;
 }
 

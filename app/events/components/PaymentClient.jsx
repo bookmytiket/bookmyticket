@@ -38,7 +38,28 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
     const { data: gateways } = useSupabaseQuery('payment_gateways', (q) => q, []);
 
     useEffect(() => {
-        // Handle return from Cashfree
+        if (!bookingId) return;
+
+        // Real-time subscription to detect payment status changes via webhooks
+        const channel = supabase
+            .channel(`booking_status_${bookingId}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `id=eq.${bookingId}` },
+                (payload) => {
+                    const newStatus = payload.new.status;
+                    const paymentStatus = payload.new.payment_status;
+                    if (newStatus === 'Confirmed' || paymentStatus === 'paid' || paymentStatus === 'SUCCESS') {
+                        setPaymentStatus('success');
+                        setTimeout(() => {
+                            router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
+                        }, 1500);
+                    }
+                }
+            )
+            .subscribe();
+
+        // Handle return from Cashfree via URL parameters (fallback)
         const status = searchParams.get('status');
         if (status === 'PAID' || status === 'SUCCESS') {
             setPaymentStatus('success');
@@ -47,10 +68,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
             }, 1500);
         } else if (status === 'FAILED') {
             setPaymentStatus('fail');
-            triggerNotification({
-                type: "ERROR",
-                data: { message: "Payment was declined by your bank." }
-            });
+            setIsPaying(false);
         }
 
         if (gateways) {
@@ -68,7 +86,11 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
             setCashfree(cf);
         };
         initCashfree();
-    }, [gateways]);
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [bookingId, gateways, searchParams]);
 
     const handleCashfree = async () => {
         if (!bookingId || !cashfree) return;
@@ -190,6 +212,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 }
             };
 
+            console.log("RAZORPAY OPTIONS:", options);
             const rzp = new window.Razorpay(options);
             rzp.open();
         } catch (err) {
@@ -313,15 +336,24 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 {/* Main Payment Section */}
                 <div style={{ padding: '60px 80px', overflowY: 'auto' }}>
                     <div style={{ maxWidth: '600px' }}>
-                        <div style={{ marginBottom: '48px' }}>
-                            <h2 style={{ fontSize: '42px', fontWeight: 900, color: '#111827', marginBottom: '12px', letterSpacing: '-0.04em', lineHeight: '1.1' }}>Complete Your Payment</h2>
-                            <p style={{ color: '#64748b', fontSize: '18px', fontWeight: 500 }}>Select your preferred payment method to secure your tickets.</p>
+                        <div style={{ marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <div>
+                                <h2 style={{ fontSize: '42px', fontWeight: 900, color: '#111827', marginBottom: '12px', letterSpacing: '-0.04em', lineHeight: '1.1' }}>Complete Your Payment</h2>
+                                <p style={{ color: '#64748b', fontSize: '18px', fontWeight: 500 }}>Select your preferred payment method to secure your tickets.</p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: '12px', fontWeight: 900, color: '#FF1CF7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Amount to Pay</p>
+                                <p style={{ fontSize: '32px', fontWeight: 900, color: '#111827', letterSpacing: '-0.03em' }}>₹{(booking?.total_price || 0).toFixed(2)}</p>
+                            </div>
                         </div>
 
                         {paymentStatus === 'processing' && (
                             <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '32px', borderRadius: '28px', marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)' }}>
                                 <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                                <p style={{ margin: 0, fontSize: '18px', color: '#1e40af', fontWeight: 700 }}>Processing Transaction...</p>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: '18px', color: '#1e40af', fontWeight: 700 }}>Processing Transaction...</p>
+                                    <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#3b82f6', fontWeight: 600 }}>Amount: ₹{(booking?.total_price || 0).toFixed(2)}</p>
+                                </div>
                             </div>
                         )}
 

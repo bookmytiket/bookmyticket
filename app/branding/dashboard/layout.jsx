@@ -53,7 +53,12 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const tab = searchParams?.get('tab') || 'dashboard';
 
@@ -71,10 +76,14 @@ export default function DashboardLayout({ children }) {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user || user.role !== 'branding_partner') {
-      router.push('/branding/signin');
+    if (!loading && mounted) {
+      if (!user) {
+        router.push('/branding/signin');
+      } else if (!['branding_partner', 'organiser', 'vendor', 'admin', 'super_admin'].includes(user.role)) {
+        router.push('/profile');
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router, mounted]);
 
   if (!user) return null;
 
@@ -100,7 +109,8 @@ export default function DashboardLayout({ children }) {
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard"   active={tab === 'dashboard' && pathname === '/branding/dashboard'} onClick={() => router.push('/branding/dashboard?tab=dashboard')} />
+          <SidebarItem icon={LayoutDashboard} label="Branding Home" active={tab === 'dashboard' && pathname === '/branding/dashboard'} onClick={() => router.push('/branding/dashboard?tab=dashboard')} />
+          <SidebarItem icon={Ticket}          label="My Tickets"     active={tab === 'my_booking'} onClick={() => router.push('/branding/dashboard?tab=my_booking')} />
           <SidebarItem icon={ImageIcon}       label="Banners"     active={tab === 'banners'}       disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=banners')} />
           <SidebarItem icon={Ticket}          label="Coupons"     active={tab === 'coupons' || pathname.includes('coupon-creation')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=coupons')} />
           <SidebarItem icon={Store}           label="Stores"      active={tab === 'stores'}        disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=stores')} />

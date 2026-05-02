@@ -2,48 +2,52 @@
   "expo": {
     "name": "BookMyTicket",
     "slug": "bookmyticket",
-    "version": "1.0.1",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/images/icon.png",
     "scheme": "bookmyticket",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
+      "backgroundColor": "#f84464"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.bookmyticket.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bookmyticket.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0f172a",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#f84464"
       },
       "package": "com.bookmyticket.app",
-      "versionCode": 2,
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
       "permissions": [
-        "CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow BookMyTicket to access your camera for QR code scanning."
-        }
-      ],
-      "expo-font",
+      "expo-router",
       "expo-secure-store"
     ],
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
+      "router": {},
       "eas": {
         "projectId": "73477805-e1bb-48db-b402-6551904b292c"
       }

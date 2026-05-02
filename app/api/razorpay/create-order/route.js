@@ -17,7 +17,7 @@ export async function POST(request) {
         const options = {
             amount: Math.round(amount * 100), // Razorpay expects amount in paise
             currency,
-            receipt: `receipt_${type}_${id}`,
+            receipt: `rcpt_${type}_${id}`.substring(0, 40),
             notes: {
                 id: id,
                 type: type
@@ -28,6 +28,7 @@ export async function POST(request) {
         return NextResponse.json(order);
     } catch (err) {
         console.error("Razorpay Order Creation Error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        const errorMessage = err.error ? err.error.description : (err.message || "Unknown Razorpay error");
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

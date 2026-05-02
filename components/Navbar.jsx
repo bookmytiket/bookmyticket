@@ -545,11 +545,9 @@ export default function Navbar({ compact = false }) {
                     >
                     <Link
                       href={
-                        user.role === "organiser" || user.role === "staff" ? "/organiser" :
-                        user.role === "vendor" ? "/vendor/dashboard" :
-                        user.role === "admin" || user.role === "super_admin" ? "/admin" :
-                        user.role === "branding_partner" ? "/branding/dashboard" :
-                        "/profile"
+                        ["organiser", "staff"].includes(user.role?.toLowerCase()) ? "/organiser" :
+                        ["admin", "super_admin"].includes(user.role?.toLowerCase()) ? "/admin" :
+                        "/profile?tab=my_booking"
                       }
                       style={{
                         background: 'linear-gradient(135deg, #f844a4 0%, #c026d3 100%)',
@@ -568,9 +566,7 @@ export default function Navbar({ compact = false }) {
                     >
                       {
                         user.role === "organiser" || user.role === "staff" ? "Organiser Panel" :
-                        user.role === "vendor" ? "Partner Portal" :
                         user.role === "admin" || user.role === "super_admin" ? "Admin Panel" :
-                        user.role === "branding_partner" ? "Partner Dashboard" :
                         "Dashboard"
                       }
                     </Link>
@@ -678,11 +674,9 @@ export default function Navbar({ compact = false }) {
                       
                         <Link 
                           href={
-                            user.role === "organiser" || user.role === "staff" ? "/organiser" :
-                            user.role === "vendor" ? "/vendor/dashboard" :
-                            user.role === "admin" || user.role === "super_admin" ? "/admin" :
-                            user.role === "branding_partner" ? "/branding/dashboard" :
-                            "/profile"
+                            ["organiser", "staff"].includes(user.role?.toLowerCase()) ? "/organiser" :
+                            ["admin", "super_admin"].includes(user.role?.toLowerCase()) ? "/admin" :
+                            "/profile?tab=my_booking"
                           } 
                           onClick={() => setProfileOpen(false)}
                           style={{ 
@@ -702,9 +696,7 @@ export default function Navbar({ compact = false }) {
                         >
                           <User size={18} /> {
                             user.role === "organiser" || user.role === "staff" ? "Organiser Panel" :
-                            user.role === "vendor" ? "Partner Portal" :
                             user.role === "admin" || user.role === "super_admin" ? "Admin Panel" :
-                            user.role === "branding_partner" ? "Partner Dashboard" :
                             "My Profile"
                           }
                         </Link>

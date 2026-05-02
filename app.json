@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "73477805-e1bb-48db-b402-6551904b292c"
+      }
+    },
+    "android": {
+      "package": "com.bookmyticket.bookmyticket"
+    }
+  }
+}

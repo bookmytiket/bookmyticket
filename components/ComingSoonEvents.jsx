@@ -253,8 +253,13 @@ export default function ComingSoonEvents({ events = [] }) {
                                 </div>
 
                                 <div style={{ position: "relative", zIndex: 1 }}>
-                                    <Link href={`/events/detail?id=${event.id}`}>
-                                        <button style={{ 
+                                    <button 
+                                        onClick={() => {
+                                            if (event.id) {
+                                                window.location.href = `/events/detail?id=${event.id}`;
+                                            }
+                                        }}
+                                        style={{ 
                                             background: "linear-gradient(135deg, #f844a4 0%, #a855f7 100%)", 
                                             color: "#fff", 
                                             border: "none", 
@@ -265,11 +270,20 @@ export default function ComingSoonEvents({ events = [] }) {
                                             boxShadow: "0 10px 20px rgba(248, 68, 164, 0.25)", 
                                             fontSize: "15px",
                                             width: "100%",
-                                            transition: "all 0.2s"
-                                        }}>
-                                            BOOK NOW
-                                        </button>
-                                    </Link>
+                                            transition: "all 0.2s",
+                                            zIndex: 10,
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.transform = "translateY(-2px)";
+                                            e.currentTarget.style.boxShadow = "0 12px 24px rgba(248, 68, 164, 0.35)";
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.transform = "translateY(0)";
+                                            e.currentTarget.style.boxShadow = "0 10px 20px rgba(248, 68, 164, 0.25)";
+                                        }}
+                                    >
+                                        BOOK NOW
+                                    </button>
                                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
                                         <button onClick={prev} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
                                         <button onClick={next} style={{ width: "36px", height: "36px", borderRadius: "50%", border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>

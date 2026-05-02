@@ -1,28 +1,40 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "preview": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "distribution": "internal"
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://yayrfycnmbpeeintfcvf.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_uDGW5qXObQq5NseQGJVwTQ_ZgIur68-"
+      }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://yayrfycnmbpeeintfcvf.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_uDGW5qXObQq5NseQGJVwTQ_ZgIur68-"
       }
     }
   },
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "./google-service-account.json",
+        "serviceAccountKeyPath": "./play-store-service-account.json",
         "track": "internal"
       }
     }
