@@ -1,130 +1,109 @@
+import { createClient } from "@supabase/supabase-js";
 import { SERVICE_CATEGORIES } from './data/serviceCategories';
-import { supabase } from '@/lib/supabase';
+
+// Initialize Admin client for full data access in sitemap generation
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+const BASE_URL = "https://bookmyticket.net";
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 86400; // Cache for 24 hours (1 day)
 
+/**
+ * Automatically generates a valid XML sitemap for the application.
+ * Dynamic fetching from Supabase ensures all public events, services, and turfs are indexed.
+ * SEO optimized with proper priorities and change frequencies.
+ */
 export default async function sitemap() {
-  const baseUrl = 'https://bookmyticket.net';
-
-  // 1. Core routes (Priority: 1.0 - 0.8)
-  const coreRoutes = [
-    '',
-    '/services',
-    '/branding',
-    '/profile',
-    '/signin',
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: route === '' ? 'always' : 'daily',
-    priority: route === '' ? 1.0 : 0.8,
-  }));
-
-  // 2. Service Category routes (Priority: 0.7)
-  const serviceCategoryRoutes = SERVICE_CATEGORIES.map((category) => ({
-    url: `${baseUrl}/services?category=${encodeURIComponent(category)}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'weekly',
-    priority: 0.7,
-  }));
-
-  // 3. Event Category routes (Priority: 0.7)
-  const eventCategoryRoutes = ['Concert', 'Sports', 'Comedy', 'Theater', 'Festivals', 'Virtual'].map((category) => ({
-    url: `${baseUrl}/?category=${encodeURIComponent(category)}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'daily',
-    priority: 0.7,
-  }));
-
-  // 3b. City Event routes (Priority: 0.8)
-  const defaultCities = ['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'];
-  
-  let dynamicCities = [...defaultCities];
-  try {
-    const { data: configData } = await supabase
-      .from('system_config')
-      .select('value')
-      .eq('key', 'seo_analytics')
-      .single();
-    
-    if (configData?.value?.city_seo_overrides) {
-      const extraCities = Object.keys(configData.value.city_seo_overrides).map(c => c.charAt(0).toUpperCase() + c.slice(1));
-      dynamicCities = Array.from(new Set([...defaultCities, ...extraCities]));
-    }
-  } catch (err) {
-    console.error("Error fetching city overrides for sitemap:", err);
-  }
-
-  const cityRoutes = dynamicCities.map((city) => ({
-    url: `${baseUrl}/events/in/${city.toLowerCase()}`,
-    lastModified: new Date().toISOString(),
-    changeFrequency: 'daily',
-    priority: 0.8,
-  }));
-
-  if (!supabase) {
-    return [
-      ...coreRoutes,
-      ...serviceCategoryRoutes,
-      ...eventCategoryRoutes,
-      ...cityRoutes
-    ];
-  }
+  // 1. Static Core Pages (Priority: 1.0 - 0.5)
+  const staticPages = [
+    { url: `${BASE_URL}`, lastModified: new Date(), changeFrequency: 'always', priority: 1.0 },
+    { url: `${BASE_URL}/events`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/services`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/branding`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE_URL}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
+  ];
 
   try {
-    // 4. Dynamic Event routes (Priority: 0.9)
-    const { data: events = [] } = await supabase.from('events').select('id, updated_at, img').limit(500);
+    // 2. Dynamic Event Routes (Priority: 0.9)
+    // Fetches active events to ensure Google only indexes valid, upcoming experiences.
+    const { data: events } = await supabaseAdmin
+      .from('events')
+      .select('id, slug, updated_at, status')
+      .eq('status', 'active')
+      .limit(1000);
+
     const eventRoutes = (events || []).map((event) => ({
-      url: `${baseUrl}/events/detail?id=${event.id}`,
-      lastModified: event.updated_at || new Date().toISOString(),
+      url: `${BASE_URL}/events/detail?id=${event.id}`, // Using current app structure
+      lastModified: event.updated_at ? new Date(event.updated_at) : new Date(),
       changeFrequency: 'always',
       priority: 0.9,
-      images: event.img ? [event.img] : [],
     }));
 
-    // 5. Dynamic Professional Service routes (Priority: 0.9)
-    const { data: vendors = [] } = await supabase
+    // 3. Dynamic Professional Service / Provider Routes (Priority: 0.7)
+    // Indexes verified artists and service providers.
+    const { data: vendors } = await supabaseAdmin
       .from('service_providers')
-      .select('id, updated_at, status, category')
+      .select('id, updated_at, status')
+      .in('status', ['Active', 'Approved', 'KYC Completed'])
+      .limit(1000);
+
+    const vendorRoutes = (vendors || []).map((vendor) => ({
+      url: `${BASE_URL}/services/${vendor.id}`,
+      lastModified: vendor.updated_at ? new Date(vendor.updated_at) : new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    }));
+
+    // 4. Dynamic Turf Routes (Priority: 0.7)
+    // Indexes all sports facilities and turfs.
+    const { data: turfs } = await supabaseAdmin
+      .from('turfs')
+      .select('id, updated_at')
       .limit(500);
-    
-    const activeVendors = (vendors || []).filter(v => 
-      v.category && 
-      (v.status === 'KYC Completed' || v.status === 'Active' || v.status === 'Approved')
-    );
-    const vendorRoutes = activeVendors.map((vendor) => ({
-      url: `${baseUrl}/services/${vendor.id}`,
-      lastModified: vendor.updated_at || new Date().toISOString(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    }));
 
-    // 6. Dynamic Turf routes (Priority: 0.9)
-    const { data: turfs = [] } = await supabase.from('turfs').select('id, updated_at, images').limit(500);
     const turfRoutes = (turfs || []).map((turf) => ({
-      url: `${baseUrl}/turfs/${turf.id}`,
-      lastModified: turf.updated_at || new Date().toISOString(),
+      url: `${BASE_URL}/turfs/${turf.id}`,
+      lastModified: turf.updated_at ? new Date(turf.updated_at) : new Date(),
       changeFrequency: 'weekly',
-      priority: 0.9,
-      images: Array.isArray(turf.images) ? turf.images.slice(0, 5) : [],
+      priority: 0.7,
     }));
 
+    // 5. Service Category Routes
+    const serviceCategoryRoutes = SERVICE_CATEGORIES.map((category) => ({
+      url: `${BASE_URL}/services?category=${encodeURIComponent(category)}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    }));
+
+    // 6. City-Based Event Routes
+    const defaultCities = ['Coimbatore', 'Bengaluru', 'Chennai', 'Mumbai', 'Kochi', 'Delhi', 'Hyderabad'];
+    const cityRoutes = defaultCities.map((city) => ({
+      url: `${BASE_URL}/events/in/${city.toLowerCase()}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    }));
+
+    // Merge all routes into a single sitemap array
     return [
-      ...coreRoutes, 
-      ...serviceCategoryRoutes, 
-      ...eventCategoryRoutes, 
-      ...cityRoutes,
-      ...eventRoutes, 
-      ...vendorRoutes, 
-      ...turfRoutes
-    ];
-  } catch (e) {
-    console.error('Sitemap generation error:', e);
-    return [
-      ...coreRoutes,
+      ...staticPages,
+      ...eventRoutes,
+      ...vendorRoutes,
+      ...turfRoutes,
       ...serviceCategoryRoutes,
-      ...eventCategoryRoutes,
       ...cityRoutes
     ];
+  } catch (error) {
+    console.error("Sitemap Generation Error:", error);
+    // Fallback to static pages if DB fetch fails
+    return staticPages;
   }
 }
