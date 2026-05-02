@@ -6,6 +6,7 @@ export const DEFAULT_FEE_SETTINGS = {
   convenienceFeeValue: 7, 
   gstPercent: 18,
   partnerSharePercent: 2,
+  gstApplyOn: 'both',
 };
 
 /**
@@ -19,7 +20,7 @@ export function resolveFeeSettings(systemSettings = {}, organiserConfig = {}, ev
     convenienceFeeType: systemSettings.convenienceFeeType || DEFAULT_FEE_SETTINGS.convenienceFeeType,
     convenienceFeeValue: Number(systemSettings.convenienceFeeValue) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue,
     gstPercent: Number(systemSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent,
-    gstApplyOn: systemSettings.gstApplyOn || systemSettings.gst_apply_on || 'fee_only',
+    gstApplyOn: systemSettings.gstApplyOn || systemSettings.gst_apply_on || DEFAULT_FEE_SETTINGS.gstApplyOn,
     applyGst: true // System default usually applies GST
   };
 
@@ -50,13 +51,13 @@ export function getFeeBreakdown(baseAmount, feeSettings = {}) {
   const feeVal = Number(feeSettings.convenience_fee_value ?? feeSettings.convenienceFeeValue ?? feeSettings.fee_value) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue;
   const applyGst = feeSettings.apply_gst !== undefined ? feeSettings.apply_gst : (feeSettings.applyGst !== undefined ? feeSettings.applyGst : true);
   const gstPct = applyGst ? (Number(feeSettings.gst_percent ?? feeSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent) : 0;
-  const gstApplyOn = feeSettings.gst_apply_on ?? feeSettings.gstApplyOn ?? 'fee_only';
-  
   const partnerSharePct = Number(feeSettings.partner_share_percent ?? feeSettings.partnerSharePercent) || DEFAULT_FEE_SETTINGS.partnerSharePercent;
+  const gstApplyOn = feeSettings.gst_apply_on ?? feeSettings.gstApplyOn ?? DEFAULT_FEE_SETTINGS.gstApplyOn;
 
   // Step 1: Platform Charge (Convenience Fee)
-  const convenienceFee = baseAmount > 0 ? (type === 'fixed' ? feeVal : (baseAmount * feeVal) / 100) : 0;
-  
+  let convenienceFee = baseAmount > 0 ? (type === 'fixed' ? feeVal : (baseAmount * feeVal) / 100) : 0;
+  convenienceFee = Math.round(convenienceFee * 100) / 100;
+
   // Step 2: GST Calculation based on mode
   let gst = 0;
   if (gstPct > 0) {
@@ -69,12 +70,13 @@ export function getFeeBreakdown(baseAmount, feeSettings = {}) {
       gst = (convenienceFee * gstPct) / 100;
     }
   }
+  gst = Math.round(gst * 100) / 100;
   
   // Step 3: Partner Share from Platform Charge
   const partnerBonus = baseAmount > 0 ? (baseAmount * partnerSharePct) / 100 : 0;
   
   // Step 4: Final Totals
-  const total = baseAmount + convenienceFee + gst;
+  const total = Math.round(baseAmount + convenienceFee + gst);
   const platformRevenue = convenienceFee - partnerBonus;
   const partnerTotal = baseAmount + partnerBonus;
 

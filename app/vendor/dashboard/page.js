@@ -462,9 +462,16 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
 }
 
 function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, setPromoteProfileModal }) {
-    const { data: bookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
+    const { data: bookingsRaw = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', vendorId).eq('status', 'Pending')
     , [vendorId]);
+
+    const bookings = React.useMemo(() => {
+        return bookingsRaw.filter(b => {
+            const diff = Date.now() - new Date(b.created_at).getTime();
+            return diff < (24 * 60 * 60 * 1000);
+        });
+    }, [bookingsRaw]);
 
     const { data: allBookings = [] } = useSupabaseQuery('vendor_bookings', (q) => 
         q.eq('vendor_id', vendorId)

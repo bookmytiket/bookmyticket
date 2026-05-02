@@ -8,6 +8,7 @@ export const DEFAULT_FEE_SETTINGS = {
   convenienceFeeValue: 7, 
   gstPercent: 18,
   partnerSharePercent: 2,
+  gstApplyOn: 'both',
 };
 
 export function resolveFeeSettings(systemSettings: any = {}, organiserConfig: any = {}, eventConfig: any = {}) {
@@ -38,30 +39,37 @@ export function resolveFeeSettings(systemSettings: any = {}, organiserConfig: an
   return finalConfig;
 }
 
-export function getFeeBreakdown(baseAmount: number, feeSettings: any = {}) {
+export function getFeeBreakdown(baseAmount: number, feeSettings: any = {}, discountAmount: number = 0) {
+  const safeBase = Number(baseAmount || 0);
+  const safeDiscount = Number(discountAmount || 0);
+  const discountedBase = Math.max(0, safeBase - safeDiscount);
+
   const type = feeSettings.convenience_fee_type || feeSettings.convenienceFeeType || (feeSettings.fee_type === 'percentage' ? 'percent' : 'fixed') || DEFAULT_FEE_SETTINGS.convenienceFeeType;
   const feeVal = Number(feeSettings.convenience_fee_value ?? feeSettings.convenienceFeeValue ?? feeSettings.fee_value) ?? DEFAULT_FEE_SETTINGS.convenienceFeeValue;
   const applyGst = feeSettings.apply_gst !== undefined ? feeSettings.apply_gst : (feeSettings.applyGst !== undefined ? feeSettings.applyGst : true);
   const gstPct = applyGst ? (Number(feeSettings.gst_percent ?? feeSettings.gstPercent) ?? DEFAULT_FEE_SETTINGS.gstPercent) : 0;
-  const gstApplyOn = feeSettings.gst_apply_on ?? feeSettings.gstApplyOn ?? 'fee_only';
+  const gstApplyOn = feeSettings.gst_apply_on ?? feeSettings.gstApplyOn ?? DEFAULT_FEE_SETTINGS.gstApplyOn;
   
-  const convenienceFee = baseAmount > 0 ? (type === 'fixed' ? feeVal : (baseAmount * feeVal) / 100) : 0;
+  let convenienceFee = discountedBase > 0 ? (type === 'fixed' ? feeVal : (discountedBase * feeVal) / 100) : 0;
+  convenienceFee = Math.round(convenienceFee * 100) / 100; // Round to 2 decimals
   
   let gst = 0;
   if (gstPct > 0) {
-    if (gstApplyOn === 'ticket_only') {
-      gst = (baseAmount * gstPct) / 100;
+    if (gstApplyOn === 'ticket_only' || gstApplyOn === 'ticket') {
+      gst = (discountedBase * gstPct) / 100;
     } else if (gstApplyOn === 'both') {
-      gst = ((baseAmount + convenienceFee) * gstPct) / 100;
+      gst = ((discountedBase + convenienceFee) * gstPct) / 100;
     } else {
       gst = (convenienceFee * gstPct) / 100;
     }
   }
+  gst = Math.round(gst * 100) / 100; // Round to 2 decimals
   
-  const total = baseAmount + convenienceFee + gst;
+  // Total should be rounded to nearest integer for payment gateways
+  const total = Math.round(discountedBase + convenienceFee + gst);
 
   return {
-    baseAmount,
+    baseAmount: discountedBase,
     convenienceFee,
     gst,
     total,

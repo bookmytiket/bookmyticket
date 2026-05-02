@@ -125,9 +125,19 @@ export default function ProfilePage() {
     const bookings = [
         ...(eventBookingsList || []),
         ...(vendorBookingsList || [])
-    ].sort((a, b) => {
-        const dateA = a.bookingDate || a._creationTime;
-        const dateB = b.bookingDate || b._creationTime;
+    ].filter(b => {
+        // Automatically hide Pending bookings older than 24 hours
+        if (b.status === "Pending") {
+            const createdTime = b.created_at || b._creationTime;
+            if (createdTime) {
+                const diff = Date.now() - new Date(createdTime).getTime();
+                return diff < (24 * 60 * 60 * 1000); // 24 Hours
+            }
+        }
+        return true;
+    }).sort((a, b) => {
+        const dateA = a.bookingDate || a._creationTime || a.created_at;
+        const dateB = b.bookingDate || b._creationTime || b.created_at;
         return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
 

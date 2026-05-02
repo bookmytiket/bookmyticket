@@ -10,7 +10,7 @@ import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/hooks/useSupabase';
+import { useAuth, useSupabaseQuery } from '@/hooks/useSupabase';
 import { supabase } from '@/lib/supabase';
 import {
   User,

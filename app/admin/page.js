@@ -395,6 +395,14 @@ const TurfBookingsTable = ({ t }) => {
     if (loading) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>Loading turf bookings...</div>;
     if (bookings.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.textSub }}>No turf bookings found.</div>;
 
+    const displayBookings = (bookings || []).filter(b => {
+        if (b.status === "pending") {
+            const diff = Date.now() - new Date(b.created_at).getTime();
+            return diff < (24 * 60 * 60 * 1000); // 24 Hours
+        }
+        return true;
+    });
+
     return (
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
             <thead>
@@ -407,7 +415,7 @@ const TurfBookingsTable = ({ t }) => {
                 </tr>
             </thead>
             <tbody>
-                {bookings.map((booking) => (
+                {displayBookings.map((booking) => (
                     <tr key={booking.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                         <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                             <div>
@@ -471,6 +479,14 @@ const PoolBookingsTable = ({ t }) => {
         }
     };
 
+    const displayBookings = (bookings || []).filter(b => {
+        if (b.status === "Pending") {
+            const diff = Date.now() - new Date(b.created_at).getTime();
+            return diff < (24 * 60 * 60 * 1000); // 24 Hours
+        }
+        return true;
+    });
+
     return (
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
             <thead>
@@ -484,7 +500,7 @@ const PoolBookingsTable = ({ t }) => {
                 </tr>
             </thead>
             <tbody>
-                {bookings.map((booking) => (
+                {displayBookings.map((booking) => (
                     <tr key={booking.id} style={{ backgroundColor: "#fff", borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                         <td style={{ padding: "16px", borderRadius: "12px 0 0 12px" }}>
                             <div>
@@ -1696,7 +1712,15 @@ function AdminHomePage() {
     // Sync bookings from Supabase
     useEffect(() => {
         if (bookingsArr.length > 0) {
-            setBookings(bookingsArr);
+            // Filter out pending bookings older than 24h
+            const activeBookings = bookingsArr.filter(b => {
+                if (b.status === "Pending") {
+                    const diff = Date.now() - new Date(b.created_at).getTime();
+                    return diff < (24 * 60 * 60 * 1000);
+                }
+                return true;
+            });
+            setBookings(activeBookings);
         }
     }, [bookingsArr]);
 

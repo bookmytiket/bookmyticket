@@ -153,12 +153,15 @@ export default function SignInPage() {
             return "/profile";
         }
 
-        // Apply role-based defaults (MANDATORY REDIRECTS)
-        if (role === 'branding_partner' || role === 'vendor') {
-            return "/branding/dashboard";
-        }
-        if (role === 'organiser' || role === 'organizer') {
-            return "/organiser";
+        // Apply role-based defaults (ONLY if no specific destination is requested)
+        if (isInvalidRedirect) {
+            if (role === 'admin' || role === 'super_admin') {
+                return "/admin";
+            } else if (role === 'staff') {
+                return "/pwa-scan";
+            } else {
+                return "/profile";
+            }
         }
 
         if (isInvalidRedirect || !isAuthorized) {

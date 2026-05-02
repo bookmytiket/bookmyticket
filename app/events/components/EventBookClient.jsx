@@ -97,15 +97,15 @@ export default function EventBookClient({ id }) {
     const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
     
     const organiserId = event?.organiser_id || event?.organiserId;
-    const { data: organiserData } = useSupabaseQuery('organisers', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
+    const { data: organiserData } = useSupabaseQuery('profiles', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
     
     const feeSettings = useMemo(() => {
         return resolveFeeSettings(
             feeSettingsSystem,
-            organiserData?.fee_config,
+            organiserData,
             event?.fee_config
         );
-    }, [feeSettingsSystem, organiserData?.fee_config, event?.fee_config]);
+    }, [feeSettingsSystem, organiserData, event?.fee_config]);
 
     const { data: bookingList } = useSupabaseQuery('bookings', (q) => q.eq('event_id', String(id)), [id]);
     

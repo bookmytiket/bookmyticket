@@ -27,8 +27,9 @@ import {
   Plus,
   CheckCircle,
   AlertCircle,
+  ChevronDown,
 } from 'lucide-react-native';
-import { getFeeBreakdown } from '@/lib/feeBreakdown';
+import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
 
 export default function BookEventScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -49,6 +50,13 @@ export default function BookEventScreen() {
   const [showRazorpay, setShowRazorpay] = useState(false);
   const [razorpayHtml, setRazorpayHtml] = useState('');
   const [currentBookingId, setCurrentBookingId] = useState<string | null>(null);
+  const [formResponses, setFormResponses] = useState<any>({});
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<any>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [showCouponsModal, setShowCouponsModal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -57,6 +65,7 @@ export default function BookEventScreen() {
     fetchEvent();
 
     // Real-time subscription
+    fetchCoupons();
     const channel = supabase
       .channel(`event-updates-${id}`)
       .on(
@@ -68,7 +77,6 @@ export default function BookEventScreen() {
           filter: `id=eq.${id}`,
         },
         (payload) => {
-          console.log('Real-time event update:', payload);
           setEvent(payload.new);
           processEventData(payload.new);
         }
@@ -81,18 +89,52 @@ export default function BookEventScreen() {
   }, [id]);
 
   const processEventData = (data: any) => {
-    // Pre-select first tier
-    const safeParse = (val: any) => {
-      if (!val) return null;
-      if (typeof val === 'string') {
-        try { return JSON.parse(val); } catch (e) { return null; }
-      }
-      return val;
-    };
     const parsedConfig = safeParse(data.dynamic_config) || {};
-    const parsedTickets = safeParse(data.tickets) || parsedConfig.tickets || [];
+    const ticketsData = safeParse(data.tickets);
+    const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
+      ? ticketsData 
+      : (parsedConfig.tickets || parsedConfig.categories || []);
     const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
-    if (tiers.length > 0) setSelectedTier(tiers[0]);
+    if (tiers.length > 0) {
+      setSelectedTier(tiers[0]);
+      const rawRates = tiers[0].ageRates || tiers[0].agePricing || tiers[0].age_rates || tiers[0].age_pricing || [];
+      if (Array.isArray(rawRates) && rawRates.length > 0) {
+        setSelectedAgeGroup(rawRates[0]);
+      }
+    }
+    
+    // Pre-fill form with defaults
+    const form = parsedConfig.registrationForm || [];
+    const initialResponses: any = {};
+    form.forEach((f: any) => {
+      if (f.isDefault) {
+        if (f.label === 'Full Name') initialResponses[f.id] = user?.user_metadata?.full_name || '';
+        if (f.label === 'Email Address') initialResponses[f.id] = user?.email || '';
+      }
+    });
+    setFormResponses(initialResponses);
+  };
+
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setAvailableCoupons(data || []);
+    } catch (err) {
+      console.error('Error fetching coupons:', err);
+    }
   };
 
   const fetchEvent = async () => {
@@ -100,7 +142,10 @@ export default function BookEventScreen() {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          organiser:profiles!events_organiser_id_fkey (*)
+        `)
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -112,32 +157,89 @@ export default function BookEventScreen() {
       setLoading(false);
     }
   };
-
-  const safeParse = (val: any) => {
-    if (!val) return null;
-    if (typeof val === 'string') {
-      try { return JSON.parse(val); } catch (e) { return null; }
-    }
-    return val;
-  };
   const dynamicConfig = safeParse(event?.dynamic_config) || {};
-  const parsedTickets = safeParse(event?.tickets) || dynamicConfig.tickets || [];
+  const ticketsData = safeParse(event?.tickets);
+  const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
+    ? ticketsData 
+    : (dynamicConfig.tickets || dynamicConfig.categories || []);
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
   
-  const tierPrice = selectedTier ? Number(selectedTier.price || 0) : Number(event?.price || 0);
-  const { subtotal, convenienceFee, gst, total } = (() => {
-    const base = tierPrice * quantity;
-    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0 };
+  const getBasePrice = () => {
+    if (selectedAgeGroup) return Number(selectedAgeGroup.price || 0);
+    if (selectedTier) {
+      const rawRates = selectedTier.ageRates || selectedTier.agePricing || selectedTier.age_rates || selectedTier.age_pricing || [];
+      if (Array.isArray(rawRates) && rawRates.length > 0) {
+        return Number(rawRates[0].price || 0);
+      }
+      return Number(selectedTier.price || 0);
+    }
+    return Number(event?.price || 0);
+  };
+
+  const basePrice = getBasePrice();
+  const { subtotal, convenienceFee, gst, total, discountAmount } = (() => {
+    const base = basePrice * quantity;
+    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0, discountAmount: 0 };
     
-    // Use shared fee breakdown logic
-    const breakdown = getFeeBreakdown(base, event?.fee_config || {});
+    // Calculate discount
+    let discount = 0;
+    if (appliedCoupon) {
+      if (appliedCoupon.type === 'percent') {
+        discount = (base * Number(appliedCoupon.value)) / 100;
+      } else {
+        discount = Math.min(base, Number(appliedCoupon.value));
+      }
+    }
+
+    // Resolve fee settings based on organiser overrides
+    const resolvedSettings = resolveFeeSettings({}, event?.organiser || {}, event?.fee_config || {});
+    const breakdown = getFeeBreakdown(base, resolvedSettings, discount);
     return {
       subtotal: base,
       convenienceFee: breakdown.convenienceFee,
       gst: breakdown.gst,
-      total: breakdown.total
+      total: breakdown.total,
+      discountAmount: discount
     };
   })();
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', code)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        Alert.alert('Invalid Coupon', 'This coupon code does not exist or is expired.');
+        return;
+      }
+
+      // Check constraints
+      if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+        Alert.alert('Expired', 'This coupon has expired.');
+        return;
+      }
+      if (quantity < (data.min_tickets || 1)) {
+        Alert.alert('Limit Not Met', `Minimum ${data.min_tickets || 1} tickets required.`);
+        return;
+      }
+
+      setAppliedCoupon(data);
+      Alert.alert('Success', `Coupon ${code} applied successfully!`);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to validate coupon.');
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
 
   const handleBook = async () => {
     if (!name.trim() || !email.trim()) {
@@ -158,6 +260,8 @@ export default function BookEventScreen() {
         attendee_name: name.trim(),
         attendee_email: email.trim(),
         attendee_phone: phone.trim() || null,
+        form_responses: formResponses,
+        age_group: selectedAgeGroup?.label || null,
       };
 
       const { data, error } = await supabase
@@ -352,13 +456,31 @@ export default function BookEventScreen() {
         {/* Ticket tiers */}
         {ticketTiers.length > 0 && (
           <RNView style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Ticket Type</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Category</Text>
             {ticketTiers.map((tier: any, i: number) => {
-              const isSelected = selectedTier?.name === tier.name && selectedTier?.type === tier.type;
+              const isSelected = selectedTier?.name === tier.name || selectedTier?.id === tier.id;
+              
+              // Robust price calculation for the list item
+              const tierPrice = (() => {
+                const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
+                if (Array.isArray(rawRates) && rawRates.length > 0) {
+                  return Math.min(...rawRates.map((r: any) => Number(r.price || 0)));
+                }
+                return Number(tier.price || 0);
+              })();
+
               return (
                 <Pressable
                   key={i}
-                  onPress={() => setSelectedTier(tier)}
+                  onPress={() => {
+                    setSelectedTier(tier);
+                    const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
+                    if (Array.isArray(rawRates) && rawRates.length > 0) {
+                      setSelectedAgeGroup(rawRates[0]);
+                    } else {
+                      setSelectedAgeGroup(null);
+                    }
+                  }}
                   style={[
                     styles.tierOption,
                     {
@@ -382,21 +504,59 @@ export default function BookEventScreen() {
                       <Text style={[styles.tierName, { color: colors.text }]}>
                         {tier.name || tier.type || 'General'}
                       </Text>
-                      {tier.description && (
+                      {(tier.description || tier.gender) && (
                         <Text style={[styles.tierDesc, { color: colors.muted }]}>
-                          {tier.description}
+                          {[tier.gender, tier.description].filter(Boolean).join(' • ')}
                         </Text>
                       )}
                     </RNView>
                   </RNView>
                   <Text style={[styles.tierPrice, { color: colors.tint }]}>
-                    {Number(tier.price) === 0 ? 'FREE' : `₹${Number(tier.price).toLocaleString('en-IN')}`}
+                    {tierPrice === 0 ? 'FREE' : `₹${tierPrice.toLocaleString('en-IN')}`}
                   </Text>
                 </Pressable>
               );
             })}
           </RNView>
         )}
+
+        {/* Age Group selection */}
+        {(() => {
+          const rawRates = selectedTier?.ageRates || selectedTier?.agePricing || selectedTier?.age_rates || selectedTier?.age_pricing || [];
+          if (Array.isArray(rawRates) && rawRates.length > 0) {
+            return (
+              <RNView style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Age Group</Text>
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      'Select Age Group',
+                      '',
+                      [
+                        ...rawRates.map((ap: any) => ({
+                          text: `${ap.label || `${ap.minAge || ap.min}-${ap.maxAge || ap.max} Yrs`} - ₹${Number(ap.price || 0).toLocaleString('en-IN')}`,
+                          onPress: () => setSelectedAgeGroup(ap)
+                        })),
+                        { text: 'Cancel', style: 'cancel' }
+                      ]
+                    );
+                  }}
+                  style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: 'center' }]}
+                >
+                  <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: selectedAgeGroup ? colors.text : colors.muted, fontSize: 15, fontWeight: '600' }}>
+                      {selectedAgeGroup 
+                        ? `${selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`} (₹${Number(selectedAgeGroup.price || 0).toLocaleString('en-IN')})`
+                        : 'Select age group'}
+                    </Text>
+                    <ChevronDown size={18} color={colors.muted} />
+                  </RNView>
+                </Pressable>
+              </RNView>
+            );
+          }
+          return null;
+        })()}
 
         {/* Quantity */}
         <RNView style={styles.section}>
@@ -418,57 +578,200 @@ export default function BookEventScreen() {
           </RNView>
         </RNView>
 
-        {/* Attendee info */}
+        {/* Dynamic Registration Form */}
         <RNView style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Details</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
           <RNView style={styles.formFields}>
-            <RNView style={styles.fieldWrapper}>
-              <Text style={[styles.label, { color: colors.muted }]}>Full Name *</Text>
-              <TextInput
-                style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-                placeholder="Enter your name"
-                placeholderTextColor={colors.muted}
-                value={name}
-                onChangeText={setName}
-              />
-            </RNView>
-            <RNView style={styles.fieldWrapper}>
-              <Text style={[styles.label, { color: colors.muted }]}>Email Address *</Text>
-              <TextInput
-                style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.muted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </RNView>
-            <RNView style={styles.fieldWrapper}>
-              <Text style={[styles.label, { color: colors.muted }]}>Phone Number</Text>
-              <TextInput
-                style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-                placeholder="+91 9876543210"
-                placeholderTextColor={colors.muted}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
-            </RNView>
+            {(dynamicConfig.registrationForm || []).map((field: any) => (
+              <RNView key={field.id} style={styles.fieldWrapper}>
+                <Text style={[styles.label, { color: colors.muted }]}>
+                  {field.label} {field.required ? '*' : ''}
+                </Text>
+                {field.type === 'select' ? (
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert(
+                        `Select ${field.label}`,
+                        '',
+                        [
+                          ...(field.options || []).map((opt: string) => ({
+                            text: opt,
+                            onPress: () => setFormResponses({ ...formResponses, [field.id]: opt })
+                          })),
+                          { text: 'Cancel', style: 'cancel' }
+                        ]
+                      );
+                    }}
+                    style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: 'center' }]}
+                  >
+                    <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: formResponses[field.id] ? colors.text : colors.muted, fontSize: 15, fontWeight: '600' }}>
+                        {formResponses[field.id] || `Select ${field.label.toLowerCase()}`}
+                      </Text>
+                      <ChevronDown size={18} color={colors.muted} />
+                    </RNView>
+                  </Pressable>
+                ) : (
+                  <TextInput
+                    style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                    placeholder={`Enter ${field.label.toLowerCase()}`}
+                    placeholderTextColor={colors.muted}
+                    value={formResponses[field.id]}
+                    onChangeText={(val) => {
+                      setFormResponses({ ...formResponses, [field.id]: val });
+                      // Map standard fields back to top-level state for legacy compat if needed
+                      if (field.isDefault) {
+                        if (field.label === 'Full Name') setName(val);
+                        if (field.label === 'Email Address') setEmail(val);
+                        if (field.label === 'Phone Number') setPhone(val);
+                      }
+                    }}
+                    keyboardType={field.type === 'tel' ? 'phone-pad' : field.type === 'email' ? 'email-address' : 'default'}
+                    autoCapitalize={field.type === 'email' ? 'none' : 'words'}
+                  />
+                )}
+              </RNView>
+            ))}
+            
+            {/* Fallback if no dynamic form */}
+            {(!dynamicConfig.registrationForm || dynamicConfig.registrationForm.length === 0) && (
+              <>
+                <RNView style={styles.fieldWrapper}>
+                  <Text style={[styles.label, { color: colors.muted }]}>Full Name *</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                    placeholder="Enter your name"
+                    placeholderTextColor={colors.muted}
+                    value={name}
+                    onChangeText={setName}
+                  />
+                </RNView>
+                <RNView style={styles.fieldWrapper}>
+                  <Text style={[styles.label, { color: colors.muted }]}>Email Address *</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                    placeholder="your@email.com"
+                    placeholderTextColor={colors.muted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </RNView>
+              </>
+            )}
           </RNView>
         </RNView>
 
+        {/* Coupon code input */}
+        <RNView style={styles.section}>
+          <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0, color: colors.text }]}>Apply Coupon</Text>
+            {availableCoupons.length > 0 && (
+              <Pressable onPress={() => setShowCouponsModal(true)}>
+                <Text style={{ color: colors.tint, fontWeight: '800', fontSize: 13 }}>View All</Text>
+              </Pressable>
+            )}
+          </RNView>
+          
+          {!appliedCoupon ? (
+            <RNView style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                style={[styles.fieldInput, { flex: 1, backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                placeholder="ENTER CODE"
+                placeholderTextColor={colors.muted}
+                value={couponCode}
+                onChangeText={setCouponCode}
+                autoCapitalize="characters"
+              />
+              <Pressable 
+                onPress={handleApplyCoupon}
+                disabled={validatingCoupon || !couponCode}
+                style={[styles.applyBtn, { backgroundColor: colors.tint, opacity: (validatingCoupon || !couponCode) ? 0.5 : 1 }]}
+              >
+                <Text style={styles.applyBtnText}>{validatingCoupon ? '...' : 'Apply'}</Text>
+              </Pressable>
+            </RNView>
+          ) : (
+            <RNView style={[styles.couponBadge, { backgroundColor: '#22c55e15', borderColor: '#22c55e' }]}>
+              <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <CheckCircle size={16} color="#22c55e" />
+                <Text style={{ color: '#22c55e', fontWeight: '800' }}>{appliedCoupon.code} Applied</Text>
+              </RNView>
+              <Pressable onPress={() => setAppliedCoupon(null)}>
+                <Text style={{ color: colors.muted, fontWeight: '700' }}>Remove</Text>
+              </Pressable>
+            </RNView>
+          )}
+        </RNView>
+
+        {/* Coupons Modal */}
+        <Modal visible={showCouponsModal} animationType="slide" transparent={true}>
+          <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <RNView style={{ backgroundColor: colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '80%' }}>
+              <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: colors.text }}>Available Offers</Text>
+                <Pressable onPress={() => setShowCouponsModal(false)}>
+                  <Text style={{ color: colors.muted, fontWeight: '800' }}>Close</Text>
+                </Pressable>
+              </RNView>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {availableCoupons.map((c) => (
+                  <Pressable 
+                    key={c.id}
+                    onPress={() => {
+                      setCouponCode(c.code);
+                      setShowCouponsModal(false);
+                      setTimeout(handleApplyCoupon, 100);
+                    }}
+                    style={{ 
+                      padding: 20, 
+                      backgroundColor: colors.card, 
+                      borderRadius: 20, 
+                      borderWidth: 1, 
+                      borderColor: colors.border,
+                      marginBottom: 12
+                    }}
+                  >
+                    <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <RNView>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: colors.text }}>{c.code}</Text>
+                        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>
+                          {c.type === 'percent' ? `${c.value}% Off` : `₹${c.value} Off`}
+                        </Text>
+                      </RNView>
+                      <ArrowLeft size={20} color={colors.tint} style={{ transform: [{ rotate: '180deg' }] }} />
+                    </RNView>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </RNView>
+          </RNView>
+        </Modal>
+
         {/* Price breakdown */}
         <RNView style={[styles.priceBreakdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.breakdownTitle, { color: colors.text }]}>Price Breakdown</Text>
+          <Text style={[styles.breakdownTitle, { color: colors.text }]}>Order Details</Text>
           <RNView style={styles.breakdownRow}>
             <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-              {selectedTier?.name || 'General'} × {quantity}
+              {selectedTier?.name || 'General'} {selectedAgeGroup ? `(${selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`})` : ''} × {quantity}
             </Text>
             <Text style={[styles.breakdownValue, { color: colors.text }]}>
               {subtotal === 0 ? 'FREE' : `₹${subtotal.toLocaleString('en-IN')}`}
             </Text>
           </RNView>
+          
+          {discountAmount > 0 && (
+            <RNView style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: '#22c55e' }]}>
+                Coupon Discount
+              </Text>
+              <Text style={[styles.breakdownValue, { color: '#22c55e' }]}>
+                - ₹{discountAmount.toLocaleString('en-IN')}
+              </Text>
+            </RNView>
+          )}
+
           {convenienceFee > 0 && (
             <RNView style={styles.breakdownRow}>
               <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
@@ -553,82 +856,90 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 15, fontWeight: '800' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 12, fontWeight: '600' },
-  section: { paddingHorizontal: 16, marginBottom: 20 },
-  sectionTitle: { fontSize: 17, fontWeight: '900', marginBottom: 12 },
+  section: { paddingHorizontal: 16, marginBottom: 28 },
+  sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16, letterSpacing: -0.3 },
   tierOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 14,
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 1.5,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  tierLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  radioInner: { width: 10, height: 10, borderRadius: 5 },
-  tierName: { fontSize: 14, fontWeight: '800' },
+  tierLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 12, height: 12, borderRadius: 6 },
+  tierName: { fontSize: 15, fontWeight: '800' },
   tierDesc: { fontSize: 12, fontWeight: '500', marginTop: 2 },
-  tierPrice: { fontSize: 15, fontWeight: '900' },
+  tierPrice: { fontSize: 16, fontWeight: '900' },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
+    height: 56,
+    marginTop: 8,
   },
-  quantityBtn: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
-  quantityValue: { fontSize: 20, fontWeight: '900' },
-  formFields: { gap: 12 },
-  fieldWrapper: { gap: 6 },
-  label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  quantityBtn: { width: 64, height: '100%', alignItems: 'center', justifyContent: 'center' },
+  quantityValue: { fontSize: 22, fontWeight: '900', textAlign: 'center', flex: 1 },
+  formFields: { gap: 16 },
+  fieldWrapper: { gap: 8 },
+  label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginLeft: 4 },
   fieldInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 48,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
     fontSize: 15,
     fontWeight: '600',
   },
   priceBreakdown: {
     margin: 16,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 16,
-    gap: 10,
+    padding: 20,
+    gap: 12,
+    marginBottom: 100,
   },
-  breakdownTitle: { fontSize: 16, fontWeight: '900', marginBottom: 4 },
+  breakdownTitle: { fontSize: 18, fontWeight: '900', marginBottom: 8 },
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   breakdownLabel: { fontSize: 14, fontWeight: '600' },
-  breakdownValue: { fontSize: 14, fontWeight: '700' },
-  breakdownDivider: { height: 1, marginVertical: 4 },
-  totalLabel: { fontSize: 16, fontWeight: '900' },
-  totalValue: { fontSize: 18, fontWeight: '900' },
+  breakdownValue: { fontSize: 15, fontWeight: '800' },
+  breakdownDivider: { height: 1, marginVertical: 8 },
+  totalLabel: { fontSize: 18, fontWeight: '900' },
+  totalValue: { fontSize: 22, fontWeight: '900' },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
     borderTopWidth: 1,
+    backgroundColor: 'transparent',
   },
-  bookBtn: { borderRadius: 14, overflow: 'hidden' },
+  bookBtn: { borderRadius: 18, overflow: 'hidden' },
   bookBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
-  bookBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  bookBtnText: { color: '#fff', fontSize: 18, fontWeight: '900' },
   successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   successContent: { alignItems: 'center', padding: 32 },
   successIcon: { width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  successTitle: { fontSize: 26, fontWeight: '900', marginBottom: 10, textAlign: 'center' },
-  successSub: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  successBtn: { width: '100%', borderRadius: 14, overflow: 'hidden' },
-  successBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16 },
-  successBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  successTitle: { fontSize: 28, fontWeight: '900', marginBottom: 12, textAlign: 'center' },
+  successSub: { fontSize: 15, fontWeight: '600', textAlign: 'center', marginBottom: 32, lineHeight: 24 },
+  successBtn: { width: '100%', borderRadius: 18, overflow: 'hidden' },
+  successBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18 },
+  successBtnText: { color: '#fff', fontSize: 17, fontWeight: '900' },
+  ageGroupGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4, justifyContent: 'space-between' },
+  ageOption: { width: '48%', padding: 16, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  ageLabel: { fontSize: 13, fontWeight: '800' },
+  agePrice: { fontSize: 12, fontWeight: '700', marginTop: 4 },
+  selectWrapper: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  applyBtn: { paddingHorizontal: 20, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  applyBtnText: { color: '#fff', fontWeight: '900', fontSize: 14, letterSpacing: 1 },
+  couponBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 16, borderWidth: 1, borderStyle: 'dashed' },
 });

@@ -30,6 +30,23 @@ import {
   Users,
   Tag,
   Globe,
+  Activity,
+  HeartPulse,
+  FileText,
+  Award,
+  Shirt,
+  Coffee,
+  Utensils,
+  Home,
+  Car,
+  ShieldCheck,
+  Smile,
+  DollarSign,
+  Trophy,
+  Target,
+  Camera,
+  CheckCircle2,
+  HelpCircle,
 } from 'lucide-react-native';
 
 export default function EventDetailScreen() {
@@ -118,14 +135,28 @@ export default function EventDetailScreen() {
   };
 
   const dynamicConfig = safeParse(event.dynamic_config) || {};
-  const parsedTickets = safeParse(event.tickets) || dynamicConfig.tickets || [];
+  const parsedTickets = safeParse(event.tickets) || dynamicConfig.tickets || dynamicConfig.categories || [];
   
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
-  const minPrice = ticketTiers.length
-    ? Math.min(...ticketTiers.map((t: any) => Number(t.price || 0)))
-    : Number(event.price || 0);
+  
+  // Robust price calculation for dynamic events
+  const getMinPrice = () => {
+    if (ticketTiers.length === 0) return Number(event.price || 0);
+    
+    const prices = ticketTiers.map((t: any) => {
+      const rawRates = t.ageRates || t.agePricing || t.age_rates || t.age_pricing || [];
+      if (Array.isArray(rawRates) && rawRates.length > 0) {
+        return Math.min(...rawRates.map((r: any) => Number(r.price || 0)));
+      }
+      return Number(t.price || 0);
+    });
+    
+    return Math.min(...prices);
+  };
 
-  const isFree = event.is_free || minPrice === 0 || event.type === 'Free';
+  const minPrice = getMinPrice();
+  
+  const isFree = event.is_free || (minPrice === 0 && event.type !== 'Dynamic') || event.type === 'Free';
   const priceLabel = isFree ? 'FREE' : `₹${minPrice.toLocaleString('en-IN')}`;
   const location = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'TBA';
   const date = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
@@ -225,56 +256,113 @@ export default function EventDetailScreen() {
             <MetaRow icon={<MapPin size={16} color={colors.error} />} value={location} label="Venue" colors={colors} isLast />
           </RNView>
 
-          {/* Description */}
-          {(event.description || event.about || dynamicConfig.description) && (
-            <RNView style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
-              <Text style={[styles.description, { color: colors.muted }]}>
-                {event.description || event.about || dynamicConfig.description}
-              </Text>
+          {/* Countdown Timer */}
+          {dynamicConfig.countdown?.enabled && dynamicConfig.countdown?.deadline && (
+            <RNView style={styles.countdownContainer}>
+              <LinearGradient
+                colors={['#f84464', '#c026d3']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.countdownGradient}
+              >
+                <Text style={styles.countdownTitle}>REGISTRATION DEADLINE</Text>
+                <Countdown deadline={dynamicConfig.countdown.deadline} />
+              </LinearGradient>
             </RNView>
           )}
 
-          {/* Ticket Tiers */}
-          {ticketTiers.length > 0 && (
+          {/* Ticket Categories & Prizes */}
+          {dynamicConfig.categories?.length > 0 && (
             <RNView style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ticket Options</Text>
-              {ticketTiers.map((tier: any, i: number) => (
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ticket Categories</Text>
+              {dynamicConfig.categories.map((cat: any, i: number) => (
                 <RNView
                   key={i}
                   style={[
-                    styles.tierRow,
+                    styles.categoryCard,
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
-                  <RNView style={styles.tierLeft}>
-                    <Ticket size={16} color={colors.tint} />
-                    <RNView>
-                      <Text style={[styles.tierName, { color: colors.text }]}>
-                        {tier.name || tier.type || 'General'}
-                      </Text>
-                      {tier.available !== undefined && (
-                        <Text style={[styles.tierAvail, { color: colors.muted }]}>
-                          {tier.available} seats left
-                        </Text>
-                      )}
-                    </RNView>
+                  <RNView style={styles.categoryHeader}>
+                    <Text style={[styles.categoryName, { color: colors.text }]}>{cat.name}</Text>
+                    <Text style={[styles.categoryPrice, { color: colors.tint }]}>
+                      {(() => {
+                        const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
+                        if (Array.isArray(rawRates) && rawRates.length > 0) {
+                          const prices = rawRates.map((r: any) => Number(r.price || 0));
+                          const min = Math.min(...prices);
+                          const max = Math.max(...prices);
+                          return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
+                        }
+                        return `₹${cat.price || 0}`;
+                      })()}
+                    </Text>
                   </RNView>
-                  <Text style={[styles.tierPrice, { color: colors.tint }]}>
-                    {Number(tier.price) === 0 ? 'FREE' : `₹${Number(tier.price).toLocaleString('en-IN')}`}
-                  </Text>
+                  
+                  {cat.prizes?.length > 0 && (
+                    <RNView style={styles.prizeList}>
+                      {cat.prizes.map((p: any, pi: number) => (
+                        <RNView key={pi} style={styles.prizeRow}>
+                          <Text style={[styles.prizeLabel, { color: colors.muted }]}>{p.label}</Text>
+                          <Text style={[styles.prizeValue, { color: colors.text }]}>{p.value}</Text>
+                        </RNView>
+                      ))}
+                    </RNView>
+                  )}
+                  
+                  <RNView style={styles.categoryFooter}>
+                    <Text style={[styles.categorySlots, { color: colors.muted }]}>
+                      {cat.gender || 'All'} • {cat.totalSlots || 0} SLOTS
+                    </Text>
+                  </RNView>
                 </RNView>
               ))}
             </RNView>
           )}
 
+          {/* Amenities Grid */}
+          {dynamicConfig.amenities?.length > 0 && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Amenities</Text>
+              <RNView style={styles.amenitiesGrid}>
+                {dynamicConfig.amenities.map((item: string, i: number) => (
+                  <RNView key={i} style={styles.amenityItem}>
+                    <RNView style={[styles.amenityIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <AmenityIcon name={item} color={colors.tint} />
+                    </RNView>
+                    <Text style={[styles.amenityLabel, { color: colors.muted }]} numberOfLines={1}>
+                      {item}
+                    </Text>
+                  </RNView>
+                ))}
+              </RNView>
+            </RNView>
+          )}
+
+          {/* Description */}
+          {(event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description) && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+              <Text style={[styles.description, { color: colors.muted }]}>
+                {event.description || event.about || dynamicConfig.description || dynamicConfig.basicInfo?.description}
+              </Text>
+            </RNView>
+          )}
+
           {/* Organiser info */}
-          {(event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name) && (
+          {(event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name || dynamicConfig.basicInfo?.organizerContact) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Organised by</Text>
               <RNView style={[styles.organiserCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Users size={18} color={colors.tint} />
-                <Text style={[styles.organiserName, { color: colors.text }]}>{event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name}</Text>
+                <RNView>
+                  <Text style={[styles.organiserName, { color: colors.text }]}>
+                    {event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name || 'Organiser'}
+                  </Text>
+                  {dynamicConfig.basicInfo?.organizerContact && (
+                    <Text style={[styles.organiserContact, { color: colors.muted }]}>{dynamicConfig.basicInfo.organizerContact}</Text>
+                  )}
+                </RNView>
               </RNView>
             </RNView>
           )}
@@ -304,6 +392,69 @@ export default function EventDetailScreen() {
       </RNView>
     </RNView>
   );
+}
+
+function Countdown({ deadline }: { deadline: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const diff = new Date(deadline).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        clearInterval(timer);
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hrs: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        min: Math.floor((diff / 1000 / 60) % 60),
+        sec: Math.floor((diff / 1000) % 60),
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [deadline]);
+
+  return (
+    <RNView style={styles.countdownRow}>
+      <TimeUnit value={timeLeft.days} label="DAYS" />
+      <TimeUnit value={timeLeft.hrs} label="HRS" />
+      <TimeUnit value={timeLeft.min} label="MIN" />
+      <TimeUnit value={timeLeft.sec} label="SEC" />
+    </RNView>
+  );
+}
+
+function TimeUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <RNView style={styles.timeUnit}>
+      <Text style={styles.timeValue}>{value}</Text>
+      <Text style={styles.timeLabel}>{label}</Text>
+    </RNView>
+  );
+}
+
+function AmenityIcon({ name, color }: { name: string; color: string }) {
+  const iconSize = 20;
+  const map: any = {
+    'Ambulance': Activity,
+    'First Aid': HeartPulse,
+    'Certificate': FileText,
+    'Medal': Award,
+    'T-Shirt': Shirt,
+    'Breakfast': Coffee,
+    'Refreshments': Utensils,
+    'Accommodation': Home,
+    'Parking': Car,
+    'Safety': ShieldCheck,
+    'Family': Smile,
+    'Cash Prize': DollarSign,
+    'Trophy': Trophy,
+    'Bib': Target,
+    'Selfie': Camera,
+    'Washroom': CheckCircle2,
+  };
+  const IconComp = map[name] || HelpCircle;
+  return <IconComp size={iconSize} color={color} />;
 }
 
 function MetaRow({ icon, value, label, colors, isLast }: any) {
@@ -371,31 +522,33 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   metaLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   metaValue: { fontSize: 14, fontWeight: '800', marginTop: 2 },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 12 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16 },
   description: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
-  tierRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  tierLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tierName: { fontSize: 14, fontWeight: '800' },
-  tierAvail: { fontSize: 11, fontWeight: '600' },
-  tierPrice: { fontSize: 16, fontWeight: '900' },
-  organiserCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  organiserName: { fontSize: 15, fontWeight: '700' },
+  categoryCard: { borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 12 },
+  categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  categoryName: { fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
+  categoryPrice: { fontSize: 18, fontWeight: '900' },
+  prizeList: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', gap: 8 },
+  prizeRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  prizeLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  prizeValue: { fontSize: 14, fontWeight: '800' },
+  categoryFooter: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 10 },
+  categorySlots: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  amenityItem: { width: '22%', alignItems: 'center', gap: 8 },
+  amenityIcon: { width: 50, height: 50, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  amenityLabel: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' },
+  organiserCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, borderWidth: 1 },
+  organiserName: { fontSize: 16, fontWeight: '800' },
+  organiserContact: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  countdownContainer: { marginBottom: 24, borderRadius: 24, overflow: 'hidden' },
+  countdownGradient: { padding: 20, alignItems: 'center' },
+  countdownTitle: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 2, marginBottom: 12 },
+  countdownRow: { flexDirection: 'row', gap: 20 },
+  timeUnit: { alignItems: 'center' },
+  timeValue: { color: '#fff', fontSize: 24, fontWeight: '900' },
+  timeLabel: { color: '#fff', fontSize: 8, fontWeight: '800', marginTop: 2 },
   bookBar: {
     position: 'absolute',
     bottom: 0,

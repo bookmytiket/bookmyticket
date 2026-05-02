@@ -158,19 +158,24 @@ export function AuthProvider({ children }) {
             if (adminRecord) {
                 role = (adminRecord.role || 'admin').toLowerCase().replace(/\s+/g, '_');
                 specializedData = adminRecord;
-            } else if (brandRecord) {
-                role = 'branding_partner';
-                specializedData = brandRecord;
+            } else if (brandRecord && (role === 'public' || role === 'branding_partner')) {
+                // Only promote to branding_partner if they aren't already a higher role
+                // and if they don't want to remain a public user (usually partners have 'branding_partner' role in profiles)
+                if (profile?.role === 'branding_partner') {
+                    role = 'branding_partner';
+                    specializedData = brandRecord;
+                }
             } else if (organiserRecord) {
                 // Protect admin/super_admin role if already set via profile
                 if (role !== 'admin' && role !== 'super_admin') {
                     role = 'organiser';
                 }
                 specializedData = organiserRecord;
-            } else if (vendorRecord || providerRecord) {
-                role = 'vendor';
-                let finalProviderData = providerRecord;
-                if (!providerRecord && vendorRecord) {
+            } else if ((vendorRecord || providerRecord) && (role === 'public' || role === 'vendor')) {
+                if (profile?.role === 'vendor') {
+                    role = 'vendor';
+                    let finalProviderData = providerRecord;
+                    if (!providerRecord && vendorRecord) {
                     const { data: newProvider, error: insertError } = await supabase
                         .from('service_providers')
                         .insert({
@@ -186,9 +191,9 @@ export function AuthProvider({ children }) {
                     
                     if (!insertError) finalProviderData = newProvider;
                 }
-                specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
-            }
- else if (role === 'staff') {
+                    specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
+                }
+            } else if (role === 'staff') {
                 try {
                     const { data } = await supabase.from('staff').select('*').eq('id', supabaseUser.id).maybeSingle();
                     if (data) specializedData = data;

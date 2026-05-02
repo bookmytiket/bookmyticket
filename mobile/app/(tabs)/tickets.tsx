@@ -24,12 +24,23 @@ export default function TicketsScreen() {
   const { user, loading: authLoading } = useAuth();
 
   // Real-time Bookings with Event Data
-  const { data: bookings, loading, refresh } = useSupabaseQuery(
+  const { data: bookingsRaw, loading, refresh } = useSupabaseQuery(
     'bookings',
     (q) => q.select('*, events(*)').eq('user_id', user?.id).order('created_at', { ascending: false }),
     [user?.id],
     { realtime: true, enabled: !!user }
   );
+
+  const bookings = React.useMemo(() => {
+    if (!bookingsRaw) return [];
+    return (bookingsRaw as any[]).filter(b => {
+      if (b.payment_status === 'pending' || b.status === 'Pending') {
+        const diff = Date.now() - new Date(b.created_at).getTime();
+        return diff < (24 * 60 * 60 * 1000);
+      }
+      return true;
+    });
+  }, [bookingsRaw]);
 
   // Automatic redirect if not logged in
   useEffect(() => {

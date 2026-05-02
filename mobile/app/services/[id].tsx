@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, Pressable, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Info
 } from 'lucide-react-native';
-import { useSupabaseQuery } from '@/hooks/useSupabase';
+import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,14 +28,49 @@ export default function ProviderProfileScreen() {
   const colors = Colors[colorScheme];
   const router = useRouter();
 
-  const { data: pro, loading } = useSupabaseQuery(
-    'service_providers',
-    (q) => q.eq('id', id).single(),
-    [id]
-  );
+  const [pro, setPro] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Try service_providers first
+        const { data: provider } = await supabase.from('service_providers').select('*').eq('id', id).single();
+        if (provider) {
+          setPro({
+            ...provider,
+            isTurf: false
+          });
+        } else {
+          // Try turfs
+          const { data: turf } = await supabase.from('turfs').select('*').eq('id', id).single();
+          if (turf) {
+            setPro({
+              ...turf,
+              business_name: turf.name,
+              category: 'Turf Booking',
+              image_url: Array.isArray(turf.images) ? turf.images[0] : turf.images,
+              bio: turf.description,
+              starting_price: turf.price_per_hour,
+              isTurf: true,
+              portfolio: Array.isArray(turf.images) ? turf.images.map(img => ({ url: img })) : [{ url: turf.images }]
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
 
   const settings = useMemo(() => {
-    if (!pro?.advanced_settings) return {};
+    if (!pro) return {};
+    if (pro.isTurf) return { rating: '5.0', reviews: '10+' };
+    if (!pro.advanced_settings) return {};
     try {
       return typeof pro.advanced_settings === 'string' 
         ? JSON.parse(pro.advanced_settings) 
@@ -139,13 +174,21 @@ export default function ProviderProfileScreen() {
           <View style={[styles.section, { marginBottom: 120 }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Portfolio</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-              {[1, 2, 3].map((_, i) => (
+              {pro.portfolio && pro.portfolio.length > 0 ? pro.portfolio.map((img: any, i: number) => (
                 <Image 
                   key={i}
-                  source={{ uri: `https://images.unsplash.com/photo-${1500000000000 + i}?w=400` }}
+                  source={{ uri: img.url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800' }}
                   style={styles.galleryImage}
                 />
-              ))}
+              )) : (
+                [1, 2, 3].map((_, i) => (
+                  <Image 
+                    key={i}
+                    source={{ uri: `https://images.unsplash.com/photo-${1500000000000 + i}?w=400` }}
+                    style={styles.galleryImage}
+                  />
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -160,7 +203,7 @@ export default function ProviderProfileScreen() {
           <Pressable style={[styles.secondaryBtn, { borderColor: colors.border }]}>
             <Phone size={20} color={colors.text} />
           </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={() => router.push('/events')}>
+          <Pressable style={styles.primaryBtn} onPress={() => router.push({ pathname: '/services/book', params: { id: pro.id } })}>
             <LinearGradient colors={['#f844a4', '#a855f7']} style={styles.gradient}>
               <Calendar size={20} color="#fff" />
               <Text style={styles.primaryBtnText}>Book Now</Text>

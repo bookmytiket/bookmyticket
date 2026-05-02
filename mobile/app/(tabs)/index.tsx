@@ -146,6 +146,14 @@ export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+
+  const safeParse = (val: any) => {
+    if (!val) return {};
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (err) { return {}; }
+    }
+    return val;
+  };
   const [userLocation, setUserLocation] = useState('Coimbatore');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [activeCountry, setActiveCountry] = useState('India');
@@ -212,14 +220,6 @@ export default function HomeScreen() {
   const activeProfessionals = useMemo(() => {
     if (!professionals) return [];
     
-    const safeParse = (val: any) => {
-      if (!val) return {};
-      if (typeof val === 'string') {
-        try { return JSON.parse(val); } catch (err) { return {}; }
-      }
-      return val;
-    };
-
     return professionals
       .map(p => ({ ...p, settings: safeParse(p.advanced_settings) }))
       .filter(p => Number(p.settings.rating || 0) >= 4)
@@ -235,33 +235,31 @@ export default function HomeScreen() {
       const s = String(ev.status || '').toLowerCase();
       if (s === "inactive" || s === "draft" || s === "expired") return false;
 
-      const safeParse = (val: any) => {
-        if (!val) return null;
-        if (typeof val === 'string') {
-          try { return JSON.parse(val); } catch (err) { return null; }
-        }
-        return val;
-      };
       const dynamicConfig = safeParse(ev.dynamic_config);
       
-      // Date/Expiry Filter
-      let dt = ev.date || ev.start_date || ev.startDate || ev.expiry_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
-      if (!dt) return true;
+      // Prioritize End Date/Expiry Date for visibility
+      let dt = ev.expiry_date || ev.end_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.basicInfo?.endDate || ev.date || ev.start_date || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
+      if (!dt) return true; // Show if no date found (fallback)
 
       let eventDate: Date | null = null;
       try {
-        if (typeof dt === 'string' && dt.includes('/')) {
-          const [day, month, year] = dt.split('/');
-          eventDate = new Date(`${year}-${month}-${day}T23:59:59`);
+        if (typeof dt === 'string') {
+          if (dt.includes('/')) {
+            const [d, m, y] = dt.split('/');
+            eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
+          } else if (dt.includes('-') && dt.split('-')[0].length === 2) {
+            const [d, m, y] = dt.split('-');
+            eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
+          } else {
+            eventDate = new Date(dt);
+          }
         } else {
           eventDate = new Date(dt);
         }
       } catch (e) { return true; }
 
-      if (eventDate) {
-        const evDateOnly = new Date(eventDate);
-        evDateOnly.setHours(0, 0, 0, 0);
-        return evDateOnly >= today;
+      if (eventDate && !isNaN(eventDate.getTime())) {
+        return eventDate >= today;
       }
       
       return true;
@@ -323,9 +321,38 @@ export default function HomeScreen() {
   }, [allLiveEvents]);
 
   const comingSoonEvents = useMemo(() => {
-    const upcoming = activeEvents.filter(e => e.featured || e.trending || e.is_spotlight);
-    return upcoming.length > 0 ? upcoming.slice(0, 5) : activeEvents.slice(0, 5);
-  }, [activeEvents]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Coming soon should show ALL upcoming events (not city restricted) to give better visibility
+    return [...allLiveEvents]
+      .filter(ev => {
+
+        const dynamicConfig = safeParse(ev.dynamic_config) || {};
+        const dt = ev.start_date || ev.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
+        if (!dt) return false;
+
+        let eventDate: Date | null = null;
+        if (typeof dt === 'string' && dt.includes('/')) {
+          const [d, m, y] = dt.split('/');
+          eventDate = new Date(`${y}-${m}-${d}T00:00:00`);
+        } else {
+          eventDate = new Date(dt);
+        }
+        
+        // Show events starting tomorrow or later
+        return eventDate > today;
+      })
+      .sort((a, b) => {
+        // Prioritize featured/trending, then by date
+        const aScore = (a.is_spotlight ? 10 : 0) + (a.featured ? 5 : 0) + (a.trending ? 3 : 0);
+        const bScore = (b.is_spotlight ? 10 : 0) + (b.featured ? 5 : 0) + (b.trending ? 3 : 0);
+        if (aScore !== bScore) return bScore - aScore;
+        
+        return new Date(a.date || a.start_date || 0).getTime() - new Date(b.date || b.start_date || 0).getTime();
+      })
+      .slice(0, 5);
+  }, [allLiveEvents]);
 
   const popularEvents = useMemo(() => {
     return activeEvents.slice(0, 10);
@@ -698,12 +725,16 @@ export default function HomeScreen() {
               renderItem={({ item }) => {
                 // Calculate countdown
                 let eventDate = new Date();
-                if (item.date) {
-                    if (item.date.includes('/')) {
-                        const [d, m, y] = item.date.split('/');
-                        eventDate = new Date(`${y}-${m}-${d}T18:00:00`);
+                const dConfig = safeParse(item.dynamic_config) || {};
+                const rawDate = item.start_date || item.date || dConfig.date || dConfig.basicInfo?.date || dConfig.basicInfo?.expiryDate;
+                const rawTime = item.time || dConfig.time || dConfig.basicInfo?.time || '18:00';
+                
+                if (rawDate) {
+                    if (typeof rawDate === 'string' && rawDate.includes('/')) {
+                        const [d, m, y] = rawDate.split('/');
+                        eventDate = new Date(`${y}-${m}-${d}T${rawTime.includes(':') ? rawTime : '18:00'}:00`);
                     } else {
-                        eventDate = new Date(item.date);
+                        eventDate = new Date(rawDate);
                     }
                 }
                 const timeDiff = eventDate.getTime() - new Date().getTime();
@@ -711,13 +742,7 @@ export default function HomeScreen() {
                 const hours = Math.max(0, Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
                 const mins = Math.max(0, Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)));
 
-                const safeParse = (val: any) => {
-                  if (!val) return null;
-                  if (typeof val === 'string') {
-                    try { return JSON.parse(val); } catch (err) { return null; }
-                  }
-                  return val;
-                };
+
                 const dynamicConfig = safeParse(item.dynamic_config) || {};
                 const eventVenue = item.venue || item.location || item.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'Venue TBA';
                 const displayDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'To be announced';
@@ -868,13 +893,7 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
               renderItem={({ item }) => {
-                const safeParse = (val: any) => {
-                  if (!val) return null;
-                  if (typeof val === 'string') {
-                    try { return JSON.parse(val); } catch (err) { return null; }
-                  }
-                  return val;
-                };
+
                 const dynamicConfig = safeParse(item.dynamic_config) || {};
                 const eventVenue = item.venue || item.location || item.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'Venue TBA';
                 const eventDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';

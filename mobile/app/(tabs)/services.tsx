@@ -35,7 +35,7 @@ export default function ServicesScreen() {
   const renderCategory = ({ item }: { item: typeof CATEGORIES[0] }) => (
     <Pressable 
       style={[styles.catCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => router.push({ pathname: '/events', params: { category: item.name } })}
+      onPress={() => router.push({ pathname: '/services', params: { category: item.name } })}
     >
       <View style={[styles.iconContainer, { backgroundColor: `${item.color}15` }]}>
         <item.icon size={24} color={item.color} />

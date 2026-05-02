@@ -51,9 +51,10 @@ export function useSupabaseQuery(
 
     // Fix: subscribe BEFORE calling .subscribe(), and only when realtime=true
     if (realtime && table) {
-      console.log(`[Supabase] Subscribing to real-time for: ${table}`);
+      const channelId = `realtime-${table}-${Math.random().toString(36).substring(7)}`;
+      console.log(`[Supabase] Subscribing to real-time for: ${table} (ID: ${channelId})`);
       const channel = supabase
-        .channel(`public:${table}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table },
