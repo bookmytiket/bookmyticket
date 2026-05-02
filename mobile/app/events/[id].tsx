@@ -52,7 +52,7 @@ export default function EventDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*, organisers(name)')
+        .select('*')
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -108,17 +108,28 @@ export default function EventDetailScreen() {
     );
   }
 
-  // Parse ticket tiers from dynamic_config or tickets
-  const ticketTiers = event.tickets || event.dynamic_config?.tickets || [];
+  // Safe JSON parse helper
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  };
+
+  const dynamicConfig = safeParse(event.dynamic_config) || {};
+  const parsedTickets = safeParse(event.tickets) || dynamicConfig.tickets || [];
+  
+  const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
   const minPrice = ticketTiers.length
     ? Math.min(...ticketTiers.map((t: any) => Number(t.price || 0)))
-    : event.price || 0;
+    : Number(event.price || 0);
 
-  const isFree = event.is_free || minPrice === 0;
+  const isFree = event.is_free || minPrice === 0 || event.type === 'Free';
   const priceLabel = isFree ? 'FREE' : `₹${minPrice.toLocaleString('en-IN')}`;
-  const location = event.location || event.city || event.dynamic_config?.venue?.name || 'TBA';
-  const date = event.date || event.dynamic_config?.date || 'TBA';
-  const time = event.time || event.dynamic_config?.time || '';
+  const location = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'TBA';
+  const date = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
+  const time = event.start_time || event.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
 
   return (
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -188,7 +199,7 @@ export default function EventDetailScreen() {
           {/* Title + Price */}
           <RNView style={styles.titleRow}>
             <Text style={[styles.eventTitle, { color: colors.text }]}>
-              {event.title}
+              {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event Details'}
             </Text>
             <RNView
               style={[
@@ -215,11 +226,11 @@ export default function EventDetailScreen() {
           </RNView>
 
           {/* Description */}
-          {event.description && (
+          {(event.description || event.about || dynamicConfig.description) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
               <Text style={[styles.description, { color: colors.muted }]}>
-                {event.description}
+                {event.description || event.about || dynamicConfig.description}
               </Text>
             </RNView>
           )}
@@ -258,12 +269,12 @@ export default function EventDetailScreen() {
           )}
 
           {/* Organiser info */}
-          {event.organisers?.name && (
+          {(event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Organised by</Text>
               <RNView style={[styles.organiserCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Users size={18} color={colors.tint} />
-                <Text style={[styles.organiserName, { color: colors.text }]}>{event.organisers.name}</Text>
+                <Text style={[styles.organiserName, { color: colors.text }]}>{event.organisers?.name || event.organiser || dynamicConfig.organiser?.name || dynamicConfig.organiser_name}</Text>
               </RNView>
             </RNView>
           )}

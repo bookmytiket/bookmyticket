@@ -110,6 +110,9 @@ export default function DashboardLayout({ children }) {
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
           <SidebarItem icon={LayoutDashboard} label="Branding Home" active={tab === 'dashboard' && pathname === '/branding/dashboard'} onClick={() => router.push('/branding/dashboard?tab=dashboard')} />
+          {['organiser', 'admin', 'super_admin'].includes(user.role) && (
+            <SidebarItem icon={Ghost} label="Organiser Portal" active={false} onClick={() => router.push('/organiser')} />
+          )}
           <SidebarItem icon={Ticket}          label="My Tickets"     active={tab === 'my_booking'} onClick={() => router.push('/branding/dashboard?tab=my_booking')} />
           <SidebarItem icon={ImageIcon}       label="Banners"     active={tab === 'banners'}       disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=banners')} />
           <SidebarItem icon={Ticket}          label="Coupons"     active={tab === 'coupons' || pathname.includes('coupon-creation')}   disabled={!isVerified} onClick={() => router.push('/branding/dashboard?tab=coupons')} />

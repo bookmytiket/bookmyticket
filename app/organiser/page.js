@@ -140,13 +140,13 @@ function LocationPickerModal({
     };
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[1200] flex items-center justify-center p-4 sm:p-6 md:p-10 backdrop-blur-md bg-black/40"
         >
-            <motion.div 
+            <motion.div
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -158,8 +158,8 @@ function LocationPickerModal({
                         <h3 className="text-xl font-bold text-slate-900 leading-tight uppercase tracking-tight">Location Picker</h3>
                         <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Interactive Map Selection</p>
                     </div>
-                    <button 
-                        onClick={() => setShowMapModal(false)} 
+                    <button
+                        onClick={() => setShowMapModal(false)}
                         className="w-10 h-10 rounded-full bg-slate-50 hover:bg-pink-50 text-slate-400 hover:text-pink-500 flex items-center justify-center transition-all border border-slate-100 hover:border-pink-200"
                     >
                         <X size={20} />
@@ -169,9 +169,9 @@ function LocationPickerModal({
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                     {/* Map Content */}
                     <div className="flex-[2.5] relative">
-                         <div ref={mapContainerRef} className="absolute inset-0 z-0 h-full w-full" />
-                         {/* Coordinates Badge Glass */}
-                         <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white shadow-lg flex items-center gap-4">
+                        <div ref={mapContainerRef} className="absolute inset-0 z-0 h-full w-full" />
+                        {/* Coordinates Badge Glass */}
+                        <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white shadow-lg flex items-center gap-4">
                             <div className="flex flex-col">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Latitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lat.toFixed(6)}</span>
@@ -181,34 +181,34 @@ function LocationPickerModal({
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Longitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lng.toFixed(6)}</span>
                             </div>
-                         </div>
+                        </div>
                     </div>
 
                     {/* Controls Sidebar */}
                     <div className="flex-1 min-w-[320px] bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6 overflow-y-auto">
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-sm flex flex-col gap-4">
-                             <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight italic">
+                            <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight italic">
                                 Precisely position the marker on the map to autofill address details.
-                             </p>
-                             
-                             <div className="space-y-4 pt-2">
+                            </p>
+
+                            <div className="space-y-4 pt-2">
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Latitude</label>
-                                    <input 
-                                        type="number" step="any" value={tempLocation.lat} 
+                                    <input
+                                        type="number" step="any" value={tempLocation.lat}
                                         onChange={e => setTempLocation(p => ({ ...p, lat: parseFloat(e.target.value) || 0 }))}
                                         className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all font-mono"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-900 uppercase tracking-widest mb-2 pl-1">Manual Longitude</label>
-                                    <input 
-                                        type="number" step="any" value={tempLocation.lng} 
+                                    <input
+                                        type="number" step="any" value={tempLocation.lng}
                                         onChange={e => setTempLocation(p => ({ ...p, lng: parseFloat(e.target.value) || 0 }))}
                                         className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all font-mono"
                                     />
                                 </div>
-                             </div>
+                            </div>
                         </div>
 
                         {geoError && (
@@ -219,7 +219,7 @@ function LocationPickerModal({
                         )}
 
                         <div className="mt-auto space-y-3">
-                            <button 
+                            <button
                                 onClick={handleUseLocation}
                                 disabled={isGeoLoading}
                                 className="w-full py-4 rounded-2xl bg-[#ec4899] text-white text-[13px] font-bold tracking-widest uppercase shadow-xl shadow-pink-200 hover:shadow-pink-300 transition-all flex items-center justify-center gap-2 group"
@@ -234,7 +234,7 @@ function LocationPickerModal({
                                     </>
                                 )}
                             </button>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setPostEvent(pe => ({ ...pe, latitude: String(tempLocation.lat), longitude: String(tempLocation.lng) }));
                                     setShowMapModal(false);
@@ -268,7 +268,7 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
     useEffect(() => {
         if (!mapContainerRef.current) return;
         const L = require("leaflet");
-        
+
         // Fix Leaflet marker icon issue
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
@@ -281,8 +281,8 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
         const initialLng = kycFormData.lng || 76.9558;
 
         const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 13);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
-            attribution: "© OpenStreetMap contributors" 
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors"
         }).addTo(map);
 
         const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
@@ -328,21 +328,21 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
                 <div style={{ padding: "0 0 20px", borderBottom: "4px solid #3b82f6", display: "inline-block", marginBottom: "24px" }}>
                     <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Service Location</h3>
                 </div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                     <div style={{ gridColumn: "span 2" }}>
                         <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Business/Service Address <span style={{ color: "#ef4444" }}>*</span></label>
                         <div style={{ position: "relative" }}>
-                            <textarea 
-                                placeholder="Enter your full business address..." 
-                                value={kycFormData.address} 
+                            <textarea
+                                placeholder="Enter your full business address..."
+                                value={kycFormData.address}
                                 onChange={e => {
                                     setKycFormData({ ...kycFormData, address: e.target.value });
                                     setKycErrors(prev => prev.filter(f => f !== 'address'));
-                                }} 
-                                style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('address') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px", minHeight: "80px" }} 
+                                }}
+                                style={{ width: "100%", padding: "12px", borderRadius: "6px", border: kycErrors.includes('address') ? "1.5px solid #ef4444" : `1px solid #e2e8f0`, color: "#1e293b", backgroundColor: "#fff", outline: "none", fontSize: "14px", minHeight: "80px" }}
                             />
-                            <button 
+                            <button
                                 onClick={handleFetchAddress}
                                 disabled={isGeoLoading}
                                 style={{ position: "absolute", right: "8px", bottom: "8px", backgroundColor: "#3b82f6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
@@ -406,7 +406,7 @@ function OrganiserPanel() {
                 const params = new URLSearchParams(window.location.search);
                 if (params.get("editId")) {
                     console.log("OrganiserPanel: editId detected, but no user. Waiting for auth state to stabilize...");
-                    return; 
+                    return;
                 }
                 router.push("/signin?redirect=" + encodeURIComponent(window.location.pathname + window.location.search));
             } else if (user.role === "staff") {
@@ -486,7 +486,7 @@ function OrganiserPanel() {
 
     const [createTicketMutation] = useSupabaseMutation("support_tickets", "insert");
     const [updateTicketMutation] = useSupabaseMutation("support_tickets", "update", (q, p) => q.eq("id", p.id));
- 
+
     const [createMarathonConfig] = useSupabaseMutation("marathon_config", "insert");
     const [createTournamentConfig] = useSupabaseMutation("tournament_config", "insert");
     const [createCoachingConfig] = useSupabaseMutation("coaching_config", "insert");
@@ -522,7 +522,7 @@ function OrganiserPanel() {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const editId = params.get("editId");
-        
+
         if (editId && eventsData && eventsData.length > 0) {
             const ev = eventsData.find(e => String(e.id) === String(editId));
             if (ev) {
@@ -604,7 +604,7 @@ function OrganiserPanel() {
     });
 
     const equaliser = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
-    
+
     const INDIAN_BANKS = [
         "State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Punjab National Bank",
         "Bank of Baroda", "Canara Bank", "Union Bank of India", "Bank of India", "Indian Bank",
@@ -639,8 +639,8 @@ function OrganiserPanel() {
                 const response = await fetch(`https://ifsc.razorpay.com/${ifsc.toUpperCase()}`);
                 if (response.ok) {
                     const data = await response.json();
-                    setKycFormData(prev => ({ 
-                        ...prev, 
+                    setKycFormData(prev => ({
+                        ...prev,
                         bankName: data.BANK,
                         branchName: data.BRANCH,
                         branchAddress: data.ADDRESS
@@ -712,7 +712,7 @@ function OrganiserPanel() {
             // Priority 1: Auth or Profile still physically loading from network
             if (loading || isOrgLoading) {
                 setCurrentStage("loading");
-                
+
                 // Safety: if stuck in loading for > 2s, force a fallback
                 if (!timeoutId) {
                     timeoutId = setTimeout(() => {
@@ -780,7 +780,7 @@ function OrganiserPanel() {
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
     const [deleteStaffMutation] = useSupabaseMutation("profiles", "delete", (q, p) => q.eq("id", p.id));
-    
+
     const internalMeetingPortalEnabled = useMemo(() => {
         const cfg = systemConfigs.find(c => c.key === "internal_meeting_portal_enabled");
         return cfg ? (typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value) : true;
@@ -797,7 +797,7 @@ function OrganiserPanel() {
                 // Check if event has passed its date/time
                 const configExpiry = e.dynamic_config?.basicInfo?.expiryDate || e.expiry_date;
                 const effectiveDate = configExpiry || e.date || e.startDate;
-                
+
                 const isAutoStatus = status === 'published' || status === 'expired';
                 if (isAutoStatus && effectiveDate) {
                     try {
@@ -808,10 +808,10 @@ function OrganiserPanel() {
                             const [d, m, y] = dateStr.split('/');
                             dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                         }
-                        
+
                         const timeStr = e.time || e.startTime || '23:59';
                         const eventDateTime = new Date(`${dateStr}T${timeStr}`);
-                        
+
                         if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
                             newStatus = 'expired';
                         }
@@ -918,7 +918,7 @@ function OrganiserPanel() {
         // Use the centralized robust validation mutation
         const result = await validateAndLogScanMutation({
             booking_id: rawId,
-            event_id: "manual_or_scan", 
+            event_id: "manual_or_scan",
             venue_id: user?.id
         });
 
@@ -1007,16 +1007,16 @@ function OrganiserPanel() {
         safetyMeasures: true,
         seatingType: "FCFS",
         mandatoryCheckin: true,
-        
+
         // Online Event Specific Fields
         startDate: "", startTime: "", endDate: "", endTime: "",
         dateSlots: [{ date: "", time: "" }],
         eventStatus: "published", isFeature: "Yes", isExclusive: "No",
         ticketLimitType: "unlimited", totalTickets: "",
         price: "", ticketsAreFree: false,
-        
+
         // Sports Event Specific Fields
-        sportType: "Marathon", 
+        sportType: "Marathon",
         distance: "5K",
         ageCategory: "All ages",
         tShirtSize: "M",
@@ -1265,16 +1265,16 @@ function OrganiserPanel() {
                 const now = new Date();
                 const configExpiry = postEvent.dynamic_config?.basicInfo?.expiryDate || postEvent.expiryDate;
                 let dateStr = configExpiry || firstSlot.date || today;
-                
+
                 // Handle DD/MM/YYYY format for robustness
                 if (dateStr.includes('/') && dateStr.split('/')[0].length <= 2) {
                     const [d, m, y] = dateStr.split('/');
                     dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                 }
-                
+
                 const timeStr = firstSlot.time || "23:59";
                 const eventDateTime = new Date(`${dateStr}T${timeStr}`);
-                
+
                 if (postEvent.eventStatus === "draft") return "draft";
                 if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) return "expired";
                 return "published";
@@ -1347,7 +1347,7 @@ function OrganiserPanel() {
                             console.error("Failed to auto-create meeting:", meetErr);
                         }
                     }
- 
+
                     // Sports Config Insertion
                     if (postEvent.type === "Sports") {
                         const sportType = postEvent.sportType?.toLowerCase();
@@ -1459,16 +1459,16 @@ function OrganiserPanel() {
             const date = new Date(year, month, day);
             const isSelected = selectedDate.toDateString() === date.toDateString();
             const isToday = new Date().toDateString() === date.toDateString();
-            
+
             days.push(
-                <div 
-                    key={day} 
+                <div
+                    key={day}
                     onClick={() => setSelectedDate(date)}
-                    style={{ 
-                        height: "40px", 
-                        border: `1px solid ${t.border}`, 
-                        padding: "4px", 
-                        cursor: "pointer", 
+                    style={{
+                        height: "40px",
+                        border: `1px solid ${t.border}`,
+                        padding: "4px",
+                        cursor: "pointer",
                         position: "relative",
                         backgroundColor: isSelected ? "#3b82f615" : t.cardBg,
                         transition: "0.2s"
@@ -1521,7 +1521,7 @@ function OrganiserPanel() {
                 font-weight: 900;
                 text-transform: uppercase;
                 letter-spacing: 0.25em;
-                color: #94a3b8;
+                color: ${t.textSub};
             }
             .sidebar-item {
                 display: flex;
@@ -1532,7 +1532,7 @@ function OrganiserPanel() {
                 cursor: pointer;
                 font-size: 14px;
                 font-weight: 600;
-                color: rgba(255, 255, 255, 0.6);
+                color: ${t.textSub};
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 border: none;
                 background: none;
@@ -1541,15 +1541,15 @@ function OrganiserPanel() {
                 letter-spacing: -0.01em;
             }
             .sidebar-item:hover {
-                background-color: rgba(255, 255, 255, 0.05);
-                color: #ffffff;
+                background-color: ${t.activeLink};
+                color: ${t.textMain};
                 transform: translateX(6px);
             }
             .sidebar-item.active {
-                background: linear-gradient(90deg, rgba(236, 72, 153, 0.2), rgba(219, 39, 119, 0.1));
-                color: #ffffff;
-                border: 1px solid rgba(236, 72, 153, 0.3);
-                box-shadow: 0 0 20px rgba(236, 72, 153, 0.1);
+                background: linear-gradient(90deg, rgba(236, 72, 153, 0.1), rgba(219, 39, 119, 0.05));
+                color: #ec4899;
+                border: 1px solid rgba(236, 72, 153, 0.2);
+                box-shadow: 0 4px 12px rgba(236, 72, 153, 0.05);
             }
             .sidebar-dropdown-item {
                 display: flex;
@@ -1557,7 +1557,7 @@ function OrganiserPanel() {
                 padding: 14px 24px 14px 56px;
                 font-size: 13px;
                 font-weight: 700;
-                color: #64748b;
+                color: ${t.textSub};
                 transition: all 0.3s;
                 border: none;
                 background: none;
@@ -1919,7 +1919,7 @@ function OrganiserPanel() {
                 <div style={{ flex: 1 }}>
                     <h2 style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>Professional Organiser Verification</h2>
                     <p style={{ color: "#64748b", fontSize: "15px", lineHeight: 1.6, marginBottom: "24px" }}>To ensure the highest quality of events on our platform, we require all organisers to complete a one-time KYC verification. This helps us maintain trust and security for all attendees. process.</p>
-                    <button 
+                    <button
                         onClick={() => setCurrentStage("kyc_wizard")}
                         style={{ backgroundColor: "#0f172a", color: "#fff", padding: "14px 32px", borderRadius: "12px", fontSize: "14px", fontWeight: 900, border: "none", cursor: "pointer", transition: "transform 0.2s" }}
                         className="hover:scale-105"
@@ -1980,138 +1980,138 @@ function OrganiserPanel() {
             {/* Content Area */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
                 <div style={{ flex: 1, overflowY: "auto", padding: "30px 24px", scrollbarWidth: "thin" }}>
-                {kycStep === 1 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                        <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "20px", display: "none" }}>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category *</label>
-                                    <select
-                                        value={kycFormData.category}
-                                        onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })}
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600, backgroundColor: "#fff" }}
-                                    >
-                                        <option value="Individual">Individual</option>
-                                        <option value="Company">Company</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Legal Name *</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="As per Government ID"
-                                        value={kycFormData.name} 
-                                        onChange={e => setKycFormData({ ...kycFormData, name: e.target.value })} 
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Card Number *</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="ABCDE1234F"
-                                        value={kycFormData.panCard} 
-                                        onChange={e => setKycFormData({ ...kycFormData, panCard: e.target.value.toUpperCase() })} 
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.1em" }} 
-                                    />
-                                </div>
-                                <div style={{ gridColumn: "span 2" }}>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address *</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter full address for communications"
-                                        value={kycFormData.address} 
-                                        onChange={e => setKycFormData({ ...kycFormData, address: e.target.value })} 
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ backgroundColor: "#fdf2f8", padding: "24px", borderRadius: "16px", border: "1px solid #fbcfe8" }}>
-                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Business Email *</label>
-                                    <input 
-                                        type="email" 
-                                        value={kycFormData.email} 
-                                        onChange={e => setKycFormData({ ...kycFormData, email: e.target.value })} 
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact Number *</label>
-                                    <input 
-                                        type="text" 
-                                        value={kycFormData.mobile} 
-                                        onChange={e => setKycFormData({ ...kycFormData, mobile: e.target.value })} 
-                                        style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} 
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ backgroundColor: "#eff6ff", padding: "24px", borderRadius: "16px", border: "1px solid #dbeafe" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Beneficiary Name</label>
-                                    <input type="text" placeholder="Account Holder Name" value={kycFormData.beneficiaryName} onChange={e => setKycFormData({ ...kycFormData, beneficiaryName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</label>
-                                    <input type="text" placeholder="HDFC0001234" value={kycFormData.ifscCode} onChange={e => handleIfscChange(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Account No</label>
-                                    <input type="text" placeholder="0000 0000 0000" value={kycFormData.accountNumber} onChange={e => setKycFormData({ ...kycFormData, accountNumber: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700 }} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {kycStep === 2 && (
-                    <div style={{ padding: "30px", textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
-                            {['pan', 'cheque', 'aadhar'].map(id => (
-                                <div key={id} style={{ border: "2px dashed #cbd5e1", padding: "24px", borderRadius: "16px", flex: 1, cursor: "pointer", transition: "all 0.3s" }} className="hover:border-blue-500 hover:bg-blue-50">
-                                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#64748b" }}>
-                                        <Building size={24} />
+                    {kycStep === 1 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                            <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "20px", display: "none" }}>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category *</label>
+                                        <select
+                                            value={kycFormData.category}
+                                            onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600, backgroundColor: "#fff" }}
+                                        >
+                                            <option value="Individual">Individual</option>
+                                            <option value="Company">Company</option>
+                                        </select>
                                     </div>
-                                    <label style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>{id.toUpperCase()}</label>
-                                    <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "16px" }}>Upload clear photo or PDF</p>
-                                    <input type="file" onChange={e => setKycFiles({ ...kycFiles, [id]: e.target.files?.[0]?.name })} style={{ fontSize: "12px", width: "100%" }} />
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Legal Name *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="As per Government ID"
+                                            value={kycFormData.name}
+                                            onChange={e => setKycFormData({ ...kycFormData, name: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Card Number *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="ABCDE1234F"
+                                            value={kycFormData.panCard}
+                                            onChange={e => setKycFormData({ ...kycFormData, panCard: e.target.value.toUpperCase() })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.1em" }}
+                                        />
+                                    </div>
+                                    <div style={{ gridColumn: "span 2" }}>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter full address for communications"
+                                            value={kycFormData.address}
+                                            onChange={e => setKycFormData({ ...kycFormData, address: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }}
+                                        />
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                            </div>
 
-                {kycStep === 3 && (
-                    <div style={{ padding: "60px", textAlign: "center" }}>
-                        <div style={{ width: "80px", height: "80px", borderRadius: "20px", backgroundColor: "#ec489910", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", color: "#ec4899" }}>
-                            <FileCheck2 size={40} />
+                            <div style={{ backgroundColor: "#fdf2f8", padding: "24px", borderRadius: "16px", border: "1px solid #fbcfe8" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Business Email *</label>
+                                        <input
+                                            type="email"
+                                            value={kycFormData.email}
+                                            onChange={e => setKycFormData({ ...kycFormData, email: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact Number *</label>
+                                        <input
+                                            type="text"
+                                            value={kycFormData.mobile}
+                                            onChange={e => setKycFormData({ ...kycFormData, mobile: e.target.value })}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ backgroundColor: "#eff6ff", padding: "24px", borderRadius: "16px", border: "1px solid #dbeafe" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Beneficiary Name</label>
+                                        <input type="text" placeholder="Account Holder Name" value={kycFormData.beneficiaryName} onChange={e => setKycFormData({ ...kycFormData, beneficiaryName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</label>
+                                        <input type="text" placeholder="HDFC0001234" value={kycFormData.ifscCode} onChange={e => handleIfscChange(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Account No</label>
+                                        <input type="text" placeholder="0000 0000 0000" value={kycFormData.accountNumber} onChange={e => setKycFormData({ ...kycFormData, accountNumber: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700 }} />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h3 style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "12px" }}>Final Consensus</h3>
-                        <p style={{ color: "#64748b", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
-                        <label style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}>
-                            <input type="checkbox" checked={agreedToVendor} onChange={e => setAgreedToVendor(e.target.checked)} style={{ width: "20px", height: "20px" }} />
-                            I accept the Partner Agreement
-                        </label>
-                    </div>
-                )}
+                    )}
+
+                    {kycStep === 2 && (
+                        <div style={{ padding: "30px", textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
+                                {['pan', 'cheque', 'aadhar'].map(id => (
+                                    <div key={id} style={{ border: "2px dashed #cbd5e1", padding: "24px", borderRadius: "16px", flex: 1, cursor: "pointer", transition: "all 0.3s" }} className="hover:border-blue-500 hover:bg-blue-50">
+                                        <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#64748b" }}>
+                                            <Building size={24} />
+                                        </div>
+                                        <label style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>{id.toUpperCase()}</label>
+                                        <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "16px" }}>Upload clear photo or PDF</p>
+                                        <input type="file" onChange={e => setKycFiles({ ...kycFiles, [id]: e.target.files?.[0]?.name })} style={{ fontSize: "12px", width: "100%" }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {kycStep === 3 && (
+                        <div style={{ padding: "60px", textAlign: "center" }}>
+                            <div style={{ width: "80px", height: "80px", borderRadius: "20px", backgroundColor: "#ec489910", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", color: "#ec4899" }}>
+                                <FileCheck2 size={40} />
+                            </div>
+                            <h3 style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "12px" }}>Final Consensus</h3>
+                            <p style={{ color: "#64748b", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
+                            <label style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}>
+                                <input type="checkbox" checked={agreedToVendor} onChange={e => setAgreedToVendor(e.target.checked)} style={{ width: "20px", height: "20px" }} />
+                                I accept the Partner Agreement
+                            </label>
+                        </div>
+                    )}
 
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 30px", borderTop: "1.5px solid #f1f5f9", backgroundColor: "#ffffff" }}>
-                    <button 
-                        onClick={() => setKycStep(kycStep - 1)} 
-                        disabled={kycStep === 1} 
+                    <button
+                        onClick={() => setKycStep(kycStep - 1)}
+                        disabled={kycStep === 1}
                         style={{ padding: "10px 24px", borderRadius: "10px", border: "1.5px solid #0f172a", background: "none", color: "#0f172a", fontWeight: 800, fontSize: "13px", cursor: kycStep === 1 ? "default" : "pointer", opacity: kycStep === 1 ? 0.3 : 1 }}
                     >
                         Back
                     </button>
-                    <button 
+                    <button
                         onClick={() => {
                             if (kycStep === 3) {
                                 if (!agreedToVendor) { showToast("Please agree to terms", "error"); return; }
@@ -2141,7 +2141,7 @@ function OrganiserPanel() {
                             } else {
                                 setKycStep(kycStep + 1);
                             }
-                        }} 
+                        }}
                         style={{ padding: "10px 32px", borderRadius: "10px", backgroundColor: "#0f172a", color: "#fff", border: "none", fontWeight: 800, fontSize: "13px", cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(15, 23, 42, 0.2)" }}
                     >
                         {kycStep === 3 ? "Submit Verification" : "Next Step"}
@@ -2249,7 +2249,7 @@ function OrganiserPanel() {
         const { data: meetings, loading } = useSupabaseQuery('meetings', (q) => q.eq('creatorId', effectiveEmail).order('created_at', { ascending: false }), [effectiveEmail]);
         const { mutate: createMeetingMutate } = useSupabaseMutation(async (supabase, data) => await supabase.from('meetings').insert(data));
         const { mutate: deleteMeetingMutate } = useSupabaseMutation(async (supabase, { meetingId }) => await supabase.from('meetings').delete().eq('id', meetingId));
-        
+
         const [isCreating, setIsCreating] = useState(false);
         const [newMeeting, setNewMeeting] = useState({ title: "", description: "" });
 
@@ -2291,7 +2291,7 @@ function OrganiserPanel() {
                         <h2 className="text-2xl font-bold tracking-tight uppercase text-slate-900 leading-none">Meeting Hub</h2>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setIsCreating(true)}
                         className="px-6 py-3.5 bg-black text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xl shadow-slate-200"
                     >
@@ -2308,20 +2308,20 @@ function OrganiserPanel() {
                         <form onSubmit={handleCreate} className="space-y-6">
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     value={newMeeting.title}
-                                    onChange={(e) => setNewMeeting({...newMeeting, title: e.target.value})}
+                                    onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
                                     placeholder="Enter a descriptive title..."
                                     className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300"
                                 />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
-                                <textarea 
+                                <textarea
                                     value={newMeeting.description}
-                                    onChange={(e) => setNewMeeting({...newMeeting, description: e.target.value})}
+                                    onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
                                     placeholder="Brief agenda or instructions..."
                                     className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300 min-h-[100px]"
                                 />
@@ -2346,14 +2346,13 @@ function OrganiserPanel() {
                     ) : meetings?.map(meeting => (
                         <div key={meeting.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
                             <div className="flex justify-between items-start mb-6">
-                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${
-                                    meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' : 
-                                    meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
-                                }`}>
+                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' :
+                                        meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
+                                    }`}>
                                     {meeting.status}
                                 </div>
-                                { !meeting.eventId && (
-                                    <button 
+                                {!meeting.eventId && (
+                                    <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (confirm("Are you sure you want to delete this meeting? All history will be lost.")) {
@@ -2369,9 +2368,9 @@ function OrganiserPanel() {
                             </div>
                             <h4 className="text-xl font-bold tracking-tight uppercase text-slate-900 mb-2 truncate">{meeting.title}</h4>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8 line-clamp-2">{meeting.description || "No description provided."}</p>
-                            
+
                             <div className="flex flex-col gap-3">
-                                <button 
+                                <button
                                     onClick={() => {
                                         const url = meeting.meetingLink && meeting.meetingLink.startsWith("http") ? meeting.meetingLink : `/${meeting.meetingLink}`;
                                         window.open(url, '_blank');
@@ -2380,7 +2379,7 @@ function OrganiserPanel() {
                                 >
                                     <Video size={16} /> Start / Join Meeting
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => copyLink(meeting.meetingLink)}
                                     className="w-full py-4 border border-slate-100 text-slate-600 rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                                 >
@@ -2408,11 +2407,10 @@ function OrganiserPanel() {
                                     key={opt.value}
                                     type="button"
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
-                                    className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all  ${
-                                        isActive 
-                                            ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100' 
+                                    className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all  ${isActive
+                                            ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100'
                                             : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
-                                    }`}
+                                        }`}
                                 >
                                     {opt.label}
                                 </button>
@@ -2446,7 +2444,7 @@ function OrganiserPanel() {
                 const totalCalculatedRows = categories.reduce((sum, c) => sum + Math.max(0, Math.floor(Number(c.rows) || 0)), 0);
                 const effectiveRows = Math.min(100, isPreview ? totalCalculatedRows : (rows || totalCalculatedRows));
                 const effectiveCols = Math.min(100, cols);
-                
+
                 let currentCategoryName = null;
 
                 return (
@@ -2482,14 +2480,13 @@ function OrganiserPanel() {
                                                     return (
                                                         <React.Fragment key={`seat-${cIdx}`}>
                                                             {isAisle && <div className="w-6" />}
-                                                            <div 
-                                                                title={`${seatId} (${cat.name} - ₹${cat.price})`} 
-                                                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all cursor-pointer shadow-sm ${
-                                                                    isBooked 
-                                                                        ? "bg-slate-200 text-transparent border-slate-200 shadow-none pointer-events-none" 
+                                                            <div
+                                                                title={`${seatId} (${cat.name} - ₹${cat.price})`}
+                                                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-[10px] font-semibold transition-all cursor-pointer shadow-sm ${isBooked
+                                                                        ? "bg-slate-200 text-transparent border-slate-200 shadow-none pointer-events-none"
                                                                         : "bg-white border hover:bg-green-50"
-                                                                }`}
-                                                                style={{ 
+                                                                    }`}
+                                                                style={{
                                                                     borderColor: isBooked ? "#e2e8f0" : cat.color,
                                                                     color: isBooked ? "transparent" : cat.color
                                                                 }}
@@ -2506,7 +2503,7 @@ function OrganiserPanel() {
                                 );
                             })}
                         </div>
-                        
+
                         {/* Stage Bottom UI */}
                         {(layout === "stage" || layout === "rate") && (
                             <div className="mt-20 mb-10 w-full flex flex-col items-center">
@@ -2536,14 +2533,14 @@ function OrganiserPanel() {
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="relative flex items-center">
                         {type === "date" ? (
-                            <CalendarPicker 
-                                value={postEvent[field] || ""} 
+                            <CalendarPicker
+                                value={postEvent[field] || ""}
                                 onChange={(val) => setPostEvent(prev => ({ ...prev, [field]: val }))}
                                 placeholder={placeholder || "dd/mm/yyyy"}
                             />
                         ) : type === "time" ? (
-                            <TimePicker 
-                                value={postEvent[field] || ""} 
+                            <TimePicker
+                                value={postEvent[field] || ""}
                                 onChange={(val) => setPostEvent(prev => ({ ...prev, [field]: val }))}
                                 placeholder={placeholder || "--:--"}
                             />
@@ -2562,7 +2559,7 @@ function OrganiserPanel() {
 
             const renderSelect = (label, field, options) => {
                 const isLocationField = ["country", "state", "city", "district"].includes(field);
-                
+
                 const handleSelectChange = (val) => {
                     const updates = { [field]: val };
 
@@ -2588,7 +2585,7 @@ function OrganiserPanel() {
                 return (
                     <div className="mb-6 col-span-1">
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
-                        <CustomSelect 
+                        <CustomSelect
                             value={postEvent[field] || ""}
                             options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.value || opt.name || opt.label || String(opt) }))}
                             onChange={handleSelectChange}
@@ -2721,7 +2718,7 @@ function OrganiserPanel() {
                                     {['Active Events', 'Expired Events'].map((sectionTitle) => {
                                         const isExpiredSection = sectionTitle === 'Expired Events';
                                         const filteredMappableEvents = events.filter(ev => isExpiredSection ? ev.status === 'expired' : ev.status !== 'expired');
-                                        
+
                                         if (filteredMappableEvents.length === 0 && isExpiredSection) return null; // Don't show empty expired section
 
                                         return (
@@ -2784,12 +2781,12 @@ function OrganiserPanel() {
                                                                         ) : <span style={{ color: t.textSub, fontSize: 13 }}>Standard Admission</span>}
                                                                     </td>
                                                                     <td style={{ padding: "16px" }}>
-                                                                        <span style={{ 
-                                                                            padding: "6px 14px", 
-                                                                            borderRadius: "100px", 
-                                                                            fontSize: "11px", 
-                                                                            fontWeight: 800, 
-                                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                                        <span style={{
+                                                                            padding: "6px 14px",
+                                                                            borderRadius: "100px",
+                                                                            fontSize: "11px",
+                                                                            fontWeight: 800,
+                                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620",
                                                                             color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
                                                                             textTransform: "uppercase"
                                                                         }}>
@@ -2837,9 +2834,9 @@ function OrganiserPanel() {
                                                                                 <Trash2 size={16} />
                                                                             </button>
                                                                             {!isExpiredSection && (
-                                                                            <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
-                                                                                <Share size={16} />
-                                                                            </button>
+                                                                                <button title="Promote Event" onClick={() => setPromoteEventModal(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#10b981", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                                    <Share size={16} />
+                                                                                </button>
                                                                             )}
                                                                         </div>
                                                                     </td>
@@ -2858,9 +2855,9 @@ function OrganiserPanel() {
                 }
                 case "meetings": {
                     return (
-                        <MeetingsTab 
-                            t={t} 
-                            effectiveEmail={effectiveEmail} 
+                        <MeetingsTab
+                            t={t}
+                            effectiveEmail={effectiveEmail}
                             router={router}
                         />
                     );
@@ -2905,9 +2902,9 @@ function OrganiserPanel() {
                                         </div>
                                     </button>
                                     <button
-                                        onClick={() => { 
-                                            setPostEvent(pe => ({ ...pe, type: "Sports", category: "Sports", seatingEnabled: false })); 
-                                            setAddEventStep("sports_type"); 
+                                        onClick={() => {
+                                            setPostEvent(pe => ({ ...pe, type: "Sports", category: "Sports", seatingEnabled: false }));
+                                            setAddEventStep("sports_type");
                                         }}
                                         className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center gap-8 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:shadow-blue-500/20 hover:border-blue-200 hover:-translate-y-2"
                                     >
@@ -2924,14 +2921,14 @@ function OrganiserPanel() {
                             </div>
                         );
                     }
- 
+
                     if (addEventStep === "sports_type") {
                         const sportsTypes = [
                             { id: "Marathon", label: "Marathon", sub: "Running & Athletics", icon: Activity, color: "from-blue-400 to-indigo-600" },
                             { id: "Tournament", label: "Tournament", sub: "Competitions & Leagues", icon: Trophy, color: "from-orange-400 to-red-600" },
                             { id: "Coaching", label: "Coaching Session", sub: "Training & Sessions", icon: Target, color: "from-purple-400 to-pink-600" },
                         ];
- 
+
                         return (
                             <div className="flex flex-col items-center justify-center min-h-[60vh] p-8    ">
                                 <div className="text-center mb-12 space-y-3">
@@ -2945,19 +2942,19 @@ function OrganiserPanel() {
                                     {sportsTypes.map((st) => (
                                         <button
                                             key={st.id}
-                                            onClick={() => { 
+                                            onClick={() => {
                                                 if (st.id === "Marathon") {
-                                                    setPostEvent(pe => ({ 
-                                                        ...pe, 
-                                                        type: "Dynamic", 
-                                                        category: "Sports", 
+                                                    setPostEvent(pe => ({
+                                                        ...pe,
+                                                        type: "Dynamic",
+                                                        category: "Sports",
                                                         sportType: "Marathon",
-                                                        seatingEnabled: false 
+                                                        seatingEnabled: false
                                                     }));
                                                 } else {
                                                     setPostEvent(pe => ({ ...pe, sportType: st.id }));
                                                 }
-                                                setAddEventStep("form"); 
+                                                setAddEventStep("form");
                                             }}
                                             className="group relative bg-white border border-slate-100 rounded-[2rem] p-8 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:border-blue-200 hover:-translate-y-2"
                                         >
@@ -2971,7 +2968,7 @@ function OrganiserPanel() {
                                         </button>
                                     ))}
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setAddEventStep("select_type")}
                                     className="mt-12 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors"
                                 >
@@ -2984,7 +2981,7 @@ function OrganiserPanel() {
                     // Step 4: Universal Dynamic Form (Used for Marathon and custom events)
                     if (postEvent.type === "Dynamic") {
                         return (
-                            <UniversalEventForm 
+                            <UniversalEventForm
                                 postEvent={postEvent}
                                 setPostEvent={setPostEvent}
                                 onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
@@ -2997,7 +2994,7 @@ function OrganiserPanel() {
                     // Step 3: Sports Form (Other sports)
                     if (postEvent.type === "Sports") {
                         return (
-                            <SportsEventForm 
+                            <SportsEventForm
                                 postEvent={postEvent}
                                 setPostEvent={setPostEvent}
                                 onCancel={() => { setPostEvent(getInitialPostEvent()); setAddEventStep("select_type"); }}
@@ -3006,7 +3003,7 @@ function OrganiserPanel() {
                             />
                         );
                     }
- 
+
                     // Step 2: Online Form
                     if (postEvent.type === "Online") {
                         return (
@@ -3025,7 +3022,7 @@ function OrganiserPanel() {
                                                 ) : <ImageIcon size={28} className="text-slate-300" />}
                                             </div>
                                             <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                            <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
+                                                <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
                                                 <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -3071,9 +3068,9 @@ function OrganiserPanel() {
                                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day online sessions</p>
                                                 </div>
                                             </div>
-                                            <button 
-                                                type="button" 
-                                                onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} 
+                                            <button
+                                                type="button"
+                                                onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))}
                                                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
                                             >
                                                 <Plus size={14} /> Add New Slot
@@ -3091,28 +3088,28 @@ function OrganiserPanel() {
                                                 <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
                                                     <div className="space-y-2">
                                                         <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
-                                                        <CalendarPicker 
-                                                            value={slot.date} 
+                                                        <CalendarPicker
+                                                            value={slot.date}
                                                             onChange={val => {
                                                                 const ns = [...postEvent.dateSlots]; ns[idx].date = val;
                                                                 setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                            }} 
+                                                            }}
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
-                                                        <TimePicker 
-                                                            value={slot.time} 
+                                                        <TimePicker
+                                                            value={slot.time}
                                                             onChange={val => {
                                                                 const ns = [...postEvent.dateSlots]; ns[idx].time = val;
                                                                 setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                            }} 
+                                                            }}
                                                         />
                                                     </div>
                                                     <div className="pt-6">
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} 
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))}
                                                             className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
                                                         >
                                                             <Trash2 size={18} />
@@ -3198,92 +3195,92 @@ function OrganiserPanel() {
                             <input type="file" ref={thumbnailInputRef} accept="image/*" onChange={handleBannerChange} className="hidden" />
 
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                            {/* Section: Image Details (Media Management) */}
-                            <div className="mb-8 p-8 rounded-[2rem] bg-pink-50/30 border border-pink-100/50">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
-                                            <ImageIcon size={20} />
+                                {/* Section: Image Details (Media Management) */}
+                                <div className="mb-8 p-8 rounded-[2rem] bg-pink-50/30 border border-pink-100/50">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
+                                                <ImageIcon size={20} />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Image Details</h3>
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Image Details</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-bold text-white uppercase tracking-widest">
-                                        <Sparkles size={10} className="text-pink-400" /> Premium Assets
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                                    {/* Cover / Banner Upload */}
-                                    <div className="space-y-4">
-                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
-                                        <div 
-                                            className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all "
-                                            onClick={() => thumbnailInputRef.current?.click()}
-                                        >
-                                            {postEvent.bannerPreview ? (
-                                                <div className="relative w-full h-full">
-                                                    <img src={postEvent.bannerPreview} alt="Banner" className="w-full h-full object-cover transition-transform  group-hover:scale-110" />
-                                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 transition-colors group-hover:bg-pink-50">
-                                                    <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-300 group-hover:text-pink-400 group-hover:scale-110 transition-all ">
-                                                        <CloudUpload size={32} />
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <span className="block text-xs font-bold text-slate-900 uppercase tracking-tight italic">Click to Upload Banner</span>
-                                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
-                                                    </div>
-                                                </div>
-                                            )}
+                                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-bold text-white uppercase tracking-widest">
+                                            <Sparkles size={10} className="text-pink-400" /> Premium Assets
                                         </div>
                                     </div>
 
-                                    {/* Gallery Management */}
-                                    <div className="space-y-4">
-                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {postEvent.galleryPreviews?.map((src, idx) => (
-                                                <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
-                                                    <img src={src} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const newPreviews = [...postEvent.galleryPreviews];
-                                                            const newImages = [...postEvent.galleryImages];
-                                                            newPreviews.splice(idx, 1);
-                                                            newImages.splice(idx, 1);
-                                                            setPostEvent(p => ({ ...p, galleryPreviews: newPreviews, galleryImages: newImages }));
-                                                        }}
-                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-md rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                                        {/* Cover / Banner Upload */}
+                                        <div className="space-y-4">
+                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
+                                            <div
+                                                className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all "
+                                                onClick={() => thumbnailInputRef.current?.click()}
+                                            >
+                                                {postEvent.bannerPreview ? (
+                                                    <div className="relative w-full h-full">
+                                                        <img src={postEvent.bannerPreview} alt="Banner" className="w-full h-full object-cover transition-transform  group-hover:scale-110" />
+                                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <div className="px-6 py-2.5 bg-white rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-900 shadow-xl">Replace Banner</div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 transition-colors group-hover:bg-pink-50">
+                                                        <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-300 group-hover:text-pink-400 group-hover:scale-110 transition-all ">
+                                                            <CloudUpload size={32} />
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <span className="block text-xs font-bold text-slate-900 uppercase tracking-tight italic">Click to Upload Banner</span>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Gallery Management */}
+                                        <div className="space-y-4">
+                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {postEvent.galleryPreviews?.map((src, idx) => (
+                                                    <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+                                                        <img src={src} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const newPreviews = [...postEvent.galleryPreviews];
+                                                                const newImages = [...postEvent.galleryImages];
+                                                                newPreviews.splice(idx, 1);
+                                                                newImages.splice(idx, 1);
+                                                                setPostEvent(p => ({ ...p, galleryPreviews: newPreviews, galleryImages: newImages }));
+                                                            }}
+                                                            className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-md rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {(postEvent.galleryPreviews?.length || 0) < 10 && (
+                                                    <div
+                                                        onClick={() => galleryInputRef.current?.click()}
+                                                        className="aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-all group"
                                                     >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {(postEvent.galleryPreviews?.length || 0) < 10 && (
-                                                <div 
-                                                    onClick={() => galleryInputRef.current?.click()}
-                                                    className="aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-all group"
-                                                >
-                                                    <div className="p-2 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-pink-500 group-hover:rotate-90 transition-all ">
-                                                        <Plus size={20} />
+                                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-pink-500 group-hover:rotate-90 transition-all ">
+                                                            <Plus size={20} />
+                                                        </div>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Add More</span>
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Add More</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-                                            <AlertCircle size={16} className="text-slate-400" />
-                                            <p className="text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
-                                                High resolution images help boost sales by up to 40%. Ensure your photos are clear and well-lit.
-                                            </p>
+                                                )}
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                                                <AlertCircle size={16} className="text-slate-400" />
+                                                <p className="text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                                                    High resolution images help boost sales by up to 40%. Ensure your photos are clear and well-lit.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                                 {/* Basic Info */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                     <div className="form-grid-4">
@@ -3313,8 +3310,8 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Age Limit</label>
-                                            <select 
-                                                value={postEvent.ageLimit} 
+                                            <select
+                                                value={postEvent.ageLimit}
                                                 onChange={e => setPostEvent(p => ({ ...p, ageLimit: e.target.value }))}
                                                 className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
                                             >
@@ -3332,8 +3329,8 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Language</label>
-                                            <select 
-                                                value={postEvent.language} 
+                                            <select
+                                                value={postEvent.language}
                                                 onChange={e => setPostEvent(p => ({ ...p, language: e.target.value }))}
                                                 className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
                                             >
@@ -3353,9 +3350,9 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Duration</label>
-                                            <input 
+                                            <input
                                                 type="text"
-                                                value={postEvent.duration} 
+                                                value={postEvent.duration}
                                                 onChange={e => setPostEvent(p => ({ ...p, duration: e.target.value }))}
                                                 placeholder="e.g. 13:00 or 3 Hours"
                                                 className="w-full bg-transparent font-bold text-slate-900 outline-none text-sm"
@@ -3384,7 +3381,7 @@ function OrganiserPanel() {
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">All safety measures enabled</span>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => setPostEvent(p => ({ ...p, safetyMeasures: !p.safetyMeasures }))}
                                             className={`w-12 h-6 rounded-full transition-all  relative ${postEvent.safetyMeasures ? 'bg-indigo-500' : 'bg-slate-200'}`}
                                         >
@@ -3401,7 +3398,7 @@ function OrganiserPanel() {
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">Seating ({postEvent.seatingType})</span>
                                             </div>
                                         </div>
-                                        <select 
+                                        <select
                                             value={postEvent.seatingType}
                                             onChange={e => setPostEvent(p => ({ ...p, seatingType: e.target.value }))}
                                             className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
@@ -3421,7 +3418,7 @@ function OrganiserPanel() {
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">Mandatory Check-In</span>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => setPostEvent(p => ({ ...p, mandatoryCheckin: !p.mandatoryCheckin }))}
                                             className={`w-12 h-6 rounded-full transition-all  relative ${postEvent.mandatoryCheckin ? 'bg-emerald-500' : 'bg-slate-200'}`}
                                         >
@@ -3438,7 +3435,7 @@ function OrganiserPanel() {
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">{postEvent.environment} Event</span>
                                             </div>
                                         </div>
-                                        <select 
+                                        <select
                                             value={postEvent.environment}
                                             onChange={e => setPostEvent(p => ({ ...p, environment: e.target.value }))}
                                             className="bg-slate-50 text-[10px] font-bold uppercase text-slate-900 p-2 rounded-lg outline-none"
@@ -3469,9 +3466,9 @@ function OrganiserPanel() {
                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day sessions</p>
                                             </div>
                                         </div>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))} 
+                                        <button
+                                            type="button"
+                                            onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: [...(prev.dateSlots || []), { date: "", time: "" }] }))}
                                             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 px-5 py-3 rounded-xl transition-all border border-blue-200/50 shadow-sm"
                                         >
                                             <Plus size={14} /> Add New Slot
@@ -3489,28 +3486,28 @@ function OrganiserPanel() {
                                             <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
                                                 <div className="space-y-2">
                                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
-                                                    <CalendarPicker 
-                                                        value={slot.date} 
+                                                    <CalendarPicker
+                                                        value={slot.date}
                                                         onChange={val => {
                                                             const ns = [...postEvent.dateSlots]; ns[idx].date = val;
                                                             setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                        }} 
+                                                        }}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
-                                                    <TimePicker 
-                                                        value={slot.time} 
+                                                    <TimePicker
+                                                        value={slot.time}
                                                         onChange={val => {
                                                             const ns = [...postEvent.dateSlots]; ns[idx].time = val;
                                                             setPostEvent(prev => ({ ...prev, dateSlots: ns }));
-                                                        }} 
+                                                        }}
                                                     />
                                                 </div>
                                                 <div className="pt-6">
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))} 
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPostEvent(prev => ({ ...prev, dateSlots: prev.dateSlots.filter((_, i) => i !== idx) }))}
                                                         className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all border border-red-100/50"
                                                     >
                                                         <Trash2 size={18} />
@@ -3532,20 +3529,20 @@ function OrganiserPanel() {
 
                                 {renderSelect("Country*", "country", Country.getAllCountries().map(c => ({ label: c.name, value: c.name })))}
 
-                                {renderSelect("State*", "state", 
-                                    postEvent.country === "India" 
-                                        ? INDIAN_STATES 
+                                {renderSelect("State*", "state",
+                                    postEvent.country === "India"
+                                        ? INDIAN_STATES
                                         : (!postEvent.countryCode ? [] : State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name })))
                                 )}
 
-                                {renderSelect("District*", "district", 
+                                {renderSelect("District*", "district",
                                     postEvent.country === "India"
                                         ? getIndianDistricts(postEvent.state)
                                         : ((!postEvent.countryCode || !postEvent.stateCode) ? [] : City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name })))
                                 )}
 
                                 {postEvent.country === "India" ? (
-                                    renderSelect("City*", "city", 
+                                    renderSelect("City*", "city",
                                         !postEvent.district ? [] : getIndianCities(postEvent.district).map(c => ({ label: c, value: c }))
                                     )
                                 ) : (
@@ -3590,7 +3587,7 @@ function OrganiserPanel() {
                                                     <Plus size={14} /> Add Category
                                                 </button>
                                             </div>
-                                            
+
                                             <div className="flex flex-col gap-4">
                                                 {(postEvent.categories || []).map((cat, idx) => (
                                                     <div key={idx} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1.5fr_auto] gap-4 items-center bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-inner">
@@ -3598,12 +3595,12 @@ function OrganiserPanel() {
                                                             const nc = [...postEvent.categories]; nc[idx].name = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
                                                         }} placeholder="Category Name" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
-                                                        
+
                                                         <input type="number" value={cat.rows} onChange={e => {
                                                             const nc = [...postEvent.categories]; nc[idx].rows = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
                                                         }} placeholder="Rows" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
-                                                        
+
                                                         <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
                                                             <input type="number" value={cat.price} disabled={cat.isFree} onChange={e => {
                                                                 const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
@@ -3617,7 +3614,7 @@ function OrganiserPanel() {
                                                                 }} />Free
                                                             </label>
                                                         </div>
-                                                        
+
                                                         <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: prev.categories.filter((_, i) => i !== idx) }))} className="p-3 text-red-500 hover:text-red-700 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl shadow-sm transition-all cursor-pointer">
                                                             <Trash2 size={16} />
                                                         </button>
@@ -3816,12 +3813,12 @@ function OrganiserPanel() {
                                                         <div style={{ fontSize: "11px", color: t.textSub }}>Total Capacity</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <span style={{ 
-                                                            padding: "6px 14px", 
-                                                            borderRadius: "100px", 
-                                                            fontSize: "11px", 
-                                                            fontWeight: 800, 
-                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                        <span style={{
+                                                            padding: "6px 14px",
+                                                            borderRadius: "100px",
+                                                            fontSize: "11px",
+                                                            fontWeight: 800,
+                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620",
                                                             color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
                                                             textTransform: "uppercase"
                                                         }}>
@@ -3902,12 +3899,12 @@ function OrganiserPanel() {
                                                         <div style={{ fontSize: "11px", color: t.textSub }}>Registered Users</div>
                                                     </td>
                                                     <td style={{ padding: "16px" }}>
-                                                        <span style={{ 
-                                                            padding: "6px 14px", 
-                                                            borderRadius: "100px", 
-                                                            fontSize: "11px", 
-                                                            fontWeight: 800, 
-                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620", 
+                                                        <span style={{
+                                                            padding: "6px 14px",
+                                                            borderRadius: "100px",
+                                                            fontSize: "11px",
+                                                            fontWeight: 800,
+                                                            backgroundColor: ev.status === 'published' ? "#22c55e20" : ev.status === 'expired' ? "#ef444420" : "#f9731620",
                                                             color: ev.status === 'published' ? "#22c55e" : ev.status === 'expired' ? "#ef4444" : "#f97316",
                                                             textTransform: "uppercase"
                                                         }}>
@@ -3966,14 +3963,14 @@ function OrganiserPanel() {
                     return (
                         <div>
                             {/* Production Diagnostic: Show warning if Supabase is disconnected */}
-                    {!supabase && (
-                        <div style={{ margin: '20px auto', padding: '16px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', color: '#b91c1c', fontSize: '14px', fontWeight: 700, textAlign: 'center', maxWidth: '600px' }}>
-                            ⚠️ Warning: Authentication & Database System Disconnected. <br/>
-                            <span style={{ fontWeight: 400, fontSize: '12px' }}>Please ensure NEXT_PUBLIC_SUPABASE_URL and NON_ANON_KEY are set in Vercel.</span>
-                        </div>
-                    )}
+                            {!supabase && (
+                                <div style={{ margin: '20px auto', padding: '16px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', color: '#b91c1c', fontSize: '14px', fontWeight: 700, textAlign: 'center', maxWidth: '600px' }}>
+                                    ⚠️ Warning: Authentication & Database System Disconnected. <br />
+                                    <span style={{ fontWeight: 400, fontSize: '12px' }}>Please ensure NEXT_PUBLIC_SUPABASE_URL and NON_ANON_KEY are set in Vercel.</span>
+                                </div>
+                            )}
 
-                    <Breadcrumb title={viewTitle} />
+                            <Breadcrumb title={viewTitle} />
                             <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                     <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>{viewTitle}</h3>
@@ -4128,7 +4125,7 @@ function OrganiserPanel() {
                                         <tbody>
                                             {myBookings.length === 0 ? (
                                                 <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No transactions yet.</td></tr>
-                                             ) : myBookings.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).reverse().map(b => (
+                                            ) : myBookings.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).reverse().map(b => (
                                                 <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
                                                     <td style={{ padding: "16px", fontSize: "14px" }}>{new Date(b.created_at).toLocaleDateString()}</td>
@@ -4170,166 +4167,166 @@ function OrganiserPanel() {
 
                     return (
                         <div>
-                        <div style={{ padding: isStaff ? "0 16px" : "0" }}>
-                            {!isStaff && <Breadcrumb title="PWA Ticket Scanner" />}
-                            <div className="pwa-scanner-grid">
-                                <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
-                                    <div style={{ marginBottom: "32px" }}>
-                                        <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Validation</h3>
-                                        <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Scan QR code or enter Booking ID manually to check-in attendees.</p>
-                                    </div>
-
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                                        <div style={{ padding: "24px", borderRadius: "12px", backgroundColor: "#3b82f610", border: "1px dashed #3b82f640", textAlign: "center" }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPwaCameraOpen(true)}
-                                                style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "16px 28px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}
-                                            >
-                                                <Camera size={22} /> Launch Camera Scanner
-                                            </button>
+                            <div style={{ padding: isStaff ? "0 16px" : "0" }}>
+                                {!isStaff && <Breadcrumb title="PWA Ticket Scanner" />}
+                                <div className="pwa-scanner-grid">
+                                    <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                        <div style={{ marginBottom: "32px" }}>
+                                            <h3 style={{ fontSize: "24px", fontWeight: 800, color: t.textMain, margin: 0 }}>Ticket Validation</h3>
+                                            <p style={{ fontSize: "14px", color: t.textSub, marginTop: "4px" }}>Scan QR code or enter Booking ID manually to check-in attendees.</p>
                                         </div>
 
-                                        {pwaCameraOpen && (
-                                            <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a", border: `2px solid #3b82f6` }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>Scanner Active</p>
-                                                    <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ background: "none", border: "none", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>Close Camera</button>
-                                                </div>
-                                                <div id="pwa-qr-reader" style={{ width: "100%", maxWidth: "400px", margin: "0 auto", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000" }}></div>
-                                            </div>
-                                        )}
-
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Manual Validation</label>
-                                            <div className="manual-validation-box" style={{ display: "flex", gap: "12px" }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter Booking ID (e.g. ORD-123456...)"
-                                                    value={pwaScanInput}
-                                                    onChange={(e) => { setPwaScanInput(e.target.value); setPwaScanResult(null); }}
-                                                    style={{ flex: 1, padding: "14px 16px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", outline: "none", fontWeight: 600 }}
-                                                />
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                            <div style={{ padding: "24px", borderRadius: "12px", backgroundColor: "#3b82f610", border: "1px dashed #3b82f640", textAlign: "center" }}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => validateBookingId(pwaScanInput)}
-                                                    style={{ padding: "14px 24px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "14px" }}
+                                                    onClick={() => setPwaCameraOpen(true)}
+                                                    style={{ display: "inline-flex", alignItems: "center", gap: "10px", padding: "16px 28px", borderRadius: "12px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "15px", boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)" }}
                                                 >
-                                                    Validate
+                                                    <Camera size={22} /> Launch Camera Scanner
                                                 </button>
                                             </div>
-                                        </div>
 
-                                        {pwaScanResult && (
-                                            <div style={{ padding: "24px", borderRadius: "16px", border: "1px solid", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e10" : pwaScanResult.status === "already_used" ? "#f59e0b10" : "#ef444410", borderColor: pwaScanResult.status === "valid" ? "#22c55e40" : pwaScanResult.status === "already_used" ? "#f59e0b40" : "#ef444440" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-                                                    <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e20" : pwaScanResult.status === "already_used" ? "#f59e0b20" : "#ef444420", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                        {pwaScanResult.status === "valid" ? <CheckCircle size={24} color="#22c55e" /> : pwaScanResult.status === "already_used" ? <AlertCircle size={24} color="#f59e0b" /> : <XCircle size={24} color="#ef4444" />}
+                                            {pwaCameraOpen && (
+                                                <div style={{ padding: "24px", borderRadius: "16px", backgroundColor: theme === "light" ? "#f8fafc" : "#0f172a", border: `2px solid #3b82f6` }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                                                        <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>Scanner Active</p>
+                                                        <button type="button" onClick={() => setPwaCameraOpen(false)} style={{ background: "none", border: "none", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>Close Camera</button>
                                                     </div>
+                                                    <div id="pwa-qr-reader" style={{ width: "100%", maxWidth: "400px", margin: "0 auto", borderRadius: "12px", overflow: "hidden", backgroundColor: "#000" }}></div>
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "13px", fontWeight: 800, color: t.textSub, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Manual Validation</label>
+                                                <div className="manual-validation-box" style={{ display: "flex", gap: "12px" }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter Booking ID (e.g. ORD-123456...)"
+                                                        value={pwaScanInput}
+                                                        onChange={(e) => { setPwaScanInput(e.target.value); setPwaScanResult(null); }}
+                                                        style={{ flex: 1, padding: "14px 16px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "15px", outline: "none", fontWeight: 600 }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => validateBookingId(pwaScanInput)}
+                                                        style={{ padding: "14px 24px", borderRadius: "10px", border: "none", backgroundColor: "#3b82f6", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: "14px" }}
+                                                    >
+                                                        Validate
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {pwaScanResult && (
+                                                <div style={{ padding: "24px", borderRadius: "16px", border: "1px solid", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e10" : pwaScanResult.status === "already_used" ? "#f59e0b10" : "#ef444410", borderColor: pwaScanResult.status === "valid" ? "#22c55e40" : pwaScanResult.status === "already_used" ? "#f59e0b40" : "#ef444440" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                                                        <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: pwaScanResult.status === "valid" ? "#22c55e20" : pwaScanResult.status === "already_used" ? "#f59e0b20" : "#ef444420", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                            {pwaScanResult.status === "valid" ? <CheckCircle size={24} color="#22c55e" /> : pwaScanResult.status === "already_used" ? <AlertCircle size={24} color="#f59e0b" /> : <XCircle size={24} color="#ef4444" />}
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: pwaScanResult.status === "valid" ? "#22c55e" : pwaScanResult.status === "already_used" ? "#f59e0b" : "#ef4444" }}>
+                                                                {pwaScanResult.status === "valid" ? "Verified Successfully" : pwaScanResult.status === "already_used" ? "Already Checked In" : "Invalid Ticket ID"}
+                                                            </p>
+                                                            <p style={{ margin: "2px 0 0", fontSize: "13px", color: t.textSub }}>{pwaScanResult.status === "valid" ? "Attendee can proceed" : "Access Denied"}</p>
+                                                        </div>
+                                                    </div>
+                                                    {pwaScanResult.booking && (
+                                                        <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                                            <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.event_name || pwaScanResult.booking.eventName}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.user_id || pwaScanResult.booking.userId}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.ticket_count || pwaScanResult.booking.ticketCount} Ticket(s)</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
+                                        <h4 style={{ fontSize: "16px", fontWeight: 800, marginBottom: "20px", color: t.textMain }}>Check-in Guide</h4>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                            {[
+                                                { icon: <QrCode size={18} />, title: "Digital Tickets", desc: "Attendees should show the QR code from their mobile app." },
+                                                { icon: <Search size={18} />, title: "Manual Search", desc: "If camera fails, enter the Booking ID found below the QR code." },
+                                                { icon: <UserCheck size={18} />, title: "Single Entry", desc: "Tickets are invalidated immediately after successful scan." }
+                                            ].map((item, i) => (
+                                                <div key={i} style={{ display: "flex", gap: "16px" }}>
+                                                    <div style={{ color: "#3b82f6" }}>{item.icon}</div>
                                                     <div>
-                                                        <p style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: pwaScanResult.status === "valid" ? "#22c55e" : pwaScanResult.status === "already_used" ? "#f59e0b" : "#ef4444" }}>
-                                                            {pwaScanResult.status === "valid" ? "Verified Successfully" : pwaScanResult.status === "already_used" ? "Already Checked In" : "Invalid Ticket ID"}
-                                                        </p>
-                                                        <p style={{ margin: "2px 0 0", fontSize: "13px", color: t.textSub }}>{pwaScanResult.status === "valid" ? "Attendee can proceed" : "Access Denied"}</p>
+                                                        <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{item.title}</p>
+                                                        <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.textSub, lineHeight: 1.5 }}>{item.desc}</p>
                                                     </div>
                                                 </div>
-                                                {pwaScanResult.booking && (
-                                                    <div style={{ padding: "16px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 800, color: t.textMain }}>{pwaScanResult.booking.event_name || pwaScanResult.booking.eventName}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "4px" }}>Attendee ID: {pwaScanResult.booking.user_id || pwaScanResult.booking.userId}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>Quantity: {pwaScanResult.booking.ticket_count || pwaScanResult.booking.ticketCount} Ticket(s)</div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
-                                    <h4 style={{ fontSize: "16px", fontWeight: 800, marginBottom: "20px", color: t.textMain }}>Check-in Guide</h4>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                                        {[
-                                            { icon: <QrCode size={18} />, title: "Digital Tickets", desc: "Attendees should show the QR code from their mobile app." },
-                                            { icon: <Search size={18} />, title: "Manual Search", desc: "If camera fails, enter the Booking ID found below the QR code." },
-                                            { icon: <UserCheck size={18} />, title: "Single Entry", desc: "Tickets are invalidated immediately after successful scan." }
-                                        ].map((item, i) => (
-                                            <div key={i} style={{ display: "flex", gap: "16px" }}>
-                                                <div style={{ color: "#3b82f6" }}>{item.icon}</div>
-                                                <div>
-                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: t.textMain }}>{item.title}</p>
-                                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.textSub, lineHeight: 1.5 }}>{item.desc}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                                        <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Recent Scans</h3>
+                                        <div style={{ padding: "6px 16px", borderRadius: "100px", backgroundColor: "#22c55e20", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
+                                            {recentScans.length} Checked-In
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "16px", border: `1px solid ${t.border}`, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Recent Scans</h3>
-                                    <div style={{ padding: "6px 16px", borderRadius: "100px", backgroundColor: "#22c55e20", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
-                                        {recentScans.length} Checked-In
-                                    </div>
-                                </div>
-
-                                <div className="scan-table-desktop" style={{ overflowX: "auto" }}>
-                                    <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
-                                        <thead>
-                                            <tr style={{ textAlign: "left" }}>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Ticket ID</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Attendee</th>
-                                                <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                             {recentScans.length === 0 ? (
-                                                <tr><td colSpan={4} style={{ textAlign: "center", padding: "48px", color: t.textSub }}>No tickets scanned yet.</td></tr>
-                                             ) : recentScans.map(b => (
-                                                <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-                                                    <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
-                                                    <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
-                                                    <td style={{ padding: "16px" }}>
-                                                        <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
-                                                        <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.customer_email || b.user_id || b.userId}</div>
-                                                    </td>
-                                                    <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
-                                                            <CheckCircle size={16} /> Authenticated
-                                                        </div>
-                                                    </td>
+                                    <div className="scan-table-desktop" style={{ overflowX: "auto" }}>
+                                        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+                                            <thead>
+                                                <tr style={{ textAlign: "left" }}>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Ticket ID</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Event</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Attendee</th>
+                                                    <th style={{ padding: "12px 16px", color: t.textSub, fontSize: "13px", fontWeight: 700 }}>Status</th>
                                                 </tr>
-                                             ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody>
+                                                {recentScans.length === 0 ? (
+                                                    <tr><td colSpan={4} style={{ textAlign: "center", padding: "48px", color: t.textSub }}>No tickets scanned yet.</td></tr>
+                                                ) : recentScans.map(b => (
+                                                    <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                                                        <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
+                                                        <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
+                                                        <td style={{ padding: "16px" }}>
+                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
+                                                            <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.customer_email || b.user_id || b.userId}</div>
+                                                        </td>
+                                                        <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#22c55e", fontSize: "13px", fontWeight: 700 }}>
+                                                                <CheckCircle size={16} /> Authenticated
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
 
-                                <div className="scan-cards-mobile" style={{ display: "none" }}>
-                                     {recentScans.length === 0 ? (
-                                        <div style={{ textAlign: "center", padding: "32px", color: t.textSub }}>No scans yet</div>
-                                    ) : (
-                                        recentScans.map(b => (
-                                            <div key={b.id} style={{ backgroundColor: t.bg, padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                                                    <span style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, backgroundColor: t.cardBg, padding: "4px 8px", borderRadius: "6px" }}>#{b.id.slice(-8).toUpperCase()}</span>
-                                                    <div style={{ color: "#22c55e", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "4px" }}>
-                                                        <CheckCircle size={14} /> Valid
+                                    <div className="scan-cards-mobile" style={{ display: "none" }}>
+                                        {recentScans.length === 0 ? (
+                                            <div style={{ textAlign: "center", padding: "32px", color: t.textSub }}>No scans yet</div>
+                                        ) : (
+                                            recentScans.map(b => (
+                                                <div key={b.id} style={{ backgroundColor: t.bg, padding: "16px", borderRadius: "16px", border: `1px solid ${t.border}` }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                                                        <span style={{ fontSize: "12px", fontWeight: 800, color: t.textSub, backgroundColor: t.cardBg, padding: "4px 8px", borderRadius: "6px" }}>#{b.id.slice(-8).toUpperCase()}</span>
+                                                        <div style={{ color: "#22c55e", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "4px" }}>
+                                                            <CheckCircle size={14} /> Valid
+                                                        </div>
                                                     </div>
+                                                    <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.event_name || b.eventName || "—"}</div>
+                                                    <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
+                                                    <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scanned_at || b.created_at || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                                 </div>
-                                                <div style={{ fontSize: "15px", fontWeight: 800, color: t.textMain, marginBottom: "4px" }}>{b.event_name || b.eventName || "—"}</div>
-                                                <div style={{ fontSize: "13px", fontWeight: 600, color: t.textSub }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
-                                                <div style={{ fontSize: "12px", color: t.textSub, opacity: 0.7, marginTop: "8px" }}>{new Date(b.scanned_at || b.created_at || 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                            </div>
-                                        ))
-                                    )}
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                );
-            }
-            case "support_tickets": {
+                    );
+                }
+                case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
                     const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
                     const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
@@ -4593,7 +4590,7 @@ function OrganiserPanel() {
                                             <div>
                                                 <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#9d174d" }}>Your Platform Fee Structure</p>
                                                 <p style={{ margin: 0, fontSize: "12px", color: "#db2777", fontWeight: 600 }}>
-                                                    {organiserData?.fee_config?.override_global 
+                                                    {organiserData?.fee_config?.override_global
                                                         ? `${organiserData.fee_config.fee_type === 'percentage' ? organiserData.fee_config.fee_value + '%' : '₹' + organiserData.fee_config.fee_value} per ticket`
                                                         : "Standard Global Fees Apply"}
                                                     {organiserData?.fee_config?.apply_gst && ` (+ ${organiserData.fee_config.gst_percent}% GST)`}
@@ -4815,7 +4812,7 @@ function OrganiserPanel() {
                                                         </td>
                                                         <td style={{ padding: "16px", color: t.textMain, fontWeight: 600 }}>{s.email}</td>
                                                         <td style={{ padding: "16px" }}>
-                                                            <div 
+                                                            <div
                                                                 onClick={async () => {
                                                                     const newStatus = !s.is_active;
                                                                     try {
@@ -4832,29 +4829,29 @@ function OrganiserPanel() {
                                                             >
                                                                 <div className={`w-3 h-3 bg-white rounded-full transition-transform  ${s.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
                                                             </div>
-                                                         </td>
+                                                        </td>
                                                         <td style={{ padding: "16px", color: t.textSub, fontSize: "13px" }}>{new Date(s.created_at || s.createdAt).toLocaleDateString()}</td>
                                                         <td style={{ padding: "16px", textAlign: "right" }}>
-                                                                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
-                                                                        <button
-                                                                            onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
-                                                                            style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                            title="Edit Staff"
-                                                                        >
-                                                                            <Settings size={18} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => { 
-                                                                                e.preventDefault();
-                                                                                e.stopPropagation();
-                                                                                setDeletingStaffId(s.id);
-                                                                            }}
-                                                                            style={{ border: "none", background: "#ef444415", color: "#ef4444", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                            title="Delete Staff"
-                                                                        >
-                                                                            <Trash2 size={18} />
-                                                                        </button>
-                                                                    </div>
+                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingRight: "8px" }}>
+                                                                <button
+                                                                    onClick={() => { setEditingStaffId(s.id); setStaffFormData({ name: s.name, email: s.email, password: s.password }); setShowStaffModal(true); }}
+                                                                    style={{ border: "none", background: "#3b82f610", color: "#3b82f6", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                    title="Edit Staff"
+                                                                >
+                                                                    <Settings size={18} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        setDeletingStaffId(s.id);
+                                                                    }}
+                                                                    style={{ border: "none", background: "#ef444415", color: "#ef4444", padding: "10px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                    title="Delete Staff"
+                                                                >
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -4874,44 +4871,44 @@ function OrganiserPanel() {
                                         <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: "0 0 8px" }}>Delete Staff Account?</h3>
                                         <p style={{ fontSize: "14px", color: t.textSub, margin: "0 0 24px", lineHeight: 1.5 }}>This action cannot be undone. The staff member will lose access to the scanner app.</p>
                                         <div style={{ display: "flex", gap: "12px" }}>
-                                            <button 
+                                            <button
                                                 onClick={() => setDeletingStaffId(null)}
                                                 style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}
                                             >
                                                 Cancel
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={async () => {
-                                                     try {
-                                                         const idToDelete = deletingStaffId;
-                                                         const staff = staffAccounts.find(s => s.id === idToDelete);
-                                                         setDeletingStaffId(null);
-                                                         
-                                                         const res = await fetch('/api/organiser/staff', {
-                                                             method: 'DELETE',
-                                                             headers: { 'Content-Type': 'application/json' },
-                                                             body: JSON.stringify({ id: idToDelete, auth_user_id: staff.auth_user_id }),
-                                                         });
-                                                         
-                                                         if (!res.ok) {
-                                                             const data = await res.json();
-                                                             throw new Error(data.error || 'Failed to delete');
-                                                         }
-                                                         
-                                                         refetchStaff();
-                                                         toast.success("Staff account removed successfully");
-                                                     } catch (err) {
-                                                         alert("Failed to delete staff account: " + err.message);
-                                                     }
+                                                    try {
+                                                        const idToDelete = deletingStaffId;
+                                                        const staff = staffAccounts.find(s => s.id === idToDelete);
+                                                        setDeletingStaffId(null);
+
+                                                        const res = await fetch('/api/organiser/staff', {
+                                                            method: 'DELETE',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ id: idToDelete, auth_user_id: staff.auth_user_id }),
+                                                        });
+
+                                                        if (!res.ok) {
+                                                            const data = await res.json();
+                                                            throw new Error(data.error || 'Failed to delete');
+                                                        }
+
+                                                        refetchStaff();
+                                                        toast.success("Staff account removed successfully");
+                                                    } catch (err) {
+                                                        alert("Failed to delete staff account: " + err.message);
+                                                    }
                                                 }}
                                                 style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#ef4444", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}
                                             >
                                                 Delete
                                             </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
                         </div>
                     );
                 }
@@ -4977,23 +4974,23 @@ function OrganiserPanel() {
                                         {newEvent.slots.map((slot, idx) => (
                                             <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                                                 <div style={{ flex: 1 }}>
-                                                    <CalendarPicker 
-                                                        value={slot.date} 
+                                                    <CalendarPicker
+                                                        value={slot.date}
                                                         onChange={val => {
                                                             const newSlots = [...newEvent.slots];
                                                             newSlots[idx].date = val;
                                                             setNewEvent(prev => ({ ...prev, slots: newSlots }));
-                                                        }} 
+                                                        }}
                                                     />
                                                 </div>
                                                 <div style={{ flex: 1 }}>
-                                                    <TimePicker 
-                                                        value={slot.time} 
+                                                    <TimePicker
+                                                        value={slot.time}
                                                         onChange={val => {
                                                             const newSlots = [...newEvent.slots];
                                                             newSlots[idx].time = val;
                                                             setNewEvent(prev => ({ ...prev, slots: newSlots }));
-                                                        }} 
+                                                        }}
                                                     />
                                                 </div>
                                                 {newEvent.slots.length > 1 && <button onClick={() => removeDateSlot(idx)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}><Trash2 size={18} /></button>}
@@ -5079,16 +5076,16 @@ function OrganiserPanel() {
                                 <button
                                     onClick={async () => {
                                         try {
-                                            if (!staffFormData.name || !staffFormData.email || (!editingStaffId && !staffFormData.password)) { 
-                                                toast.error("Please fill all required fields"); 
-                                                return; 
+                                            if (!staffFormData.name || !staffFormData.email || (!editingStaffId && !staffFormData.password)) {
+                                                toast.error("Please fill all required fields");
+                                                return;
                                             }
 
                                             setPostLoading(true);
-                                            
+
                                             // Call our custom Admin API
                                             const method = editingStaffId ? 'PUT' : 'POST';
-                                            const body = editingStaffId 
+                                            const body = editingStaffId
                                                 ? { auth_user_id: staffAccounts.find(s => s.id === editingStaffId)?.auth_user_id, password: staffFormData.password }
                                                 : { ...staffFormData, organiserId: user.id };
 
@@ -5192,10 +5189,16 @@ function OrganiserPanel() {
                         {!isStaff && (
                             <>
                                 <div className="sidebar-category">Home</div>
-                                <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}>
+                                <button onClick={() => setActiveTab("dashboard")} className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`} style={{ width: "calc(100% - 30px)" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                                         <LayoutDashboard size={18} />
                                         <span>Dashboard</span>
+                                    </div>
+                                </button>
+                                <button onClick={() => router.push("/branding/dashboard")} className="sidebar-item" style={{ width: "calc(100% - 30px)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                        <Sparkles size={18} />
+                                        <span>Branding Panel</span>
                                     </div>
                                 </button>
 
@@ -5324,7 +5327,7 @@ function OrganiserPanel() {
                                 </button>
                             </>
                         )}
-                        
+
                         <div style={{ padding: "12px 12px 0" }}>
                             <button
                                 onClick={(e) => {
@@ -5362,8 +5365,8 @@ function OrganiserPanel() {
                     )}
                     <header className="h-20 bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-slate-100 flex items-center justify-between px-6 lg:px-10">
                         <div className="flex items-center gap-6">
-                            <button 
-                                onClick={() => setSidebarOpen(true)} 
+                            <button
+                                onClick={() => setSidebarOpen(true)}
                                 className="p-2.5 rounded-xl bg-slate-50 text-slate-400 md:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
                             >
                                 <Menu size={20} />
@@ -5382,13 +5385,13 @@ function OrganiserPanel() {
                                 <div style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", backgroundColor: "#ef4444", borderRadius: "50%", border: `2px solid ${t.header}` }}></div>
                             </button>
                             <div style={{ position: "relative" }} ref={dropdownRef}>
-                                <button 
+                                <button
                                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                                    style={{ 
-                                        display: "flex", 
-                                        alignItems: "center", 
-                                        gap: "12px", 
-                                        paddingLeft: "12px", 
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        paddingLeft: "12px",
                                         borderLeft: `1px solid ${t.border}`,
                                         background: "none",
                                         borderTop: "none",
@@ -5425,20 +5428,20 @@ function OrganiserPanel() {
                                             <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: t.textMain }}>{profile.firstName} {profile.lastName}</p>
                                             <p style={{ margin: 0, fontSize: "12px", color: t.textSub, textOverflow: "ellipsis", overflow: "hidden" }}>{profile.email}</p>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => { setActiveTab("change_password"); setProfileDropdownOpen(false); }}
-                                            style={{ 
-                                                display: "flex", 
-                                                alignItems: "center", 
-                                                gap: "10px", 
-                                                width: "100%", 
-                                                padding: "10px 12px", 
-                                                borderRadius: "10px", 
-                                                border: "none", 
-                                                background: "none", 
-                                                color: t.textMain, 
-                                                fontSize: "13px", 
-                                                fontWeight: 600, 
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "10px",
+                                                width: "100%",
+                                                padding: "10px 12px",
+                                                borderRadius: "10px",
+                                                border: "none",
+                                                background: "none",
+                                                color: t.textMain,
+                                                fontSize: "13px",
+                                                fontWeight: 600,
                                                 cursor: "pointer",
                                                 textAlign: "left"
                                             }}
@@ -5446,20 +5449,20 @@ function OrganiserPanel() {
                                         >
                                             <Lock size={16} color={t.textSub} /> Change Password
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { setProfileDropdownOpen(false); handleLogout(); }}
-                                            style={{ 
-                                                display: "flex", 
-                                                alignItems: "center", 
-                                                gap: "10px", 
-                                                width: "100%", 
-                                                padding: "10px 12px", 
-                                                borderRadius: "10px", 
-                                                border: "none", 
-                                                background: "none", 
-                                                color: "#ef4444", 
-                                                fontSize: "13px", 
-                                                fontWeight: 600, 
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "10px",
+                                                width: "100%",
+                                                padding: "10px 12px",
+                                                borderRadius: "10px",
+                                                border: "none",
+                                                background: "none",
+                                                color: "#ef4444",
+                                                fontSize: "13px",
+                                                fontWeight: 600,
                                                 cursor: "pointer",
                                                 textAlign: "left"
                                             }}
@@ -5481,7 +5484,7 @@ function OrganiserPanel() {
 
                     {isStaff && (
                         <div className="bottom-nav">
-                            <button 
+                            <button
                                 className={`bottom-nav-item ${activeTab === "pwa_scanner" ? "active" : ""}`}
                                 onClick={() => setActiveTab("pwa_scanner")}
                                 style={{ width: "100%" }}
@@ -5508,7 +5511,13 @@ function OrganiserPanel() {
                 <nav style={{ flex: 1, paddingBottom: "24px", opacity: 0.5 }}>
                     <div className="sidebar-category">Home</div>
                     <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><LayoutDashboard size={18} /> Dashboard (Locked)</div></div>
-                    
+                    <button onClick={() => router.push("/branding/dashboard")} className="sidebar-item" style={{ width: "calc(100% - 30px)", opacity: 1, color: "#ffffff" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <Sparkles size={18} />
+                            <span>Branding Panel</span>
+                        </div>
+                    </button>
+
                     <div className="sidebar-category">{isProfessionalService ? "Portfolio" : "Events"}</div>
                     <div className="sidebar-item"><div style={{ display: "flex", alignItems: "center", gap: "12px" }}><Grid size={18} /> {isProfessionalService ? "Service Setup" : "Management"} (Locked)</div></div>
                 </nav>
@@ -5544,8 +5553,8 @@ function OrganiserPanel() {
                 <header className="top-header">
                     <div>
                         <h1 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>
-                            {isProfessionalService 
-                                ? `${organiserData?.category || 'Service'} Onboarding` 
+                            {isProfessionalService
+                                ? `${organiserData?.category || 'Service'} Onboarding`
                                 : "Organiser Onboarding"
                             }
                         </h1>

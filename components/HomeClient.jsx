@@ -349,6 +349,7 @@ const WhyChooseUs = () => {
 function HomeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, selectedCity } = useAuth();
   const activeCat = searchParams.get("category");
   const searchQuery = searchParams.get("q") || "";
   const [heroSlides, setHeroSlides] = useState([]);
@@ -385,7 +386,7 @@ function HomeClient() {
     global: { title: "BookMyTicket", description: "Best Event Ticketing Platform" }
   };
 
-  const { user } = useAuth();
+
   const { data: userBookings } = useSupabaseQuery('bookings', (q) => 
     user?.id 
       ? q.select('*, events(title, img, date, time)').eq('user_id', user.id).order('created_at', { ascending: false }) 
@@ -422,11 +423,27 @@ function HomeClient() {
 
   const normalizedOrgEvents = useMemo(() => {
     const now = new Date();
+    const cityFilter = selectedCity && selectedCity !== "India" ? selectedCity.toLowerCase() : null;
+
     return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
       .filter(ev => {
         // Safe status check
         const s = String(ev.status || '').toLowerCase();
         if (s === "inactive" || s === "draft") return false;
+        
+        // Location filter (Web Portal)
+        if (cityFilter) {
+          const loc = String(ev.location || ev.venue || ev.city || '').toLowerCase();
+          const isVirtual = ev.virtual === true || 
+                 String(ev.type || '').toLowerCase() === "online" || 
+                 String(ev.type || '').toLowerCase() === "virtual" ||
+                 loc.includes("online") || loc.includes("virtual");
+                 
+          // Only show events that match the city, or are online events
+          if (!loc.includes(cityFilter) && !isVirtual) {
+            return false;
+          }
+        }
         
         const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
         const now = new Date();
@@ -469,7 +486,7 @@ function HomeClient() {
     ...(Array.isArray(normalizedOrgEvents) ? normalizedOrgEvents : [])
   ], [normalizedOrgEvents]);
 
-  const { selectedCity } = useAuth();
+
 
   const filteredEvents = useMemo(() => {
     let results = allEventsForFilter;

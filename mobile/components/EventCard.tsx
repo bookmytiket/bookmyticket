@@ -16,6 +16,21 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
+  // Safe JSON parse helper for dynamic configs
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  };
+
+  const dynamicConfig = safeParse(event.dynamic_config) || {};
+  const eventVenue = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || "TBA";
+  const rawDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
+  const rawTime = event.time || event.start_time || dynamicConfig.time || dynamicConfig.basicInfo?.time;
+  const eventDate = [rawDate, rawTime].filter(Boolean).join(" ") || "TBA";
+
   return (
     <MotiView
       from={{ opacity: 0, translateY: 20 }}
@@ -56,13 +71,13 @@ export default function EventCard({ event, onPress }: EventCardProps) {
 
         <View style={styles.content}>
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-            {event.name || event.title}
+            {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}
           </Text>
           
           <View style={styles.infoRow}>
             <MapPin size={12} color={colors.error} />
             <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
-              {event.venue || event.location || event.city || "TBA"}
+              {eventVenue}
             </Text>
           </View>
 
@@ -70,7 +85,7 @@ export default function EventCard({ event, onPress }: EventCardProps) {
             <View style={styles.infoRow}>
               <Calendar size={12} color={colors.success} />
               <Text style={[styles.dateText, { color: colors.muted }]}>
-                {event.start_date || event.date || "TBA"}
+                {eventDate}
               </Text>
             </View>
             <View style={[styles.priceBadge, { backgroundColor: colors.background }]}>

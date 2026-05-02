@@ -3,6 +3,7 @@ import { StyleSheet, FlatList, TextInput, Pressable, ScrollView, View, Text, Ima
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
+import * as SecureStore from 'expo-secure-store';
 import EventCard from '@/components/EventCard';
 import { useRouter } from 'expo-router';
 import { Search, X, SlidersHorizontal, ChevronRight } from 'lucide-react-native';
@@ -18,6 +19,15 @@ export default function EventsScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [userLocation, setUserLocation] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    SecureStore.getItemAsync('userLocation').then(loc => {
+      if (loc && loc !== 'India' && loc !== 'Live Location') {
+        setUserLocation(loc);
+      }
+    });
+  }, []);
 
   const { data: events, loading, refresh } = useSupabaseQuery(
     'events',
@@ -33,7 +43,15 @@ export default function EventsScreen() {
       const s = String(ev.status || '').toLowerCase();
       if (s === "draft" || s === "inactive") return false;
       
-      let dt = ev.date || ev.start_date || ev.startDate;
+      const safeParse = (val: any) => {
+        if (!val) return null;
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch (e) { return null; }
+        }
+        return val;
+      };
+      const dynamicConfig = safeParse(ev.dynamic_config) || {};
+      let dt = ev.date || ev.start_date || ev.startDate || ev.expiry_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
       if (!dt) return true;
       
       let eventDate: Date | null = null;
@@ -51,23 +69,62 @@ export default function EventsScreen() {
       return true;
     });
 
+    if (userLocation) {
+      list = list.filter(e => {
+        const safeParse = (val: any) => {
+          if (!val) return null;
+          if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch (e) { return null; }
+          }
+          return val;
+        };
+        const dynamicConfig = safeParse(e.dynamic_config) || {};
+        const loc = String(e.venue || e.location || e.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || '').toLowerCase();
+        
+        const isVirtual = e.virtual === true || 
+                 String(e.type || '').toLowerCase() === "online" || 
+                 String(e.type || '').toLowerCase() === "virtual" ||
+                 loc.includes("online") || loc.includes("virtual");
+                 
+        if (!loc.includes(userLocation.toLowerCase()) && !isVirtual) {
+          return false;
+        }
+        return true;
+      });
+    }
+
     if (selectedCategory !== 'All') {
-      list = list.filter(
-        (e) => e.category?.toLowerCase() === selectedCategory.toLowerCase()
-      );
+      list = list.filter((e) => {
+        const safeParse = (val: any) => {
+          if (!val) return null;
+          if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch (err) { return null; }
+          }
+          return val;
+        };
+        const dynamicConfig = safeParse(e.dynamic_config) || {};
+        const cat = String(e.category || dynamicConfig.basicInfo?.category || '').toLowerCase();
+        return cat === selectedCategory.toLowerCase();
+      });
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (e) =>
-          e.name?.toLowerCase().includes(q) ||
-          e.title?.toLowerCase().includes(q) ||
-          e.venue?.toLowerCase().includes(q) ||
-          e.location?.toLowerCase().includes(q)
-      );
+      list = list.filter((e) => {
+        const safeParse = (val: any) => {
+          if (!val) return null;
+          if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch (err) { return null; }
+          }
+          return val;
+        };
+        const dynamicConfig = safeParse(e.dynamic_config) || {};
+        const title = String(e.name || e.title || dynamicConfig.basicInfo?.eventName || dynamicConfig.title || '').toLowerCase();
+        const venue = String(e.venue || e.location || e.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || '').toLowerCase();
+        return title.includes(q) || venue.includes(q);
+      });
     }
     return list;
-  }, [events, selectedCategory, searchQuery]);
+  }, [events, selectedCategory, searchQuery, userLocation]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

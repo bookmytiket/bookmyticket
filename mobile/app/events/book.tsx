@@ -6,7 +6,9 @@ import {
   View as RNView,
   Alert,
   TextInput,
+  Modal
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Text } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -43,6 +45,9 @@ export default function BookEventScreen() {
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showRazorpay, setShowRazorpay] = useState(false);
+  const [razorpayHtml, setRazorpayHtml] = useState('');
+  const [currentBookingId, setCurrentBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) fetchEvent();
@@ -67,7 +72,16 @@ export default function BookEventScreen() {
       setEvent(data);
 
       // Pre-select first tier
-      const tiers = data.tickets || data.dynamic_config?.tickets || [];
+      const safeParse = (val: any) => {
+        if (!val) return null;
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch (e) { return null; }
+        }
+        return val;
+      };
+      const parsedConfig = safeParse(data.dynamic_config) || {};
+      const parsedTickets = safeParse(data.tickets) || parsedConfig.tickets || [];
+      const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
       if (tiers.length > 0) setSelectedTier(tiers[0]);
     } catch (err) {
       console.error('Error fetching event for booking:', err);
@@ -76,7 +90,17 @@ export default function BookEventScreen() {
     }
   };
 
-  const ticketTiers = event?.tickets || event?.dynamic_config?.tickets || [];
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  };
+  const dynamicConfig = safeParse(event?.dynamic_config) || {};
+  const parsedTickets = safeParse(event?.tickets) || dynamicConfig.tickets || [];
+  const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+  
   const tierPrice = selectedTier ? Number(selectedTier.price || 0) : Number(event?.price || 0);
   const subtotal = tierPrice * quantity;
   const convenienceFee = event?.is_free ? 0 : Math.round(subtotal * 0.02);
@@ -114,25 +138,80 @@ export default function BookEventScreen() {
       if (event.is_free) {
         setSuccess(true);
       } else {
-        // For paid events: navigate to payment (Cashfree/Razorpay)
-        // For now show success (payment integration point)
-        Alert.alert(
-          'Booking Confirmed!',
-          'Your booking has been confirmed. Payment integration coming soon.',
-          [
-            {
-              text: 'View Ticket',
-              onPress: () => {
-                router.replace('/(tabs)/tickets');
-              },
-            },
-          ]
-        );
+        // Paid Event - Initialize Razorpay via WebView
+        setCurrentBookingId(data.id);
+        
+        // Generate Razorpay Checkout HTML
+        const html = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+              .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f84464; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+          </head>
+          <body>
+            <div class="loader"></div>
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+            <script>
+              var options = {
+                key: "${process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SkQ5MQO9dB5LuI'}",
+                amount: "${Math.round(total * 100)}",
+                currency: "INR",
+                name: "BookMyTicket",
+                description: "Ticket for ${event.name || event.title}",
+                prefill: {
+                  name: "${name.trim()}",
+                  email: "${email.trim()}",
+                  contact: "${phone.trim()}"
+                },
+                theme: { color: "#f84464" },
+                handler: function(response) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', paymentId: response.razorpay_payment_id }));
+                }
+              };
+              options.modal = {
+                ondismiss: function() {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'dismissed' }));
+                }
+              };
+              setTimeout(() => {
+                var rzp = new Razorpay(options);
+                rzp.open();
+              }, 500);
+            </script>
+          </body>
+        </html>
+        `;
+        
+        setRazorpayHtml(html);
+        setShowRazorpay(true);
       }
     } catch (err: any) {
       Alert.alert('Booking Failed', err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRazorpayMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.event === 'success') {
+        setShowRazorpay(false);
+        // Update booking status in Supabase
+        if (currentBookingId) {
+          await supabase.from('bookings').update({ payment_status: 'paid', payment_id: data.paymentId }).eq('id', currentBookingId);
+        }
+        setSuccess(true);
+      } else if (data.event === 'dismissed') {
+        setShowRazorpay(false);
+        Alert.alert('Payment Cancelled', 'You can retry the payment from your tickets page.');
+      }
+    } catch (e) {
+      console.log('Error parsing Razorpay message', e);
     }
   };
 
@@ -186,6 +265,23 @@ export default function BookEventScreen() {
 
   return (
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Razorpay Webview Modal */}
+      <Modal visible={showRazorpay} animationType="slide" transparent={false}>
+        <RNView style={{ flex: 1, backgroundColor: colors.background, paddingTop: 40 }}>
+          <Pressable onPress={() => setShowRazorpay(false)} style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Text style={{ fontWeight: '800', color: colors.text }}>Cancel Payment</Text>
+          </Pressable>
+          {razorpayHtml ? (
+            <WebView
+              source={{ html: razorpayHtml }}
+              onMessage={handleRazorpayMessage}
+              style={{ flex: 1 }}
+              javaScriptEnabled={true}
+            />
+          ) : null}
+        </RNView>
+      </Modal>
+
       {/* Header */}
       <RNView style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -205,16 +301,16 @@ export default function BookEventScreen() {
           />
           <RNView style={styles.eventInfo}>
             <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-              {event.title}
+              {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event Booking'}
             </Text>
             <RNView style={styles.metaRow}>
               <Calendar size={12} color={colors.tint} />
-              <Text style={[styles.metaText, { color: colors.muted }]}>{event.date || 'TBA'}</Text>
+              <Text style={[styles.metaText, { color: colors.muted }]}>{event.start_date || event.date || dynamicConfig?.date || dynamicConfig?.basicInfo?.date || dynamicConfig?.basicInfo?.expiryDate || 'TBA'}</Text>
             </RNView>
             <RNView style={styles.metaRow}>
               <MapPin size={12} color={colors.error} />
               <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                {event.location || event.city || 'TBA'}
+                {event.venue || event.location || event.city || dynamicConfig?.venue?.name || dynamicConfig?.basicInfo?.venue || 'TBA'}
               </Text>
             </RNView>
           </RNView>

@@ -109,6 +109,17 @@ function TicketCard({ booking, colors, index, onPress }: any) {
       ? '#f59e0b'
       : '#ef4444';
 
+  const safeParse = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch (e) { return null; }
+    }
+    return val;
+  };
+  const dynamicConfig = safeParse(event.dynamic_config) || {};
+  const eventVenue = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue;
+  const eventDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
+
   return (
     <MotiView
       from={{ opacity: 0, translateY: 20 }}
@@ -136,21 +147,21 @@ function TicketCard({ booking, colors, index, onPress }: any) {
           />
           <RNView style={styles.eventInfo}>
             <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-              {event.name || event.title || 'Event'}
+              {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}
             </Text>
-            {(event.start_date || event.date) && (
+            {eventDate && (
               <RNView style={styles.metaRow}>
                 <Calendar size={12} color={colors.tint} />
                 <Text style={[styles.metaText, { color: colors.muted }]}>
-                  {event.start_date || event.date}
+                  {eventDate}
                 </Text>
               </RNView>
             )}
-            {(event.venue || event.location || event.city) && (
+            {eventVenue && (
               <RNView style={styles.metaRow}>
                 <MapPin size={12} color={colors.error} />
                 <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                  {event.venue || event.location || event.city}
+                  {eventVenue}
                 </Text>
               </RNView>
             )}
