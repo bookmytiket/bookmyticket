@@ -516,50 +516,6 @@ export default function CheckoutClient({ id }) {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Terms Section */}
-                                <div className="p-8 bg-blue-50 rounded-[32px] border border-blue-100 space-y-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-500 shadow-sm shrink-0">
-                                            <ShieldCheck size={20} />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight">Terms of Attendance</h4>
-                                            <p className="text-xs font-medium text-blue-700/70 leading-relaxed">Please review the event guidelines and safety protocols before proceeding.</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <label className="flex items-center gap-4 cursor-pointer group">
-                                        <div className="relative flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={termsAccepted}
-                                                onChange={(e) => setTermsAccepted(e.target.checked)}
-                                                className="w-6 h-6 rounded-lg border-blue-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                                            />
-                                        </div>
-                                        <span className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition-colors">
-                                            I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="underline decoration-blue-300 underline-offset-4">Event Terms & Conditions</button>
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <button 
-                                    onClick={handleConfirmPay}
-                                    disabled={!termsAccepted || isProcessing}
-                                    className={`
-                                        w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm transition-all shadow-2xl flex items-center justify-center gap-3
-                                        ${termsAccepted && !isProcessing
-                                            ? 'bg-slate-900 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95' 
-                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
-                                    `}
-                                >
-                                    {isProcessing ? (
-                                        <>Preparing Tickets...</>
-                                    ) : (
-                                        <>{total > 0 ? "Proceed to Payment" : "Confirm My Spot"} <ArrowRight size={20} /></>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -693,6 +649,50 @@ export default function CheckoutClient({ id }) {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Terms Section */}
+                                <div className="p-8 bg-blue-50 rounded-[32px] border border-blue-100 space-y-6 mt-8">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-500 shadow-sm shrink-0">
+                                            <ShieldCheck size={20} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight">Terms of Attendance</h4>
+                                            <p className="text-xs font-medium text-blue-700/70 leading-relaxed">Please review the event guidelines and safety protocols before proceeding.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <label className="flex items-center gap-4 cursor-pointer group">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={termsAccepted}
+                                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                                className="w-6 h-6 rounded-lg border-blue-200 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                                            />
+                                        </div>
+                                        <span className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition-colors">
+                                            I agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="underline decoration-blue-300 underline-offset-4">Event Terms & Conditions</button>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <button 
+                                    onClick={handleConfirmPay}
+                                    disabled={!termsAccepted || isProcessing}
+                                    className={`
+                                        w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm transition-all shadow-2xl flex items-center justify-center gap-3
+                                        ${termsAccepted && !isProcessing
+                                            ? 'bg-slate-900 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95' 
+                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}
+                                    `}
+                                >
+                                    {isProcessing ? (
+                                        <>Preparing Tickets...</>
+                                    ) : (
+                                        <>{total > 0 ? "Proceed to Payment" : "Confirm My Spot"} <ArrowRight size={20} /></>
+                                    )}
+                                </button>
                             </div>
                         </div>
 

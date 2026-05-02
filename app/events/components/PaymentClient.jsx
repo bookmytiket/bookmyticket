@@ -325,16 +325,9 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 </div>
             </div>
 
-            <div style={{ 
-                flex: 1, 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 420px',
-                zIndex: 10,
-                position: 'relative',
-                minHeight: 0
-            }}>
+            <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_420px] z-10 relative min-h-0 overflow-y-auto lg:overflow-y-hidden">
                 {/* Main Payment Section */}
-                <div style={{ padding: '60px 80px', overflowY: 'auto' }}>
+                <div className="p-6 lg:p-[60px_80px] overflow-y-visible lg:overflow-y-auto">
                     <div style={{ maxWidth: '600px' }}>
                         <div style={{ marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                             <div>
@@ -504,15 +497,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 </div>
 
                 {/* Sidebar Order Summary */}
-                <div style={{ 
-                    background: 'rgba(252, 249, 242, 0.6)', 
-                    padding: '40px 48px', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    overflowY: 'hidden',
-                    borderLeft: '1px solid rgba(0,0,0,0.03)',
-                    backdropFilter: 'blur(30px)'
-                }}>
+                <div className="bg-[#fcf9f299] p-6 lg:p-[40px_48px] flex flex-col border-t lg:border-t-0 lg:border-l border-black/5 backdrop-blur-md">
                     <h3 style={{ fontSize: '11px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.25em', marginBottom: '32px' }}>Transaction Overview</h3>
                     
                     <div style={{ marginBottom: '32px', position: 'relative' }}>
