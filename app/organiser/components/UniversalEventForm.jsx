@@ -15,7 +15,7 @@ import InlineMap from "./InlineMap";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
-        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">{label}</label>
+        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}</label>
         {type === "date" ? (
             <CalendarPicker 
                 value={value || ""} 
@@ -33,7 +33,7 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "") =>
                 type={type}
                 value={value || ""}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-400"
                 placeholder={placeholder}
             />
         )}
@@ -53,7 +53,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category Name</label>
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Category Name</label>
                 <input 
                     className="w-full bg-slate-50 border-none text-sm font-bold p-3 rounded-xl"
                     value={category.name}
@@ -86,7 +86,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
             />
             {/* Category-based price removed in favor of Age-based pricing */}
             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Slots</label>
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Total Slots</label>
                 <input 
                     type="number"
                     className="w-full bg-slate-50 border-none text-sm font-bold p-3 rounded-xl"
@@ -100,7 +100,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
             </div>
             <div className="md:col-span-2 space-y-3">
                 <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prize Distribution</label>
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Prize Distribution</label>
                     <button 
                         onClick={() => {
                             const newCats = [...config.categories];
@@ -152,8 +152,8 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
             <div className="md:col-span-2 space-y-3 pt-4 border-t border-slate-50">
                 <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Age-Based Pricing</label>
-                        <p className="text-[8px] font-medium text-slate-400 uppercase tracking-tight">Set different prices for age ranges (Optional)</p>
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Age-Based Pricing</label>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">Set different prices for age ranges (Optional)</p>
                     </div>
                     <button 
                         onClick={() => {
@@ -174,7 +174,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                             <div className="col-span-4 flex items-center gap-2">
                                 <input 
                                     type="number" placeholder="Min"
-                                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold"
+                                    className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold text-slate-900"
                                     value={ap.minAge}
                                     onChange={e => {
                                         const newCats = [...config.categories];
@@ -182,10 +182,10 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                         updateConfig('categories', newCats);
                                     }}
                                 />
-                                <span className="text-slate-300 font-bold">to</span>
+                                <span className="text-slate-400 font-bold">to</span>
                                 <input 
                                     type="number" placeholder="Max"
-                                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-bold"
+                                    className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold text-slate-900"
                                     value={ap.maxAge}
                                     onChange={e => {
                                         const newCats = [...config.categories];
@@ -194,12 +194,12 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     }}
                                 />
                             </div>
-                            <div className="col-span-1 text-slate-400 font-bold text-[10px] uppercase">Years</div>
+                            <div className="col-span-1 text-slate-600 font-bold text-[10px] uppercase">Years</div>
                             <div className="col-span-5 relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-xs">₹</span>
                                 <input 
                                     type="number" placeholder="Price"
-                                    className="w-full bg-slate-50 border border-slate-100 pl-7 pr-4 py-3 rounded-xl text-xs font-bold"
+                                    className="w-full bg-white border border-slate-200 pl-7 pr-4 py-3 rounded-xl text-xs font-bold text-slate-900"
                                     value={ap.price}
                                     onChange={e => {
                                         const newCats = [...config.categories];
@@ -233,13 +233,13 @@ const CustomSelect = ({ label, value, onChange, options }) => {
     const [isOpen, setIsOpen] = React.useState(false);
     return (
         <div className="space-y-2 relative">
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">{label}</label>
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}</label>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
+                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
             >
                 <span>{value || "Select Option"}</span>
-                <ChevronDown size={18} className={`text-slate-400 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={18} className={`text-slate-600 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
             </div>
             {isOpen && (
                 <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden    ">
@@ -465,7 +465,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Event Identity</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Main details and core presentation</p>
+                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Main details and core presentation</p>
                         </div>
                     </div>
 
@@ -575,7 +575,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     <input 
                                         type="text"
                                         placeholder="Search venue or address manually..."
-                                        className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all"
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-400"
                                         onKeyDown={async (e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();

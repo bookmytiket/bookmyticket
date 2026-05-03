@@ -119,3 +119,55 @@ export const getProviderRequests = async (providerId: string) => {
   if (error) throw error;
   return data;
 };
+
+// --- Wallet & Payouts ---
+
+export const getWallet = async (organiserId: string) => {
+  const { data, error } = await supabase
+    .from('wallets')
+    .select('*')
+    .eq('organiser_id', organiserId)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const getWalletTransactions = async (organiserId: string) => {
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .select('*')
+    .eq('organiser_id', organiserId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+export const getWithdrawRequests = async (organiserId: string) => {
+  const { data, error } = await supabase
+    .from('withdraw_requests')
+    .select('*')
+    .eq('organiser_id', organiserId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+export const createWithdrawRequest = async (request: any) => {
+  const { data, error } = await supabase
+    .from('withdraw_requests')
+    .insert([request])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// --- System Config ---
+
+export const getSystemConfig = async () => {
+  const { data, error } = await supabase
+    .from('system_config')
+    .select('*');
+  if (error) throw error;
+  return data;
+};

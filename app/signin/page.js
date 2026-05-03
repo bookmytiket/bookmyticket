@@ -159,6 +159,8 @@ export default function SignInPage() {
                 return "/admin";
             } else if (role === 'staff') {
                 return "/pwa-scan";
+            } else if (role === 'organiser') {
+                return "/organiser";
             } else {
                 return "/profile";
             }
@@ -169,6 +171,8 @@ export default function SignInPage() {
                 return "/admin";
             } else if (role === 'staff') {
                 return "/pwa-scan";
+            } else if (role === 'organiser') {
+                return "/organiser";
             } else {
                 return "/profile";
             }

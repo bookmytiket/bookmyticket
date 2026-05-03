@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Text } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -24,6 +25,9 @@ export default function ServiceBookScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showRazorpay, setShowRazorpay] = useState(false);
+  const [razorpayHtml, setRazorpayHtml] = useState('');
+  const [currentBookingId, setCurrentBookingId] = useState<string | null>(null);
   
   // Turf Specific State
   const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-GB'));
@@ -60,6 +64,22 @@ export default function ServiceBookScreen() {
     fetchData();
   }, [id]);
 
+  const handleRazorpayMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.event === 'success') {
+        setShowRazorpay(false);
+        // Update booking status in Supabase if we had a booking record
+        setSuccess(true);
+      } else if (data.event === 'dismissed') {
+        setShowRazorpay(false);
+        Alert.alert('Payment Cancelled', 'Your booking was not completed.');
+      }
+    } catch (e) {
+      console.log('Error parsing Razorpay message', e);
+    }
+  };
+
   const handleConfirm = async () => {
     if (!user) {
       Alert.alert('Sign In Required', 'Please sign in to complete your booking.', [
@@ -74,12 +94,65 @@ export default function ServiceBookScreen() {
       return;
     }
     
-    setSubmitting(true);
-    // Simulate booking process
-    setTimeout(() => {
+    const totalAmount = Number(item?.starting_price || 0) * (item?.isTurf ? duration : 1);
+    
+    if (totalAmount > 0) {
+      setSubmitting(true);
+      // Generate Razorpay Checkout HTML
+      const html = `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+            .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f84464; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <div class="loader"></div>
+          <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+          <script>
+            var options = {
+              key: "${process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SkQ5MQO9dB5LuI'}",
+              amount: "${Math.round(totalAmount * 100)}",
+              currency: "INR",
+              name: "BookMyTicket",
+              description: "Booking for ${item.business_name}",
+              prefill: {
+                name: "${user?.user_metadata?.full_name || ''}",
+                email: "${user?.email || ''}",
+              },
+              theme: { color: "#f84464" },
+              handler: function(response) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', paymentId: response.razorpay_payment_id }));
+              }
+            };
+            options.modal = {
+              ondismiss: function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'dismissed' }));
+              }
+            };
+            setTimeout(() => {
+              var rzp = new Razorpay(options);
+              rzp.open();
+            }, 500);
+          </script>
+        </body>
+      </html>
+      `;
+      
+      setRazorpayHtml(html);
+      setShowRazorpay(true);
       setSubmitting(false);
-      setSuccess(true);
-    }, 1500);
+    } else {
+      setSubmitting(true);
+      // Simulate booking process for free items
+      setTimeout(() => {
+        setSubmitting(false);
+        setSuccess(true);
+      }, 1500);
+    }
   };
 
   if (loading) {
@@ -121,6 +194,27 @@ export default function ServiceBookScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Razorpay Webview Modal */}
+      <Modal visible={showRazorpay} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 40 }}>
+          <Pressable onPress={() => setShowRazorpay(false)} style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Text style={{ fontWeight: '800', color: colors.text }}>Cancel Payment</Text>
+          </Pressable>
+          {razorpayHtml ? (
+            <WebView
+              source={{ html: razorpayHtml }}
+              onMessage={handleRazorpayMessage}
+              style={{ flex: 1 }}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              originWhitelist={['*']}
+              scalesPageToFit={true}
+              startInLoadingState={true}
+            />
+          ) : null}
+        </View>
+      </Modal>
+
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.text} />

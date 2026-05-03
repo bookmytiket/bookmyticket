@@ -16,6 +16,7 @@ import {
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from '@/components/AuthContext';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
+import EventMap from './EventMap';
 import { Outfit } from 'next/font/google';
 
 const outfit = Outfit({ 
@@ -590,6 +591,18 @@ export default function DynamicEventClient({ event }) {
                                 })}
                             </div>
                         </div>
+
+                        {/* Event Map Section */}
+                        {config.location?.coordinates?.lat && config.location?.coordinates?.lng && (
+                            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6">
+                                <EventMap 
+                                    lat={config.location.coordinates.lat}
+                                    lng={config.location.coordinates.lng}
+                                    venueName={config.location.venueName}
+                                    address={config.location.address}
+                                />
+                            </div>
+                        )}
                     </div>
 
                 </div>

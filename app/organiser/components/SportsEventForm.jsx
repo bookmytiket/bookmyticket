@@ -42,7 +42,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
     const renderInput = (label, field, type = "text", placeholder = "") => (
         <div className="space-y-2">
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">{label}</label>
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}</label>
             {type === "date" ? (
                 <CalendarPicker 
                     value={postEvent[field] || ""} 
@@ -60,7 +60,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                     type={type}
                     value={postEvent[field] || ""}
                     onChange={(e) => updateField(field, e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner transition-all placeholder:text-slate-400"
                     placeholder={placeholder}
                 />
             )}
@@ -78,7 +78,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
         return (
             <div className="space-y-3">
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">{label}</label>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}</label>
                 <div className="flex flex-wrap gap-2">
                     {options.map(opt => (
                         <button
@@ -87,7 +87,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${
                                 selected.includes(opt) 
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                                : 'bg-white border-slate-100 text-slate-400 hover:border-blue-200'
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-200'
                             }`}
                         >
                             {opt}
@@ -172,7 +172,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-slate-900 uppercase">Sport Configuration</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tailor the fields for your {postEvent.sportType}</p>
+                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Tailor the fields for your {postEvent.sportType}</p>
                         </div>
                     </div>
 
@@ -210,7 +210,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             </div>
 
                             <div className="space-y-6 pt-4 border-t border-slate-50">
-                                <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Amenities & Participant Benefits</h4>
+                                <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.2em]">Amenities & Participant Benefits</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                     {[
                                         { id: 'Ambulance', label: 'Ambulance', icon: Activity },

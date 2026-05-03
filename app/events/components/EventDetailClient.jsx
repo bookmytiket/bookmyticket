@@ -11,6 +11,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import EventMap from './EventMap';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -107,6 +108,7 @@ export default function EventDetailClient({ id }) {
             parking: rawEvent.parking || 'Paid Parking Available at the Venue.',
             tags: Array.isArray(rawEvent.tags) && rawEvent.tags.length > 0 ? rawEvent.tags : [rawEvent.category || 'Event'].filter(Boolean),
             dateSlots: rawEvent.dateSlots || [],
+            dynamic_config: typeof rawEvent.dynamic_config === 'string' ? JSON.parse(rawEvent.dynamic_config) : (rawEvent.dynamic_config || {})
         };
     }, [rawEvent]);
 
@@ -214,6 +216,21 @@ export default function EventDetailClient({ id }) {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Event Map */}
+                            {event.dynamic_config?.location?.coordinates?.lat && (
+                                <div className="mt-12 pt-12 border-t border-slate-100">
+                                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
+                                        <MapPin className="text-pink-500" size={28} /> Live Location
+                                    </h2>
+                                    <EventMap 
+                                        lat={event.dynamic_config.location.coordinates.lat}
+                                        lng={event.dynamic_config.location.coordinates.lng}
+                                        venueName={event.dynamic_config.location.venueName || event.venue}
+                                        address={event.dynamic_config.location.address || event.location}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 

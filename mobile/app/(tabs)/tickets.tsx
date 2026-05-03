@@ -128,7 +128,7 @@ function TicketCard({ booking, colors, index, onPress }: any) {
     return val;
   };
   const dynamicConfig = safeParse(event.dynamic_config) || {};
-  const eventVenue = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue;
+  const eventVenue = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || event.city;
   const eventDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
 
   return (

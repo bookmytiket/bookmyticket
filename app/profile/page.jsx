@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video, X } from "lucide-react";
+import { Ticket, Lock, LogOut, ArrowLeft, Sparkles, Video, X, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import Link from "next/link";
 import { isVirtualEvent } from "@/app/utils/eventUtils";
@@ -391,6 +391,14 @@ export default function ProfilePage() {
                     </div>
 
                     <nav style={{ padding: "12px" }}>
+                        {user.role === 'organiser' && (
+                            <button
+                                onClick={() => router.push("/organiser")}
+                                style={{ width: "100%", padding: "12px 16px", background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: "#fff", fontWeight: "700", fontSize: "14px", marginBottom: "12px", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(248, 68, 100, 0.2)" }}
+                            >
+                                <LayoutDashboard size={18} /> Organiser Panel
+                            </button>
+                        )}
                         <button
                             onClick={() => setActiveTab("my_booking")}
                             style={{ width: "100%", padding: "12px 16px", background: activeTab === "my_booking" ? t.activeItem : "transparent", border: "none", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: activeTab === "my_booking" ? t.activeText : t.textSub, fontWeight: "600", fontSize: "14px", marginBottom: "4px", transition: "all 0.2s" }}

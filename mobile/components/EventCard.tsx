@@ -26,7 +26,7 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   };
 
   const dynamicConfig = safeParse(event.dynamic_config) || {};
-  const eventVenue = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || "TBA";
+  const eventVenue = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || event.city || "TBA";
   const rawDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
   const rawTime = event.time || event.start_time || dynamicConfig.time || dynamicConfig.basicInfo?.time;
   const eventDate = [rawDate, rawTime].filter(Boolean).join(" ") || "TBA";

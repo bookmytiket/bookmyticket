@@ -6,7 +6,8 @@ import {
   View as RNView,
   Alert,
   TextInput,
-  Modal
+  Modal,
+  Linking
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/Themed';
@@ -57,6 +58,7 @@ export default function BookEventScreen() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [showCouponsModal, setShowCouponsModal] = useState(false);
+  const [selectionField, setSelectionField] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -106,12 +108,23 @@ export default function BookEventScreen() {
     // Pre-fill form with defaults
     const form = parsedConfig.registrationForm || [];
     const initialResponses: any = {};
+    let initialName = user?.user_metadata?.full_name || '';
+    let initialEmail = user?.email || '';
+
     form.forEach((f: any) => {
-      if (f.isDefault) {
-        if (f.label === 'Full Name') initialResponses[f.id] = user?.user_metadata?.full_name || '';
-        if (f.label === 'Email Address') initialResponses[f.id] = user?.email || '';
+      const label = f.label.toLowerCase();
+      if (f.isDefault || label.includes('name') || label.includes('email')) {
+        if (label.includes('name')) {
+          initialResponses[f.id] = initialName;
+        }
+        if (label.includes('email')) {
+          initialResponses[f.id] = initialEmail;
+        }
       }
     });
+
+    setName(initialName);
+    setEmail(initialEmail);
     setFormResponses(initialResponses);
   };
 
@@ -164,6 +177,18 @@ export default function BookEventScreen() {
     : (dynamicConfig.tickets || dynamicConfig.categories || []);
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
   
+  const getVenueDetails = () => {
+    const venueName = event?.venue || event?.location || dynamicConfig?.venue?.name || dynamicConfig?.basicInfo?.venue || 'TBA';
+    const venueAddress = event?.address || dynamicConfig?.venue?.address || dynamicConfig?.location?.address || '';
+    const city = event?.city || dynamicConfig?.venue?.city || dynamicConfig?.basicInfo?.city || '';
+    
+    return {
+      name: venueName,
+      address: [venueAddress, city].filter(Boolean).join(', ')
+    };
+  };
+  const venue = getVenueDetails();
+
   const getBasePrice = () => {
     if (selectedAgeGroup) return Number(selectedAgeGroup.price || 0);
     if (selectedTier) {
@@ -177,9 +202,9 @@ export default function BookEventScreen() {
   };
 
   const basePrice = getBasePrice();
-  const { subtotal, convenienceFee, gst, total, discountAmount } = (() => {
+  const { subtotal, convenienceFee, gst, total, paymentTotal, discountAmount } = (() => {
     const base = basePrice * quantity;
-    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0, discountAmount: 0 };
+    if (event?.is_free) return { subtotal: 0, convenienceFee: 0, gst: 0, total: 0, paymentTotal: 0, discountAmount: 0 };
     
     // Calculate discount
     let discount = 0;
@@ -199,6 +224,7 @@ export default function BookEventScreen() {
       convenienceFee: breakdown.convenienceFee,
       gst: breakdown.gst,
       total: breakdown.total,
+      paymentTotal: breakdown.paymentTotal,
       discountAmount: discount
     };
   })();
@@ -242,26 +268,63 @@ export default function BookEventScreen() {
   };
 
   const handleBook = async () => {
-    if (!name.trim() || !email.trim()) {
+    let finalName = name.trim();
+    let finalEmail = email.trim();
+    let finalPhone = phone.trim();
+
+    // Fallback: Check dynamic form responses if state is empty
+    if (!finalName || !finalEmail) {
+      Object.entries(formResponses).forEach(([fieldId, value]) => {
+        const field = (dynamicConfig.registrationForm || []).find((f: any) => String(f.id) === fieldId);
+        if (field && typeof value === 'string') {
+          const label = field.label.toLowerCase();
+          if (!finalName && (label.includes('name') || label.includes('full name'))) finalName = value.trim();
+          if (!finalEmail && (label.includes('email') || label.includes('email id'))) finalEmail = value.trim();
+          if (!finalPhone && (label.includes('phone') || label.includes('mobile') || label.includes('contact'))) finalPhone = value.trim();
+        }
+      });
+    }
+
+    if (!finalName || !finalEmail) {
       Alert.alert('Missing Info', 'Please fill in your name and email.');
+      return;
+    }
+
+    // Check other required dynamic fields
+    const missingFields = (dynamicConfig.registrationForm || [])
+      .filter((f: any) => f.required && !formResponses[f.id])
+      .map((f: any) => f.label);
+    
+    if (missingFields.length > 0) {
+      Alert.alert('Required Info', `Please fill in: ${missingFields.join(', ')}`);
       return;
     }
 
     setSubmitting(true);
     try {
+      const breakdown = getFeeBreakdown(subtotal, resolveFeeSettings({}, event?.organiser || {}, event?.fee_config || {}), discountAmount);
+
       const bookingPayload = {
+        event_id: String(event.id),
         user_id: user?.id,
-        event_id: event.id,
-        ticket_type: selectedTier?.name || selectedTier?.type || 'General',
-        quantity,
-        amount: total,
-        payment_status: event.is_free ? 'paid' : 'pending',
-        booking_status: 'confirmed',
-        attendee_name: name.trim(),
-        attendee_email: email.trim(),
-        attendee_phone: phone.trim() || null,
-        form_responses: formResponses,
-        age_group: selectedAgeGroup?.label || null,
+        ticket_count: quantity,
+        base_amount: subtotal,
+        platform_charge: convenienceFee,
+        gst_amount: gst,
+        discount_amount: discountAmount,
+        total_price: total,
+        status: (event.is_free || total === 0) ? 'Confirmed' : 'Pending',
+        scanned: false,
+        event_name: event.name || event.title || dynamicConfig?.title,
+        location: venue.name || event.location,
+        customer_details: {
+          name: finalName,
+          email: finalEmail,
+          phone: finalPhone || null,
+          age_group: selectedAgeGroup?.label || null,
+          ticket_type: selectedTier?.name || selectedTier?.type || 'General',
+          ...formResponses
+        },
       };
 
       const { data, error } = await supabase
@@ -278,8 +341,27 @@ export default function BookEventScreen() {
         // Paid Event - Initialize Razorpay via WebView
         setCurrentBookingId(data.id);
         
-        // Generate Razorpay Checkout HTML
-        const html = `
+        try {
+          const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.2:3000';
+          const orderRes = await fetch(`${apiUrl}/api/razorpay/create-order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.id,
+              amount: total,
+              type: "booking"
+            })
+          });
+          
+          if (!orderRes.ok) {
+            const errData = await orderRes.json();
+            throw new Error(errData.error || "Failed to create payment order");
+          }
+          
+          const orderData = await orderRes.json();
+
+          // Generate Razorpay Checkout HTML
+          const html = `
         <html>
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -295,8 +377,9 @@ export default function BookEventScreen() {
             <script>
               var options = {
                 key: "${process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SkQ5MQO9dB5LuI'}",
-                amount: "${Math.round(total * 100)}",
-                currency: "INR",
+                amount: "${orderData.amount}",
+                currency: "${orderData.currency}",
+                order_id: "${orderData.id}",
                 name: "BookMyTicket",
                 description: "Ticket for ${event.name || event.title}",
                 prefill: {
@@ -306,7 +389,12 @@ export default function BookEventScreen() {
                 },
                 theme: { color: "#f84464" },
                 handler: function(response) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', paymentId: response.razorpay_payment_id }));
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                    event: 'success', 
+                    paymentId: response.razorpay_payment_id,
+                    orderId: response.razorpay_order_id,
+                    signature: response.razorpay_signature
+                  }));
                 }
               };
               options.modal = {
@@ -325,6 +413,11 @@ export default function BookEventScreen() {
         
         setRazorpayHtml(html);
         setShowRazorpay(true);
+        } catch (fetchErr: any) {
+          // Cleanup pending booking if order creation fails
+          await supabase.from('bookings').delete().eq('id', data.id);
+          throw new Error('Could not connect to payment gateway: ' + fetchErr.message);
+        }
       }
     } catch (err: any) {
       Alert.alert('Booking Failed', err.message || 'Something went wrong. Please try again.');
@@ -338,13 +431,43 @@ export default function BookEventScreen() {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.event === 'success') {
         setShowRazorpay(false);
-        // Update booking status in Supabase
-        if (currentBookingId) {
-          await supabase.from('bookings').update({ payment_status: 'paid', payment_id: data.paymentId }).eq('id', currentBookingId);
+        setSubmitting(true);
+        
+        try {
+          const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.2:3000';
+          const verifyRes = await fetch(`${apiUrl}/api/razorpay/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: data.orderId,
+              razorpay_payment_id: data.paymentId,
+              razorpay_signature: data.signature,
+              id: currentBookingId,
+              type: "booking"
+            })
+          });
+          
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            setSuccess(true);
+          } else {
+            // Revert pending booking on verification failure
+            if (currentBookingId) await supabase.from('bookings').delete().eq('id', currentBookingId);
+            Alert.alert("Verification Failed", verifyData.error || "Payment verification failed.");
+          }
+        } catch (err) {
+          // Revert pending booking on network error
+          if (currentBookingId) await supabase.from('bookings').delete().eq('id', currentBookingId);
+          Alert.alert("Verification Error", "Could not verify payment with server.");
+        } finally {
+          setSubmitting(false);
         }
-        setSuccess(true);
       } else if (data.event === 'dismissed') {
         setShowRazorpay(false);
+        // Delete the pending booking so it doesn't leave fake bookings
+        if (currentBookingId) {
+          await supabase.from('bookings').delete().eq('id', currentBookingId);
+        }
         Alert.alert('Payment Cancelled', 'You can retry the payment from your tickets page.');
       }
     } catch (e) {
@@ -414,6 +537,10 @@ export default function BookEventScreen() {
               onMessage={handleRazorpayMessage}
               style={{ flex: 1 }}
               javaScriptEnabled={true}
+              domStorageEnabled={true}
+              originWhitelist={['*']}
+              scalesPageToFit={true}
+              startInLoadingState={true}
             />
           ) : null}
         </RNView>
@@ -444,16 +571,107 @@ export default function BookEventScreen() {
               <Calendar size={12} color={colors.tint} />
               <Text style={[styles.metaText, { color: colors.muted }]}>{event.start_date || event.date || dynamicConfig?.date || dynamicConfig?.basicInfo?.date || dynamicConfig?.basicInfo?.expiryDate || 'TBA'}</Text>
             </RNView>
-            <RNView style={styles.metaRow}>
-              <MapPin size={12} color={colors.error} />
-              <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                {event.venue || event.location || event.city || dynamicConfig?.venue?.name || dynamicConfig?.basicInfo?.venue || 'TBA'}
-              </Text>
+            <RNView style={[styles.metaRow, { alignItems: 'flex-start' }]}>
+              <MapPin size={12} color={colors.error} style={{ marginTop: 2 }} />
+              <RNView style={{ flex: 1 }}>
+                <Text style={[styles.metaText, { color: colors.text, fontWeight: '700' }]} numberOfLines={1}>
+                  {venue.name}
+                </Text>
+                {venue.address ? (
+                  <Text style={[styles.metaText, { color: colors.muted, fontSize: 10, marginTop: 1 }]} numberOfLines={1}>
+                    {venue.address}
+                  </Text>
+                ) : null}
+              </RNView>
             </RNView>
           </RNView>
         </RNView>
 
-        {/* Ticket tiers */}
+        {/* Event Map */}
+        {dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
+          <RNView style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden', height: 220, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
+            <WebView 
+              scrollEnabled={false}
+              geolocationEnabled={true}
+              source={{ html: `
+                <html>
+                  <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                    <style>
+                      body { margin: 0; padding: 0; font-family: -apple-system, system-ui; }
+                      #map { height: 100vh; width: 100vw; }
+                      .locate-btn {
+                        position: absolute; top: 12px; left: 12px; z-index: 1000;
+                        background: white; border: none; border-radius: 12px;
+                        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                      }
+                      .user-marker {
+                        width: 14px; height: 14px; background: #3b82f6;
+                        border: 3px solid white; border-radius: 50%;
+                        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+                      }
+                      .leaflet-container { background: #000 !important; }
+                    </style>
+                  </head>
+                  <body>
+                    <div id="map"></div>
+                    <button class="locate-btn" onclick="locateMe()">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 1-1.5 5h3Z"/><path d="m22 12-5 1.5v-3Z"/><path d="M12 23 13.5 18h-3Z"/><path d="M2 12 7 10.5v3Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                    <script>
+                      var map = L.map('map', { zoomControl: false }).setView([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], 17);
+                      
+                      // Use Google Satellite for consistency and reliability
+                      L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                        maxZoom: 20,
+                        subdomains:['mt0','mt1','mt2','mt3']
+                      }).addTo(map);
+
+                      var markerIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<div style="background-color:#f84464;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(248,68,100,0.8);"></div>',
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                      });
+
+                      L.marker([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], { icon: markerIcon }).addTo(map);
+                      
+                      function locateMe() {
+                        if (!navigator.geolocation) return;
+                        navigator.geolocation.getCurrentPosition(function(pos) {
+                          var lat = pos.coords.latitude;
+                          var lng = pos.coords.longitude;
+                          
+                          var userIcon = L.divIcon({
+                            className: 'user-marker-container',
+                            html: '<div class="user-marker"></div>',
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                          });
+                          
+                          L.marker([lat, lng], { icon: userIcon }).addTo(map);
+                          
+                          var bounds = L.latLngBounds([lat, lng], [${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}]);
+                          map.fitBounds(bounds, { padding: [50, 50] });
+                        });
+                      }
+                    </script>
+                  </body>
+                </html>
+              `}}
+              style={{ flex: 1 }}
+            />
+            <Pressable 
+              onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dynamicConfig.location.coordinates.lat},${dynamicConfig.location.coordinates.lng}`)}
+              style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: colors.tint, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 }}
+            >
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>GET DIRECTIONS</Text>
+            </Pressable>
+          </RNView>
+        )}
         {ticketTiers.length > 0 && (
           <RNView style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Category</Text>
@@ -582,26 +800,24 @@ export default function BookEventScreen() {
         <RNView style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
           <RNView style={styles.formFields}>
-            {(dynamicConfig.registrationForm || []).map((field: any) => (
+            {(dynamicConfig.registrationForm || [])
+              .filter((field: any, index: number, self: any[]) => {
+                const label = (field.label || '').toLowerCase();
+                // Deduplicate email fields: Skip "Email ID" if "Email Address" exists
+                if (label.includes('email id')) {
+                  const hasEmailAddress = self.some(f => (f.label || '').toLowerCase().includes('email address'));
+                  if (hasEmailAddress) return false;
+                }
+                return true;
+              })
+              .map((field: any) => (
               <RNView key={field.id} style={styles.fieldWrapper}>
                 <Text style={[styles.label, { color: colors.muted }]}>
                   {field.label} {field.required ? '*' : ''}
                 </Text>
                 {field.type === 'select' ? (
                   <Pressable
-                    onPress={() => {
-                      Alert.alert(
-                        `Select ${field.label}`,
-                        '',
-                        [
-                          ...(field.options || []).map((opt: string) => ({
-                            text: opt,
-                            onPress: () => setFormResponses({ ...formResponses, [field.id]: opt })
-                          })),
-                          { text: 'Cancel', style: 'cancel' }
-                        ]
-                      );
-                    }}
+                    onPress={() => setSelectionField(field)}
                     style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: 'center' }]}
                   >
                     <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -757,7 +973,7 @@ export default function BookEventScreen() {
               {selectedTier?.name || 'General'} {selectedAgeGroup ? `(${selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`})` : ''} × {quantity}
             </Text>
             <Text style={[styles.breakdownValue, { color: colors.text }]}>
-              {subtotal === 0 ? 'FREE' : `₹${subtotal.toLocaleString('en-IN')}`}
+              {subtotal === 0 ? 'FREE' : `₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
           </RNView>
           
@@ -767,28 +983,27 @@ export default function BookEventScreen() {
                 Coupon Discount
               </Text>
               <Text style={[styles.breakdownValue, { color: '#22c55e' }]}>
-                - ₹{discountAmount.toLocaleString('en-IN')}
+                - ₹{discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </RNView>
           )}
 
-          {convenienceFee > 0 && (
+          <RNView style={styles.breakdownRow}>
+            <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
+              Subtotal
+            </Text>
+            <Text style={[styles.breakdownValue, { color: colors.text }]}>
+              ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </RNView>
+
+          {(convenienceFee + gst) > 0 && (
             <RNView style={styles.breakdownRow}>
               <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-                Convenience fee
+                Fees + GST
               </Text>
               <Text style={[styles.breakdownValue, { color: colors.text }]}>
-                ₹{convenienceFee.toLocaleString('en-IN')}
-              </Text>
-            </RNView>
-          )}
-          {gst > 0 && (
-            <RNView style={styles.breakdownRow}>
-              <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-                GST
-              </Text>
-              <Text style={[styles.breakdownValue, { color: colors.text }]}>
-                ₹{gst.toLocaleString('en-IN')}
+                ₹{(convenienceFee + gst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </RNView>
           )}
@@ -796,7 +1011,7 @@ export default function BookEventScreen() {
           <RNView style={styles.breakdownRow}>
             <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
             <Text style={[styles.totalValue, { color: colors.tint }]}>
-              {total === 0 ? 'FREE' : `₹${total.toLocaleString('en-IN')}`}
+              {total === 0 ? 'FREE' : `₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Text>
           </RNView>
         </RNView>
@@ -821,11 +1036,95 @@ export default function BookEventScreen() {
                 ? 'Processing...'
                 : event.is_free
                 ? 'Confirm Free Ticket'
-                : `Pay ₹${total.toLocaleString('en-IN')}`}
+                : `Pay ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
             </Text>
           </LinearGradient>
         </Pressable>
       </RNView>
+      {/* Custom Selection Modal */}
+      <Modal
+        visible={!!selectionField}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectionField(null)}
+      >
+        <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setSelectionField(null)} />
+          <MotiView
+            from={{ translateY: 300 }}
+            animate={{ translateY: 0 }}
+            style={{ 
+              backgroundColor: colors.background, 
+              borderTopLeftRadius: 32, 
+              borderTopRightRadius: 32, 
+              padding: 24,
+              paddingBottom: 40,
+              maxHeight: '80%'
+            }}
+          >
+            <RNView style={{ width: 40, height: 4, backgroundColor: colors.border, alignSelf: 'center', borderRadius: 2, marginBottom: 20 }} />
+            <Text style={{ fontSize: 20, fontWeight: '900', color: colors.text, marginBottom: 8, textAlign: 'center' }}>
+              Select {selectionField?.label}
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 24, textAlign: 'center' }}>
+              Choose one option from the list below
+            </Text>
+            
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {(selectionField?.options || []).map((opt: string) => (
+                <Pressable
+                  key={opt}
+                  onPress={() => {
+                    setFormResponses({ ...formResponses, [selectionField.id]: opt });
+                    setSelectionField(null);
+                  }}
+                  style={({ pressed }) => [
+                    {
+                      paddingVertical: 18,
+                      paddingHorizontal: 20,
+                      borderRadius: 16,
+                      backgroundColor: formResponses[selectionField.id] === opt ? `${colors.tint}10` : colors.card,
+                      marginBottom: 10,
+                      borderWidth: 1,
+                      borderColor: formResponses[selectionField.id] === opt ? colors.tint : colors.border,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      opacity: pressed ? 0.7 : 1
+                    }
+                  ]}
+                >
+                  <Text style={{ 
+                    fontSize: 16, 
+                    fontWeight: '700', 
+                    color: formResponses[selectionField.id] === opt ? colors.tint : colors.text 
+                  }}>
+                    {opt}
+                  </Text>
+                  {formResponses[selectionField.id] === opt && (
+                    <CheckCircle size={20} color={colors.tint} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+            
+            <Pressable 
+              onPress={() => setSelectionField(null)}
+              style={{ 
+                marginTop: 20, 
+                paddingVertical: 16, 
+                alignItems: 'center',
+                backgroundColor: colors.card,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border
+              }}
+            >
+              <Text style={{ fontWeight: '800', color: colors.text }}>Cancel</Text>
+            </Pressable>
+          </MotiView>
+        </RNView>
+      </Modal>
     </RNView>
   );
 }

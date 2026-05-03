@@ -104,8 +104,8 @@ export function AuthProvider({ children }) {
                     catch (e) { return { data: null, error: e }; }
                 })(),
                 (async () => {
-                    try { return await supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(); }
-                    catch (e) { return { data: null, error: e }; }
+                    // Legacy table check removed, as all organiser data is now in 'vendors'
+                    return { data: null, error: null };
                 })(),
                 (async () => {
                     try { return await supabase.from('vendors').select('*').eq('id', supabaseUser.id).maybeSingle(); }
@@ -165,32 +165,32 @@ export function AuthProvider({ children }) {
                     role = 'branding_partner';
                     specializedData = brandRecord;
                 }
-            } else if (organiserRecord) {
-                // Protect admin/super_admin role if already set via profile
-                if (role !== 'admin' && role !== 'super_admin') {
+            } else if (role === 'organiser' || role === 'staff' || organiserRecord) {
+                // Promoted role logic: If they have a record in the vendors table OR are already an organiser
+                if (role !== 'admin' && role !== 'super_admin' && role !== 'staff') {
                     role = 'organiser';
                 }
-                specializedData = organiserRecord;
+                specializedData = { ...(vendorRecord || {}), ...(organiserRecord || {}) };
             } else if ((vendorRecord || providerRecord) && (role === 'public' || role === 'vendor')) {
-                if (profile?.role === 'vendor') {
+                if (profile?.role === 'vendor' || role === 'vendor') {
                     role = 'vendor';
                     let finalProviderData = providerRecord;
                     if (!providerRecord && vendorRecord) {
-                    const { data: newProvider, error: insertError } = await supabase
-                        .from('service_providers')
-                        .insert({
-                            id: supabaseUser.id,
-                            organiser_id: supabaseUser.id,
-                            business_name: vendorRecord.business_name || profile?.full_name || supabaseUser.email?.split('@')[0],
-                            category: vendorRecord.category || 'Professional Service',
-                            status: 'active',
-                            advanced_settings: { blocked_dates: [] }
-                        })
-                        .select()
-                        .single();
-                    
-                    if (!insertError) finalProviderData = newProvider;
-                }
+                        const { data: newProvider, error: insertError } = await supabase
+                            .from('service_providers')
+                            .insert({
+                                id: supabaseUser.id,
+                                organiser_id: supabaseUser.id,
+                                business_name: vendorRecord.business_name || profile?.full_name || supabaseUser.email?.split('@')[0],
+                                category: vendorRecord.category || 'Professional Service',
+                                status: 'active',
+                                advanced_settings: { blocked_dates: [] }
+                            })
+                            .select()
+                            .single();
+                        
+                        if (!insertError) finalProviderData = newProvider;
+                    }
                     specializedData = { ...(vendorRecord || {}), ...(finalProviderData || {}) };
                 }
             } else if (role === 'staff') {

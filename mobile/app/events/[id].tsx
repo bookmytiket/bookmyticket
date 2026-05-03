@@ -8,7 +8,9 @@ import {
   Linking,
   Share,
   Alert,
+  TextInput,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Text } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -158,7 +160,10 @@ export default function EventDetailScreen() {
   
   const isFree = event.is_free || (minPrice === 0 && event.type !== 'Dynamic') || event.type === 'Free';
   const priceLabel = isFree ? 'FREE' : `₹${minPrice.toLocaleString('en-IN')}`;
-  const location = event.venue || event.location || event.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'TBA';
+  const venueName = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'TBA';
+  const venueAddress = event.address || dynamicConfig.location?.address || dynamicConfig.venue?.address || '';
+  const city = event.city || dynamicConfig.location?.city || dynamicConfig.venue?.city || dynamicConfig.basicInfo?.city || '';
+  
   const date = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
   const time = event.start_time || event.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
 
@@ -253,8 +258,75 @@ export default function EventDetailScreen() {
           <RNView style={[styles.metaCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <MetaRow icon={<Calendar size={16} color={colors.tint} />} value={date} label="Date" colors={colors} />
             {time ? <MetaRow icon={<Clock size={16} color={colors.secondary} />} value={time} label="Time" colors={colors} /> : null}
-            <MetaRow icon={<MapPin size={16} color={colors.error} />} value={location} label="Venue" colors={colors} isLast />
+            <MetaRow 
+              icon={<MapPin size={16} color={colors.error} />} 
+              value={venueName} 
+              subValue={venueAddress ? `${venueAddress}${city ? ', ' + city : ''}` : ''}
+              label="Venue" 
+              colors={colors} 
+              isLast 
+            />
           </RNView>
+
+          {/* Event Map Section */}
+          {dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
+            <RNView style={styles.mapSection}>
+              <RNView style={[styles.mapContainer, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                <WebView 
+                  scrollEnabled={false}
+                  source={{ html: `
+                    <html>
+                      <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                        <style>
+                          body { margin: 0; padding: 0; background: #000; }
+                          #map { height: 100vh; width: 100vw; }
+                          .leaflet-control-attribution { display: none !important; }
+                        </style>
+                      </head>
+                      <body>
+                        <div id="map"></div>
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                        <script>
+                          var map = L.map('map', { 
+                            zoomControl: false,
+                            dragging: false,
+                            touchZoom: false,
+                            doubleClickZoom: false,
+                            scrollWheelZoom: false,
+                            boxZoom: false,
+                            keyboard: false
+                          }).setView([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], 17);
+                          
+                          // Use Google Satellite for more reliable mobile rendering
+                          L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                            maxZoom: 20,
+                            subdomains:['mt0','mt1','mt2','mt3']
+                          }).addTo(map);
+                          
+                          var markerIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: '<div style="background-color:#f84464;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(248,68,100,0.8);"></div>',
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                          });
+                          L.marker([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], { icon: markerIcon }).addTo(map);
+                        </script>
+                      </body>
+                    </html>
+                  `}}
+                  style={styles.webView}
+                />
+                <Pressable 
+                  onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dynamicConfig.location.coordinates.lat},${dynamicConfig.location.coordinates.lng}`)}
+                  style={styles.mapDirectionsBtn}
+                >
+                  <Text style={styles.mapDirectionsText}>GET DIRECTIONS</Text>
+                </Pressable>
+              </RNView>
+            </RNView>
+          )}
 
           {/* Countdown Timer */}
           {dynamicConfig.countdown?.enabled && dynamicConfig.countdown?.deadline && (
@@ -457,7 +529,7 @@ function AmenityIcon({ name, color }: { name: string; color: string }) {
   return <IconComp size={iconSize} color={color} />;
 }
 
-function MetaRow({ icon, value, label, colors, isLast }: any) {
+function MetaRow({ icon, value, subValue, label, colors, isLast }: any) {
   return (
     <RNView
       style={[
@@ -465,10 +537,13 @@ function MetaRow({ icon, value, label, colors, isLast }: any) {
         !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border },
       ]}
     >
-      {icon}
+      <RNView style={{ marginTop: 2 }}>{icon}</RNView>
       <RNView style={{ flex: 1 }}>
         <Text style={[styles.metaLabel, { color: colors.muted }]}>{label}</Text>
         <Text style={[styles.metaValue, { color: colors.text }]}>{value}</Text>
+        {subValue ? (
+          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 1 }}>{subValue}</Text>
+        ) : null}
       </RNView>
     </RNView>
   );
@@ -573,4 +648,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   bookBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  mapSection: { marginBottom: 24 },
+  mapContainer: { height: 220, borderRadius: 24, overflow: 'hidden', borderWidth: 1, position: 'relative' },
+  webView: { flex: 1 },
+  mapDirectionsBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#f84464', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
+  mapDirectionsText: { color: '#fff', fontSize: 10, fontWeight: '900' },
 });

@@ -744,7 +744,7 @@ export default function HomeScreen() {
 
 
                 const dynamicConfig = safeParse(item.dynamic_config) || {};
-                const eventVenue = item.venue || item.location || item.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'Venue TBA';
+                const eventVenue = item.venue || item.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || item.city || 'Venue TBA';
                 const displayDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'To be announced';
                 const eventTime = item.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '18:00';
 
@@ -895,7 +895,7 @@ export default function HomeScreen() {
               renderItem={({ item }) => {
 
                 const dynamicConfig = safeParse(item.dynamic_config) || {};
-                const eventVenue = item.venue || item.location || item.city || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || 'Venue TBA';
+                const eventVenue = item.venue || item.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || item.city || 'Venue TBA';
                 const eventDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
                 const eventTime = item.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
 

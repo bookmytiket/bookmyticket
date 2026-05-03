@@ -795,8 +795,8 @@ const PayoutRequestsTable = ({ t, theme }) => {
                                 <div style={{ fontWeight: 700, color: t.textMain }}>{req.organisers?.business_name || req.organisers?.name || 'Organiser'}</div>
                                 <div style={{ fontSize: "11px", color: t.textSub }}>{new Date(req.created_at).toLocaleString()}</div>
                             </td>
-                            <td style={{ padding: "12px", fontWeight: 800, color: "#ec4899" }}>₹{req.amount.toLocaleString()}</td>
-                            <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{req.wallets?.balance?.toLocaleString() || '0'}</td>
+                            <td style={{ padding: "12px", fontWeight: 800, color: "#ec4899" }}>₹{Number(req.amount).toFixed(2)}</td>
+                            <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{Number(req.wallets?.balance || 0).toFixed(2)}</td>
                             <td style={{ padding: "12px" }}>
                                 <span className={`badge ${req.status === 'approved' ? 'badge-green' : req.status === 'pending' ? 'badge-yellow' : 'badge-red'}`}>
                                     {req.status.toUpperCase()}
@@ -2575,7 +2575,7 @@ function AdminHomePage() {
 
                             <div className="stats-grid">
                                 {[
-                                    { label: "Total Revenue", value: dashboardStats ? `₹${dashboardStats.totalRevenue.toLocaleString()}` : "…", icon: LayoutDashboard, color: "#3b82f6", trend: "+12.5%" },
+                                    { label: "Total Revenue", value: dashboardStats ? `₹${Number(dashboardStats.totalRevenue).toFixed(2)}` : "…", icon: LayoutDashboard, color: "#3b82f6", trend: "+12.5%" },
                                     { label: "Total Events", value: dashboardStats ? dashboardStats.totalEvents.toString() : "…", icon: Ticket, color: "#8b5cf6", trend: "+5.2%" },
                                     { label: "Tickets Sold", value: dashboardStats ? dashboardStats.totalTickets.toString() : "…", icon: Ticket, color: "#ec4899", trend: "+8.1%" },
                                     { label: "Customers", value: dashboardStats ? dashboardStats.totalUsers.toString() : "…", icon: UserCircle, color: "#f59e0b", trend: "+2.4%" },
@@ -3104,7 +3104,7 @@ function AdminHomePage() {
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{b.eventName}</td>
                                                 <td style={{ padding: "12px", fontSize: "13px" }}>{b.customerEmail}</td>
                                                 <td style={{ padding: "12px" }}>{b.ticketCount}</td>
-                                                <td style={{ padding: "12px", fontWeight: 600 }}>₹{b.totalPrice?.toLocaleString()}</td>
+                                                <td style={{ padding: "12px", fontWeight: 600 }}>₹{Number(b.totalPrice || 0).toFixed(2)}</td>
                                                 <td style={{ padding: "12px" }}><span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "12px", backgroundColor: "#22c55e15", color: "#22c55e" }}>{b.status || "Confirmed"}</span></td>
                                                 <td style={{ padding: "12px" }}><button style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>View</button></td>
                                             </tr>
@@ -3359,15 +3359,15 @@ function AdminHomePage() {
                                     </div>
                                     <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                         <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#22c55e", textTransform: "uppercase" }}>Platform Revenue</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{turfBookings.reduce((sum, b) => sum + (b.platform_revenue || 0), 0).toFixed(2)}</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.platform_revenue) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.platform_revenue) || 0), 0)).toFixed(2)}</p>
                                     </div>
                                     <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                         <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: "#3b82f6", textTransform: "uppercase" }}>GST Collected</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{turfBookings.reduce((sum, b) => sum + (b.gst_amount || 0), 0).toFixed(2)}</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.gst_amount) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.gst_amount) || 0), 0)).toFixed(2)}</p>
                                     </div>
                                     <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                         <p style={{ margin: "0", fontSize: "11px", fontWeight: 800, color: t.textSub, textTransform: "uppercase" }}>Total Gross</p>
-                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0) + turfBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0)).toLocaleString()}</p>
+                                        <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 900 }}>₹{(bookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0) + turfBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0)).toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>

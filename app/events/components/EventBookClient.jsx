@@ -15,6 +15,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from '@/components/AuthContext';
 import CalendarModal from '@/components/booking/CalendarModal';
 import PackageSelector from '@/components/booking/PackageSelector';
+import EventMap from './EventMap';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop';
 const ROW_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -68,6 +69,7 @@ export default function EventBookClient({ id }) {
             time: rawEvent.time || '',
             location: rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue',
             dateSlots: rawEvent.dateSlots || [],
+            dynamic_config: typeof rawEvent.dynamic_config === 'string' ? JSON.parse(rawEvent.dynamic_config) : (rawEvent.dynamic_config || {})
         };
     }, [rawEvent]);
 
@@ -278,6 +280,18 @@ export default function EventBookClient({ id }) {
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Interactive Map in Summary */}
+                                {event.dynamic_config?.location?.coordinates?.lat && (
+                                    <div className="mt-12 pt-8 border-t border-slate-50">
+                                        <EventMap 
+                                            lat={event.dynamic_config.location.coordinates.lat}
+                                            lng={event.dynamic_config.location.coordinates.lng}
+                                            venueName={event.dynamic_config.location.venueName || event.venue}
+                                            address={event.dynamic_config.location.address || event.location}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
 

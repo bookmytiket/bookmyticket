@@ -7,7 +7,7 @@ export function useSupabaseQuery(
   deps: any[] = [],
   options: any = {}
 ) {
-  const { realtime = false, initialData = undefined, enabled = true } = options;
+  const { realtime = true, initialData = undefined, enabled = true } = options;
 
   const [data, setData] = useState<any[] | undefined>(initialData);
   const [loading, setLoading] = useState(enabled && !initialData);

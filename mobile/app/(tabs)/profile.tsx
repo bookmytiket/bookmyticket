@@ -132,6 +132,12 @@ export default function ProfileScreen() {
             colors={colors}
           />
           <ProfileItem
+            icon={<Wallet size={20} color={colors.secondary} />}
+            label="My Wallet"
+            onPress={() => router.push('/wallet')}
+            colors={colors}
+          />
+          <ProfileItem
             icon={<Bell size={20} color={colors.secondary} />}
             label="Notifications"
             onPress={() => {}}

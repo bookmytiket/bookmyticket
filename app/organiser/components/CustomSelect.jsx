@@ -49,12 +49,12 @@ export default function CustomSelect({
             {/* Trigger */}
             <div 
                 onClick={() => !isLoading && setIsOpen(!isOpen)}
-                className={`w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-pink-300 transition-all shadow-inner ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-pink-300 transition-all shadow-inner ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-                <span className={selectedOption ? "text-slate-900" : "text-slate-300 font-medium truncate mr-2"}>
+                <span className={selectedOption ? "text-slate-900" : "text-slate-500 font-bold truncate mr-2"}>
                     {isLoading ? "Loading..." : (selectedOption ? selectedOption.label : placeholder)}
                 </span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-slate-600 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             <AnimatePresence>

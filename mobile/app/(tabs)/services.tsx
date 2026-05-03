@@ -20,11 +20,11 @@ import {
 const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
-  { id: '1', name: 'Mehendi Artist', icon: Scissors, color: '#f844a4', count: '12+ Pros' },
-  { id: '2', name: 'Photographers', icon: Camera, color: '#8b5cf6', count: '8+ Pros' },
-  { id: '3', name: 'Makeup Artist', icon: Palette, color: '#fb923c', count: '15+ Pros' },
+  { id: '1', name: 'Mehendi Artist', icon: Palette, color: '#f84464', count: '12+ Pros' },
+  { id: '2', name: 'Photographer/Studio', icon: Camera, color: '#a855f7', count: '8+ Pros' },
+  { id: '3', name: 'Makeup Artist', icon: Sparkles, color: '#c026d3', count: '15+ Pros' },
   { id: '4', name: 'Turf Booking', icon: Trophy, color: '#22c55e', count: '6+ Venues' },
-  { id: '5', name: 'Swimming Pools', icon: Waves, color: '#0ea5e9', count: '4+ Locations' },
+  { id: '5', name: 'Swimming Pool', icon: Waves, color: '#0ea5e9', count: '4+ Locations' },
 ];
 
 export default function ServicesScreen() {
