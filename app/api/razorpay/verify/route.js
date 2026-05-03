@@ -17,10 +17,26 @@ export async function POST(request) {
             type = "booking"
         } = await request.json();
 
+        let key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+        const { data: gateway } = await supabaseAdmin
+            .from('payment_gateways')
+            .select('config')
+            .eq('name', 'Razorpay')
+            .single();
+
+        if (gateway?.config) {
+            key_secret = gateway.config.keySecret || gateway.config.apiSecret || key_secret;
+        }
+
+        if (!key_secret) {
+            return NextResponse.json({ error: "Razorpay secret not configured" }, { status: 500 });
+        }
+
         // 1. Verify Signature
         const text = razorpay_order_id + "|" + razorpay_payment_id;
         const generated_signature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .createHmac("sha256", key_secret)
             .update(text)
             .digest("hex");
 

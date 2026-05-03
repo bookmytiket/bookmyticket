@@ -164,8 +164,13 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
             if (order.error) throw new Error(order.error);
 
             // 3. Open Razorpay Checkout
+            const rzpConfig = gateways?.find(g => g.name === "Razorpay")?.config;
+            const key_id = rzpConfig?.keyId || rzpConfig?.apiKey || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+            
+            if (!key_id) throw new Error("Razorpay Key ID is not configured. Please add it to Vercel or your Admin panel.");
+
             const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                key: key_id,
                 amount: order.amount,
                 currency: order.currency,
                 name: "BookMyTicket",
@@ -173,27 +178,34 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                 image: "/logo.png",
                 order_id: order.id,
                 handler: async function (response) {
-                    // 4. Verify Payment
-                    const verifyRes = await fetch('/api/razorpay/verify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            id: bookingId,
-                            type: "booking"
-                        })
-                    });
+                    try {
+                        // 4. Verify Payment
+                        const verifyRes = await fetch('/api/razorpay/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                id: bookingId,
+                                type: "booking"
+                            })
+                        });
 
-                    const verifyData = await verifyRes.json();
-                    if (verifyData.success) {
-                        setPaymentStatus('success');
-                        setTimeout(() => {
-                            router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
-                        }, 1500);
-                    } else {
-                        throw new Error(verifyData.error || "Verification failed");
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                            setPaymentStatus('success');
+                            setTimeout(() => {
+                                router.push(`/events/book/success?bookingId=${bookingId}&id=${eventId}`);
+                            }, 1500);
+                        } else {
+                            throw new Error(verifyData.error || "Verification failed");
+                        }
+                    } catch (verifyErr) {
+                        console.error("Verification Error:", verifyErr);
+                        setPaymentStatus('fail');
+                        setIsPaying(false);
+                        alert("Payment verification failed: " + verifyErr.message);
                     }
                 },
                 prefill: {
