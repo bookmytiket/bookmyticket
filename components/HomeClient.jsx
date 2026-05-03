@@ -6,17 +6,13 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoHeroBanner from '@/components/VideoHeroBanner';
 import NewEventPublishedBanner from '@/components/NewEventPublishedBanner';
-import FeaturedOrganisers from '@/components/FeaturedOrganisers';
 import FeaturedEvents from '@/components/FeaturedEvents';
 import RecentlyViewedEvents from '@/components/RecentlyViewedEvents';
 import ComingSoonEvents from '@/components/ComingSoonEvents';
 import TrendingEvents from '@/components/TrendingEvents';
-import PopularEvents from '@/components/PopularEvents';
 import ExclusiveEvents from '@/components/ExclusiveEvents';
 import VirtualEvents from '@/components/VirtualEvents';
-import RecentMemories from '@/components/RecentMemories';
 import VenueEventCard from '@/components/VenueEventCard';
-import Sponsors from '@/components/Sponsors';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SubnavMarquee from '@/components/SubnavMarquee';
 import Footer from '@/components/Footer';
@@ -33,15 +29,17 @@ import ServiceCategories from '@/components/ServiceCategories';
 import PublicReviewsBanner from '@/components/PublicReviewsBanner';
 import TopRatedServices from '@/components/TopRatedServices';
 import { resolveBannerRedirect } from '@/lib/bannerHelper';
+import { getEventPath } from '@/app/utils/seo';
 
 function TicketCard({ event, router }) {
   return (
     <div 
       onClick={() => {
+        const path = getEventPath(event);
         if (router) {
-          router.push(`/events/detail?id=${event.id || event._id}`);
+          router.push(path);
         } else {
-          window.location.href = `/events/detail?id=${event.id || event._id}`;
+          window.location.href = path;
         }
       }}
       style={{ 
@@ -59,30 +57,26 @@ function TicketCard({ event, router }) {
       onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-8px)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
     >
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', backgroundColor: '#f8fafc' }}>
+      {/* Image Area - Increased size to match Exclusive Events style */}
+      <div style={{ width: '100%', aspectRatio: '2.3/3', position: 'relative', overflow: 'hidden', background: '#f1f5f9' }}>
         <img 
-          src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=660&fit=crop"} 
+          src={event.img} 
           alt={event.title} 
-          style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         />
         <div style={{ 
-          position: 'absolute', 
-          top: '12px', 
-          left: '12px', 
-          background: 'rgba(0,0,0,0.6)', 
-          backdropFilter: 'blur(4px)',
-          color: '#fff', 
-          fontSize: '10px', 
-          fontWeight: 800, 
-          padding: '4px 12px', 
-          borderRadius: '20px', 
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
+            position: 'absolute', top: '10px', left: '10px', 
+            background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
+            padding: '4px 10px', borderRadius: '8px', 
+            fontSize: '10px', fontWeight: 900, color: '#f84464',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
         }}>
-          {event.category || 'Featured'}
+            LIVE
         </div>
       </div>
-      
+
       <div style={{ padding: "16px", flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <h3 style={{ 
@@ -566,7 +560,7 @@ function HomeClient() {
 
   const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive || e.is_exclusive), [filteredEvents]);
 
-  const popularEventsList = useMemo(() => filteredEvents, [filteredEvents]);
+
 
   const venueEventsList = useMemo(() => {
     return filteredEvents.filter(e => (e.venue || e.location) && !e.virtual);
@@ -832,7 +826,9 @@ function HomeClient() {
             <RecentlyViewedEvents liveEvents={allLiveEvents} />
 
             {/* 2) Featured Events */}
-            <FeaturedEvents events={featuredEventsList} />
+            <div id="featured-events">
+              <FeaturedEvents events={featuredEventsList} />
+            </div>
 
             {/* 3) Coming Soon */}
             <ComingSoonEvents events={filteredEvents} />
@@ -922,10 +918,7 @@ function HomeClient() {
                 )}
             </section>
 
-            {/* 4) Explore Popular Events */}
-            <div id="explore-popular-events">
-              <PopularEvents events={popularEventsList} />
-            </div>
+            {/* 4) Explore Popular Events removed */}
 
             {/* 5) Exclusive Events */}
             <ExclusiveEvents events={exclusiveEventsList} />
@@ -1200,14 +1193,7 @@ function HomeClient() {
             {/* Top Rated Professional Services */}
             <TopRatedServices professionals={serviceProviders} />
 
-             {/* Branding & Others */}
-            <div style={{ width: '100%' }}>
-              <FeaturedOrganisers organisers={eventPartners} />
-            </div>
-            <RecentMemories />
-            <div style={{ width: '100%' }}>
-              <Sponsors />
-            </div>
+            {/* Branding & Others removed */}
 
             {/* Promotional Image Hero Banners moved to bottom for better flow */}
 

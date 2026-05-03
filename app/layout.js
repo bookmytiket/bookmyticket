@@ -43,19 +43,21 @@ export async function generateMetadata() {
   ];
 
   try {
-    const { data } = await supabase
-      .from('system_config')
-      .select('value')
-      .eq('key', 'seo_analytics')
-      .maybeSingle();
+    if (supabase) {
+      const { data } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'seo_analytics')
+        .maybeSingle();
 
-    if (data?.value) {
-      if (data.value.global_title) title = data.value.global_title;
-      if (data.value.global_description) description = data.value.global_description;
-      if (data.value.global_keywords) {
-        const k = data.value.global_keywords;
-        // Merge or replace based on config
-        keywords = k.includes(',') ? k.split(',').map(s => s.trim()) : [k];
+      if (data?.value) {
+        if (data.value.global_title) title = data.value.global_title;
+        if (data.value.global_description) description = data.value.global_description;
+        if (data.value.global_keywords) {
+          const k = data.value.global_keywords;
+          // Merge or replace based on config
+          keywords = k.includes(',') ? k.split(',').map(s => s.trim()) : [k];
+        }
       }
     }
   } catch (error) {

@@ -169,21 +169,21 @@ export default function EventDetailClient({ id }) {
             <Navbar />
             
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-8">
-                {/* Hero Banner */}
-                <div className="w-full h-[250px] md:h-[450px] rounded-[40px] overflow-hidden shadow-2xl relative mb-12 group border border-slate-200">
-                    <img src={event.img} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" alt={event.title} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                {/* Hero Header (Image-Free) */}
+                <div className="w-full py-20 md:py-32 rounded-[40px] overflow-hidden shadow-2xl relative mb-12 bg-slate-900 border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-purple-600/10 to-transparent opacity-50" />
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-pink-500/5 blur-[120px] -mr-32 -mt-32 rounded-full" />
                     
-                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-pink-500 text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                    <div className="relative z-10 px-8 md:px-16">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-pink-500 text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8">
                             <Sparkles size={14} /> Featured Experience
                         </div>
-                        <h1 className="text-white text-4xl md:text-7xl font-black uppercase tracking-tight leading-[0.9] mb-6 drop-shadow-lg">
+                        <h1 className="text-white text-4xl md:text-8xl font-black uppercase tracking-tight leading-[0.9] mb-10 max-w-4xl">
                             {event.title}
                         </h1>
-                        <div className="flex flex-wrap items-center gap-8 text-white/80 font-bold uppercase text-[12px] tracking-[0.15em]">
-                            <div className="flex items-center gap-2.5"><Calendar size={18} className="text-pink-500" /> {event.date}</div>
-                            <div className="flex items-center gap-2.5"><MapPin size={18} className="text-pink-500" /> {event.venue}</div>
+                        <div className="flex flex-wrap items-center gap-10 text-white/60 font-bold uppercase text-[12px] tracking-[0.15em]">
+                            <div className="flex items-center gap-3"><Calendar size={20} className="text-pink-500" /> {event.date}</div>
+                            <div className="flex items-center gap-3"><MapPin size={20} className="text-pink-500" /> {event.venue}</div>
                         </div>
                     </div>
                 </div>
@@ -192,18 +192,18 @@ export default function EventDetailClient({ id }) {
                     {/* Main Content */}
                     <div className="lg:col-span-8 flex flex-col gap-12">
                         <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm p-10 md:p-16">
-                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
                                 <Info className="text-pink-500" size={28} /> About the Event
-                            </h3>
+                            </h2>
                             <p className="text-[17px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-12">
                                 {event.description}
                             </p>
                             
                             <hr className="border-slate-100 mb-12" />
                             
-                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
                                 <Warehouse className="text-pink-500" size={28} /> Venue & Amenities
-                            </h3>
+                            </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {event.features.map((feature, idx) => (
                                     <div key={idx} className="flex items-center gap-5 p-6 bg-slate-50 rounded-[32px] border border-slate-100">

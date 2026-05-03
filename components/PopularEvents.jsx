@@ -22,13 +22,6 @@ function PopularCard({ event }) {
                     transition: "box-shadow 0.2s ease"
                 }}
             >
-                <div style={{ position: "relative", width: "100%", aspectRatio: "2.3/3", overflow: "hidden" }}>
-                    <img
-                        src={event.img}
-                        alt={event.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                </div>
                 <div style={{ padding: "10px", flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", marginBottom: "6px" }}>
                         <h3 style={{

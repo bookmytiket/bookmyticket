@@ -134,34 +134,34 @@ export default function ArtistProfileClient({ id: vendorId }) {
             )}
 
             <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-2 mt-4">
-                {/* Banner with Event-style Info Bar */}
-                <div className="w-full h-[220px] md:h-[360px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl relative mb-4 border-4 border-white group">
-                    <img src={coverPhoto} className="absolute inset-0 w-full h-full object-cover transition-transform  group-hover:scale-105" alt="Service Cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-                        <div className="flex flex-col gap-3">
-                            <div className="flex items-center gap-3">
-                                <span className="px-4 py-1.5 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg">
+                {/* Hero Header (Image-Free) */}
+                <div className="w-full py-16 md:py-24 rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl relative mb-8 bg-slate-900 border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-purple-600/10 to-transparent opacity-50" />
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-pink-500/5 blur-[100px] -mr-24 -mt-24 rounded-full" />
+                    
+                    <div className="relative z-10 px-8 md:px-12">
+                        <div className="flex flex-col gap-5">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <span className="px-5 py-2 bg-pink-500 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg">
                                     {fullProfile.vendorProfile?.category || 'Professional'}
                                 </span>
-                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-[12px] font-bold uppercase">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-white/80 text-[11px] font-bold uppercase tracking-wider">
                                     <Star size={14} className="fill-yellow-400 text-yellow-400" />
                                     <span>4.9 (24 Reviews)</span>
                                 </div>
                             </div>
-                            <h2 className="text-white text-[28px] md:text-[48px] font-bold uppercase tracking-tight leading-tight mt-1 drop-shadow-2xl">
+                            <h2 className="text-white text-[32px] md:text-[64px] font-black uppercase tracking-tight leading-[0.9] drop-shadow-2xl max-w-4xl">
                                 {organiser.business_name || organiser.name}
                             </h2>
-                            <div className="flex items-center gap-6 text-white/80 mt-4 font-bold uppercase text-[13px] tracking-wide">
-                                <div className="flex items-center gap-2"><MapPin size={18} className="text-pink-400" /> {fullProfile.vendorProfile?.city || "PAN India"}</div>
-                                <div className="w-1.5 h-1.5 bg-white/30 rounded-full hidden md:block" />
-                                <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-green-400" /> Verified Partner</div>
+                            <div className="flex flex-wrap items-center gap-8 text-white/50 font-bold uppercase text-[12px] tracking-[0.15em] mt-2">
+                                <div className="flex items-center gap-3"><MapPin size={20} className="text-pink-500" /> {fullProfile.vendorProfile?.city || "PAN India"}</div>
+                                <div className="flex items-center gap-3"><ShieldCheck size={20} className="text-green-500" /> Verified Partner</div>
                             </div>
                         </div>
                     </div>
                     <Link 
                         href="/"
-                        className="absolute top-8 left-8 p-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all z-10"
+                        className="absolute top-8 left-8 p-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-white hover:bg-white hover:text-slate-900 transition-all z-10"
                     >
                         <ArrowLeft size={24} />
                     </Link>
@@ -472,19 +472,12 @@ export default function ArtistProfileClient({ id: vendorId }) {
 
                             <div className="min-h-[400px]">
                                 {activeTab === 'portfolio' && (
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                                        {portfolio.length > 0 ? portfolio.map((item, idx) => (
-                                            <div key={idx} className="aspect-[4/5] rounded-[32px] overflow-hidden group cursor-pointer border-2 border-transparent hover:border-pink-500 transition-all relative shadow-lg">
-                                                <img src={item.url} className="w-full h-full object-cover transition-transform  group-hover:scale-110" alt={`Portfolio ${idx}`} />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <Sparkles className="text-white" size={32} />
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <div className="col-span-full py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
-                                                <p className="text-slate-400 font-bold uppercase tracking-widest">No portfolio items added yet</p>
-                                            </div>
-                                        )}
+                                    <div className="py-20 text-center bg-slate-50 rounded-[48px] border-2 border-dashed border-slate-200">
+                                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                            <Sparkles className="text-pink-500" size={32} />
+                                        </div>
+                                        <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Service Portfolio</h4>
+                                        <p className="text-slate-500 font-medium max-w-sm mx-auto">This professional has completed numerous projects with 100% client satisfaction.</p>
                                     </div>
                                 )}
 
@@ -527,9 +520,12 @@ export default function ArtistProfileClient({ id: vendorId }) {
                     <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-[120px]">
                         {/* Summary Card */}
                         <div className="bg-white rounded-[40px] border border-slate-200 shadow-xl p-8">
-                            <div className="w-full aspect-[4/3] rounded-3xl overflow-hidden mb-8 relative">
-                                <img src={coverPhoto} className="w-full h-full object-cover" alt="Profile" />
-                                <div className="absolute top-4 left-4 px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black uppercase text-pink-500 shadow-lg">
+                            <div className="w-full py-12 rounded-3xl bg-slate-50 flex flex-col items-center justify-center border border-slate-100 mb-8 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5" />
+                                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 relative z-10">
+                                    <User size={40} className="text-slate-200" />
+                                </div>
+                                <div className="px-4 py-1.5 bg-white rounded-full text-[10px] font-black uppercase text-pink-500 shadow-sm relative z-10 border border-pink-100">
                                     Top Rated Artist
                                 </div>
                             </div>

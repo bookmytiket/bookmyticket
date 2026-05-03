@@ -3,6 +3,7 @@ import React, { useRef, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Video } from "lucide-react";
 import { isVirtualEvent, isFreeEvent } from "@/app/utils/eventUtils";
+import { getEventPath } from "@/app/utils/seo";
 
 export default function FeaturedEvents({ events }) {
     const [isMobile, setIsMobile] = useState(false);
@@ -95,7 +96,7 @@ export default function FeaturedEvents({ events }) {
                     {list.length > 0 ? list.map((event) => (
                         <Link
                             key={event.id}
-                            href={`/events/detail?id=${event.id}`}
+                            href={getEventPath(event)}
                             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                         >
                             <div
@@ -111,13 +112,7 @@ export default function FeaturedEvents({ events }) {
                                     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                                     height: '100%'
                                 }}
-                            >
-                                <div style={{
-                                    width: "100%",
-                                    aspectRatio: isMobile ? "1 / 1" : "2.3 / 3",
-                                    overflow: "hidden",
-                                    position: "relative"
-                                }}>
+                            >                                <div style={{ position: "relative", width: "100%", aspectRatio: "2.3/3", overflow: "hidden" }}>
                                     <img
                                         src={event.img}
                                         alt={event.title}

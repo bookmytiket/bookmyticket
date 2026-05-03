@@ -339,15 +339,19 @@ export default function ServicesPage() {
                     e.currentTarget.style.borderColor = "#e2e8f0";
                   }}
                 >
-                  {/* Image */}
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#f1f5f9" }}>
-                    <img
-                      src={vendor.portfolio?.[0]?.url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop"}
-                      alt={vendor.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s ease" }}
-                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
-                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                    />
+                  {/* Text-Based Header (Image-Free) */}
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ 
+                        width: "80px", height: "80px", 
+                        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                        borderRadius: "24px",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "32px", fontWeight: 900, color: "#cbd5e1",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "inset 0 2px 10px rgba(0,0,0,0.02)"
+                    }}>
+                        {(vendor.business_name || vendor.name || "A")[0].toUpperCase()}
+                    </div>
                     {/* Status badge */}
                     {(() => {
                         const todayStr = new Date().toISOString().split('T')[0];
@@ -356,12 +360,11 @@ export default function ServicesPage() {
                             return (
                                 <div style={{
                                     position: "absolute", top: "12px", left: "12px",
-                                    background: "rgba(239, 68, 68, 0.9)",
-                                    backdropFilter: "blur(8px)",
+                                    background: "#fee2e2",
                                     padding: "4px 10px", borderRadius: "12px",
-                                    fontSize: "10px", fontWeight: 900, color: "#fff",
+                                    fontSize: "10px", fontWeight: 900, color: "#ef4444",
                                     textTransform: "uppercase", letterSpacing: "0.5px",
-                                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.2)",
+                                    border: "1px solid #fecaca",
                                     zIndex: 10
                                 }}>
                                     Busy Today
@@ -371,12 +374,11 @@ export default function ServicesPage() {
                         return (
                             <div style={{
                                 position: "absolute", top: "12px", left: "12px",
-                                background: "rgba(34, 197, 94, 0.9)",
-                                backdropFilter: "blur(8px)",
+                                background: "#dcfce7",
                                 padding: "4px 10px", borderRadius: "12px",
-                                fontSize: "10px", fontWeight: 900, color: "#fff",
+                                fontSize: "10px", fontWeight: 900, color: "#16a34a",
                                 textTransform: "uppercase", letterSpacing: "0.5px",
-                                boxShadow: "0 2px 8px rgba(34, 197, 94, 0.2)",
+                                border: "1px solid #bbf7d0",
                                 zIndex: 10
                             }}>
                                 Available
@@ -386,12 +388,12 @@ export default function ServicesPage() {
                     {/* Rating badge */}
                     <div style={{
                       position: "absolute", top: "12px", right: "12px",
-                      background: "rgba(255,255,255,0.95)",
-                      backdropFilter: "blur(8px)",
+                      background: "#fff",
                       padding: "4px 10px", borderRadius: "12px",
                       display: "flex", alignItems: "center", gap: "5px",
-                      fontSize: "13px", fontWeight: 800, color: "#0f172a",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                      fontSize: "12px", fontWeight: 800, color: "#0f172a",
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                     }}>
                       <Star size={12} color="#fbbf24" fill="#fbbf24" />
                       {vendor.rating > 0 ? vendor.rating.toFixed(1) : "New"}

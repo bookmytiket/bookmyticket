@@ -12,7 +12,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 
 const SUBNAV_LINKS = [
-  { href: "/#explore-popular-events", label: "Events" },
+  { href: "/#featured-events", label: "Events" },
   { href: "/#services", label: "Services" },
 ];
 

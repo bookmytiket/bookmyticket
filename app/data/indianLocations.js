@@ -1,30 +1,86 @@
 export const INDIAN_STATES = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+    { name: "Andhra Pradesh", slug: "andhra-pradesh" },
+    { name: "Arunachal Pradesh", slug: "arunachal-pradesh" },
+    { name: "Assam", slug: "assam" },
+    { name: "Bihar", slug: "bihar" },
+    { name: "Chhattisgarh", slug: "chhattisgarh" },
+    { name: "Goa", slug: "goa" },
+    { name: "Gujarat", slug: "gujarat" },
+    { name: "Haryana", slug: "haryana" },
+    { name: "Himachal Pradesh", slug: "himachal-pradesh" },
+    { name: "Jharkhand", slug: "jharkhand" },
+    { name: "Karnataka", slug: "karnataka" },
+    { name: "Kerala", slug: "kerala" },
+    { name: "Madhya Pradesh", slug: "madhya-pradesh" },
+    { name: "Maharashtra", slug: "maharashtra" },
+    { name: "Manipur", slug: "manipur" },
+    { name: "Meghalaya", slug: "meghalaya" },
+    { name: "Mizoram", slug: "mizoram" },
+    { name: "Nagaland", slug: "nagaland" },
+    { name: "Odisha", slug: "odisha" },
+    { name: "Punjab", slug: "punjab" },
+    { name: "Rajasthan", slug: "rajasthan" },
+    { name: "Sikkim", slug: "sikkim" },
+    { name: "Tamil Nadu", slug: "tamil-nadu" },
+    { name: "Telangana", slug: "telangana" },
+    { name: "Tripura", slug: "tripura" },
+    { name: "Uttar Pradesh", slug: "uttar-pradesh" },
+    { name: "Uttarakhand", slug: "uttarakhand" },
+    { name: "West Bengal", slug: "west-bengal" },
+    { name: "Delhi", slug: "delhi" },
+    { name: "Puducherry", slug: "puducherry" }
 ];
 
 export const INDIAN_DISTRICTS = {
-    "Tamil Nadu": [
-        "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri", "Dindigul", "Erode", "Kallakurichi", "Kanchipuram", "Kanyakumari", "Karur", "Krishnagiri", "Madurai", "Mayiladuthurai", "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", "Pudukkottai", "Ramanathapuram", "Ranipet", "Salem", "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi", "Tiruchirappalli", "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar"
+    "tamil-nadu": [
+        "chennai", "coimbatore", "madurai", "salem", "trichy", "tiruppur", "erode", "vellore", "thoothukudi", "tirunelveli"
     ],
-    "Karnataka": ["Bengaluru Urban", "Bengaluru Rural", "Mysuru", "Mangaluru", "Hubballi-Dharwad", "Belagavi", "Kalaburagi"],
-    "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Palakkad", "Alappuzha"],
-    "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Aurangabad", "Solapur"],
-    "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Khammam", "Karimnagar", "Ramagundam"],
-    // Add more as needed
+    "karnataka": [
+        "bangalore", "mysore", "hubli", "mangalore", "belgaum", "gulbarga", "davanagere", "bellary"
+    ],
+    "kerala": [
+        "kochi", "trivandrum", "kozhikode", "thrissur", "kollam", "palakkad", "alappuzha", "kannur"
+    ],
+    "maharashtra": [
+        "mumbai", "pune", "nagpur", "thane", "nashik", "aurangabad", "solapur", "amravati"
+    ],
+    "gujarat": [
+        "ahmedabad", "surat", "vadodara", "rajkot", "bhavnagar", "jamnagar", "junagadh", "gandhinagar"
+    ],
+    "telangana": [
+        "hyderabad", "warangal", "nizamabad", "karimnagar", "khammam", "ramagundam", "mahbubnagar"
+    ],
+    "andhra-pradesh": [
+        "visakhapatnam", "vijayawada", "guntur", "nellore", "kurnool", "kakinada", "tirupati"
+    ],
+    "west-bengal": [
+        "kolkata", "howrah", "durgapur", "asansol", "siliguri", "kharagpur", "bardhaman"
+    ],
+    "delhi": [
+        "new-delhi", "north-delhi", "south-delhi", "west-delhi", "east-delhi"
+    ]
 };
 
-export const INDIAN_CITIES = {
-    "Coimbatore": [
-        "Coimbatore City", "Pollachi", "Mettupalayam", "Annur", "Sulur", "Valparai", "Udumalaipettai", "Karamadai", "Perianaickenpalayam", "Madukkarai", "Thondamuthur", "Kinathukadavu"
-    ],
-    "Chennai": ["Chennai Central", "Adyar", "Anna Nagar", "T. Nagar", "Velachery", "Tambaram", "Ambattur", "Avadi", "Porur", "Sholinganallur"],
-    "Madurai": ["Madurai South", "Madurai North", "Melur", "Vadipatti", "Usilampatti", "Tirumangalam", "Peraiyur"],
-    "Salem": ["Salem City", "Attur", "Edappadi", "Mettur", "Omalur", "Sankagiri", "Valapady", "Yercaud"],
-    "Trichy": ["Tiruchirappalli City", "Manapparai", "Musiri", "Thuraiyur", "Lalgudi", "Srirangam"],
-    "Mysuru": ["Mysuru City", "Hunsur", "Nanjangud", "Periyapatna", "Teresina"],
-    "Bengaluru Urban": ["Bengaluru Central", "Indiranagar", "Koramangala", "Jayanagar", "Whitefield", "Marathahalli", "Electronics City", "HSR Layout"],
-    // Default fallback if a district isn't detailed
+export const slugify = (text) => {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')     // Replace spaces with -
+        .replace(/[^\w-]+/g, '')  // Remove all non-word chars
+        .replace(/--+/g, '-');    // Replace multiple - with single -
 };
 
-export const getIndianDistricts = (stateName) => INDIAN_DISTRICTS[stateName] || [];
-export const getIndianCities = (districtName) => INDIAN_CITIES[districtName] || [districtName]; // Fallback to district name as city if not listed
+/**
+ * Returns a list of districts for a given state slug.
+ */
+export const getIndianDistricts = (stateSlug) => {
+    return INDIAN_DISTRICTS[stateSlug] || [];
+};
+
+/**
+ * Legacy helper for city selection (aliases to districts).
+ */
+export const getIndianCities = (stateSlug) => {
+    return getIndianDistricts(stateSlug);
+};
