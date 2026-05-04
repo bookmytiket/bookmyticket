@@ -442,7 +442,7 @@ export default function PaymentClient({ id: eventId, bookingId: propBookingId })
                                         onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(255, 28, 247, 0.25)'; }}
                                     >
                                         <img src="https://razorpay.com/favicon.png" style={{ width: '24px', height: '24px', filter: 'brightness(0) invert(1)' }} alt="" />
-                                        Pay with Razorpay
+                                        Pay Now
                                     </button>
                                 )}
 
