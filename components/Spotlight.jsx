@@ -158,7 +158,18 @@ export default function Spotlight({ events = [] }) {
                       </svg>
                       <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{ev.date}</span>
                     </div>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(ev) ? "Free" : "Paid"}</span>
+                                        <div style={{ 
+                                            fontSize: '11px', 
+                                            fontWeight: 900, 
+                                            color: isFreeEvent(ev) ? '#22c55e' : '#111827',
+                                            backgroundColor: isFreeEvent(ev) ? '#22c55e10' : '#f1f5f9',
+                                            padding: '4px 10px',
+                                            borderRadius: '100px',
+                                            letterSpacing: '0.02em',
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            {isFreeEvent(ev) ? "FREE" : "PAID"}
+                                        </div>
                   </div>
                 </div>
               </div>

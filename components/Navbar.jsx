@@ -132,7 +132,7 @@ import LocationSelectionModal from "./LocationSelectionModal";
 import BecomePartnerModal from "./BecomePartnerModal";
 
 const ALL_CITIES_BY_COUNTRY = {
-  "India": ["Coimbatore", "Chennai", "Salem", "Madurai", "Trichy", "Tirupur", "Erode", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Kolkata", "Delhi", "Gurgaon", "Noida", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kochi", "Thiruvananthapuram", "Chandigarh", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Ludhiana", "Agra", "Nashik", "Rajkot", "Varanasi", "Srinagar", "Amritsar", "Aurangabad", "Solapur"],
+  "India": ["Coimbatore", "Chennai", "Salem", "Madurai", "Trichy", "Tiruppur", "Erode", "Vellore", "Thoothukudi", "Tirunelveli", "Bengaluru", "Hyderabad", "Mumbai", "Pune", "Kolkata", "Delhi", "Gurgaon", "Noida", "Ahmedabad", "Surat", "Jaipur", "Lucknow", "Kochi", "Thiruvananthapuram", "Chandigarh", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Ludhiana", "Agra", "Nashik", "Rajkot", "Varanasi", "Srinagar", "Amritsar", "Aurangabad", "Solapur"],
   "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Al Ain", "Ras Al Khaimah", "Fujairah", "Umm Al Quwain", "Ajman"],
   "Singapore": ["Central", "North", "South", "East", "West"],
   "Malaysia": ["Kuala Lumpur", "George Town", "Ipoh", "Shah Alam", "Petaling Jaya", "Malacca City", "Johor Bahru", "Kuching", "Kota Kinabalu"],
@@ -294,7 +294,7 @@ export default function Navbar({ compact = false }) {
         if (!coupons || coupons.length <= 1) return;
         const timer = setInterval(() => {
             setCurrentIndex((prev) => (prev + 1) % coupons.length);
-        }, 4000);
+        }, 5000);
         return () => clearInterval(timer);
     }, [coupons]);
 
@@ -303,7 +303,8 @@ export default function Navbar({ compact = false }) {
     const current = coupons[currentIndex];
     const brandName = current.brand_name || current.brandName;
     const title = current.title;
-    const code = current.coupon_code || current._id?.toUpperCase() || 'GET DEAL';
+    const bannerUrl = current.banner_url || current.bannerUrl || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400';
+    const discount = current.discountValue ? `${current.discountValue}${current.discountType === 'Percentage' ? '%' : '₹'} OFF` : (current.discount || 'OFFER');
 
     const handleCouponClick = () => {
         if (!user) {
@@ -314,64 +315,78 @@ export default function Navbar({ compact = false }) {
     };
 
     return (
-        <div style={{ perspective: '1000px', display: 'flex', justifyContent: 'center', flex: (isScrolled || isMobileMode) ? 'none' : 1, width: isMobileMode ? '100%' : 'auto' }}>
+        <div style={{ perspective: '1000px', display: 'flex', justifyContent: 'center', flex: 1, width: isMobileMode ? '100%' : 'auto' }}>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentIndex}
                     onClick={handleCouponClick}
-                    initial={{ rotateX: 90, opacity: 0, y: isScrolled ? -5 : 5 }}
-                    animate={{ rotateX: 0, opacity: 1, y: 0 }}
-                    exit={{ rotateX: -90, opacity: 0, y: isScrolled ? 5 : -5 }}
-                    whileHover={{ scale: 1.05, y: -2 }}
+                    initial={{ rotateX: 90, opacity: 0 }}
+                    animate={{ rotateX: 0, opacity: 1 }}
+                    exit={{ rotateX: -90, opacity: 0 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.5, ease: "backOut" }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
                     style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: (isScrolled || isMobileMode) ? '8px' : '12px',
-                        background: 'transparent',
-                        backdropFilter: 'none',
-                        padding: (isScrolled || isMobileMode) ? '2px 0' : '5px 0',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
+                        width: isMobileMode ? '100%' : '360px',
+                        height: '60px',
+                        background: '#fff',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                         cursor: 'pointer',
-                        maxWidth: isMobileMode ? '100%' : '420px',
-                        position: 'relative',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        position: 'relative'
                     }}
                 >
-                    <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                        transform: 'translateX(-100%)',
-                        animation: 'shimmer 3s infinite',
-                        pointerEvents: 'none'
-                    }} />
-                    <span style={{ fontSize: (isScrolled || isMobileMode) ? '10px' : '12px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        🏷️ {brandName}:
-                    </span>
-                    <span style={{ fontSize: (isScrolled || isMobileMode) ? '11px' : '13px', fontWeight: 800, color: isScrolled ? '#fff' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {title}
-                    </span>
+                    {/* Landscape Mini Image */}
+                    <div style={{ width: '80px', height: '100%', position: 'relative', flexShrink: 0 }}>
+                        <img src={bannerUrl} alt="offer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1))' }} />
+                    </div>
+
+                    <div style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#f84464', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                {brandName}
+                            </span>
+                            <span style={{ fontSize: '10px', fontWeight: 900, color: '#16a34a', background: '#f0fdf4', padding: '1px 6px', borderRadius: '4px' }}>
+                                {discount}
+                            </span>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {title}
+                        </span>
+                    </div>
+
                     <div style={{ 
                         background: 'linear-gradient(135deg, #f84464 0%, #c026d3 100%)', 
                         color: '#fff', 
-                        padding: (isScrolled || isMobileMode) ? '2px 8px' : '3px 10px', 
-                        borderRadius: (isScrolled || isMobileMode) ? '6px' : '8px', 
-                        fontSize: (isScrolled || isMobileMode) ? '9px' : '10px', 
-                        fontWeight: 900,
-                        boxShadow: '0 4px 8px rgba(248, 68, 100, 0.2)',
+                        width: '30px',
+                        height: '100%',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px'
                     }}>
-                        GET DEAL
+                        →
                     </div>
+
+                    <div className="shimmer-effect" style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        transform: 'translateX(-100%)',
+                        animation: 'shimmer 4s infinite linear',
+                        pointerEvents: 'none'
+                    }} />
                 </motion.div>
             </AnimatePresence>
             <style>{`
                 @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    30% { transform: translateX(100%); }
                     100% { transform: translateX(100%); }
                 }
             `}</style>
@@ -766,26 +781,7 @@ export default function Navbar({ compact = false }) {
           </div>
         </div>
 
-        {/* Persistent Scrolled Ticker - INTEGRATED into Main Navbar */}
-        <AnimatePresence>
-          {scrolled && isHome && !isMobile && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              style={{
-                position: 'absolute',
-                left: '65%',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 60,
-                pointerEvents: 'auto'
-              }}
-            >
-              <CouponFlipTicker isScrolled={true} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Persistent Scrolled Ticker removed as requested */}
 
         {/* Mobile View - Home Only Ticker & Search */}
         <div className="show-mobile" style={{
@@ -794,7 +790,7 @@ export default function Navbar({ compact = false }) {
         }}>
           {/* Mobile Coupon Ticker - Top Priority */}
           {isHome && (
-            <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center', width: '100%' }}>
                <CouponFlipTicker isMobileMode={true} isScrolled={scrolled} />
             </div>
           )}
@@ -893,8 +889,7 @@ export default function Navbar({ compact = false }) {
               ))}
             </div>
 
-            {/* Dynamic Coupon Flip Ticker (Center) - Home Only */}
-            {!scrolled && isHome && !isMobile && <CouponFlipTicker />}
+            {/* Dynamic Coupon Flip Ticker removed as requested */}
 
             <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
               <motion.button

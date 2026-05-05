@@ -22,6 +22,7 @@ import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import CouponManagement from "./components/CouponManagement";
+import InlineMap from "./components/InlineMap";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -156,11 +157,11 @@ function LocationPickerModal({
                 <div className="px-8 py-5 border-b border-slate-50 flex items-center justify-between bg-white">
                     <div>
                         <h3 className="text-xl font-bold text-slate-900 leading-tight uppercase tracking-tight">Location Picker</h3>
-                        <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Interactive Map Selection</p>
+                        <p className="text-[10px] font-bold tracking-widest text-slate-600 uppercase">Interactive Map Selection</p>
                     </div>
                     <button
                         onClick={() => setShowMapModal(false)}
-                        className="w-10 h-10 rounded-full bg-slate-50 hover:bg-pink-50 text-slate-400 hover:text-pink-500 flex items-center justify-center transition-all border border-slate-100 hover:border-pink-200"
+                        className="w-10 h-10 rounded-full bg-slate-50 hover:bg-pink-50 text-slate-600 hover:text-pink-500 flex items-center justify-center transition-all border border-slate-100 hover:border-pink-200"
                     >
                         <X size={20} />
                     </button>
@@ -173,12 +174,12 @@ function LocationPickerModal({
                         {/* Coordinates Badge Glass */}
                         <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white shadow-lg flex items-center gap-4">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Latitude</span>
+                                <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Latitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lat.toFixed(6)}</span>
                             </div>
                             <div className="w-[1px] h-6 bg-slate-200" />
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Longitude</span>
+                                <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Longitude</span>
                                 <span className="text-xs font-bold text-slate-800">{tempLocation.lng.toFixed(6)}</span>
                             </div>
                         </div>
@@ -187,7 +188,7 @@ function LocationPickerModal({
                     {/* Controls Sidebar */}
                     <div className="flex-1 min-w-[320px] bg-slate-50/50 border-l border-slate-100 p-8 flex flex-col gap-6 overflow-y-auto">
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-50 shadow-sm flex flex-col gap-4">
-                            <p className="text-[11px] font-bold text-slate-500 leading-relaxed uppercase tracking-tight italic">
+                            <p className="text-[11px] font-bold text-slate-700 leading-relaxed uppercase tracking-tight italic">
                                 Precisely position the marker on the map to autofill address details.
                             </p>
 
@@ -239,7 +240,7 @@ function LocationPickerModal({
                                     setPostEvent(pe => ({ ...pe, latitude: String(tempLocation.lat), longitude: String(tempLocation.lng) }));
                                     setShowMapModal(false);
                                 }}
-                                className="w-full py-4 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-600 text-[11px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2"
+                                className="w-full py-4 rounded-2xl bg-white border border-slate-100 text-slate-600 hover:text-slate-600 text-[11px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2"
                             >
                                 Set Lat/Long Only
                             </button>
@@ -331,7 +332,7 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
                     <div style={{ gridColumn: "span 2" }}>
-                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 600 }}>Business/Service Address <span style={{ color: "#ef4444" }}>*</span></label>
+                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 600 }}>Business/Service Address <span style={{ color: "#ef4444" }}>*</span></label>
                         <div style={{ position: "relative" }}>
                             <textarea
                                 placeholder="Enter your full business address..."
@@ -358,7 +359,7 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
                     <div style={{ padding: "12px 16px", backgroundColor: "#fff", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                             <span style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b" }}>Set Map Pin</span>
-                            <p style={{ margin: 0, fontSize: "10px", color: "#64748b" }}>Drag the marker to your exact location for customers to find you.</p>
+                            <p style={{ margin: 0, fontSize: "10px", color: "#334155" }}>Drag the marker to your exact location for customers to find you.</p>
                         </div>
                         <div style={{ display: "flex", gap: "10px" }}>
                             <div style={{ fontSize: "10px", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "4px" }}>Lat: {kycFormData.lat.toFixed(4)}</div>
@@ -426,7 +427,7 @@ function OrganiserPanel() {
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
             <div className="w-16 h-16 border-4 border-slate-200 border-t-pink-500 rounded-full animate-spin mb-6" />
             <h2 className="text-xl font-bold text-slate-900 uppercase tracking-tight italic">Initializing Portal</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Connecting to Secure Gateway...</p>
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-2">Connecting to Secure Gateway...</p>
         </div>
     );
 
@@ -504,11 +505,9 @@ function OrganiserPanel() {
 
     const { data: bookingsData = [] } = useSupabaseQuery(
         "bookings",
-        (q) => {
-            if (!eventsData || eventsData.length === 0) return q.eq("id", "none");
-            return q.in("event_id", eventsData.map(e => String(e.id)));
-        },
-        [eventsData]
+        (q) => q.in("event_id", eventsData.map(e => String(e.id))),
+        [eventsData],
+        { enabled: eventsData.length > 0 }
     );
 
     const { data: staffAccounts = [], refresh: refetchStaff } = useSupabaseQuery(
@@ -822,7 +821,11 @@ function OrganiserPanel() {
                 }
                 return { ...e, id: e.id, status };
             });
-            setEvents(processed);
+            setEvents(prev => {
+                const currentStr = JSON.stringify(prev);
+                const nextStr = JSON.stringify(processed);
+                return currentStr === nextStr ? prev : processed;
+            });
         }
     }, [eventsData]);
 
@@ -892,6 +895,110 @@ function OrganiserPanel() {
     // State for Modals
     const [showCreateEvent, setShowCreateEvent] = useState(false);
     const [showPayoutModal, setShowPayoutModal] = useState(false);
+    const [payoutAmount, setPayoutAmount] = useState("");
+    const [showBankUpdateModal, setShowBankUpdateModal] = useState(false);
+
+    const handleBankUpdate = async () => {
+        if (!kycFormData.bankName || !kycFormData.accountNumber || !kycFormData.ifscCode) {
+            showToast("Please fill all bank details", "warning");
+            return;
+        }
+        
+        setPostLoading(true);
+        try {
+            const { error } = await supabase
+                .from('organisers')
+                .update({ 
+                    kyc_details: { 
+                        ...organiserData?.kyc_details, 
+                        bankName: kycFormData.bankName,
+                        accountNumber: kycFormData.accountNumber,
+                        ifscCode: kycFormData.ifscCode,
+                        beneficiaryName: kycFormData.beneficiaryName,
+                        accountType: kycFormData.accountType
+                    } 
+                })
+                .eq('id', user.id);
+            
+            if (error) throw error;
+            
+            await refreshOrganiserData();
+            showToast("Settlement account updated successfully!", "success");
+            setShowBankUpdateModal(false);
+            // Optionally refetch organiser data here if needed, 
+            // but kycFormData is already updated locally.
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            setPostLoading(false);
+        }
+    };
+
+    const handlePayoutRequest = async () => {
+        const amount = parseFloat(payoutAmount);
+        if (isNaN(amount) || amount <= 0) {
+            showToast("Please enter a valid amount", "warning");
+            return;
+        }
+        if (amount > (wallet?.balance || 0)) {
+            showToast("Insufficient balance", "error");
+            return;
+        }
+
+        setPostLoading(true);
+        try {
+            const providerType = isProfessionalService ? 'service' : 'organiser';
+            const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
+            const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
+
+            // 1. Insert Request
+            const { error: reqErr } = await supabase.from('withdraw_requests').insert([{
+                [idColumn]: user.id,
+                amount: amount,
+                status: 'pending'
+            }]);
+            if (reqErr) throw reqErr;
+
+            // 2. Update Balance
+            const { error: wallErr } = await supabase.from(walletTable)
+                .update({ balance: wallet.balance - amount, updated_at: new Date().toISOString() })
+                .eq(idColumn, user.id);
+            if (wallErr) throw wallErr;
+
+            // 3. Record Transaction
+            await supabase.from('wallet_transactions').insert([{
+                provider_id: user.id,
+                amount: amount,
+                type: 'debit',
+                description: 'Withdrawal Request (Pending)',
+                provider_type: providerType,
+                reference_id: (await supabase.from('withdraw_requests').select('id').eq(idColumn, user.id).order('created_at', { ascending: false }).limit(1).single()).data?.id
+            }]);
+
+            // 4. Legacy Sync (Update organisers table if organiser)
+            if (providerType === 'organiser') {
+                try {
+                    await supabase.from('organisers')
+                        .update({ wallet_balance: wallet.balance - amount })
+                        .eq('id', user.id);
+                } catch (e) {
+                    console.warn("Legacy balance sync failed:", e);
+                }
+            }
+
+            // Update local state and refresh
+            setWallet(prev => ({ ...prev, balance: prev.balance - amount }));
+            refreshOrganiserData();
+            
+            showToast("Payout request submitted and balance debited.", "success");
+            setShowPayoutModal(false);
+            setPayoutAmount("");
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            setPostLoading(false);
+        }
+    };
     const [selectedEventForSeatMap, setSelectedEventForSeatMap] = useState(null);
     const [newEvent, setNewEvent] = useState({
         title: "", type: "Venue", venue: "",
@@ -1005,6 +1112,11 @@ function OrganiserPanel() {
         language: "English",
         duration: "2-3 Hours",
         safetyMeasures: true,
+        parking: true,
+        washroom: true,
+        food: true,
+        security: true,
+        wifi: false,
         seatingType: "FCFS",
         mandatoryCheckin: true,
 
@@ -1036,6 +1148,84 @@ function OrganiserPanel() {
         layoutType: "stage",
     });
     const [postEvent, setPostEvent] = useState(getInitialPostEvent());
+    const [lastZipEdit, setLastZipEdit] = useState(0);
+
+
+    // Auto-fetch address from Lat/Lng (Map Pin)
+    useEffect(() => {
+        if (postEvent.latitude && postEvent.longitude) {
+            const timer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${postEvent.latitude}&lon=${postEvent.longitude}`);
+                    const data = await res.json();
+                    const addr = data.address || {};
+                    let fetchedZip = addr.postcode || addr['addr:postcode'] || addr.postal_code;
+                    
+                    // Fallback: Extract from display_name if address object is incomplete
+                    if (!fetchedZip && data.display_name) {
+                        const zipMatch = data.display_name.match(/\b\d{6}\b/);
+                        if (zipMatch) fetchedZip = zipMatch[0];
+                    }
+                    
+                    // Don't override zip if user edited it in the last 10 seconds
+                    const shouldUpdateZip = fetchedZip && (Date.now() - lastZipEdit > 10000);
+
+                    setPostEvent(prev => ({ 
+                        ...prev, 
+                        address: data.display_name || prev.address,
+                        city: addr.city || addr.town || addr.village || addr.suburb || prev.city,
+                        zipCode: shouldUpdateZip ? fetchedZip : (prev.zipCode || ""),
+                        district: addr.state_district || addr.county || prev.district,
+                        state: addr.state || prev.state,
+                        country: addr.country || prev.country
+                    }));
+                    
+                    if (shouldUpdateZip) showToast(`Address Resolved: ${fetchedZip}`, "success");
+                } catch (err) {
+                    console.error("Reverse geocoding error:", err);
+                }
+            }, 1500); 
+            return () => clearTimeout(timer);
+        }
+    }, [postEvent.latitude, postEvent.longitude]);
+
+    // Auto-fetch City/State from Pincode + Center Map
+    useEffect(() => {
+        if (postEvent.zipCode?.length === 6) {
+            const fetchFromPin = async () => {
+                try {
+                    // 1. Fetch Address Details
+                    const res = await fetch(`https://api.postalpincode.in/pincode/${postEvent.zipCode}`);
+                    const data = await res.json();
+                    
+                    if (data[0] && data[0].Status === "Success") {
+                        const po = data[0].PostOffice[0];
+                        setPostEvent(prev => ({
+                            ...prev,
+                            city: po.District,
+                            district: po.District,
+                            state: po.State,
+                            country: "India"
+                        }));
+                    }
+
+                    // 2. Fetch Lat/Lng to center map on this pincode
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${postEvent.zipCode}&country=India`);
+                    const geoData = await geoRes.json();
+                    if (geoData && geoData.length > 0) {
+                        setPostEvent(prev => ({
+                            ...prev,
+                            latitude: parseFloat(geoData[0].lat),
+                            longitude: parseFloat(geoData[0].lon)
+                        }));
+                    }
+                } catch (err) {
+                    console.error("Pincode API error:", err);
+                }
+            };
+            fetchFromPin();
+        }
+    }, [postEvent.zipCode]);
     const [publishError, setPublishError] = useState("");
 
     useEffect(() => {
@@ -1113,7 +1303,7 @@ function OrganiserPanel() {
             }
             currentRow = nextMax;
         }
-        return { name: "General", color: "#94a3b8", price: 0 };
+        return { name: "General", color: "#475569", price: 0 };
     };
 
     // Mock booked seats for existing events (for the Seat Map view)
@@ -1429,24 +1619,24 @@ function OrganiserPanel() {
             bg: "#f8fafc",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#0f172a",
-            textSub: "#64748b",
+            textMain: "#020617",
+            textSub: "#475569",
             cardBg: "#ffffff",
             border: "#e2e8f0",
             activeLink: "#f1f5f9",
-            activeText: "#0f172a",
+            activeText: "#020617",
             sidebarBorder: "#e2e8f0"
         },
         dark: {
             bg: "#f8fafc",
             sidebar: "#ffffff",
             header: "#ffffff",
-            textMain: "#0f172a",
-            textSub: "#64748b",
+            textMain: "#020617",
+            textSub: "#475569",
             cardBg: "#ffffff",
             border: "#e2e8f0",
             activeLink: "#f1f5f9",
-            activeText: "#0f172a",
+            activeText: "#020617",
             sidebarBorder: "#e2e8f0"
         }
     };
@@ -1772,7 +1962,7 @@ function OrganiserPanel() {
                 margin: 6px 0 0;
                 font-size: 11px;
                 font-weight: 800;
-                color: #94a3b8;
+                color: #475569;
                 text-transform: uppercase;
                 letter-spacing: 0.2em;
             }
@@ -1789,7 +1979,7 @@ function OrganiserPanel() {
                 gap: 12px;
                 font-size: 10px;
                 font-weight: 900;
-                color: #94a3b8;
+                color: #475569;
                 margin-bottom: 32px;
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
@@ -1849,7 +2039,7 @@ function OrganiserPanel() {
                 flex-direction: column;
                 align-items: center;
                 gap: 4px;
-                color: #94a3b8;
+                color: #475569;
                 font-size: 10px;
                 font-weight: 800;
                 text-decoration: none;
@@ -1898,7 +2088,7 @@ function OrganiserPanel() {
                 <Shield size={32} color="#ec4899" />
             </div>
             <h2 style={{ fontSize: "24px", fontWeight: 900, marginBottom: "8px", color: "#0f172a" }}>Two-Factor Security</h2>
-            <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600, marginBottom: "32px" }}>Scan the QR code below to setup MFA</p>
+            <p style={{ color: "#334155", fontSize: "14px", fontWeight: 600, marginBottom: "32px" }}>Scan the QR code below to setup MFA</p>
 
             <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "20px", width: "200px", height: "200px", margin: "0 auto 32px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0" }}>
                 <div style={{ width: "168px", height: "168px", backgroundImage: "url('https://api.qrserver.com/v1/create-qr-code/?size=168x168&data=BookMyTicketOrganizerMFA')", backgroundSize: "cover" }}></div>
@@ -1931,7 +2121,7 @@ function OrganiserPanel() {
                 </div>
                 <div style={{ flex: 1 }}>
                     <h2 style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>Professional Organiser Verification</h2>
-                    <p style={{ color: "#64748b", fontSize: "15px", lineHeight: 1.6, marginBottom: "24px" }}>To ensure the highest quality of events on our platform, we require all organisers to complete a one-time KYC verification. This helps us maintain trust and security for all attendees. process.</p>
+                    <p style={{ color: "#334155", fontSize: "15px", lineHeight: 1.6, marginBottom: "24px" }}>To ensure the highest quality of events on our platform, we require all organisers to complete a one-time KYC verification. This helps us maintain trust and security for all attendees. process.</p>
                     <button
                         onClick={() => setCurrentStage("kyc_wizard")}
                         style={{ backgroundColor: "#0f172a", color: "#fff", padding: "14px 32px", borderRadius: "12px", fontSize: "14px", fontWeight: 900, border: "none", cursor: "pointer", transition: "transform 0.2s" }}
@@ -1950,7 +2140,7 @@ function OrganiserPanel() {
 
             {/* Left Sidebar Tracker */}
             <div style={{ width: "240px", position: "relative", flexShrink: 0, padding: "30px 24px", borderRight: "1px solid #f1f5f9", backgroundColor: "#fcfdfe" }}>
-                <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "24px" }}>Onboarding Progress</h2>
+                <h2 style={{ fontSize: "12px", fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: "24px" }}>Onboarding Progress</h2>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px", position: "relative" }}>
                     {[
@@ -1973,7 +2163,7 @@ function OrganiserPanel() {
                                     fontWeight: 900,
                                     fontSize: "16px",
                                     backgroundColor: isCompleted ? "#22c55e" : (isActive ? "#0f172a" : "#f8fafc"),
-                                    color: isActive || isCompleted ? "#fff" : "#94a3b8",
+                                    color: isActive || isCompleted ? "#fff" : "#475569",
                                     border: isActive || isCompleted ? "none" : "1.5px solid #f1f5f9",
                                     transition: "all 0.4s ease",
                                     boxShadow: isActive ? "0 10px 15px -3px rgba(15, 23, 42, 0.1)" : "none"
@@ -1981,8 +2171,8 @@ function OrganiserPanel() {
                                     {isCompleted ? <Check size={20} strokeWidth={3} /> : step.num}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column" }}>
-                                    <span style={{ fontSize: "12px", fontWeight: 800, color: isActive || isCompleted ? "#0f172a" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.label}</span>
-                                    <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px", fontWeight: 600 }}>{step.desc}</span>
+                                    <span style={{ fontSize: "12px", fontWeight: 800, color: isActive || isCompleted ? "#0f172a" : "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.label}</span>
+                                    <span style={{ fontSize: "10px", color: "#475569", marginTop: "2px", fontWeight: 600 }}>{step.desc}</span>
                                 </div>
                             </div>
                         );
@@ -1998,7 +2188,7 @@ function OrganiserPanel() {
                             <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                                     <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "20px", display: "none" }}>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Category *</label>
                                         <select
                                             value={kycFormData.category}
                                             onChange={e => setKycFormData({ ...kycFormData, category: e.target.value })}
@@ -2009,7 +2199,7 @@ function OrganiserPanel() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Legal Name *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Full Legal Name *</label>
                                         <input
                                             type="text"
                                             placeholder="As per Government ID"
@@ -2019,7 +2209,7 @@ function OrganiserPanel() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Card Number *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>PAN Card Number *</label>
                                         <input
                                             type="text"
                                             placeholder="ABCDE1234F"
@@ -2029,7 +2219,7 @@ function OrganiserPanel() {
                                         />
                                     </div>
                                     <div style={{ gridColumn: "span 2" }}>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Registered Address *</label>
                                         <input
                                             type="text"
                                             placeholder="Enter full address for communications"
@@ -2044,7 +2234,7 @@ function OrganiserPanel() {
                             <div style={{ backgroundColor: "#fdf2f8", padding: "24px", borderRadius: "16px", border: "1px solid #fbcfe8" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Business Email *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Business Email *</label>
                                         <input
                                             type="email"
                                             value={kycFormData.email}
@@ -2053,7 +2243,7 @@ function OrganiserPanel() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact Number *</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contact Number *</label>
                                         <input
                                             type="text"
                                             value={kycFormData.mobile}
@@ -2067,15 +2257,15 @@ function OrganiserPanel() {
                             <div style={{ backgroundColor: "#eff6ff", padding: "24px", borderRadius: "16px", border: "1px solid #dbeafe" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Beneficiary Name</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Beneficiary Name</label>
                                         <input type="text" placeholder="Account Holder Name" value={kycFormData.beneficiaryName} onChange={e => setKycFormData({ ...kycFormData, beneficiaryName: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 600 }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</label>
                                         <input type="text" placeholder="HDFC0001234" value={kycFormData.ifscCode} onChange={e => handleIfscChange(e.target.value)} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Account No</label>
+                                        <label style={{ display: "block", fontSize: "12px", color: "#334155", marginBottom: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Account No</label>
                                         <input type="text" placeholder="0000 0000 0000" value={kycFormData.accountNumber} onChange={e => setKycFormData({ ...kycFormData, accountNumber: e.target.value })} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700 }} />
                                     </div>
                                 </div>
@@ -2088,11 +2278,11 @@ function OrganiserPanel() {
                             <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
                                 {['pan', 'cheque', 'aadhar'].map(id => (
                                     <div key={id} style={{ border: "2px dashed #cbd5e1", padding: "24px", borderRadius: "16px", flex: 1, cursor: "pointer", transition: "all 0.3s" }} className="hover:border-blue-500 hover:bg-blue-50">
-                                        <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#64748b" }}>
+                                        <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#334155" }}>
                                             <Building size={24} />
                                         </div>
                                         <label style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "block", marginBottom: "8px", textTransform: "uppercase" }}>{id.toUpperCase()}</label>
-                                        <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "16px" }}>Upload clear photo or PDF</p>
+                                        <p style={{ fontSize: "12px", color: "#475569", marginBottom: "16px" }}>Upload clear photo or PDF</p>
                                         <input type="file" onChange={e => setKycFiles({ ...kycFiles, [id]: e.target.files?.[0]?.name })} style={{ fontSize: "12px", width: "100%" }} />
                                     </div>
                                 ))}
@@ -2106,7 +2296,7 @@ function OrganiserPanel() {
                                 <FileCheck2 size={40} />
                             </div>
                             <h3 style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "12px" }}>Final Consensus</h3>
-                            <p style={{ color: "#64748b", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
+                            <p style={{ color: "#334155", fontSize: "16px", marginBottom: "40px", maxWidth: "480px", margin: "0 auto 40px" }}>By clicking submit, you agree to the BookMyTicket Partner Terms of Service and Business Operating Guidelines.</p>
                             <label style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}>
                                 <input type="checkbox" checked={agreedToVendor} onChange={e => setAgreedToVendor(e.target.checked)} style={{ width: "20px", height: "20px" }} />
                                 I accept the Partner Agreement
@@ -2302,7 +2492,7 @@ function OrganiserPanel() {
                 <div className="flex items-center justify-between mb-2">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight uppercase text-slate-900 leading-none">Meeting Hub</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mt-2">Manage your virtual sessions and video calls</p>
                     </div>
                     <button
                         onClick={() => setIsCreating(true)}
@@ -2316,31 +2506,31 @@ function OrganiserPanel() {
                     <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100    ">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-pink-500">Configure Session</h3>
-                            <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-all"><X size={20} /></button>
+                            <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-600 transition-all"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreate} className="space-y-6">
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
+                                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 px-1">Meeting Title</label>
                                 <input
                                     type="text"
                                     required
                                     value={newMeeting.title}
                                     onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
                                     placeholder="Enter a descriptive title..."
-                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300"
+                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
+                                <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 px-1">Description (Optional)</label>
                                 <textarea
                                     value={newMeeting.description}
                                     onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
                                     placeholder="Brief agenda or instructions..."
-                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-300 min-h-[100px]"
+                                    className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-100 transition-all font-bold placeholder:text-slate-500 min-h-[100px]"
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setIsCreating(false)} className="px-6 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest text-slate-500 hover:bg-slate-50">Cancel</button>
+                                <button type="button" onClick={() => setIsCreating(false)} className="px-6 py-4 rounded-2xl font-bold text-[11px] uppercase tracking-widest text-slate-700 hover:bg-slate-50">Cancel</button>
                                 <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">Initialize Meeting</button>
                             </div>
                         </form>
@@ -2350,17 +2540,17 @@ function OrganiserPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {meetings?.length === 0 && !isCreating ? (
                         <div className="col-span-full py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 flex flex-col items-center text-center">
-                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
+                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-500 mb-6">
                                 <Video size={40} />
                             </div>
-                            <h4 className="text-lg font-bold tracking-tight uppercase text-slate-400">No Meetings Planned</h4>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2">Start by creating your first virtual event</p>
+                            <h4 className="text-lg font-bold tracking-tight uppercase text-slate-600">No Meetings Planned</h4>
+                            <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mt-2">Start by creating your first virtual event</p>
                         </div>
                     ) : meetings?.map(meeting => (
                         <div key={meeting.id} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm hover:shadow-xl hover:shadow-slate-100 transition-all group">
                             <div className="flex justify-between items-start mb-6">
                                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${meeting.status === 'live' ? 'bg-emerald-50 text-emerald-600' :
-                                        meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
+                                        meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-700'
                                     }`}>
                                     {meeting.status}
                                 </div>
@@ -2373,14 +2563,14 @@ function OrganiserPanel() {
                                                     .catch(err => alert("Failed to delete: " + err.message));
                                             }
                                         }}
-                                        className="p-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                        className="p-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                 )}
                             </div>
                             <h4 className="text-xl font-bold tracking-tight uppercase text-slate-900 mb-2 truncate">{meeting.title}</h4>
-                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8 line-clamp-2">{meeting.description || "No description provided."}</p>
+                            <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-8 line-clamp-2">{meeting.description || "No description provided."}</p>
 
                             <div className="flex flex-col gap-3">
                                 <button
@@ -2411,7 +2601,7 @@ function OrganiserPanel() {
         const renderTabContent = () => {
             const renderToggle = (label, field, options) => (
                 <div className="mb-6">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 shadow-inner">
                         {options.map((opt) => {
                             const isActive = postEvent[field] === opt.value;
@@ -2422,7 +2612,7 @@ function OrganiserPanel() {
                                     onClick={() => setPostEvent(prev => ({ ...prev, [field]: opt.value }))}
                                     className={`flex-1 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all  ${isActive
                                             ? 'bg-white text-pink-500 shadow-md shadow-slate-200/50 scale-[1.02] border border-slate-100'
-                                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
+                                            : 'text-slate-600 hover:text-slate-600 hover:bg-slate-100/50 border border-transparent'
                                         }`}
                                 >
                                     {opt.label}
@@ -2475,7 +2665,7 @@ function OrganiserPanel() {
                                         {isNewCategory && layout === "rate" && (
                                             <div className="w-full flex items-center justify-center relative my-6">
                                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                                                <div className="relative bg-white px-4 text-[11px] font-bold tracking-widest text-slate-500 uppercase flex items-center gap-2">
+                                                <div className="relative bg-white px-4 text-[11px] font-bold tracking-widest text-slate-700 uppercase flex items-center gap-2">
                                                     <span>₹{cat.price}</span>
                                                     <span className="text-slate-900">{cat.name}</span>
                                                 </div>
@@ -2521,20 +2711,20 @@ function OrganiserPanel() {
                         {(layout === "stage" || layout === "rate") && (
                             <div className="mt-20 mb-10 w-full flex flex-col items-center">
                                 <div className="w-3/4 max-w-xl h-10 border-t-2 border-l-2 border-r-2 border-blue-200/50 rounded-t-2xl bg-gradient-to-t from-blue-50/30 to-white" style={{ transform: "perspective(150px) rotateX(10deg)" }}></div>
-                                <p className="text-[11px] font-medium text-slate-500 mt-4 tracking-wide">All eyes this way please</p>
+                                <p className="text-[11px] font-medium text-slate-700 mt-4 tracking-wide">All eyes this way please</p>
                             </div>
                         )}
                         {layout === "ground" && (
-                            <div className="mt-16 mb-8 px-12 py-3 border-2 border-dashed border-slate-300 rounded-full text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+                            <div className="mt-16 mb-8 px-12 py-3 border-2 border-dashed border-slate-300 rounded-full text-slate-600 text-[11px] font-bold uppercase tracking-widest">
                                 Main Entrance / Exit
                             </div>
                         )}
 
                         {!isPreview && (
                             <div className="mt-auto border-t border-slate-100 w-full pt-6 pb-2 flex justify-center gap-10">
-                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded border border-[#22c55e] bg-white"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Available</span></div>
-                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-[#22c55e]"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Selected</span></div>
-                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-slate-200"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-500">Sold</span></div>
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded border border-[#22c55e] bg-white"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-700">Available</span></div>
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-[#22c55e]"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-700">Selected</span></div>
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-slate-200"></div><span className="text-[11px] font-bold tracking-widest uppercase text-slate-700">Sold</span></div>
                             </div>
                         )}
                     </div>
@@ -2543,7 +2733,7 @@ function OrganiserPanel() {
 
             const renderInput = (label, field, type = "text", placeholder = "", fullWidth = false) => (
                 <div className={`mb-6 ${fullWidth ? "col-span-2" : "col-span-1"}`}>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">{label}{label.endsWith('*') ? '' : '*'}</label>
                     <div className="relative flex items-center">
                         {type === "date" ? (
                             <CalendarPicker
@@ -2563,7 +2753,7 @@ function OrganiserPanel() {
                                 value={postEvent[field] || ""}
                                 onChange={(e) => setPostEvent(prev => ({ ...prev, [field]: e.target.value }))}
                                 placeholder={placeholder}
-                                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-inner"
+                                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 placeholder:font-medium shadow-inner"
                             />
                         )}
                     </div>
@@ -2597,7 +2787,7 @@ function OrganiserPanel() {
 
                 return (
                     <div className="mb-6 col-span-1">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{label}*</label>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">{label}*</label>
                         <CustomSelect
                             value={postEvent[field] || ""}
                             options={options.map(opt => (typeof opt === 'string' ? opt : { label: opt.name || opt.label || String(opt), value: opt.value || opt.name || opt.label || String(opt) }))}
@@ -2768,7 +2958,7 @@ function OrganiserPanel() {
                                                                                     <p style={{ fontSize: "12px", color: t.textSub, margin: 0 }}>{ev.venue || "Online"}</p>
                                                                                     {ev.type === "Online" && ev.meetingUrl && (
                                                                                         <div style={{ display: "flex", alignItems: "center", gap: "4px", backgroundColor: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
-                                                                                            <span style={{ fontSize: "9px", fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Code:</span>
+                                                                                            <span style={{ fontSize: "9px", fontWeight: 800, color: "#334155", textTransform: "uppercase" }}>Code:</span>
                                                                                             <span style={{ fontSize: "10px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace" }}>{ev.meetingUrl}</span>
                                                                                         </div>
                                                                                     )}
@@ -2813,6 +3003,17 @@ function OrganiserPanel() {
                                                                                 setPostEvent({
                                                                                     ...getInitialPostEvent(),
                                                                                     ...ev,
+                                                                                    // Map snake_case from Convex to camelCase for form state
+                                                                                    seatingEnabled: ev.seating_enabled !== undefined ? ev.seating_enabled : ev.seatingEnabled,
+                                                                                    totalSeats: ev.total_seats || ev.totalSeats,
+                                                                                    normalTicketCapacity: ev.normal_ticket_capacity || ev.normalTicketCapacity,
+                                                                                    normalTicketPrice: ev.normal_ticket_price || ev.normalTicketPrice,
+                                                                                    categories: ev.seat_categories || ev.seatCategories || ev.categories || getInitialPostEvent().categories,
+                                                                                    dateSlots: ev.date_slots || ev.dateSlots,
+                                                                                    meetingUrl: ev.meeting_url || ev.meetingUrl,
+                                                                                    meetingType: ev.meeting_type || ev.meetingType,
+                                                                                    externalMeetingUrl: ev.external_meeting_url || ev.externalMeetingUrl,
+                                                                                    
                                                                                     ...(ev.sports_details || {}),
                                                                                     sportType: ev.sports_details?.sport_type || ev.sportType,
                                                                                     ageCategory: ev.sports_details?.age_category || ev.ageCategory,
@@ -2824,14 +3025,15 @@ function OrganiserPanel() {
                                                                                     tournamentType: ev.sports_details?.tournament_type || ev.tournamentType,
                                                                                     trainerDetails: ev.sports_details?.trainer_details || ev.trainerDetails,
                                                                                     sessionSlots: ev.sports_details?.session_slots || ev.sessionSlots,
-                                                                                    isFeature: ev.featured ? "Yes" : "No",
-                                                                                    isExclusive: ev.exclusive ? "Yes" : "No",
+                                                                                    isFeature: (ev.featured === true || ev.isFeature === "Yes") ? "Yes" : "No",
+                                                                                    isExclusive: (ev.exclusive === true || ev.isExclusive === "Yes") ? "Yes" : "No",
                                                                                     eventStatus: ev.status || "published",
-                                                                                    dateType: ev.dateSlots ? "multiple" : "single",
+                                                                                    dateType: (ev.date_slots || ev.dateSlots) ? "multiple" : "single",
                                                                                     startDate: ev.date,
                                                                                     startTime: ev.time,
-                                                                                    bannerPreview: ev.bannerPreview || ev.img,
-                                                                                    categories: ev.seatCategories || getInitialPostEvent().categories,
+                                                                                    expiryDate: ev.expiry_date || ev.expiryDate,
+                                                                                    bannerPreview: ev.banner_preview || ev.bannerPreview || ev.img,
+                                                                                    image_url: ev.banner_preview || ev.bannerPreview || ev.img, // Used by Sports/Universal forms
                                                                                 });
                                                                                 setAddEventStep("form");
                                                                                 setActiveTab("post_event");
@@ -2885,7 +3087,7 @@ function OrganiserPanel() {
                                         <Sparkles size={12} /> Format Selection
                                     </div>
                                     <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Create New Experience</h2>
-                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
+                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-xs h-[10px]">Select the delivery format for your upcoming event</p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
                                     <button
@@ -2898,7 +3100,7 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="text-center space-y-2 z-10">
                                             <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-pink-600 transition-colors">Digital Broadcast</span>
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Access Event</span>
+                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">Global Access Event</span>
                                         </div>
                                     </button>
                                     <button
@@ -2911,7 +3113,7 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="text-center space-y-2 z-10">
                                             <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-orange-600 transition-colors">Physical Venue</span>
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">In-person Gathering</span>
+                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">In-person Gathering</span>
                                         </div>
                                     </button>
                                     <button
@@ -2927,7 +3129,7 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="text-center space-y-2 z-10">
                                             <span className="block text-xl font-bold text-slate-900 tracking-tight uppercase group-hover:text-blue-600 transition-colors">Sports Event</span>
-                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Athletics, Turf, Competitions</span>
+                                            <span className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest">Athletics, Turf, Competitions</span>
                                         </div>
                                     </button>
                                 </div>
@@ -2949,7 +3151,7 @@ function OrganiserPanel() {
                                         <Trophy size={12} /> Sports Configuration
                                     </div>
                                     <h2 className="text-4xl font-bold text-slate-900 tracking-tight uppercase">Select Sport Type</h2>
-                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs h-[10px]">What kind of sports event are you organizing?</p>
+                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-xs h-[10px]">What kind of sports event are you organizing?</p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                                     {sportsTypes.map((st) => (
@@ -2976,14 +3178,14 @@ function OrganiserPanel() {
                                             </div>
                                             <div className="text-center space-y-1">
                                                 <span className="block text-lg font-bold text-slate-900 tracking-tight uppercase">{st.label}</span>
-                                                <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">{st.sub}</span>
+                                                <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest">{st.sub}</span>
                                             </div>
                                         </button>
                                     ))}
                                 </div>
                                 <button
                                     onClick={() => setAddEventStep("select_type")}
-                                    className="mt-12 flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors"
+                                    className="mt-12 flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors"
                                 >
                                     <ArrowLeft size={14} /> Back to Formats
                                 </button>
@@ -3027,16 +3229,16 @@ function OrganiserPanel() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                     {/* Thumbnail Image */}
                                     <div>
-                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">Cover Image*</label>
                                         <div className="group relative border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 flex flex-col md:flex-row items-center gap-6 hover:bg-pink-50 hover:border-pink-300 transition-all cursor-pointer overflow-hidden min-h-[140px]" onClick={() => thumbnailInputRef.current?.click()}>
                                             <div className="w-28 h-20 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0 relative z-10 flex items-center justify-center">
                                                 {postEvent.bannerPreview ? (
                                                     <img src={postEvent.bannerPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-                                                ) : <ImageIcon size={28} className="text-slate-300" />}
+                                                ) : <ImageIcon size={28} className="text-slate-500" />}
                                             </div>
                                             <div className="flex flex-col gap-1 z-10 text-center md:text-left">
-                                                <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-500">Upload Banner</span>
-                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">1920x1080px (16:9)</span>
+                                                <span className="text-[11px] font-bold uppercase tracking-widest group-hover:text-pink-600 transition-colors text-slate-700">Upload Banner</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-600">1920x1080px (16:9)</span>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
@@ -3078,7 +3280,7 @@ function OrganiserPanel() {
                                                 </div>
                                                 <div>
                                                     <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day online sessions</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Schedule recurring or multi-day online sessions</p>
                                                 </div>
                                             </div>
                                             <button
@@ -3091,7 +3293,7 @@ function OrganiserPanel() {
                                         </div>
                                         <div className="space-y-4">
                                             {(postEvent.dateSlots || []).length === 0 ? (
-                                                <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                                <div className="py-12 flex flex-col items-center justify-center text-slate-600 gap-3">
                                                     <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
                                                         <Clock size={32} className="opacity-20" />
                                                     </div>
@@ -3100,7 +3302,7 @@ function OrganiserPanel() {
                                             ) : (postEvent.dateSlots || []).map((slot, idx) => (
                                                 <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
                                                     <div className="space-y-2">
-                                                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
+                                                        <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Date</label>
                                                         <CalendarPicker
                                                             value={slot.date}
                                                             onChange={val => {
@@ -3110,7 +3312,7 @@ function OrganiserPanel() {
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
+                                                        <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Time</label>
                                                         <TimePicker
                                                             value={slot.time}
                                                             onChange={val => {
@@ -3167,7 +3369,7 @@ function OrganiserPanel() {
                                         ) : (
                                             <div style={{ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px dashed #e2e8f0", display: "flex", alignItems: "center", gap: "10px", marginTop: "24px" }}>
                                                 <div style={{ width: "8px", height: "8px", borderRadius: "full", backgroundColor: "#22c55e", animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" }} />
-                                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Safe Platform Meeting Link will be auto-generated</span>
+                                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.5px" }}>Safe Platform Meeting Link will be auto-generated</span>
                                             </div>
                                         )}
                                     </div>
@@ -3218,14 +3420,14 @@ function OrganiserPanel() {
                                             <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">Image Details</h3>
                                         </div>
                                         <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-[9px] font-bold text-white uppercase tracking-widest">
-                                            <Sparkles size={10} className="text-pink-400" /> Premium Assets
+                                            <Sparkles size={10} className="text-pink-600" /> Premium Assets
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                                         {/* Cover / Banner Upload */}
                                         <div className="space-y-4">
-                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
+                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Primary Banner (16:9)</label>
                                             <div
                                                 className="group relative h-64 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-pink-300 transition-all "
                                                 onClick={() => thumbnailInputRef.current?.click()}
@@ -3239,12 +3441,12 @@ function OrganiserPanel() {
                                                     </div>
                                                 ) : (
                                                     <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 transition-colors group-hover:bg-pink-50">
-                                                        <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-300 group-hover:text-pink-400 group-hover:scale-110 transition-all ">
+                                                        <div className="w-16 h-16 rounded-3xl bg-white shadow-xl shadow-slate-200 flex items-center justify-center text-slate-500 group-hover:text-pink-600 group-hover:scale-110 transition-all ">
                                                             <CloudUpload size={32} />
                                                         </div>
                                                         <div className="text-center">
                                                             <span className="block text-xs font-bold text-slate-900 uppercase tracking-tight italic">Click to Upload Banner</span>
-                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
+                                                            <span className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">Recommended: 1920x1080px</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -3253,7 +3455,7 @@ function OrganiserPanel() {
 
                                         {/* Gallery Management */}
                                         <div className="space-y-4">
-                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
+                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Photo Gallery (Max 10)</label>
                                             <div className="grid grid-cols-3 gap-3">
                                                 {postEvent.galleryPreviews?.map((src, idx) => (
                                                     <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
@@ -3278,16 +3480,16 @@ function OrganiserPanel() {
                                                         onClick={() => galleryInputRef.current?.click()}
                                                         className="aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-all group"
                                                     >
-                                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-300 group-hover:text-pink-500 group-hover:rotate-90 transition-all ">
+                                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-500 group-hover:text-pink-500 group-hover:rotate-90 transition-all ">
                                                             <Plus size={20} />
                                                         </div>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Add More</span>
+                                                        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tight">Add More</span>
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-                                                <AlertCircle size={16} className="text-slate-400" />
-                                                <p className="text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                                                <AlertCircle size={16} className="text-slate-600" />
+                                                <p className="text-[9px] font-bold text-slate-700 leading-relaxed uppercase tracking-widest">
                                                     High resolution images help boost sales by up to 40%. Ensure your photos are clear and well-lit.
                                                 </p>
                                             </div>
@@ -3318,11 +3520,11 @@ function OrganiserPanel() {
                                 </div>
                                 <div className="flex flex-wrap gap-4">
                                     <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
                                             <Users size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Age Limit</label>
+                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Age Limit</label>
                                             <select
                                                 value={postEvent.ageLimit}
                                                 onChange={e => setPostEvent(p => ({ ...p, ageLimit: e.target.value }))}
@@ -3337,11 +3539,11 @@ function OrganiserPanel() {
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
                                             <Languages size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Language</label>
+                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Language</label>
                                             <select
                                                 value={postEvent.language}
                                                 onChange={e => setPostEvent(p => ({ ...p, language: e.target.value }))}
@@ -3358,11 +3560,11 @@ function OrganiserPanel() {
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
                                             <Clock size={20} />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Duration</label>
+                                            <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1">Duration</label>
                                             <input
                                                 type="text"
                                                 value={postEvent.duration}
@@ -3390,7 +3592,7 @@ function OrganiserPanel() {
                                                 <ShieldCheck size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Safety Control</span>
+                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Safety Control</span>
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">All safety measures enabled</span>
                                             </div>
                                         </div>
@@ -3407,7 +3609,7 @@ function OrganiserPanel() {
                                                 <Armchair size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
+                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Seating Arrangement</span>
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">Seating ({postEvent.seatingType})</span>
                                             </div>
                                         </div>
@@ -3427,7 +3629,7 @@ function OrganiserPanel() {
                                                 <CheckCircle2 size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Reception Mode</span>
+                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Reception Mode</span>
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">Mandatory Check-In</span>
                                             </div>
                                         </div>
@@ -3444,7 +3646,7 @@ function OrganiserPanel() {
                                                 <Landmark size={20} />
                                             </div>
                                             <div>
-                                                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Venue Location</span>
+                                                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">Venue Location</span>
                                                 <span className="block text-sm font-bold text-slate-900 uppercase">{postEvent.environment} Event</span>
                                             </div>
                                         </div>
@@ -3476,7 +3678,7 @@ function OrganiserPanel() {
                                             </div>
                                             <div>
                                                 <h4 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Multiple Date/Time Slots</h4>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Schedule recurring or multi-day sessions</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Schedule recurring or multi-day sessions</p>
                                             </div>
                                         </div>
                                         <button
@@ -3489,7 +3691,7 @@ function OrganiserPanel() {
                                     </div>
                                     <div className="space-y-4">
                                         {(postEvent.dateSlots || []).length === 0 ? (
-                                            <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                            <div className="py-12 flex flex-col items-center justify-center text-slate-600 gap-3">
                                                 <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
                                                     <Clock size={32} className="opacity-20" />
                                                 </div>
@@ -3498,7 +3700,7 @@ function OrganiserPanel() {
                                         ) : (postEvent.dateSlots || []).map((slot, idx) => (
                                             <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-center bg-white p-5 rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
                                                 <div className="space-y-2">
-                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Date</label>
+                                                    <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Date</label>
                                                     <CalendarPicker
                                                         value={slot.date}
                                                         onChange={val => {
@@ -3508,7 +3710,7 @@ function OrganiserPanel() {
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Slot Time</label>
+                                                    <label className="block text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-1">Slot Time</label>
                                                     <TimePicker
                                                         value={slot.time}
                                                         onChange={val => {
@@ -3537,41 +3739,147 @@ function OrganiserPanel() {
                                 {renderSelect("Category*", "category", eventCategoryNames.map(n => ({ label: n, value: n })))}
                             </div>
 
-                            <div className="form-grid-4" style={{ alignItems: "end", marginBottom: "20px" }}>
-                                {renderInput("Venue Address*", "venue", "text", "Venue Name / Address")}
+                            {/* Section: Venue & Map (Modernized) */}
+                            <div className="mb-8 p-8 rounded-[2.5rem] bg-indigo-50/30 border border-indigo-100/50">
+                                <div className="flex items-center gap-5 mb-8">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                        <MapPin size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue & Map</h2>
+                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Where will the magic happen?</p>
+                                    </div>
+                                </div>
 
-                                {renderSelect("Country*", "country", Country.getAllCountries().map(c => ({ label: c.name, value: c.name })))}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Venue Name / Building*</label>
+                                        <input 
+                                            type="text"
+                                            value={postEvent.venue || ""}
+                                            onChange={(e) => setPostEvent(prev => ({ ...prev, venue: e.target.value }))}
+                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                                            placeholder="e.g. Nehru Stadium"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Full Address*</label>
+                                        <input 
+                                            type="text"
+                                            value={postEvent.address || ""}
+                                            onChange={(e) => setPostEvent(prev => ({ ...prev, address: e.target.value }))}
+                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                                            placeholder="Building, Street, Area"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-1">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">City / District*</label>
+                                        <input 
+                                            type="text"
+                                            value={postEvent.city || ""}
+                                            onChange={(e) => setPostEvent(prev => ({ ...prev, city: e.target.value }))}
+                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                                            placeholder="City / Area"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-1">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Pincode / Zip Code</label>
+                                        <input 
+                                            type="text"
+                                            value={postEvent.zipCode || ""}
+                                            onChange={(e) => {
+                                                setPostEvent(prev => ({ ...prev, zipCode: e.target.value }));
+                                                setLastZipEdit(Date.now());
+                                            }}
+                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                                            placeholder="641XXX"
+                                        />
+                                    </div>
+                                </div>
 
-                                {renderSelect("State*", "state",
-                                    postEvent.country === "India"
-                                        ? INDIAN_STATES
-                                        : (!postEvent.countryCode ? [] : State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name })))
-                                )}
+                                <div className="space-y-6 pt-6 border-t border-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Venue Location (Pin on Map)</label>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                if (navigator.geolocation) {
+                                                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                                                        const lat = pos.coords.latitude;
+                                                        const lng = pos.coords.longitude;
+                                                        setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                                                        showToast("Live Location Set. Address Auto-Fetching...", "success");
+                                                    });
+                                                }
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all"
+                                        >
+                                            <Target size={14} /> Detect Current Location
+                                        </button>
+                                    </div>
+                                    
+                                    {/* Address Search */}
+                                    <div className="relative group">
+                                        <input 
+                                            type="text"
+                                            placeholder="Search venue or address to center map..."
+                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all placeholder:text-slate-600"
+                                            onKeyDown={async (e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    const query = e.target.value;
+                                                    if (!query) return;
+                                                    try {
+                                                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                                                        const data = await res.json();
+                                                        if (data && data.length > 0) {
+                                                            const { lat, lon } = data[0];
+                                                            setPostEvent(prev => ({ 
+                                                                ...prev, 
+                                                                address: data[0].display_name,
+                                                                latitude: parseFloat(lat), 
+                                                                longitude: parseFloat(lon) 
+                                                            }));
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Geocoding error:", err);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-600 uppercase tracking-widest opacity-0 group-focus-within:opacity-100 transition-opacity">Press Enter to Search</div>
+                                    </div>
 
-                                {renderSelect("District*", "district",
-                                    postEvent.country === "India"
-                                        ? getIndianDistricts(postEvent.state)
-                                        : ((!postEvent.countryCode || !postEvent.stateCode) ? [] : City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name })))
-                                )}
-
-                                {postEvent.country === "India" ? (
-                                    renderSelect("City*", "city",
-                                        !postEvent.district ? [] : getIndianCities(postEvent.district).map(c => ({ label: c, value: c }))
-                                    )
-                                ) : (
-                                    renderInput("City*", "city", "text", "City / Area")
-                                )}
-
-                                <button type="button" onClick={() => { setTempLocation({ lat: 28.6139, lng: 77.209 }); setShowMapModal(true); }} className="w-12 h-12 rounded-2xl bg-[#8b5cf6] text-white hover:bg-[#7c3aed] flex items-center justify-center transition-all mb-6 shadow-lg shadow-purple-100/50 group">
-                                    <MapPin size={22} className="group-hover:scale-110 transition-transform" />
-                                </button>
+                                    <div className="h-[350px] rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-2xl relative">
+                                        <InlineMap 
+                                            lat={postEvent.latitude || 11.0168} 
+                                            lng={postEvent.longitude || 76.9558}
+                                            onLocationSelect={(lat, lng) => setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                                        />
+                                        <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-lg flex items-center gap-3 z-[100]">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shrink-0">
+                                                <MapPin size={16} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-none mb-1">Current Selection</p>
+                                                <p className="text-[10px] font-bold text-slate-900 truncate">
+                                                    {(Number(postEvent.latitude) || 11.0168).toFixed(4)}, {(Number(postEvent.longitude) || 76.9558).toFixed(4)}
+                                                </p>
+                                            </div>
+                                            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md">Live</div>
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest text-center italic">Pin location on map for automatic directions on the booking page.</p>
+                                </div>
                             </div>
+
+
 
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full     mb-8">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
                                     <div>
-                                        <h4 className="text-2xl font-bold text-slate-500 tracking-tight uppercase">Ticketing & Seating</h4>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">Configure event capacity and layout</p>
+                                        <h4 className="text-2xl font-bold text-slate-700 tracking-tight uppercase">Ticketing & Seating</h4>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mt-1">Configure event capacity and layout</p>
                                     </div>
                                     <div className="w-full md:w-64">
                                         {renderToggle("", "seatingEnabled", [{ label: "Seats Map", value: true }, { label: "Standard", value: false }])}
@@ -3595,7 +3903,7 @@ function OrganiserPanel() {
 
                                         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
                                             <div className="flex items-center justify-between mb-8">
-                                                <p className="text-[11px] font-bold tracking-widest text-slate-500 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
+                                                <p className="text-[11px] font-bold tracking-widest text-slate-700 uppercase">Seating Categories (VIP, GOLD, SILVER)</p>
                                                 <button type="button" onClick={() => setPostEvent(prev => ({ ...prev, categories: [...(prev.categories || []), { name: "Bronze", price: 200, rows: 2, isFree: false }] }))} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-pink-600 bg-pink-50 hover:bg-pink-100 px-4 py-2.5 rounded-xl transition-all border border-pink-200/50 shadow-sm">
                                                     <Plus size={14} /> Add Category
                                                 </button>
@@ -3607,19 +3915,19 @@ function OrganiserPanel() {
                                                         <input value={cat.name} onChange={e => {
                                                             const nc = [...postEvent.categories]; nc[idx].name = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Category Name" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
+                                                        }} placeholder="Category Name" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 placeholder:font-medium shadow-sm" />
 
                                                         <input type="number" value={cat.rows} onChange={e => {
                                                             const nc = [...postEvent.categories]; nc[idx].rows = e.target.value;
                                                             setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                        }} placeholder="Rows" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 placeholder:font-medium shadow-sm" />
+                                                        }} placeholder="Rows" className="w-full bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 placeholder:font-medium shadow-sm" />
 
                                                         <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
                                                             <input type="number" value={cat.price} disabled={cat.isFree} onChange={e => {
                                                                 const nc = [...postEvent.categories]; nc[idx].price = e.target.value;
                                                                 setPostEvent(prev => ({ ...prev, categories: nc }));
-                                                            }} placeholder="Price (₹)" className="w-full bg-transparent text-slate-900 text-xs font-bold px-4 py-3 focus:outline-none placeholder:text-slate-300 placeholder:font-medium disabled:opacity-50" />
-                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                            }} placeholder="Price (₹)" className="w-full bg-transparent text-slate-900 text-xs font-bold px-4 py-3 focus:outline-none placeholder:text-slate-500 placeholder:font-medium disabled:opacity-50" />
+                                                            <label className="flex items-center gap-2 px-4 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
                                                                 <input type="checkbox" checked={cat.isFree} className="rounded text-pink-500 focus:ring-pink-500 w-3.5 h-3.5 cursor-pointer" onChange={e => {
                                                                     const nc = [...postEvent.categories]; nc[idx].isFree = e.target.checked;
                                                                     if (e.target.checked) nc[idx].price = 0;
@@ -3654,10 +3962,10 @@ function OrganiserPanel() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-inner">
                                         {renderInput("Total Capacity*", "normalTicketCapacity", "number", "e.g. 500")}
                                         <div className="mb-6">
-                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
+                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-3 pl-1">Ticket Price (₹)*</label>
                                             <div className="flex bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-pink-500/20 focus-within:border-pink-300 transition-all">
-                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-300 disabled:bg-slate-50 disabled:text-slate-400" />
-                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                                                <input type="number" value={postEvent.normalTicketPrice || ""} onChange={(e) => setPostEvent(prev => ({ ...prev, normalTicketPrice: e.target.value }))} disabled={postEvent.ticketsAreFree} placeholder="e.g. 499" className="w-full bg-transparent text-slate-900 text-sm font-semibold px-4 py-3 focus:outline-none placeholder:text-slate-500 disabled:bg-slate-50 disabled:text-slate-600" />
+                                                <label className="flex items-center gap-2 px-6 bg-slate-50 border-l border-slate-200 text-[10px] font-bold uppercase text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors">
                                                     <input type="checkbox" checked={postEvent.ticketsAreFree} className="rounded text-pink-500 focus:ring-pink-500 w-4 h-4 cursor-pointer" onChange={e => setPostEvent(prev => ({ ...prev, ticketsAreFree: e.target.checked, normalTicketPrice: e.target.checked ? "0" : prev.normalTicketPrice }))} /> Free
                                                 </label>
                                             </div>
@@ -3667,17 +3975,24 @@ function OrganiserPanel() {
                             </div>
 
                             <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 w-full     mb-8">
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
-                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-300 shadow-inner resize-y leading-relaxed" />
+                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest mb-4 pl-1">Event Description*</label>
+                                <textarea value={postEvent.description} onChange={e => setPostEvent(prev => ({ ...prev, description: e.target.value }))} rows={5} placeholder="Describe the highlights, rules, and vibe of the event..." className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-medium px-6 py-5 rounded-3xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-300 transition-all placeholder:text-slate-500 shadow-inner resize-y leading-relaxed" />
                             </div>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
-                                {publishError && (
-                                    <div style={{ padding: "10px 16px", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "13px", fontWeight: 600, maxWidth: "500px", width: "100%" }}>
-                                        ⚠️ {publishError}
-                                    </div>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+                                {editingEvent && (
+                                    <button onClick={() => {
+                                        setEditingEvent(null);
+                                        setPostEvent(getInitialPostEvent());
+                                        setAddEventStep("select_type");
+                                        setActiveTab("manage_events");
+                                    }} style={{ padding: "12px 24px", backgroundColor: "transparent", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+                                        Cancel Edit
+                                    </button>
                                 )}
-                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 900, cursor: "pointer", boxShadow: "0 14px 28px rgba(236,72,153,0.22)" }}>Publish Event</button>
+                                <button onClick={publishSeatEvent} style={{ padding: "12px 48px", background: ACCENT_GRADIENT, backgroundColor: ACCENT_PINK, color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 900, cursor: "pointer", boxShadow: "0 14px 28px rgba(236,72,153,0.22)" }}>
+                                    {editingEvent ? "Update Venue Event" : "Publish Event"}
+                                </button>
                             </div>
                         </div>
                     );
@@ -4016,10 +4331,10 @@ function OrganiserPanel() {
                                                     <tr><td colSpan={6} style={{ textAlign: "center", padding: "64px", color: t.textSub }}>No {statusFilter.toLowerCase()} bookings found.</td></tr>
                                                 ) : filtered.map(b => (
                                                     <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                                                        <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800 }}>#{b.id.slice(-8).toUpperCase()}</td>
-                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600 }}>{b.event_name || b.eventName || "—"}</td>
+                                                        <td style={{ padding: "20px 16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 800, color: t.textMain }}>#{b.id.slice(-8).toUpperCase()}</td>
+                                                        <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 600, color: t.textMain }}>{b.event_name || b.eventName || "—"}</td>
                                                         <td style={{ padding: "20px 16px" }}>
-                                                            <div style={{ fontSize: "14px", fontWeight: 600 }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
+                                                            <div style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>{b.user_name || b.userName || b.customer_details?.name || "Guest User"}</div>
                                                             <div style={{ fontSize: "12px", color: t.textSub }}>{b.customer_details?.email || b.user_id || b.userId}</div>
                                                         </td>
                                                         <td style={{ padding: "20px 16px", fontSize: "14px", fontWeight: 700 }}>{b.ticket_count || b.ticketCount}</td>
@@ -4084,11 +4399,16 @@ function OrganiserPanel() {
                                         <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "20px", backgroundColor: t.cardBg, borderRadius: "12px", border: `1px solid ${t.border}` }}>
                                             <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: theme === "light" ? "#f1f5f9" : "#1e293b", display: "flex", alignItems: "center", justifyContent: "center" }}><Building size={24} style={{ color: t.textSub }} /></div>
                                             <div>
-                                                <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: t.textMain }}>HDFC Bank ···· 4242</p>
-                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Account Verified by Admin</p>
+                                                <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: t.textMain }}>{kycFormData.bankName || "No Bank Linked"} ···· {kycFormData.accountNumber?.slice(-4) || "0000"}</p>
+                                                <p style={{ margin: 0, fontSize: "12px", color: t.textSub }}>Account {kycFormData.bankName ? "Linked" : "Not Linked"}</p>
                                             </div>
                                         </div>
-                                        <button style={{ marginTop: "24px", width: "100%", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>Change Settlement Account</button>
+                                        <button 
+                                            onClick={() => setShowBankUpdateModal(true)}
+                                            style={{ marginTop: "24px", width: "100%", border: `1px solid ${t.border}`, background: t.cardBg, color: t.textMain, padding: "12px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+                                        >
+                                            Change Settlement Account
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -4141,11 +4461,11 @@ function OrganiserPanel() {
                                             ) : myBookings.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).reverse().map(b => (
                                                 <tr key={b.id} style={{ backgroundColor: t.bg, borderRadius: "12px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
                                                     <td style={{ padding: "16px", borderRadius: "12px 0 0 12px", fontSize: "13px", fontWeight: 700, color: t.textSub }}>#{b.id.slice(-8).toUpperCase()}</td>
-                                                    <td style={{ padding: "16px", fontSize: "14px" }}>{new Date(b.created_at).toLocaleDateString()}</td>
+                                                    <td style={{ padding: "16px", fontSize: "14px", color: t.textMain, fontWeight: 600 }}>{new Date(b.created_at).toLocaleDateString()}</td>
                                                     <td style={{ padding: "16px" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                                             <div style={{ width: "24px", height: "24px", borderRadius: "6px", backgroundColor: "#22c55e20", display: "flex", alignItems: "center", justifyContent: "center" }}><Ticket size={14} color="#22c55e" /></div>
-                                                            <span style={{ fontSize: "14px", fontWeight: 600 }}>Ticket Sale</span>
+                                                            <span style={{ fontSize: "14px", fontWeight: 600, color: t.textMain }}>Ticket Sale</span>
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: "16px", fontSize: "14px", color: t.textMain, fontWeight: 600 }}>{(b.event_name || b.eventName || "—")} <span style={{ color: t.textSub, fontWeight: 400 }}>(x{b.ticket_count || b.ticketCount})</span></td>
@@ -4341,7 +4661,7 @@ function OrganiserPanel() {
                 }
                 case "support_tickets": {
                     const TICKET_STATUSES = ["Open", "Pending", "On-Hold", "In-Progress", "Resolved", "Closed"];
-                    const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#64748b");
+                    const statusColor = (s) => ({ Open: "#22c55e", Pending: "#7dd3fc", "On-Hold": "#8b5cf6", "In-Progress": "#06b6d4", Resolved: "#22c55e", Closed: "#ef4444" }[s] || "#334155");
                     const filteredTickets = supportTicketSearchId.trim() ? supportTicketsList.filter(t => String(t.ticketId || t.id || "").toLowerCase().includes(supportTicketSearchId.trim().toLowerCase())) : supportTicketsList;
                     const toggleTicketSelect = (id) => setSelectedTicketIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
                     const toggleSelectAll = () => { if (selectedTicketIds.length >= filteredTickets.length) setSelectedTicketIds([]); else setSelectedTicketIds(filteredTickets.map(t => t.id)); };
@@ -4440,7 +4760,7 @@ function OrganiserPanel() {
                                                         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                                             <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>TICKET ID</span><div style={{ fontSize: "15px", fontWeight: 700 }}>#{viewedTicket.ticketId || viewedTicket.id.slice(-6).toUpperCase()}</div></div>
                                                             <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>SUBJECT</span><div style={{ fontSize: "15px", fontWeight: 700 }}>{viewedTicket.subject}</div></div>
-                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>STATUS</span><div><span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, backgroundColor: (statusColor(viewedTicket.status) || "#64748b") + "20", color: statusColor(viewedTicket.status) }}>{(viewedTicket.status || "Open").toUpperCase()}</span></div></div>
+                                                            <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>STATUS</span><div><span style={{ padding: "6px 14px", borderRadius: "100px", fontSize: "12px", fontWeight: 800, backgroundColor: (statusColor(viewedTicket.status) || "#334155") + "20", color: statusColor(viewedTicket.status) }}>{(viewedTicket.status || "Open").toUpperCase()}</span></div></div>
                                                             <div><span style={{ fontSize: "12px", color: t.textSub, fontWeight: 600 }}>CREATED AT</span><div style={{ fontSize: "14px", fontWeight: 600 }}>{new Date(viewedTicket.createdAt).toLocaleString()}</div></div>
                                                         </div>
                                                     </div>
@@ -4453,7 +4773,7 @@ function OrganiserPanel() {
                                                     <h4 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "20px" }}>Reply History</h4>
                                                     <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
                                                         {viewedTicket.replies?.length > 0 ? viewedTicket.replies.map((r, i) => (
-                                                            <div key={i} style={{ display: "flex", gap: "16px", padding: "20px", borderRadius: "12px", backgroundColor: r.from === 'organiser' ? "#3b82f610" : "#f1f5f9", borderLeft: `4px solid ${r.from === 'organiser' ? "#3b82f6" : "#64748b"}` }}>
+                                                            <div key={i} style={{ display: "flex", gap: "16px", padding: "20px", borderRadius: "12px", backgroundColor: r.from === 'organiser' ? "#3b82f610" : "#f1f5f9", borderLeft: `4px solid ${r.from === 'organiser' ? "#3b82f6" : "#334155"}` }}>
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                                                                         <span style={{ fontWeight: 800, fontSize: "14px", textTransform: "capitalize" }}>{r.from}</span>
@@ -4501,7 +4821,7 @@ function OrganiserPanel() {
                                                                     <td style={{ padding: "16px", fontSize: "14px", color: t.textSub }}>{ticket.email || "—"}</td>
                                                                     <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600 }}>{ticket.subject}</td>
                                                                     <td style={{ padding: "16px" }}>
-                                                                        <span style={{ padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: (statusColor(ticket.status) || "#64748b") + "20", color: statusColor(ticket.status) }}>{ticket.status.toUpperCase()}</span>
+                                                                        <span style={{ padding: "6px 12px", borderRadius: "100px", fontSize: "11px", fontWeight: 800, backgroundColor: (statusColor(ticket.status) || "#334155") + "20", color: statusColor(ticket.status) }}>{ticket.status.toUpperCase()}</span>
                                                                     </td>
                                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                                         <select
@@ -4935,6 +5255,8 @@ function OrganiserPanel() {
             }
         };
 
+
+
         return (
             <div style={{ display: 'flex', minHeight: '100vh', background: 'linear-gradient(135deg, #06b6d4 0%, #2563eb 40%, #1e1b4b 100%)', fontFamily: "'Figtree', sans-serif", WebkitFontSmoothing: 'antialiased', color: '#ffffff' }}>
                 {styles}
@@ -5140,15 +5462,75 @@ function OrganiserPanel() {
                             <p style={{ fontSize: "14px", color: t.textSub, marginBottom: "24px" }}>Enter the amount you wish to withdraw to your linked bank account.</p>
                             <div style={{ position: "relative", marginBottom: "24px" }}>
                                 <span style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "18px", color: t.textMain }}>₹</span>
-                                <input type="number" placeholder="0.00" style={{ width: "100%", padding: "14px 14px 14px 40px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "20px", fontWeight: 900 }} />
+                                <input 
+                                    type="number" 
+                                    placeholder="0.00" 
+                                    value={payoutAmount}
+                                    onChange={(e) => setPayoutAmount(e.target.value)}
+                                    style={{ width: "100%", padding: "14px 14px 14px 40px", borderRadius: "12px", border: `1.5px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontSize: "20px", fontWeight: 900 }} 
+                                />
                             </div>
                             <div style={{ display: "flex", gap: "12px" }}>
                                 <button onClick={() => setShowPayoutModal(false)} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                                <button onClick={() => { alert("Payout request submitted!"); setShowPayoutModal(false); }} style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer" }}>Confirm</button>
+                                <button 
+                                    onClick={handlePayoutRequest} 
+                                    disabled={postLoading}
+                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: postLoading ? 0.7 : 1 }}
+                                >
+                                    {postLoading ? "Processing..." : "Confirm"}
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
+
+                {/* Bank Update Modal */}
+                {showBankUpdateModal && (
+                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+                        <div style={{ backgroundColor: t.cardBg, padding: "32px", borderRadius: "24px", width: "500px", border: `1px solid ${t.border}`, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+                                <div>
+                                    <h3 style={{ fontSize: "20px", fontWeight: 800, color: t.textMain, margin: 0 }}>Update Settlement Account</h3>
+                                    <p style={{ fontSize: "14px", color: t.textSub, margin: "4px 0 0" }}>Change your bank details for future payouts.</p>
+                                </div>
+                                <button onClick={() => setShowBankUpdateModal(false)} style={{ background: "none", border: "none", color: t.textSub, cursor: "pointer" }}><X size={24} /></button>
+                            </div>
+                            
+                            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: t.textSub, marginBottom: "6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Beneficiary Name</label>
+                                    <input type="text" value={kycFormData.beneficiaryName} onChange={e => setKycFormData({ ...kycFormData, beneficiaryName: e.target.value })} placeholder="Account holder name" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontWeight: 600 }} />
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: t.textSub, marginBottom: "6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>IFSC Code</label>
+                                        <input type="text" value={kycFormData.ifscCode} onChange={e => handleIfscChange(e.target.value)} placeholder="HDFC0001234" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontWeight: 700, letterSpacing: "1px" }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "12px", color: t.textSub, marginBottom: "6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Bank Name</label>
+                                        <input type="text" value={kycFormData.bankName} onChange={e => setKycFormData({ ...kycFormData, bankName: e.target.value })} placeholder="Auto-filled from IFSC" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontWeight: 600 }} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "12px", color: t.textSub, marginBottom: "6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Account Number</label>
+                                    <input type="text" value={kycFormData.accountNumber} onChange={e => setKycFormData({ ...kycFormData, accountNumber: e.target.value })} placeholder="Enter bank account number" style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.textMain, fontWeight: 700, letterSpacing: "1px" }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
+                                <button onClick={() => setShowBankUpdateModal(false)} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "none", color: t.textMain, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                                <button 
+                                    onClick={handleBankUpdate} 
+                                    disabled={postLoading}
+                                    style={{ flex: 1, padding: "12px", borderRadius: "10px", backgroundColor: "#3b82f6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: postLoading ? 0.7 : 1, transition: "0.2s" }}
+                                >
+                                    {postLoading ? "Saving..." : "Update Account"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
 
                 <PromoteModal
                     isOpen={!!promoteEventModal}
@@ -5192,7 +5574,7 @@ function OrganiserPanel() {
                         </div>
                     </div>
                     <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
+                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.3em] mb-1">{isStaff ? "Staff Portal" : "Organiser Console"}</p>
                         <div className="flex items-center gap-2">
 
                             <span className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.2em] italic">{profile.firstName || "Verified Partner"}</span>
@@ -5380,13 +5762,13 @@ function OrganiserPanel() {
                         <div className="flex items-center gap-6">
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="p-2.5 rounded-xl bg-slate-50 text-slate-400 md:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
+                                className="p-2.5 rounded-xl bg-slate-50 text-slate-600 md:hidden hover:bg-slate-100 transition-all border border-slate-100 shadow-sm"
                             >
                                 <Menu size={20} />
                             </button>
                             <div className="hidden md:flex items-center bg-slate-50 rounded-full px-4 py-2 border border-slate-100">
-                                <Search size={16} className="text-slate-400" />
-                                <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none pl-2 text-[12px] font-bold text-slate-600 placeholder:text-slate-400" />
+                                <Search size={16} className="text-slate-600" />
+                                <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none pl-2 text-[12px] font-bold text-slate-600 placeholder:text-slate-600" />
                             </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
@@ -5490,7 +5872,7 @@ function OrganiserPanel() {
                     </header>
                     <main className="flex-1 p-6 lg:p-10 relative z-0 flex flex-col">
                         <div className="flex-1">{renderTabContent()}</div>
-                        <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        <footer className="mt-8 pt-6 border-t border-slate-100 text-center text-[10px] font-bold uppercase tracking-widest text-slate-600">
                             Copyright ©2026. All Rights Reserved.
                         </footer>
                     </main>
@@ -5583,7 +5965,7 @@ function OrganiserPanel() {
     // Show loading screen until mounted AND auth state is resolved
     if (!mounted || loading) {
         return (
-            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#94a3b8" }}>
+            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#475569" }}>
                 Loading…
             </div>
         );
@@ -5592,7 +5974,7 @@ function OrganiserPanel() {
     // If not logged in, redirect (useEffect handles this, show nothing in the meantime)
     if (!user) {
         return (
-            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#94a3b8" }}>
+            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", color: "#475569" }}>
                 Redirecting to sign in…
             </div>
         );

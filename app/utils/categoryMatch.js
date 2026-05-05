@@ -13,14 +13,24 @@ function toSlug(str) {
  */
 export function eventMatchesCategory(event, category) {
   const evCat = String(event?.category ?? "").trim().toLowerCase();
+  const evType = String(event?.type ?? "").trim().toLowerCase();
   const evSlug = toSlug(event?.category);
+  const evTypeSlug = toSlug(event?.type);
   const catName = String(category?.name ?? "").toLowerCase();
   const catSlug = String(category?.slug ?? toSlug(category?.name)).toLowerCase();
-  if (!evCat) return false;
+
+  if (!evCat && !evType) return false;
+
+  // Check category matches
   if (evCat === catName || evSlug === catSlug) return true;
   if (evSlug.startsWith(catSlug + "-") || evSlug.endsWith("-" + catSlug)) return true;
   if (catName.length >= 2 && evCat.includes(catName)) return true;
   if (catSlug.length >= 2 && evSlug.includes(catSlug)) return true;
+
+  // Check type matches (Crucial for Sports events)
+  if (evType === catName || evTypeSlug === catSlug) return true;
+  if (catName.length >= 2 && evType.includes(catName)) return true;
+
   if (evCat.replace(/s$/, "") === catName || evSlug.replace(/s$/, "") === catSlug) return true;
   return false;
 }

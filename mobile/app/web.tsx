@@ -20,7 +20,7 @@ export default function WebViewerScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={15}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/auth/sign-in')} style={styles.backBtn} hitSlop={15}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>

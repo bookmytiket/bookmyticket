@@ -41,7 +41,7 @@ export default function ServicesScreen() {
         
         // 1. Fetch from service_providers
         const isTurfCat = category === "Turf Booking";
-        let query = supabase.from('service_providers').select('*').eq('status', 'active');
+        let query = supabase.from('service_providers').select('*').ilike('status', 'active');
         
         if (category && category !== "All Services") {
           // Map UI categories to potential DB names
@@ -74,7 +74,7 @@ export default function ServicesScreen() {
 
         // 2. Fetch from dedicated turfs table if applicable
         if (!category || isTurfCat || category === "All Services") {
-          const { data: turfs } = await supabase.from('turfs').select('*').eq('status', 'active');
+          const { data: turfs } = await supabase.from('turfs').select('*').ilike('status', 'active');
           if (turfs) {
             const normalizedTurfs = turfs.map(t => ({
               ...t,
@@ -113,7 +113,7 @@ export default function ServicesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 8 }}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} hitSlop={12} style={{ padding: 8 }}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{category || 'Experts'}</Text>
@@ -163,7 +163,7 @@ export default function ServicesScreen() {
             <View style={{ marginTop: 50, alignItems: 'center' }}>
               <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 16, fontWeight: '600' }}>No experts found in this category.</Text>
               <Pressable 
-                onPress={() => router.back()}
+                onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
                 style={{ marginTop: 20, padding: 12, backgroundColor: colors.tint, borderRadius: 12 }}
               >
                 <Text style={{ color: '#fff', fontWeight: '800' }}>Explore Other Categories</Text>

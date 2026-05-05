@@ -108,7 +108,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                             Turf Operations
                         </h2>
                     </div>
-                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
+                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
                         Performance overview of your facilities
                     </p>
                 </div>
@@ -125,7 +125,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                         href="/vendor/services"
                         className="group bg-slate-900 border border-slate-800 px-6 py-2.5 rounded-xl text-white font-black text-[9px] shadow-sm hover:shadow-xl hover:bg-slate-800 transition-all flex items-center gap-2 uppercase tracking-widest"
                     >
-                        <Plus size={14} className="text-blue-400 group-hover:rotate-90 transition-transform" />
+                        <Plus size={14} className="text-blue-600 group-hover:rotate-90 transition-transform" />
                         Manager
                     </Link>
                 </div>
@@ -148,7 +148,7 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                         </div>
 
                         <div className="mt-4 relative z-10">
-                            <h3 className="text-slate-400 text-[8px] font-black uppercase tracking-widest">{stat.name}</h3>
+                            <h3 className="text-slate-600 text-[8px] font-black uppercase tracking-widest">{stat.name}</h3>
                             <div className="text-2xl font-black text-slate-900 mt-1 tracking-tighter italic">
                                 {stat.value}
                             </div>
@@ -186,11 +186,11 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                                             {booking.customer_details?.name || "Player Cluster"}
                                         </h4>
                                         <div className="flex items-center gap-3">
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <CalendarIcon size={10} className="text-blue-500" />
                                                 {booking.date}
                                             </span>
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <Clock size={10} className="text-emerald-500" />
                                                 {booking.start_time} - {booking.end_time}
                                             </span>
@@ -212,12 +212,12 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                             </div>
                         )) : (
                             <div className="bg-white rounded-[2rem] p-16 border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-inner">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 shadow-inner">
                                     <CheckCircle size={32} strokeWidth={1} />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Empty Grid</h4>
-                                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">No active reservations detected.</p>
+                                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">No active reservations detected.</p>
                                 </div>
                             </div>
                         )}
@@ -233,14 +233,14 @@ function TurfDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                         
                         <div className="relative z-10 space-y-6">
                             <div className="space-y-1">
-                                <p className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-400">Projected Yield</p>
+                                <p className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-600">Projected Yield</p>
                                 <h4 className="text-2xl font-black text-white tracking-tighter italic">₹{stats.totalEarnings}</h4>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-xl">
                                     <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mb-0.5">Status</p>
-                                    <p className="text-sm font-black text-emerald-400 italic">ACTIVE</p>
+                                    <p className="text-sm font-black text-emerald-600 italic">ACTIVE</p>
                                 </div>
                                 <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-xl">
                                     <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mb-0.5">Efficiency</p>
@@ -322,7 +322,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                             Pool Operations
                         </h2>
                     </div>
-                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
+                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
                         Management hub for your swimming facilities
                     </p>
                 </div>
@@ -339,7 +339,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                         href="/vendor/swimming-pool"
                         className="group bg-slate-900 border border-slate-800 px-6 py-2.5 rounded-xl text-white font-black text-[9px] shadow-sm hover:shadow-xl hover:bg-slate-800 transition-all flex items-center gap-2 uppercase tracking-widest"
                     >
-                        <Plus size={14} className="text-sky-400 group-hover:rotate-90 transition-transform" />
+                        <Plus size={14} className="text-sky-600 group-hover:rotate-90 transition-transform" />
                         Pool Manager
                     </Link>
                 </div>
@@ -362,7 +362,7 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                         </div>
 
                         <div className="mt-4 relative z-10">
-                            <h3 className="text-slate-400 text-[8px] font-black uppercase tracking-widest">{stat.name}</h3>
+                            <h3 className="text-slate-600 text-[8px] font-black uppercase tracking-widest">{stat.name}</h3>
                             <div className="text-2xl font-black text-slate-900 mt-1 tracking-tighter italic">
                                 {stat.value}
                             </div>
@@ -397,11 +397,11 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                                             Request for {booking.booking_date}
                                         </h4>
                                         <div className="flex items-center gap-3">
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <CalendarIcon size={10} className="text-sky-500" />
                                                 {booking.booking_date}
                                             </span>
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <Clock size={10} className="text-emerald-500" />
                                                 {booking.status}
                                             </span>
@@ -420,12 +420,12 @@ function PoolDashboardContent({ user, vendorId, promoteProfileModal, setPromoteP
                             </div>
                         )) : (
                             <div className="bg-white rounded-[2rem] p-16 border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-inner">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 shadow-inner">
                                     <CheckCircle size={32} strokeWidth={1} />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">No Requests</h4>
-                                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">No active inquiries detected.</p>
+                                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">No active inquiries detected.</p>
                                 </div>
                             </div>
                         )}
@@ -519,7 +519,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                             Artist Center
                         </h2>
                     </div>
-                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
+                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em] ml-1">
                         Operational Hub for your Boutique
                     </p>
                 </div>
@@ -569,7 +569,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                         </div>
 
                         <div className="mt-4 relative z-10">
-                            <h3 className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em]">{stat.name}</h3>
+                            <h3 className="text-slate-600 text-[8px] font-black uppercase tracking-[0.2em]">{stat.name}</h3>
                             <div className="text-2xl font-black text-slate-900 mt-1 group-hover:text-pink-600 transition-colors tracking-tighter italic">
                                 {stat.value}
                             </div>
@@ -607,11 +607,11 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                             {booking.customer_details?.name || "Premium Client"}
                                         </h4>
                                         <div className="flex items-center gap-3">
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <CalendarIcon size={10} className="text-yellow-500" />
                                                 {booking.booking_date}
                                             </span>
-                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span className="flex items-center gap-1.5 text-[8px] font-black text-slate-600 uppercase tracking-widest">
                                                 <Clock size={10} className="text-pink-500" />
                                                 {booking.booking_time || "Flexi"}
                                             </span>
@@ -620,7 +620,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                 </div>
 
                                 <div className="flex items-center gap-2.5 mt-4 md:mt-0">
-                                    <button className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-slate-50 text-slate-500 text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all border border-slate-200/50">
+                                    <button className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-slate-50 text-slate-700 text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 hover:text-slate-900 transition-all border border-slate-200/50">
                                         Details
                                     </button>
                                     <button className="flex-1 md:flex-none px-6 py-2.5 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all">
@@ -630,12 +630,12 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                             </div>
                         )) : (
                             <div className="bg-white rounded-[2rem] p-16 border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-inner">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 shadow-inner">
                                     <CheckCircle size={32} strokeWidth={1} />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">Agenda Zero</h4>
-                                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">All queues are cleared.</p>
+                                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] max-w-xs">All queues are cleared.</p>
                                 </div>
                             </div>
                         )}
@@ -652,7 +652,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                         
                         <div className="relative z-10 space-y-6">
                             <div className="space-y-1">
-                                <p className="text-[8px] font-black uppercase tracking-[0.4em] text-pink-400">Portfolio Yield</p>
+                                <p className="text-[8px] font-black uppercase tracking-[0.4em] text-pink-600">Portfolio Yield</p>
                                 <h4 className="text-2xl font-black text-white tracking-tighter italic">₹{stats.totalEarnings}</h4>
                             </div>
 
@@ -663,7 +663,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                 </div>
                                 <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-xl">
                                     <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mb-0.5">status</p>
-                                    <p className="text-sm font-black text-emerald-400 italic">LIVE</p>
+                                    <p className="text-sm font-black text-emerald-600 italic">LIVE</p>
                                 </div>
                             </div>
 
@@ -690,7 +690,7 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                                             </div>
                                             <div className="space-y-0">
                                                 <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight italic">{job.customer_details?.name || "Client"}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{job.booking_date}</p>
+                                                <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{job.booking_date}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -701,10 +701,10 @@ function ArtistDashboardContent({ user, vendorId, profile, promoteProfileModal, 
                             </div>
                         ) : (
                             <div className="text-center py-8 space-y-3">
-                                <div className="text-slate-200">
+                                <div className="text-slate-700">
                                     <Clock size={32} strokeWidth={1} />
                                 </div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Roadmap Clear</p>
+                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Roadmap Clear</p>
                             </div>
                         )}
                         

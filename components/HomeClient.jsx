@@ -100,21 +100,23 @@ function TicketCard({ event, router }) {
           <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{event.location || event.city || "TBA"}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid #f8fafc' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 700 }}>{event.date}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>{event.date?.split(' ')[0]}</span>
           </div>
-          <span style={{ 
-            fontSize: '12px', 
-            fontWeight: 800, 
-            color: '#111827',
-            background: '#f1f5f9',
-            padding: '2px 8px',
-            borderRadius: '6px'
+          <div style={{ 
+            fontSize: '11px', 
+            fontWeight: 900, 
+            color: isFreeEvent(event) ? '#22c55e' : '#0f172a',
+            backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
+            padding: '4px 10px',
+            borderRadius: '100px',
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase'
           }}>
             {isFreeEvent(event) ? "FREE" : "PAID"}
-          </span>
+          </div>
         </div>
       </div>
     </div>
@@ -427,11 +429,43 @@ function HomeClient() {
   const { data: supabaseEventsRaw } = useSupabaseQuery('events', (q) => q, []);
   const supabaseEvents = useMemo(() => supabaseEventsRaw || EMPTY_ARRAY, [supabaseEventsRaw]);
 
-  const { data: serviceProviders } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), []);
+  const { data: serviceProvidersRaw } = useSupabaseQuery('service_providers', (q) => q.eq('status', 'active'), []);
+
+  const filteredServices = useMemo(() => {
+    if (!serviceProvidersRaw) return [];
+    if (!selectedCity || selectedCity === "All Cities") return serviceProvidersRaw;
+
+    const cityLower = selectedCity.toLowerCase();
+    const cityVariations = {
+      'bengaluru': ['bangalore', 'bengaluru'],
+      'bangalore': ['bangalore', 'bengaluru'],
+      'new delhi': ['delhi', 'new delhi', 'ncr'],
+      'delhi': ['delhi', 'new delhi', 'ncr'],
+      'mumbai': ['bombay', 'mumbai'],
+      'chennai': ['madras', 'chennai'],
+      'kochi': ['cochin', 'kochi'],
+      'coimbatore': ['coimbatore', 'pollachi'],
+    };
+    
+    const targetCities = cityVariations[cityLower] || [cityLower];
+
+    return serviceProvidersRaw.filter(p => {
+      const pCity = String(p.city || '').toLowerCase().trim();
+      const pLoc = String(p.location || '').toLowerCase().trim();
+      const pDistrict = String(p.district || '').toLowerCase().trim();
+
+      if (!pCity && !pLoc && !pDistrict) return true;
+
+      return targetCities.some(tc => 
+        pCity.includes(tc) || 
+        pDistrict.includes(tc) || 
+        pLoc.includes(tc)
+      );
+    });
+  }, [serviceProvidersRaw, selectedCity]);
 
   const allLiveEvents = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
 
     return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
       .filter(ev => {
@@ -440,14 +474,12 @@ function HomeClient() {
 
         const eventDate = parseEventDate(ev.date || ev.rawDate || ev.startDate, ev.time || ev.rawTime || ev.startTime, ev);
         if (eventDate) {
-            const evDateOnly = new Date(eventDate);
-            evDateOnly.setHours(0, 0, 0, 0);
-            return evDateOnly >= today;
+            return eventDate >= now;
         }
         return true; // Keep events with no date for safety, or mark as TBA
       })
       .map((ev, idx) => {
-        const loc = String(ev.location || ev.venue || ev.address || "Venue").trim();
+        const loc = String(ev.location || ev.venue || ev.address || "").trim();
         const isVirtual = ev.virtual === true || 
                  String(ev.type || '').toLowerCase() === "online" || 
                  String(ev.type || '').toLowerCase() === "virtual" ||
@@ -503,8 +535,8 @@ function HomeClient() {
       const targetCities = cityVariations[cityLower] || [cityLower];
 
       results = results.filter(ev => {
-        // Spotlight/Featured/Virtual events show everywhere
-        if (ev.virtual === true || ev.featured === true || ev.spotlight === true || ev.is_spotlight === true || ev.is_exclusive === true) return true;
+        // Only Virtual events show everywhere. Spotlight/Exclusive are now filtered by city.
+        if (ev.virtual === true) return true;
         
         const evCity = String(ev.city || '').toLowerCase().trim();
         const evLoc = String(ev.location || '').toLowerCase().trim();
@@ -539,15 +571,12 @@ function HomeClient() {
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
     results = results.filter(ev => {
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time, ev);
       if (!eventDate) return true;
       
-      const evDateOnly = new Date(eventDate);
-      evDateOnly.setHours(0, 0, 0, 0);
-      return evDateOnly >= today;
+      return eventDate >= now;
     });
     return results;
   }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);
@@ -559,6 +588,15 @@ function HomeClient() {
   const spotlightEventsList = useMemo(() => filteredEvents.filter((e) => e.spotlight || e.is_spotlight), [filteredEvents]);
 
   const exclusiveEventsList = useMemo(() => filteredEvents.filter((e) => e.exclusive || e.is_exclusive), [filteredEvents]);
+  
+  const comingSoonList = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return filteredEvents.filter(e => {
+      const eventDate = parseEventDate(e.rawDate || e.date, e.rawTime || e.time, e);
+      return eventDate && eventDate >= today;
+    });
+  }, [filteredEvents]);
 
 
 
@@ -826,12 +864,18 @@ function HomeClient() {
             <RecentlyViewedEvents liveEvents={allLiveEvents} />
 
             {/* 2) Featured Events */}
-            <div id="featured-events">
-              <FeaturedEvents events={featuredEventsList} />
-            </div>
+            {featuredEventsList.length > 0 && (
+              <div id="featured-events">
+                <FeaturedEvents events={featuredEventsList} />
+              </div>
+            )}
 
             {/* 3) Coming Soon */}
-            <ComingSoonEvents events={filteredEvents} />
+            {comingSoonList.length > 0 && (
+              <div id="coming-soon">
+                <ComingSoonEvents events={comingSoonList} />
+              </div>
+            )}
 
             {/* 3.2) Just In (Recently Published) */}
             <section style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '40px 20px' }}>
@@ -1191,7 +1235,7 @@ function HomeClient() {
             <VirtualEvents events={normalizedOrgEvents} />
 
             {/* Top Rated Professional Services */}
-            <TopRatedServices professionals={serviceProviders} />
+            <TopRatedServices professionals={filteredServices} />
 
             {/* Branding & Others removed */}
 

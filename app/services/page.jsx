@@ -18,8 +18,9 @@ export default function ServicesPage() {
 
   // Fetch all vendors for the category
   const { data: vendors = [], loading: vendorsLoading } = useSupabaseQuery('service_providers', (q) => {
-    if (category !== "All Services") {
-      return q.eq('category', category);
+    if (category && category !== "All Services") {
+      const search = category.endsWith('s') ? category.slice(0, -1) : category;
+      return q.or(`category.ilike.%${category}%,category.ilike.%${search}%`);
     }
     return q;
   }, [category]);

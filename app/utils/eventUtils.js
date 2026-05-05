@@ -22,20 +22,50 @@ export function isVirtualEvent(event) {
 export function isFreeEvent(event) {
     if (!event) return false;
     
-    // Check if price is explicitly 0
-    if (event.price === 0 || event.price === "0") return true;
+    // 1. Check explicit "Free" flags (boolean or string "true"/"yes")
+    const isFreeFlag = (val) => val === true || val === "true" || val === "yes" || val === "Yes";
+    if (isFreeFlag(event.isFree) || isFreeFlag(event.is_free)) return true;
+    if (isFreeFlag(event.ticketsAreFree) || isFreeFlag(event.tickets_are_free)) return true;
     
-    // Check normalTicketPrice
-    if (event.normalTicketPrice === 0 || event.normalTicketPrice === "0") return true;
+    // 2. Check various price fields (snake_case and camelCase)
+    // If Number(val) is 0, it's free. We check for undefined/null explicitly too.
+    const price = event.price !== undefined ? event.price : event.price; 
+    const normalPrice = event.normal_ticket_price !== undefined ? event.normal_ticket_price : event.normalTicketPrice;
+    
+    const isZero = (val) => val === 0 || val === "0" || val === 0.0 || (val !== undefined && val !== null && Number(val) === 0);
 
-    // Check type explicitly
-    if (String(event.type || '').toLowerCase() === 'free') return true;
-
-    // Check seat categories if available
-    if (Array.isArray(event.seatCategories) && event.seatCategories.length > 0) {
-        // If all categories are marked isFree or have 0 price
-        return event.seatCategories.every(cat => cat.isFree || cat.price === 0);
+    if (isZero(price)) return true;
+    if (isZero(normalPrice)) return true;
+    
+    // If it's a Sports event, it might have price in distancePricing
+    if (event.type === "Sports" || event.category === "Sports") {
+        if (event.distancePricing && typeof event.distancePricing === 'object') {
+            const dp = Object.values(event.distancePricing);
+            if (dp.length > 0 && dp.every(p => isZero(p))) return true;
+        }
     }
+
+    // 3. Check categories/seatCategories if available
+    const cats = event.seat_categories || event.seatCategories || event.categories || event.dynamic_config?.categories;
+    if (Array.isArray(cats) && cats.length > 0) {
+        // If all categories are free
+        return cats.every(cat => 
+            isFreeFlag(cat.isFree) || 
+            isFreeFlag(cat.is_free) || 
+            isZero(cat.price) ||
+            cat.price === null || 
+            cat.price === undefined
+        );
+    }
+
+    // 4. Check dynamic_config defaults
+    if (isFreeFlag(event.dynamic_config?.basicInfo?.isFree)) return true;
+
+    // 5. Type check
+    if (String(event.type || '').toLowerCase() === 'free') return true;
+    
+    // If we have no price info at all, we'll assume it's NOT free for now (safer for business)
+    // unless it matches one of the above.
     
     return false;
 }

@@ -82,8 +82,16 @@ export default function VenueEventCard({ event }) {
                     >
                         {event.category || "VENUE EVENT"}
                     </p>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
-                        {isFreeEvent(event) ? "FREE" : `₹${event.price}`}
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: isFreeEvent(event) ? "#22c55e" : "#0f172a" }}>
+                        {(() => {
+                            if (isFreeEvent(event)) return "FREE";
+                            const cats = event.categories || event.seatCategories;
+                            if (Array.isArray(cats) && cats.length > 0) {
+                                const prices = cats.map(c => parseFloat(c.price)).filter(p => !isNaN(p) && p > 0);
+                                if (prices.length > 0) return `₹${Math.min(...prices)}`;
+                            }
+                            return event.price ? `₹${event.price}` : (event.normalTicketPrice ? `₹${event.normalTicketPrice}` : "PAID");
+                        })()}
                     </span>
                 </div>
 

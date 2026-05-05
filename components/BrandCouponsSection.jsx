@@ -10,7 +10,7 @@ import CouponModal from "./CouponModal";
 
 // --- Coupon Ad Card (Reference style) ---
 function CouponCard({ coupon, onClick }) {
-  const daysLeft = Math.max(0, Math.round((coupon.endDate - Date.now()) / (1000 * 60 * 60 * 24)));
+  const daysLeft = Math.max(0, Math.round(((coupon.endDate || Date.now()) - Date.now()) / (1000 * 60 * 60 * 24)));
   const discountLabel = coupon.discountType === "Percentage"
     ? `${coupon.discountValue}% OFF`
     : `₹${coupon.discountValue} OFF`;
@@ -26,9 +26,10 @@ function CouponCard({ coupon, onClick }) {
         cursor: "pointer",
         transition: "transform 0.2s, box-shadow 0.2s",
         display: "flex",
-        flexDirection: "column",
-        flex: "0 0 240px",
-        maxWidth: 255,
+        flexDirection: "row",
+        flex: "0 0 380px",
+        width: 380,
+        height: 140,
         border: "1px solid #f0f0f0",
       }}
       onMouseEnter={e => {
@@ -40,79 +41,77 @@ function CouponCard({ coupon, onClick }) {
         e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.08)";
       }}
     >
-      {/* Banner Image */}
+      {/* Landscape Image - Left Side */}
       <div style={{
-        height: 120,
+        width: 140,
+        height: "100%",
         background: coupon.bannerUrl
           ? `url(${coupon.bannerUrl}) center/cover`
           : "linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)",
         position: "relative",
         overflow: "hidden",
+        flexShrink: 0
       }}>
-        {/* Logo inside banner */}
+        {/* Logo sticker badge */}
         {coupon.logoUrl && (
           <div style={{
             position: "absolute", top: 8, left: 8,
-            background: "#fff",
-            borderRadius: 8,
-            padding: "4px 8px",
-            display: "flex", alignItems: "center", gap: 6,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.15)"
+            background: "rgba(255,255,255,0.9)",
+            borderRadius: 6,
+            padding: "4px",
+            display: "flex", alignItems: "center",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+            backdropFilter: "blur(4px)"
           }}>
-            <img src={coupon.logoUrl} alt="logo" style={{ height: 18, objectFit: "contain" }} />
+            <img src={coupon.logoUrl} alt="logo" style={{ height: 14, objectFit: "contain" }} />
           </div>
         )}
-        {/* Discount sticker badge */}
-        <div style={{
-          position: "absolute", top: 8, right: 8,
-          background: "#fff",
-          borderRadius: 6,
-          padding: "3px 8px",
-          fontSize: 11,
-          fontWeight: 900,
-          color: "#7c3aed",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.15)"
-        }}>
-          {discountLabel}
-        </div>
       </div>
 
-      {/* Card body */}
-      <div style={{ padding: "12px 14px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Brand name */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-          {coupon.logoUrl ? (
-            <img src={coupon.logoUrl} alt="brand" style={{ height: 16, objectFit: "contain" }} />
-          ) : null}
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>
-            {coupon.brandName || "Partner Brand"}
-          </span>
-        </div>
+      {/* Card body - Right Side */}
+      <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div>
+          {/* Brand & Discount Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#f84464", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              {coupon.brandName || "Partner"}
+            </span>
+            <span style={{
+              background: "linear-gradient(135deg, #f84464 0%, #c026d3 100%)",
+              borderRadius: 6,
+              padding: "2px 8px",
+              fontSize: 10,
+              fontWeight: 900,
+              color: "#fff",
+            }}>
+              {discountLabel}
+            </span>
+          </div>
 
-        {/* Title */}
-        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", lineHeight: 1.35, marginBottom: 6 }}>
-          {coupon.title}
-        </div>
+          {/* Title */}
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", lineHeight: 1.3, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {coupon.title}
+          </div>
 
-        {/* Description */}
-        <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.5, flexGrow: 1 }}>
-          {coupon.description?.slice(0, 65)}{coupon.description?.length > 65 ? "…" : ""}
+          {/* Description */}
+          <div style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {coupon.description}
+          </div>
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
-          <span style={{ fontSize: 10, color: "#9ca3af" }}>
-            {daysLeft > 0 ? `${daysLeft} days left` : "Ends today!"}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid #f9fafb" }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af" }}>
+            {daysLeft > 0 ? `${daysLeft}D Left` : "Ends Today"}
           </span>
           <span style={{
             fontSize: 10,
-            background: coupon.redemptionMethod === "Online" ? "#eff6ff" : "#f0fdf4",
-            color: coupon.redemptionMethod === "Online" ? "#2563eb" : "#16a34a",
-            borderRadius: 4,
-            padding: "2px 7px",
-            fontWeight: 700,
+            color: "#f84464",
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px"
           }}>
-            {coupon.redemptionMethod}
+            GET DEAL →
           </span>
         </div>
       </div>

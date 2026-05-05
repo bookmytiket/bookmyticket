@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, ShieldCheck } from 'lucide-react-native';
 
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-linking';
@@ -49,7 +49,22 @@ export default function SignInScreen() {
       });
 
       if (error) throw error;
-      router.replace('/(tabs)');
+
+      if (data?.user) {
+        // Fetch role to determine redirection
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        const role = profile?.role?.toLowerCase();
+        if (['staff', 'admin', 'organiser', 'superadmin', 'provider'].includes(role)) {
+          router.replace('/staff');
+        } else {
+          router.replace('/(tabs)');
+        }
+      }
     } catch (err: any) {
       Alert.alert('Sign In Failed', err.message || 'Invalid credentials. Please try again.');
     } finally {
@@ -84,12 +99,27 @@ export default function SignInScreen() {
           const access_token = params.get('access_token');
 
           if (access_token && refresh_token) {
-            const { error: sessionError } = await supabase.auth.setSession({
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
               access_token,
               refresh_token,
             });
             if (sessionError) throw sessionError;
-            router.replace('/(tabs)');
+            
+            if (sessionData?.user) {
+              // Fetch role to determine redirection
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', sessionData.user.id)
+                .single();
+
+              const role = profile?.role?.toLowerCase();
+              if (['staff', 'admin', 'organiser', 'superadmin', 'provider'].includes(role)) {
+                router.replace('/staff');
+              } else {
+                router.replace('/(tabs)');
+              }
+            }
           }
         }
       }
@@ -250,6 +280,17 @@ export default function SignInScreen() {
             </RNView>
           </Pressable>
 
+          {/* Staff Login link */}
+          <Pressable
+            style={styles.staffLink}
+            onPress={() => router.push('/auth/staff-login')}
+          >
+            <ShieldCheck size={16} color={colors.muted} />
+            <Text style={[styles.staffLinkText, { color: colors.muted }]}>
+              Staff & Organiser Portal
+            </Text>
+          </Pressable>
+
           {/* Sign Up link */}
           <Pressable
             style={styles.linkRow}
@@ -326,5 +367,22 @@ const styles = StyleSheet.create({
   googleBtnText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  staffLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 12,
+  },
+  staffLinkText: {
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

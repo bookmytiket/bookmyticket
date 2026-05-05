@@ -71,7 +71,7 @@ export default function TicketDetailScreen() {
   if (loading || !booking) {
     return (
       <RNView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}>
           <ArrowLeft size={22} color={colors.text} />
         </Pressable>
       </RNView>
@@ -104,7 +104,7 @@ export default function TicketDetailScreen() {
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <RNView style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} hitSlop={12}>
           <ArrowLeft size={22} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>My Ticket</Text>

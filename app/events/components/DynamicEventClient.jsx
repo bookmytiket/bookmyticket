@@ -11,7 +11,7 @@ import {
     HeartPulse, Coffee, Utensils, Home, Car, Shirt, Camera, 
     Target, Trophy, Activity, FileText, Zap, Smile, ChevronRight,
     Plus, Minus, X, DollarSign, ArrowLeft, ArrowRight, CreditCard,
-    AlertTriangle
+    AlertTriangle, Map
 } from 'lucide-react';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from '@/components/AuthContext';
@@ -594,13 +594,39 @@ export default function DynamicEventClient({ event }) {
 
                         {/* Event Map Section */}
                         {config.location?.coordinates?.lat && config.location?.coordinates?.lng && (
-                            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6">
+                            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-4">
                                 <EventMap 
                                     lat={config.location.coordinates.lat}
                                     lng={config.location.coordinates.lng}
                                     venueName={config.location.venueName}
                                     address={config.location.address}
                                 />
+                                
+                                {(config.location.startingPoint || config.location.routeMapUrl) && (
+                                    <div className="pt-4 border-t border-slate-50 flex flex-wrap gap-4 items-center justify-between">
+                                        {config.location.startingPoint && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                                                    <MapPin size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Starting Point</p>
+                                                    <p className="text-xs font-bold text-slate-900">{config.location.startingPoint}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {config.location.routeMapUrl && (
+                                            <a 
+                                                href={config.location.routeMapUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"
+                                            >
+                                                <Map size={14} /> View Route Map
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

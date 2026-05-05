@@ -30,8 +30,9 @@ import {
   Ticket,
   ChevronRight,
   Users,
-  Tag,
   Globe,
+  Search,
+  Tag,
   Activity,
   HeartPulse,
   FileText,
@@ -192,7 +193,7 @@ export default function EventDetailScreen() {
           {/* Nav overlay */}
           <RNView style={styles.heroNav}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
               style={styles.navBtn}
               hitSlop={8}
             >
@@ -325,6 +326,31 @@ export default function EventDetailScreen() {
                   <Text style={styles.mapDirectionsText}>GET DIRECTIONS</Text>
                 </Pressable>
               </RNView>
+
+              {(dynamicConfig.location?.startingPoint || dynamicConfig.location?.routeMapUrl) && (
+                <RNView style={[styles.marathonDetails, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  {dynamicConfig.location?.startingPoint && (
+                    <RNView style={styles.marathonRow}>
+                      <RNView style={styles.marathonIcon}>
+                        <MapPin size={16} color={colors.tint} />
+                      </RNView>
+                      <RNView>
+                        <Text style={[styles.marathonLabel, { color: colors.muted }]}>STARTING POINT</Text>
+                        <Text style={[styles.marathonValue, { color: colors.text }]}>{dynamicConfig.location.startingPoint}</Text>
+                      </RNView>
+                    </RNView>
+                  )}
+                  {dynamicConfig.location?.routeMapUrl && (
+                    <Pressable 
+                      onPress={() => Linking.openURL(dynamicConfig.location.routeMapUrl)}
+                      style={[styles.routeBtn, { backgroundColor: colors.tint + '10' }]}
+                    >
+                      <Globe size={14} color={colors.tint} />
+                      <Text style={[styles.routeBtnText, { color: colors.tint }]}>VIEW ROUTE MAP</Text>
+                    </Pressable>
+                  )}
+                </RNView>
+              )}
             </RNView>
           )}
 
@@ -653,4 +679,11 @@ const styles = StyleSheet.create({
   webView: { flex: 1 },
   mapDirectionsBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#f84464', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
   mapDirectionsText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  marathonDetails: { marginTop: 12, padding: 16, borderRadius: 20, borderWidth: 1, gap: 12 },
+  marathonRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  marathonIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(248,68,100,0.1)', alignItems: 'center', justifyContent: 'center' },
+  marathonLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  marathonValue: { fontSize: 13, fontWeight: '700', marginTop: 2 },
+  routeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(248,68,100,0.3)' },
+  routeBtnText: { fontSize: 11, fontWeight: '900' },
 });

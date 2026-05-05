@@ -75,7 +75,7 @@ export default function EarningsPage() {
                             <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic uppercase">Earnings & Settlements</h2>
                         </div>
                     </div>
-                    <p className="text-slate-500 text-xs max-w-xl font-medium">Manage your revenue, withdrawals, and bank history.</p>
+                    <p className="text-slate-700 text-xs max-w-xl font-medium">Manage your revenue, withdrawals, and bank history.</p>
                 </div>
                 <div className="flex items-center space-x-3 mb-1">
                     <button className="flex items-center space-x-2 bg-white text-slate-900 px-5 py-2.5 rounded-xl font-black text-[10px] border border-slate-200 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">
@@ -105,9 +105,9 @@ export default function EarningsPage() {
                             </div>
                             <div>
                                 <h3 className="text-2xl font-black text-slate-900 group-hover:text-purple-600 transition-colors tracking-tighter">{stat.value}</h3>
-                                <p className="text-slate-400 text-[8px] font-black uppercase tracking-widest mt-0.5">{stat.label}</p>
+                                <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest mt-0.5">{stat.label}</p>
                             </div>
-                            <p className="text-[9px] text-slate-400 font-medium italic">{stat.sub}</p>
+                            <p className="text-[9px] text-slate-600 font-medium italic">{stat.sub}</p>
                         </div>
                     </div>
                 ))}
@@ -123,14 +123,14 @@ export default function EarningsPage() {
                         </h3>
                         <div className="flex items-center space-x-4">
                             <div className="relative group">
-                                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
                                 <input 
                                     type="text" 
                                     placeholder="Search..." 
                                     className="bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-6 text-xs text-slate-900 outline-none focus:border-purple-500/50 transition-all font-bold placeholder:text-slate-300" 
                                 />
                             </div>
-                            <button className="p-3 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-purple-600 transition-all">
+                            <button className="p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-purple-600 transition-all">
                                 <Filter size={18} />
                             </button>
                         </div>
@@ -150,13 +150,13 @@ export default function EarningsPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black text-slate-900 group-hover:text-purple-600 transition-colors uppercase italic tracking-tight truncate max-w-[200px]">{tx.desc}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{tx.date}</p>
+                                            <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{tx.date}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-6">
                                         <div className="text-right">
                                             <p className={`text-base font-black ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>{tx.amount}</p>
-                                            <span className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em]">{tx.status}</span>
+                                            <span className="text-[8px] text-slate-600 font-black uppercase tracking-[0.2em]">{tx.status}</span>
                                         </div>
                                         <ChevronRight size={16} className="text-slate-200 group-hover:text-purple-500 group-hover:translate-x-1.5 transition-all" />
                                     </div>
@@ -166,11 +166,11 @@ export default function EarningsPage() {
                                     <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-200 mx-auto group">
                                         <DollarSign size={32} className="group-hover:text-purple-600 transition-colors" />
                                     </div>
-                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No entries found</p>
+                                    <p className="text-slate-600 text-[10px] font-black uppercase tracking-widest">No entries found</p>
                                 </div>
                             )}
                         </div>
-                        <button className="w-full py-4 text-center text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-purple-600 transition-all border-t border-slate-50 bg-slate-50/20">
+                        <button className="w-full py-4 text-center text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 hover:text-purple-600 transition-all border-t border-slate-50 bg-slate-50/20">
                             Load Archive
                         </button>
                     </div>
@@ -225,7 +225,7 @@ export default function EarningsPage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black text-slate-900 tracking-tight uppercase">{item.label}</p>
-                                        <p className="text-[8px] text-slate-400 font-bold">{item.desc}</p>
+                                        <p className="text-[8px] text-slate-600 font-bold">{item.desc}</p>
                                     </div>
                                 </div>
                             ))}

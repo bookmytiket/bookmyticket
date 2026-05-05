@@ -18,6 +18,8 @@ export const POPULAR_CITIES = {
         { name: "Kolkata", icon: "Kolkata", img: "/locations/Kolkata.jpeg" }, 
         { name: "New Delhi", icon: "Delhi", img: "/locations/New Delhi.png" }, 
         { name: "Mumbai", icon: "Mumbai", img: "/locations/Mumbai.png" },
+        { name: "Madurai", icon: "Generic" },
+        { name: "Salem", icon: "Generic" },
     ],
     "UAE": [
         { name: "Dubai", icon: "Generic" }, 

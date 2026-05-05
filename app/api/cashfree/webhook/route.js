@@ -1,6 +1,7 @@
 import { Cashfree, CFEnvironment } from "cashfree-pg";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -39,7 +40,7 @@ export async function POST(request) {
         console.log(`Cashfree Webhook received for Booking ${bookingId}: ${paymentStatus}`);
 
         if (paymentStatus === "SUCCESS") {
-            // 1. Fetch Booking and Event details for notification
+            // 1. Fetch Booking and Event details
             const { data: booking, error: fetchErr } = await supabaseAdmin
                 .from('bookings')
                 .select('*, events(*)')
@@ -49,23 +50,43 @@ export async function POST(request) {
             if (fetchErr) throw fetchErr;
 
             // 2. Update Booking Status
-            const { error: bookingErr } = await supabaseAdmin
+            await supabaseAdmin
                 .from('bookings')
                 .update({ status: 'Confirmed' })
                 .eq('id', bookingId);
 
-            if (bookingErr) throw bookingErr;
-
             // 3. Record Payment
-            await supabaseAdmin.from('payments').insert({
+            const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
                 booking_id: bookingId,
+                user_id: booking.user_id,
+                type: 'event',
+                reference_id: bookingId,
                 payment_gateway: 'Cashfree',
                 payment_id: payment.cf_payment_id,
-                status: 'success',
-                amount: payment.payment_amount
-            });
+                status: 'pending',
+                total_amount: payment.payment_amount,
+                base_amount: booking.base_amount,
+                platform_fee: booking.platform_charge,
+                gst_amount_col: booking.gst_amount
+            }).select().single();
 
-            // 4. Generate Ticket Record
+            // 4. Unified Payment Logic
+            const organiserId = booking.events?.organiser_id;
+            if (paymentRecord) {
+                await handlePaymentSuccess({
+                    paymentId: paymentRecord.id,
+                    type: 'event',
+                    referenceId: bookingId,
+                    totalAmount: payment.payment_amount,
+                    baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                    platformFee: booking.platform_charge || 0,
+                    gstAmount: booking.gst_amount || 0,
+                    providerId: organiserId,
+                    description: `Earnings from booking ${bookingId} (via Cashfree)`
+                });
+            }
+
+            // 5. Generate Ticket Record
             const ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
             await supabaseAdmin.from('tickets').insert({
                 booking_id: bookingId,
@@ -73,7 +94,7 @@ export async function POST(request) {
                 status: 'active'
             });
 
-            // 4a. Record Coupon Usage
+            // 6. Record Coupon Usage
             if (booking.coupon_id) {
                 await supabaseAdmin.from('coupon_usage').insert({
                     user_id: booking.user_id,
@@ -82,41 +103,11 @@ export async function POST(request) {
                 });
             }
 
-            // 4b. Credit Organiser Wallet
-            const creditAmount = booking.base_amount - (booking.discount_amount || 0);
-            const organiserId = booking.events?.organiser_id;
-
-            if (organiserId && creditAmount > 0) {
-                // Get or create wallet
-                const { data: wallet } = await supabaseAdmin
-                    .from('wallets')
-                    .select('id, balance')
-                    .eq('organiser_id', organiserId)
-                    .single();
-
-                if (wallet) {
-                    await supabaseAdmin
-                        .from('wallets')
-                        .update({ balance: wallet.balance + creditAmount })
-                        .eq('id', wallet.id);
-
-                    // Record transaction
-                    await supabaseAdmin.from('wallet_transactions').insert({
-                        organiser_id: organiserId,
-                        booking_id: bookingId,
-                        amount: creditAmount,
-                        type: 'credit',
-                        description: `Earnings from booking ${bookingId}`
-                    });
-                }
-            }
-
-            // 5. Trigger Notifications
+            // 7. Trigger Notifications
             try {
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
-                const customerName = customerDetails.name || "Customer";
 
                 if (phoneNumber || email) {
                     const protocol = headers['x-forwarded-proto'] || 'https';
@@ -131,7 +122,7 @@ export async function POST(request) {
                             email,
                             type: "BOOKING",
                             data: {
-                                name: customerName,
+                                name: customerDetails.name || "Customer",
                                 eventName: booking.events?.title || "Event",
                                 date: booking.events?.date || "TBA",
                                 bookingId: bookingId,
@@ -140,23 +131,12 @@ export async function POST(request) {
                         })
                     });
                 }
-            } catch (notifyErr) {
-                console.error("Failed to trigger notification:", notifyErr.message);
-                // Don't fail the whole webhook if notification fails
-            }
+            } catch (notifyErr) {}
         } else if (paymentStatus === "FAILED") {
             await supabaseAdmin
                 .from('bookings')
                 .update({ status: 'Failed' })
                 .eq('id', bookingId);
-
-            await supabaseAdmin.from('payments').insert({
-                booking_id: bookingId,
-                payment_gateway: 'Cashfree',
-                payment_id: payment.cf_payment_id,
-                status: 'failed',
-                amount: payment.payment_amount
-            });
         }
 
         return NextResponse.json({ received: true });

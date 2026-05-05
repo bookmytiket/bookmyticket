@@ -62,6 +62,7 @@ export const INDIAN_DISTRICTS = {
 };
 
 export const slugify = (text) => {
+    if (!text) return "";
     return text
         .toString()
         .toLowerCase()
@@ -72,15 +73,26 @@ export const slugify = (text) => {
 };
 
 /**
- * Returns a list of districts for a given state slug.
+ * Returns a list of districts for a given state name or slug.
  */
-export const getIndianDistricts = (stateSlug) => {
-    return INDIAN_DISTRICTS[stateSlug] || [];
+export const getIndianDistricts = (stateNameOrSlug) => {
+    if (!stateNameOrSlug) return [];
+    const slug = slugify(stateNameOrSlug);
+    const districts = INDIAN_DISTRICTS[slug] || [];
+    // Convert slugs back to readable names for the UI
+    return districts.map(d => d.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '));
 };
 
 /**
- * Legacy helper for city selection (aliases to districts).
+ * Returns a list of cities/areas for a given district.
+ * For now, we return the same list or a sub-list if we had one.
+ * Since our data is currently [State -> Cities], we'll treat districts as cities.
  */
-export const getIndianCities = (stateSlug) => {
-    return getIndianDistricts(stateSlug);
+export const getIndianCities = (districtNameOrSlug) => {
+    if (!districtNameOrSlug) return [];
+    // For now, if it's India, we might just return the district itself as the only city option
+    // or return a few common areas if we had them.
+    // To avoid "Loading..." when there's no deeper data, we return the district name itself.
+    const name = districtNameOrSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return [name];
 };

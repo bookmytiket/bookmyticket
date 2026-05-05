@@ -55,7 +55,18 @@ function EventCard({ event }) {
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                             <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>{event.date}</span>
                         </div>
-                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
+                        <div style={{ 
+                            fontSize: '11px', 
+                            fontWeight: 900, 
+                            color: isFreeEvent(event) ? '#22c55e' : '#111827',
+                            backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
+                            padding: '4px 10px',
+                            borderRadius: '100px',
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase'
+                        }}>
+                            {isFreeEvent(event) ? "FREE" : "PAID"}
+                        </div>
                     </div>
                 </div>
             </article>
@@ -71,6 +82,7 @@ export default function TrendingEvents({ events = [] }) {
             scrollRef.current.scrollBy({ left: dir === "left" ? -380 : 380, behavior: "smooth" });
     };
 
+    if (!events || events.length === 0) return null;
     return (
         <section style={{ width: "100%", backgroundColor: "#fff", padding: "36px 0 28px" }}>
             <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0 20px" }}>

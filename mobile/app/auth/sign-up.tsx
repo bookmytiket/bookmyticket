@@ -73,7 +73,7 @@ export default function SignUpScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable style={styles.back} onPress={() => router.back()} hitSlop={12}>
+        <Pressable style={styles.back} onPress={() => router.canGoBack() ? router.back() : router.replace('/auth/sign-in')} hitSlop={12}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
 

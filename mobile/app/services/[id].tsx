@@ -100,7 +100,7 @@ export default function ProviderProfileScreen() {
           />
           
           <SafeAreaView style={styles.headerActions}>
-            <Pressable style={styles.iconBtn} onPress={() => router.back()}>
+            <Pressable style={styles.iconBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}>
               <ChevronLeft size={24} color="#fff" />
             </Pressable>
             <View style={{ flexDirection: 'row', gap: 12 }}>

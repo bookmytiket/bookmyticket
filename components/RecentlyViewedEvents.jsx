@@ -255,9 +255,17 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                                             ) : expired ? (
                                                 <span style={{ background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: "100px", padding: "2px 8px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Expired</span>
                                             ) : (
-                                                <div style={{ position: "relative", display: "inline-block" }}>
-                                                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{isFreeEvent(event) ? "Free" : "Paid"}</span>
-                                                    <span style={{ position: "absolute", bottom: "-2px", left: 0, width: "100%", height: "2px", background: "#ef4444", borderRadius: "2px", display: "block" }} />
+                                                <div style={{ 
+                                                    fontSize: '11px', 
+                                                    fontWeight: 900, 
+                                                    color: isFreeEvent(event) ? '#22c55e' : '#111827',
+                                                    backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '100px',
+                                                    letterSpacing: '0.02em',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {isFreeEvent(event) ? "FREE" : "PAID"}
                                                 </div>
                                             )}
                                         </div>

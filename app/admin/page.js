@@ -15,6 +15,7 @@ import SeoAnalyticsAdmin from "@/app/admin/components/SeoAnalyticsAdmin";
 import CareersAdmin from "@/app/admin/components/CareersAdmin";
 import CareersBannerSettings from "@/app/admin/components/CareersBannerSettings";
 import AdminContactInquiries from "@/app/admin/components/AdminContactInquiries";
+import RevenueDashboard from "@/app/admin/components/RevenueDashboard";
 
 
 import { MoreVertical, Briefcase, LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles, CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Trash2, Mail, Lock, CreditCard, Code, Globe, Shield, FileText, Megaphone, Tag, LayoutGrid, Calendar, ShoppingCart, UserCircle, Gift, Send, BarChart3, Archive, MessageCircle, Upload, Edit, Search, AlertCircle, ChevronDown, ChevronRight, LogOut, Activity, RefreshCw, AlertTriangle, Info, Smartphone, MessageSquare, Landmark } from "lucide-react";
@@ -727,44 +728,91 @@ const CouponManager = ({ t, theme }) => {
 
 
 const PayoutRequestsTable = ({ t, theme }) => {
-    const { data: requests = [], loading, refresh } = useSupabaseQuery('withdraw_requests', (q) => q.select('*, wallets(balance), organisers:organiser_id(business_name, id)'));
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    
+    const fetchRequests = async () => {
+        setLoading(true);
+        try {
+            // Fetch requests with both potential links
+            const { data } = await supabase
+                .from('withdraw_requests')
+                .select('*, organisers:organiser_id(business_name, id), providers:service_provider_id(full_name, id)')
+                .order('created_at', { ascending: false });
+            
+            if (data) {
+                // For each request, fetch the latest balance from the correct table
+                const enriched = await Promise.all(data.map(async (req) => {
+                    const table = req.organiser_id ? 'organiser_wallet' : 'provider_wallet';
+                    const col = req.organiser_id ? 'organiser_id' : 'service_provider_id';
+                    const pid = req.organiser_id || req.service_provider_id;
+
+                    const { data: w } = await supabase.from(table).select('balance').eq(col, pid).maybeSingle();
+                    return { ...req, current_balance: w?.balance || 0 };
+                }));
+                setRequests(enriched);
+            }
+        } catch (err) {
+            console.error("Fetch requests error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchRequests(); }, []);
+
     const [updateStatus] = useSupabaseMutation('withdraw_requests', 'update', (q, p) => q.eq('id', p.id));
-    const [updateWallet] = useSupabaseMutation('wallets', 'update', (q, p) => q.eq('organiser_id', p.organiser_id));
     const [addTransaction] = useSupabaseMutation('wallet_transactions', 'insert');
     const { showToast } = useToast();
+    const refresh = fetchRequests;
 
     const handleAction = async (request, newStatus) => {
         try {
-            if (newStatus === 'approved') {
-                const { data: wallet, error: walletError } = await supabase.from('wallets').select('balance').eq('organiser_id', request.organiser_id).single();
-                if (walletError || !wallet) {
-                    showToast("Wallet not found", "error");
-                    return;
-                }
-                if (wallet.balance < request.amount) {
-                    showToast("Insufficient organiser balance", "error");
-                    return;
-                }
+            const providerId = request.organiser_id || request.service_provider_id;
+            const providerType = request.organiser_id ? 'organiser' : 'service';
+            const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
+            const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
 
+            if (newStatus === 'approved') {
                 // 1. Update request status to 'approved'
+                // No need to deduct here as it's now deducted on request
                 await updateStatus({ id: request.id, status: 'approved' });
 
-                // 2. Deduct from wallet
-                await updateWallet({ organiser_id: request.organiser_id, balance: wallet.balance - request.amount });
+                // 2. Update transaction description to reflect completion
+                await supabase.from('wallet_transactions')
+                    .update({ description: 'Withdrawal Completed' })
+                    .eq('reference_id', request.id);
 
-                // 3. Record transaction
+                showToast("Payout marked as approved", "success");
+            } else if (newStatus === 'rejected') {
+                // 1. Update request status to 'rejected'
+                await updateStatus({ id: request.id, status: 'rejected' });
+
+                // 2. Refund the amount (since it was deducted on request)
+                const { data: walletData } = await supabase
+                    .from(walletTable)
+                    .select('balance')
+                    .eq(idColumn, providerId)
+                    .single();
+                
+                if (walletData) {
+                    await supabase
+                        .from(walletTable)
+                        .update({ balance: walletData.balance + request.amount })
+                        .eq(idColumn, providerId);
+                }
+
+                // 3. Record Refund Transaction
                 await addTransaction({
-                    organiser_id: request.organiser_id,
+                    provider_id: providerId,
                     amount: request.amount,
-                    type: 'debit',
-                    description: `Payout Approved`,
-                    reference_id: request.id
+                    type: 'credit',
+                    description: `Payout Rejected - Refunded`,
+                    reference_id: request.id,
+                    provider_type: providerType
                 });
 
-                showToast("Payout approved", "success");
-            } else if (newStatus === 'rejected') {
-                await updateStatus({ id: request.id, status: 'rejected' });
-                showToast("Payout rejected", "info");
+                showToast("Payout rejected and funds refunded", "info");
             }
             refresh();
         } catch (err) {
@@ -792,11 +840,13 @@ const PayoutRequestsTable = ({ t, theme }) => {
                     ) : requests.map((req) => (
                         <tr key={req.id} style={{ borderBottom: `1px solid ${t.border}` }}>
                             <td style={{ padding: "12px" }}>
-                                <div style={{ fontWeight: 700, color: t.textMain }}>{req.organisers?.business_name || req.organisers?.name || 'Organiser'}</div>
+                                <div style={{ fontWeight: 700, color: t.textMain }}>
+                                    {req.organisers?.business_name || req.providers?.full_name || 'Partner'}
+                                </div>
                                 <div style={{ fontSize: "11px", color: t.textSub }}>{new Date(req.created_at).toLocaleString()}</div>
                             </td>
                             <td style={{ padding: "12px", fontWeight: 800, color: "#ec4899" }}>₹{Number(req.amount).toFixed(2)}</td>
-                            <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{Number(req.wallets?.balance || 0).toFixed(2)}</td>
+                            <td style={{ padding: "12px", color: t.textMain, fontWeight: 600 }}>₹{Number(req.current_balance || 0).toFixed(2)}</td>
                             <td style={{ padding: "12px" }}>
                                 <span className={`badge ${req.status === 'approved' ? 'badge-green' : req.status === 'pending' ? 'badge-yellow' : 'badge-red'}`}>
                                     {req.status.toUpperCase()}
@@ -2440,6 +2490,7 @@ function AdminHomePage() {
                                 )}
                                 
                                 <SidebarGroupTitle title="Finance" />
+                                <SidebarItem id="revenue" label="Revenue Tracking" icon={BarChart3} active={activeTab === "revenue"} onClick={() => setActiveTab("revenue")} />
                                 <SidebarItem id="gst" label="GST Reports" icon={Briefcase} active={activeTab === "gst"} onClick={() => setActiveTab("gst")} />
                                 <SidebarItem id="payout_requests" label="Payout Requests" icon={Landmark} active={activeTab === "payout_requests"} onClick={() => setActiveTab("payout_requests")} />
 
@@ -2598,6 +2649,11 @@ function AdminHomePage() {
                                 ))}
                             </div>
                         </>
+                    )}
+                    {activeTab === "revenue" && (
+                        <div className="px-8 lg:px-12 py-8">
+                            <RevenueDashboard t={t} theme={theme} />
+                        </div>
                     )}
                     {activeTab === "banner_ads" && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

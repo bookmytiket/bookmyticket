@@ -63,7 +63,7 @@ function TurfBookingRegistry({ user, vendorId }) {
             case "pending": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
             case "confirmed": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
             case "cancelled": return "bg-red-500/10 text-red-500 border-red-500/20";
-            default: return "bg-slate-500/10 text-slate-500 border-slate-500/20";
+            default: return "bg-slate-500/10 text-slate-700 border-slate-500/20";
         }
     };
 
@@ -86,11 +86,11 @@ function TurfBookingRegistry({ user, vendorId }) {
                         </div>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Reservation Ledger</h2>
                     </div>
-                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">Operational Log for all activities</p>
+                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em] ml-1">Operational Log for all activities</p>
                 </div>
                 <div className="flex items-center space-x-3">
                     <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors" size={16} />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 group-hover:text-blue-500 transition-colors" size={16} />
                         <input 
                             type="text" 
                             placeholder="Find records..." 
@@ -111,7 +111,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                         className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all  whitespace-nowrap ${
                             statusFilter === status 
                                 ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' 
-                                : 'bg-white text-slate-400 border-slate-200 hover:border-blue-500/30 hover:text-blue-500 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-500/30 hover:text-blue-500 shadow-sm'
                         }`}
                     >
                         {status}
@@ -124,7 +124,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100/50 text-slate-400 font-black text-[8px] uppercase tracking-[0.2em]">
+                            <tr className="bg-slate-50/50 border-b border-slate-100/50 text-slate-600 font-black text-[8px] uppercase tracking-[0.2em]">
                                 <th className="px-6 py-4">Lead / Player</th>
                                 <th className="px-6 py-4">Facility / Pitch</th>
                                 <th className="px-6 py-4">Time Slot</th>
@@ -145,13 +145,13 @@ function TurfBookingRegistry({ user, vendorId }) {
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="text-slate-900 font-black text-[13px] tracking-tight italic uppercase truncate">{booking.customer_details?.name || "Player Cluster"}</div>
-                                                <div className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate">{booking.customer_details?.phone || "Private Entry"}</div>
+                                                <div className="text-slate-600 text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate">{booking.customer_details?.phone || "Private Entry"}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="text-slate-800 text-[13px] font-black uppercase italic tracking-tight truncate">{booking.turf_name}</div>
-                                        <div className="flex items-center gap-1.5 mt-1 text-slate-400 text-[8px] font-black uppercase tracking-widest truncate">
+                                        <div className="flex items-center gap-1.5 mt-1 text-slate-600 text-[8px] font-black uppercase tracking-widest truncate">
                                             <MapPin size={10} className="text-blue-500" />
                                             Active Field
                                         </div>
@@ -162,7 +162,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                                                 <CalendarIcon size={12} className="text-blue-500" />
                                                 <span>{booking.date}</span>
                                             </div>
-                                            <div className="flex items-center space-x-1.5 text-slate-400 text-[8px] font-black uppercase tracking-widest whitespace-nowrap">
+                                            <div className="flex items-center space-x-1.5 text-slate-600 text-[8px] font-black uppercase tracking-widest whitespace-nowrap">
                                                 <Clock size={10} className="text-emerald-500" />
                                                 <span>{booking.start_time} - {booking.end_time}</span>
                                             </div>
@@ -197,7 +197,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                                             )}
                                             <button 
                                                 onClick={() => setSelectedBooking(booking)}
-                                                className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm flex items-center gap-2 group"
+                                                className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm flex items-center gap-2 group"
                                             >
                                                 <ChevronRight size={16} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
                                             </button>
@@ -208,12 +208,12 @@ function TurfBookingRegistry({ user, vendorId }) {
                                 <tr>
                                     <td colSpan="5" className="px-8 py-24 text-center">
                                         <div className="flex flex-col items-center justify-center space-y-6">
-                                            <div className="w-24 h-24 rounded-[3rem] bg-slate-50 text-slate-100 flex items-center justify-center border border-slate-100 shadow-inner">
+                                            <div className="w-24 h-24 rounded-[3rem] bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-100 shadow-inner">
                                                 <AlertCircle size={48} />
                                             </div>
                                             <div className="space-y-2">
                                                 <h4 className="text-slate-900 font-black text-3xl tracking-tighter uppercase italic">Ledger Empty</h4>
-                                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">No operational records found in this sequence.</p>
+                                                <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">No operational records found in this sequence.</p>
                                             </div>
                                         </div>
                                     </td>
@@ -238,7 +238,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                                 </div>
                                 <button 
                                     onClick={() => setSelectedBooking(null)}
-                                    className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:bg-slate-100 transition-all"
+                                    className="p-3 bg-slate-50 rounded-2xl text-slate-600 hover:bg-slate-100 transition-all"
                                 >
                                     <XCircle size={20} />
                                 </button>
@@ -247,27 +247,27 @@ function TurfBookingRegistry({ user, vendorId }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Player Identity</label>
+                                        <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Player Identity</label>
                                         <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                             <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black italic">
                                                 {selectedBooking.customer_details?.name?.charAt(0) || "P"}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight">{selectedBooking.customer_details?.name}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Verified User</p>
+                                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Verified User</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contact Grid</label>
+                                        <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Contact Grid</label>
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3 text-slate-600">
-                                                <Phone size={14} className="text-slate-400" />
+                                                <Phone size={14} className="text-slate-600" />
                                                 <span className="text-xs font-bold">{selectedBooking.customer_details?.phone || "N/A"}</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-slate-600">
-                                                <Mail size={14} className="text-slate-400" />
+                                                <Mail size={14} className="text-slate-600" />
                                                 <span className="text-xs font-bold">{selectedBooking.customer_details?.email || "N/A"}</span>
                                             </div>
                                         </div>
@@ -276,7 +276,7 @@ function TurfBookingRegistry({ user, vendorId }) {
 
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Session Details</label>
+                                        <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Session Details</label>
                                         <div className="p-5 bg-slate-900 rounded-[2rem] text-white space-y-4">
                                             <div>
                                                 <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-1">Facility Name</p>
@@ -296,7 +296,7 @@ function TurfBookingRegistry({ user, vendorId }) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Financial Summary</label>
+                                        <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Financial Summary</label>
                                         <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                                             <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Net Revenue</span>
                                             <span className="text-xl font-black text-slate-900 italic">₹{selectedBooking.total_amount}</span>
@@ -354,7 +354,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
             case "confirmed": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
             case "completed": return "bg-green-500/10 text-green-500 border-green-500/20";
             case "cancelled": return "bg-red-500/10 text-red-500 border-red-500/20";
-            default: return "bg-slate-500/10 text-slate-500 border-slate-500/20";
+            default: return "bg-slate-500/10 text-slate-700 border-slate-500/20";
         }
     };
 
@@ -369,11 +369,11 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                         </div>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Registry Hub</h2>
                     </div>
-                    <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] ml-1">Full Command over your professional service sessions</p>
+                    <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.3em] ml-1">Full Command over your professional service sessions</p>
                 </div>
                 <div className="flex items-center space-x-3">
                     <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-pink-500 transition-colors" size={16} />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 group-hover:text-pink-500 transition-colors" size={16} />
                         <input 
                             type="text" 
                             placeholder="Find leads..." 
@@ -394,7 +394,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                         className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all  whitespace-nowrap ${
                             statusFilter === status 
                                 ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/10' 
-                                : 'bg-white text-slate-400 border-slate-200 hover:border-pink-500/30 hover:text-pink-500 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-pink-500/30 hover:text-pink-500 shadow-sm'
                         }`}
                     >
                         {status}
@@ -407,7 +407,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100/50 text-slate-400 font-black text-[8px] uppercase tracking-[0.2em]">
+                            <tr className="bg-slate-50/50 border-b border-slate-100/50 text-slate-600 font-black text-[8px] uppercase tracking-[0.2em]">
                                 <th className="px-6 py-4">Customer Profile</th>
                                 <th className="px-6 py-4">Session & Timeline</th>
                                 <th className="px-6 py-4">Financials</th>
@@ -425,18 +425,18 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="text-slate-900 font-black text-[13px] tracking-tight italic uppercase truncate">{booking.customer_details?.name}</div>
-                                                <div className="text-slate-400 text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate">{booking.customer_details?.email}</div>
+                                                <div className="text-slate-600 text-[8px] font-bold uppercase tracking-widest mt-0.5 truncate">{booking.customer_details?.email}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="text-slate-800 text-[13px] font-black uppercase italic tracking-tight truncate">{booking.service_type}</div>
-                                        <div className="flex items-center space-x-3 mt-1.5 text-slate-400 text-[8px] font-black uppercase tracking-widest truncate">
+                                        <div className="flex items-center space-x-3 mt-1.5 text-slate-600 text-[8px] font-black uppercase tracking-widest truncate">
                                             <span className="flex items-center space-x-1.5">
                                                 <CalendarIcon size={12} className="text-pink-500" />
                                                 <span>{booking.booking_date}</span>
                                             </span>
-                                            <span className="text-slate-200">|</span>
+                                            <span className="text-slate-700">|</span>
                                             <span className="flex items-center space-x-1.5">
                                                 <Clock size={12} className="text-yellow-500" />
                                                 <span>{booking.booking_time || "Flexi"}</span>
@@ -483,7 +483,7 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                                                     Complete
                                                 </button>
                                             )}
-                                            <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm group">
+                                            <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm group">
                                                 <MessageSquare size={16} strokeWidth={2.5} className="group-hover:" />
                                             </button>
                                         </div>
@@ -493,12 +493,12 @@ function ArtistBookingRegistry({ user, vendorId, profile }) {
                                 <tr>
                                     <td colSpan="5" className="px-8 py-24 text-center">
                                         <div className="flex flex-col items-center justify-center space-y-6">
-                                            <div className="w-20 h-20 rounded-[2.5rem] bg-slate-50 text-slate-200 flex items-center justify-center border border-slate-100 shadow-inner">
+                                            <div className="w-20 h-20 rounded-[2.5rem] bg-slate-50 text-slate-700 flex items-center justify-center border border-slate-100 shadow-inner">
                                                 <AlertCircle size={40} />
                                             </div>
                                             <div className="space-y-2">
                                                 <h4 className="text-slate-900 font-black text-2xl tracking-tighter uppercase italic">No Active Entries</h4>
-                                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Our sensors found no matches for your current sweep.</p>
+                                                <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">Our sensors found no matches for your current sweep.</p>
                                             </div>
                                         </div>
                                     </td>

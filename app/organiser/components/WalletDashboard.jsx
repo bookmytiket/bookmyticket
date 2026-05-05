@@ -16,8 +16,9 @@ import {
     Search
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/context/ToastContext';
 
-export default function WalletDashboard({ user }) {
+export default function WalletDashboard({ user, providerType = 'organiser' }) {
     const [wallet, setWallet] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [withdrawRequests, setWithdrawRequests] = useState([]);
@@ -26,22 +27,52 @@ export default function WalletDashboard({ user }) {
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawNotes, setWithdrawNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (user?.id) {
             fetchWalletData();
+
+            // Real-time sync for wallet balance
+            const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
+            const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
+
+            const channel = supabase
+                .channel(`wallet_realtime_${user.id}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    table: walletTable, 
+                    filter: `${idColumn}=eq.${user.id}` 
+                }, (payload) => {
+                    if (payload.new) setWallet(payload.new);
+                })
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    table: 'wallet_transactions',
+                    filter: `provider_id=eq.${user.id}`
+                }, () => {
+                    fetchWalletData(); // Refresh all data on new transaction
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
-    }, [user?.id]);
+    }, [user?.id, providerType]);
 
     const fetchWalletData = async () => {
         setLoading(true);
         try {
+            const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
+            const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
+
             // Fetch Wallet
             const { data: walletData } = await supabase
-                .from('wallets')
+                .from(walletTable)
                 .select('*')
-                .eq('organiser_id', user.id)
-                .single();
+                .eq(idColumn, user.id)
+                .maybeSingle();
             
             if (walletData) setWallet(walletData);
 
@@ -49,7 +80,7 @@ export default function WalletDashboard({ user }) {
             const { data: txData } = await supabase
                 .from('wallet_transactions')
                 .select('*')
-                .eq('organiser_id', user.id)
+                .eq('provider_id', user.id)
                 .order('created_at', { ascending: false });
             
             setTransactions(txData || []);
@@ -58,7 +89,7 @@ export default function WalletDashboard({ user }) {
             const { data: wrData } = await supabase
                 .from('withdraw_requests')
                 .select('*')
-                .eq('organiser_id', user.id)
+                .eq(idColumn, user.id)
                 .order('created_at', { ascending: false });
             
             setWithdrawRequests(wrData || []);
@@ -73,32 +104,68 @@ export default function WalletDashboard({ user }) {
         e.preventDefault();
         const amount = parseFloat(withdrawAmount);
         if (isNaN(amount) || amount <= 0) {
-            alert("Please enter a valid amount");
+            showToast("Please enter a valid amount", "warning");
             return;
         }
         if (amount > wallet.balance) {
-            alert("Insufficient balance");
+            showToast("Insufficient balance", "error");
             return;
         }
 
         setIsSubmitting(true);
-        const { error } = await supabase.from('withdraw_requests').insert([{
-            organiser_id: user.id,
-            amount: amount,
-            payout_details: { notes: withdrawNotes },
-            status: 'pending'
-        }]);
+        const idColumn = providerType === 'organiser' ? 'organiser_id' : 'service_provider_id';
+        const walletTable = providerType === 'organiser' ? 'organiser_wallet' : 'provider_wallet';
 
-        if (!error) {
+        try {
+            // 1. Insert Withdraw Request
+            const { error: requestErr } = await supabase.from('withdraw_requests').insert([{
+                [idColumn]: user.id,
+                amount: amount,
+                payout_details: { notes: withdrawNotes },
+                status: 'pending'
+            }]);
+
+            if (requestErr) throw requestErr;
+
+            // 2. Update Wallet Balance (Debit Immediately)
+            const newBalance = wallet.balance - amount;
+            const { error: walletErr } = await supabase
+                .from(walletTable)
+                .update({ balance: newBalance, updated_at: new Date().toISOString() })
+                .eq(idColumn, user.id);
+            
+            if (walletErr) throw walletErr;
+
+            // 3. Record Transaction
+            await supabase.from('wallet_transactions').insert([{
+                provider_id: user.id,
+                amount: amount,
+                type: 'debit',
+                description: 'Withdrawal Request (Pending)',
+                provider_type: providerType
+            }]);
+
+            // 4. Legacy Sync (Update organisers table if organiser)
+            if (providerType === 'organiser') {
+                try {
+                    await supabase.from('organisers')
+                        .update({ wallet_balance: newBalance })
+                        .eq('id', user.id);
+                } catch (e) {
+                    console.warn("Legacy balance sync failed:", e);
+                }
+            }
+
             setWithdrawAmount('');
             setWithdrawNotes('');
             setShowWithdrawModal(false);
             fetchWalletData();
-            alert("Withdrawal request submitted successfully");
-        } else {
-            alert(error.message);
+            showToast("Withdrawal request submitted and balance debited.", "success");
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
     };
 
     if (loading) return (

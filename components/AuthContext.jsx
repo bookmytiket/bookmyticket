@@ -104,8 +104,8 @@ export function AuthProvider({ children }) {
                     catch (e) { return { data: null, error: e }; }
                 })(),
                 (async () => {
-                    // Legacy table check removed, as all organiser data is now in 'vendors'
-                    return { data: null, error: null };
+                    try { return await supabase.from('organisers').select('*').eq('id', supabaseUser.id).maybeSingle(); }
+                    catch (e) { return { data: null, error: e }; }
                 })(),
                 (async () => {
                     try { return await supabase.from('vendors').select('*').eq('id', supabaseUser.id).maybeSingle(); }

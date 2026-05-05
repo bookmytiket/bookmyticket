@@ -1,27 +1,27 @@
 const { createClient } = require('@supabase/supabase-js');
-// Read env from .env.local if it exists, or mobile/.env
 const fs = require('fs');
 let url, key;
 
 try {
     const env = fs.readFileSync('/home/raja/bookmyticket/.env.local', 'utf8');
-    url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1];
-    key = env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1];
+    url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim();
+    key = env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim();
 } catch (e) {
     const env = fs.readFileSync('/home/raja/bookmyticket/mobile/.env', 'utf8');
-    url = env.match(/EXPO_PUBLIC_SUPABASE_URL=(.*)/)?.[1];
-    key = env.match(/EXPO_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1];
+    url = env.match(/EXPO_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim();
+    key = env.match(/EXPO_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim();
 }
 
 const supabase = createClient(url, key);
 
 async function check() {
   const { data, error } = await supabase
-    .from('events')
+    .from('bookings')
     .select('*')
-    .ilike('title', '%marathon%');
+    .limit(1);
     
   if (error) console.error(error);
-  else console.log(JSON.stringify(data, null, 2));
+  else if (data && data.length > 0) console.log(Object.keys(data[0]));
+  else console.log('No data in bookings');
 }
 check();

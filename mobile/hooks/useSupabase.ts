@@ -132,19 +132,43 @@ export function useSupabaseMutation(
 export function useAuth() {
   const [session, setSession] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      if (!error && data) {
+        setRole(data.role);
+      }
+    } catch (e) {
+      console.error('Error fetching profile role:', e);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) fetchProfile(currentUser.id);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          fetchProfile(currentUser.id);
+        } else {
+          setRole(null);
+        }
         setLoading(false);
       }
     );
@@ -154,7 +178,8 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setRole(null);
   };
 
-  return { session, user, loading, signOut };
+  return { session, user, role, loading, signOut };
 }

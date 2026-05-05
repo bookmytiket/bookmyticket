@@ -60,15 +60,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="services"
-        options={{
-          title: 'Services',
-          tabBarLabel: 'SERVICES',
-          tabBarIcon: ({ color }) => <Sparkles size={22} color={color} />,
-        }}
-      />
-      
-      <Tabs.Screen
         name="book"
         options={{
           title: 'Book Now',
@@ -98,20 +89,20 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="services"
+        options={{
+          title: 'Services',
+          tabBarLabel: 'SERVICES',
+          tabBarIcon: ({ color }) => <Sparkles size={22} color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
         name="tickets"
         options={{
           title: 'Tickets',
           tabBarLabel: 'TICKETS',
           tabBarIcon: ({ color }) => <Ticket size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <User size={24} color={color} fill={focused ? color : 'none'} />
-          ),
         }}
       />
     </Tabs>
@@ -120,38 +111,38 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   bookNowContainer: {
-    top: -25,
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    top: -20,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: '#fff',
-    padding: 5,
-    elevation: 10,
+    padding: 4,
+    elevation: 8,
     shadowColor: '#f844a4',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 25,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
   },
   bookNowGradient: {
     width: '100%',
     height: '100%',
-    borderRadius: 32,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
   bookNowText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
-    lineHeight: 14,
+    lineHeight: 12,
     textTransform: 'uppercase',
   },
   bookNowTextSub: {
     color: '#fff',
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
-    lineHeight: 11,
+    lineHeight: 9,
     textTransform: 'uppercase',
-    marginTop: 2,
+    marginTop: 1,
   }
 });

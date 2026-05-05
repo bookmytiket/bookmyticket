@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal } from 'react-native';
+import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal, StatusBar } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery, useAuth } from '@/hooks/useSupabase';
@@ -8,7 +8,7 @@ import HeroSlider from '@/components/HeroSlider';
 import EventCard from '@/components/EventCard';
 import { useRouter } from 'expo-router';
 import { MotiView, MotiText } from 'moti';
-import { MapPin, Search, Menu, Bell, Sparkles, Ticket, Zap, Camera, Hammer, Utensils, Laptop, Rocket, ChevronRight, X as CloseIcon, User } from 'lucide-react-native';
+import { MapPin, Search, Menu, Bell, Sparkles, Ticket, Zap, Camera, Hammer, Utensils, Laptop, Rocket, ChevronRight, X as CloseIcon, User, Star } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -141,7 +141,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
-  const { signOut, user } = useAuth();
+  const { signOut, user, role } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
@@ -163,6 +163,15 @@ export default function HomeScreen() {
       if (loc) setUserLocation(loc);
     });
   }, []);
+
+  // Auto-redirect staff to dashboard on initial app load
+  const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false);
+  useEffect(() => {
+    if (!hasCheckedRedirect && user && role && ['staff', 'admin', 'organiser', 'superadmin', 'provider'].includes(role.toLowerCase())) {
+      setHasCheckedRedirect(true);
+      router.replace('/staff');
+    }
+  }, [user, role, hasCheckedRedirect]);
 
   const handleSetLocation = async (loc: string) => {
     setUserLocation(loc);
@@ -212,7 +221,7 @@ export default function HomeScreen() {
 
   const { data: professionals } = useSupabaseQuery(
     'service_providers',
-    (q) => q.eq('status', 'active'),
+    (q) => q.ilike('status', 'active'),
     [],
     { realtime: true }
   );
@@ -220,12 +229,25 @@ export default function HomeScreen() {
   const activeProfessionals = useMemo(() => {
     if (!professionals) return [];
     
+    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
+
     return professionals
       .map(p => ({ ...p, settings: safeParse(p.advanced_settings) }))
-      .filter(p => Number(p.settings.rating || 0) >= 4)
-      .sort((a, b) => Number(b.settings.rating) - Number(a.settings.rating))
+      .filter(p => {
+        // Basic filtering for rating
+        if (p.settings.rating && Number(p.settings.rating) < 4) return false;
+
+        // City/District filtering
+        if (cityFilter) {
+          const pLoc = String(p.city || p.location || p.district || '').toLowerCase();
+          if (!pLoc.includes(cityFilter)) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => Number(b.settings.rating || 5) - Number(a.settings.rating || 5))
       .slice(0, 10);
-  }, [professionals]);
+  }, [professionals, userLocation]);
 
   const allLiveEvents = useMemo(() => {
     const today = new Date();
@@ -259,7 +281,7 @@ export default function HomeScreen() {
       } catch (e) { return true; }
 
       if (eventDate && !isNaN(eventDate.getTime())) {
-        return eventDate >= today;
+        return eventDate >= new Date();
       }
       
       return true;
@@ -270,15 +292,16 @@ export default function HomeScreen() {
     const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
 
     return allLiveEvents.filter(ev => {
-      // Spotlight/Exclusive/Virtual events show everywhere
       const isVirtual = ev.virtual === true || ev.virtual === "Yes";
-      const isSpotlight = ev.is_spotlight === true || ev.spotlight === true || ev.spotlight === "Yes";
-      const isExclusive = ev.is_exclusive === true || ev.exclusive === true || ev.exclusive === "Yes";
-
-      if (isVirtual || isSpotlight || isExclusive) return true;
+      // Only Virtual events show everywhere. Spotlight/Exclusive are now filtered by city.
+      if (isVirtual) return true;
 
       if (cityFilter) {
-        const loc = String(ev.city || ev.location || ev.venue || '').toLowerCase();
+        const loc = String(ev.city || ev.location || ev.venue || ev.district || '').toLowerCase();
+        
+        // If no city/location info at all, show it anyway (e.g. Test Marathon)
+        if (!loc.trim()) return true;
+
         if (!loc.includes(cityFilter)) {
           return false;
         }
@@ -315,19 +338,18 @@ export default function HomeScreen() {
   }, [activeEvents]);
 
   const justInEventsList = useMemo(() => {
-    return [...allLiveEvents]
+    return [...activeEvents]
       .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
       .slice(0, 5);
-  }, [allLiveEvents]);
+  }, [activeEvents]);
 
   const comingSoonEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Coming soon should show ALL upcoming events (not city restricted) to give better visibility
-    return [...allLiveEvents]
+    // Filter coming soon events by city as well
+    return [...activeEvents]
       .filter(ev => {
-
         const dynamicConfig = safeParse(ev.dynamic_config) || {};
         const dt = ev.start_date || ev.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
         if (!dt) return false;
@@ -352,7 +374,7 @@ export default function HomeScreen() {
         return new Date(a.date || a.start_date || 0).getTime() - new Date(b.date || b.start_date || 0).getTime();
       })
       .slice(0, 5);
-  }, [allLiveEvents]);
+  }, [activeEvents]);
 
   const popularEvents = useMemo(() => {
     return activeEvents.slice(0, 10);
@@ -400,15 +422,34 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffda00" />
       {/* 1. Custom Header */}
       <View style={styles.header}>
         <View style={[styles.headerTopYellow, { backgroundColor: '#ffda00' }]}>
-          <View style={{ backgroundColor: '#ffda00' }}>
+          <View style={{ backgroundColor: '#ffda00', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Image 
               source={require('../../assets/images/logo_brand.png')} 
-              style={{ width: 140, height: 45, backgroundColor: '#ffda00' }}
+              style={{ width: 130, height: 45, backgroundColor: '#ffda00' }}
               resizeMode="contain"
             />
+            
+            <Pressable 
+              onPress={() => setIsLocationModalOpen(true)}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: 'rgba(255,255,255,0.8)', 
+                paddingHorizontal: 10, 
+                paddingVertical: 6, 
+                borderRadius: 10,
+                gap: 4,
+                maxWidth: 140
+              }}
+            >
+              <MapPin size={14} color="#f84464" />
+              <Text style={{ fontWeight: '800', fontSize: 12, color: '#000' }} numberOfLines={1}>{userLocation}</Text>
+              <ChevronRight size={12} color="#64748b" style={{ transform: [{ rotate: '90deg' }] }} />
+            </Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffda00' }}>
             {user ? (
@@ -428,34 +469,63 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 2. Promo Ticker - Flip Slide Style */}
-        <View style={[styles.promoTicker, { backgroundColor: colors.background }]}>
+        {/* 2. Promo Ticker - Landscape Box Style */}
+        <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.background }}>
           <Pressable 
-            style={styles.promoTickerContent}
+            style={{ 
+              height: 70, 
+              backgroundColor: colors.card, 
+              borderRadius: 16, 
+              flexDirection: 'row', 
+              overflow: 'hidden', 
+              borderWidth: 1, 
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              elevation: 3
+            }}
             onPress={() => {
               if (!user) {
                 router.push('/auth/sign-in');
               } else {
-                Alert.alert('Coupon Copied!', 'The promo code has been copied to your clipboard.');
+                router.push('/coupons');
               }
             }}
           >
-            <Text style={styles.promoEmoji}>🏷️</Text>
             <MotiView
               key={currentPromoIndex}
-              from={{ opacity: 0, translateY: 10, rotateX: '-90deg' }}
-              animate={{ opacity: 1, translateY: 0, rotateX: '0deg' }}
-              transition={{ type: 'spring', damping: 15 }}
-              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              from={{ rotateX: '-90deg', opacity: 0 }}
+              animate={{ rotateX: '0deg', opacity: 1 }}
+              transition={{ type: 'timing', duration: 600 }}
+              style={{ flex: 1, flexDirection: 'row' }}
             >
-              <Text style={styles.promoText} numberOfLines={1}>
-                <Text style={{ color: '#f844a4', fontWeight: '900' }}>
-                  {PROMOS[currentPromoIndex].code}: 
+              {/* Left Image */}
+              <View style={{ width: 80, height: '100%', backgroundColor: '#f1f5f9' }}>
+                <Image 
+                  source={{ uri: PROMOS[currentPromoIndex].code === 'NYKAA' ? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Nykaa_logo.svg/1200px-Nykaa_logo.svg.png' : 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode="cover"
+                />
+              </View>
+              
+              {/* Right Content */}
+              <View style={{ flex: 1, paddingHorizontal: 12, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4' }}>{PROMOS[currentPromoIndex].code}</Text>
+                  <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>LIMITED DEAL</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 2 }} numberOfLines={1}>
+                  {PROMOS[currentPromoIndex].text}
                 </Text>
-                {' '}{PROMOS[currentPromoIndex].text}
-              </Text>
-              <View style={styles.getDealBadge}>
-                <Text style={styles.getDealText}>GET DEAL</Text>
+              </View>
+
+              {/* Action */}
+              <View style={{ width: 30, backgroundColor: '#f844a4', justifyContent: 'center', alignItems: 'center' }}>
+                <ChevronRight size={16} color="#fff" />
               </View>
             </MotiView>
           </Pressable>
@@ -533,26 +603,27 @@ export default function HomeScreen() {
               }
 
               return (
-              <Pressable style={{ width: 280, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
-                <View style={{ height: 140, position: 'relative' }}>
+              <Pressable style={{ width: 320, height: 130, flexDirection: 'row', backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
+                <View style={{ width: 120, height: '100%', position: 'relative' }}>
                   <Image source={{ uri: bannerImage }} style={{ width: '100%', height: '100%' }} />
-                  <View style={{ position: 'absolute', top: 12, left: 12, width: 28, height: 28, backgroundColor: '#fff', borderRadius: 8, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
-                    <Image source={{ uri: logoImage }} style={{ width: 16, height: 16 }} resizeMode="contain" />
-                  </View>
-                  <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '900', color: '#6366f1' }}>{item.discountValue ? `${item.discountValue}${item.discountType === 'Percentage' ? '%' : '₹'} OFF` : (item.discount || 'OFFER')}</Text>
+                  <View style={{ position: 'absolute', top: 8, left: 8, width: 24, height: 24, backgroundColor: '#fff', borderRadius: 6, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
+                    <Image source={{ uri: logoImage }} style={{ width: 14, height: 14 }} resizeMode="contain" />
                   </View>
                 </View>
-                <View style={{ padding: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                    <Image source={{ uri: logoImage }} style={{ width: 14, height: 14 }} resizeMode="contain" />
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: colors.text }}>{item.brandName || item.brand_name || 'Brand'}</Text>
+                <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#f84464', textTransform: 'uppercase' }}>{item.brandName || item.brand_name || 'Brand'}</Text>
+                      <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>{item.discountValue ? `${item.discountValue}${item.discountType === 'Percentage' ? '%' : '₹'} OFF` : (item.discount || 'OFFER')}</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: colors.text, marginBottom: 4 }} numberOfLines={1}>{item.title}</Text>
+                    <Text style={{ fontSize: 10, color: colors.muted, lineHeight: 14 }} numberOfLines={2}>{item.description}</Text>
                   </View>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: colors.text, marginBottom: 6, lineHeight: 20 }} numberOfLines={2}>{item.title}</Text>
-                  <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 16, lineHeight: 18 }} numberOfLines={2}>{item.description}</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.muted }}>{daysLeft}</Text>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#3b82f6' }}>{item.redemptionMethod || 'Online'}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <Text style={{ fontSize: 9, fontWeight: '600', color: colors.muted }}>{daysLeft}</Text>
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#f84464' }}>GET DEAL →</Text>
                   </View>
                 </View>
               </Pressable>
@@ -599,57 +670,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Professional Services Section (Mehendi Artists, etc.) */}
-        {activeProfessionals.length > 0 && (
-          <View style={[styles.section, { marginBottom: 10 }]}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'column', gap: 2 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4', letterSpacing: 1, textTransform: 'uppercase' }}>Professional Services</Text>
-                </View>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Top <Text style={{ color: '#a855f7' }}>Artists</Text> & Pros</Text>
-              </View>
-              <Pressable onPress={() => router.push('/services')}>
-                <Text style={[styles.seeAll, { color: colors.tint }]}>See All</Text>
-              </Pressable>
-            </View>
-            <FlatList
-              data={activeProfessionals}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => `pro-${item.id}`}
-              contentContainerStyle={{ paddingLeft: 20, gap: 16 }}
-              renderItem={({ item }) => (
-                <Pressable 
-                  style={{ width: 180, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}
-                  onPress={() => router.push({ pathname: "/services/[id]", params: { id: item.id } })}
-                >
-                  <View style={{ height: 120, position: 'relative' }}>
-                    <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }} style={{ width: '100%', height: '100%' }} />
-                    <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: '#22c55e', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <Text style={{ fontSize: 8, fontWeight: '900', color: '#fff' }}>AVAILABLE</Text>
-                    </View>
-                    <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                      <Star size={10} fill="#fbbf24" color="#fbbf24" />
-                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#000' }}>{item.settings.rating || '5.0'}</Text>
-                    </View>
-                  </View>
-                  <View style={{ padding: 10 }}>
-                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#f844a4', textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: colors.text }} numberOfLines={1}>{item.business_name}</Text>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={10} color={colors.muted} />
-                        <Text style={{ fontSize: 10, color: colors.muted }}>{item.city || 'Online'}</Text>
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#10b981' }}>₹{Number(item.starting_price || item.pricing || 1999).toLocaleString()}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-              )}
-            />
-          </View>
-        )}
+        {/* Professional Services Section removed as requested */}
 
         {/* Ad Banner Slot */}
         {banners && banners.some(b => {
@@ -1154,13 +1175,13 @@ export default function HomeScreen() {
               </Pressable>
               <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
               
-              {user && ['staff', 'admin', 'organiser', 'superadmin'].includes(user.user_metadata?.role?.toLowerCase()) && (
+              {user && role && ['staff', 'admin', 'organiser', 'superadmin'].includes(role.toLowerCase()) && (
                 <>
                   <Pressable style={styles.menuItem} onPress={() => { 
                     setIsMenuOpen(false); 
                     router.push('/staff');
                   }}>
-                    <Text style={[styles.menuItemText, { color: '#a855f7' }]}>⚡ Organiser Dashboard</Text>
+                    <Text style={[styles.menuItemText, { color: '#a855f7' }]}>⚡ Staff Dashboard</Text>
                   </Pressable>
                   <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
                 </>
@@ -1323,6 +1344,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    backgroundColor: '#ffda00',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },

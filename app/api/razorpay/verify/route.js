@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { handlePaymentSuccess } from "@/app/utils/paymentUtils";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,7 +15,7 @@ export async function POST(request) {
             razorpay_payment_id, 
             razorpay_signature,
             id,
-            type = "booking"
+            type = "booking" // "booking" for events, "service" for professional services
         } = await request.json();
 
         let key_secret = process.env.RAZORPAY_KEY_SECRET;
@@ -44,7 +45,7 @@ export async function POST(request) {
             return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
         }
 
-        if (type === "booking") {
+        if (type === "booking" || type === "event") {
             // 2. Fetch Booking and Event details
             const { data: booking, error: fetchErr } = await supabaseAdmin
                 .from('bookings')
@@ -62,83 +63,63 @@ export async function POST(request) {
 
             if (bookingErr) throw bookingErr;
 
-            // 4. Record Payment (Graceful)
-            try {
-                const { error: paymentErr } = await supabaseAdmin.from('payments').insert({
-                    booking_id: id,
-                    payment_gateway: 'Razorpay',
-                    payment_id: razorpay_payment_id,
-                    status: 'success',
-                    amount: booking.total_price
-                });
-                if (paymentErr) console.warn("Payments insert failed (table might be missing):", paymentErr.message);
-            } catch (e) {
-                console.warn("Payments exception:", e.message);
-            }
+            // 4. Record Payment
+            const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
+                booking_id: id,
+                user_id: booking.user_id,
+                type: 'event',
+                reference_id: id,
+                payment_gateway: 'Razorpay',
+                payment_id: razorpay_payment_id,
+                order_id: razorpay_order_id,
+                signature: razorpay_signature,
+                status: 'pending', // Will be updated by handlePaymentSuccess
+                total_amount: booking.total_price,
+                base_amount: booking.base_amount,
+                platform_fee: booking.platform_charge,
+                gst_amount_col: booking.gst_amount
+            }).select().single();
 
-            // 5. Generate Ticket Record (Graceful)
-            let ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
-            try {
-                const { error: ticketErr } = await supabaseAdmin.from('tickets').insert({
-                    booking_id: id,
-                    ticket_number: ticketNumber,
-                    status: 'active'
-                });
-                if (ticketErr) console.warn("Tickets insert failed (table might be missing):", ticketErr.message);
-            } catch (e) {
-                console.warn("Tickets exception:", e.message);
-            }
+            const paymentId = paymentRecord?.id;
 
-            // 5a. Record Coupon Usage (Graceful)
-            if (booking.coupon_id) {
-                try {
-                    const { error: couponErr } = await supabaseAdmin.from('coupon_usage').insert({
-                        user_id: booking.user_id,
-                        coupon_id: booking.coupon_id,
-                        booking_id: id
-                    });
-                    if (couponErr) console.warn("Coupon usage insert failed:", couponErr.message);
-                } catch (e) {}
-            }
-
-            // 5b. Credit Organiser Wallet (Graceful)
-            const creditAmount = booking.base_amount - (booking.discount_amount || 0);
+            // 5. Unified Payment Logic (Wallet Credit & Revenue split)
             const organiserId = booking.events?.organiser_id;
-
-            if (organiserId && creditAmount > 0) {
-                try {
-                    // Get or create wallet
-                    const { data: wallet, error: walletFetchErr } = await supabaseAdmin
-                        .from('wallets')
-                        .select('id, balance')
-                        .eq('organiser_id', organiserId)
-                        .maybeSingle();
-
-                    if (wallet) {
-                        await supabaseAdmin
-                            .from('wallets')
-                            .update({ balance: wallet.balance + creditAmount })
-                            .eq('id', wallet.id);
-
-                        await supabaseAdmin.from('wallet_transactions').insert({
-                            organiser_id: organiserId,
-                            booking_id: id,
-                            amount: creditAmount,
-                            type: 'credit',
-                            description: `Earnings from booking ${id}`
-                        });
-                    }
-                } catch (e) {
-                    console.warn("Wallet update failed:", e.message);
-                }
+            if (paymentId) {
+                await handlePaymentSuccess({
+                    paymentId,
+                    type: 'event',
+                    referenceId: id,
+                    totalAmount: booking.total_price,
+                    baseAmount: booking.partner_total || (booking.base_amount - (booking.discount_amount || 0)),
+                    platformFee: booking.platform_charge || 0,
+                    gstAmount: booking.gst_amount || 0,
+                    providerId: organiserId,
+                    description: `Earnings from event booking ${id}`
+                });
             }
 
-            // 6. Trigger Notifications
+            // 6. Generate Ticket Record
+            let ticketNumber = Math.random().toString(36).substring(2, 10).toUpperCase();
+            await supabaseAdmin.from('tickets').insert({
+                booking_id: id,
+                ticket_number: ticketNumber,
+                status: 'active'
+            });
+
+            // 7. Record Coupon Usage
+            if (booking.coupon_id) {
+                await supabaseAdmin.from('coupon_usage').insert({
+                    user_id: booking.user_id,
+                    coupon_id: booking.coupon_id,
+                    booking_id: id
+                });
+            }
+
+            // 8. Trigger Notifications
             try {
                 const customerDetails = booking.customer_details || {};
                 const phoneNumber = customerDetails.phone || customerDetails.mobile;
                 const email = customerDetails.email;
-                const customerName = customerDetails.name || "Customer";
 
                 if (phoneNumber || email) {
                     const protocol = request.headers.get('x-forwarded-proto') || 'https';
@@ -153,7 +134,7 @@ export async function POST(request) {
                             email,
                             type: "BOOKING",
                             data: {
-                                name: customerName,
+                                name: customerDetails.name || "Customer",
                                 eventName: booking.events?.title || "Event",
                                 date: booking.events?.date || "TBA",
                                 bookingId: id,
@@ -162,25 +143,50 @@ export async function POST(request) {
                         })
                     });
                 }
-            } catch (notifyErr) {
-                console.error("Failed to trigger notification:", notifyErr.message);
-            }
-        } else if (type === "advertise") {
-            // Update Advertise Banner Status
-            const { error: bannerErr } = await supabaseAdmin
-                .from('advertise_banners')
-                .update({ status: 'paid' })
-                .eq('id', id);
+            } catch (notifyErr) {}
 
-            if (bannerErr) throw bannerErr;
+        } else if (type === "service") {
+            // 1. Fetch Service Booking details
+            const { data: sBooking, error: sErr } = await supabaseAdmin
+                .from('vendor_bookings')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (sErr) throw sErr;
 
-            // Record Payment for Advertise
-            await supabaseAdmin.from('payments').insert({
-                advertise_id: id,
+            // 2. Update Status
+            await supabaseAdmin.from('vendor_bookings').update({ status: 'Paid' }).eq('id', id);
+
+            // 3. Record Payment
+            const { data: paymentRecord } = await supabaseAdmin.from('payments').insert({
+                user_id: sBooking.user_id,
+                type: 'service',
+                reference_id: id,
                 payment_gateway: 'Razorpay',
                 payment_id: razorpay_payment_id,
-                status: 'success'
-            });
+                order_id: razorpay_order_id,
+                status: 'pending',
+                total_amount: sBooking.total_amount,
+                base_amount: sBooking.total_amount, // For now, services take full base
+                platform_fee: 0,
+                gst_amount_col: 0
+            }).select().single();
+
+            // 4. Unified Wallet logic
+            if (paymentRecord) {
+                await handlePaymentSuccess({
+                    paymentId: paymentRecord.id,
+                    type: 'service',
+                    referenceId: id,
+                    totalAmount: sBooking.total_amount,
+                    baseAmount: sBooking.total_amount,
+                    platformFee: 0,
+                    gstAmount: 0,
+                    providerId: sBooking.vendor_id,
+                    description: `Earnings from service session ${id}`
+                });
+            }
         }
 
         return NextResponse.json({ success: true });
