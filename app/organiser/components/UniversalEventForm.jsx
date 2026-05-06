@@ -17,6 +17,7 @@ import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/i
 import { COUNTRIES } from "@/app/data/locationData";
 import { supabase } from "@/lib/supabase";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
+import { useToast } from "@/context/ToastContext";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
@@ -388,6 +389,7 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
 
 const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
     
@@ -728,22 +730,25 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                                 const { lat, lng } = config.location.coordinates;
                                                 try {
                                                     const geocoded = await reverseGeocode(lat, lng);
-                                                    setConfig(prev => ({
-                                                        ...prev,
-                                                        country: geocoded.country || prev.country,
-                                                        countryCode: geocoded.countryCode || prev.countryCode,
-                                                        state: geocoded.state || prev.state,
-                                                        stateCode: geocoded.stateCode || prev.stateCode,
-                                                        district: geocoded.district || prev.district,
-                                                        city: geocoded.city || prev.city,
-                                                        zipCode: geocoded.pincode || prev.zipCode,
-                                                        location: { 
-                                                            ...prev.location, 
-                                                            address: geocoded.fullAddress || prev.location.address,
-                                                            city: geocoded.city || prev.location.city,
-                                                            pincode: geocoded.pincode || prev.location.pincode
-                                                        }
-                                                    }));
+                                                    if (geocoded) {
+                                                        setConfig(prev => ({
+                                                            ...prev,
+                                                            country: geocoded.country || prev.country,
+                                                            countryCode: geocoded.countryCode || prev.countryCode,
+                                                            state: geocoded.state || prev.state,
+                                                            stateCode: geocoded.stateCode || prev.stateCode,
+                                                            district: geocoded.district || prev.district,
+                                                            city: geocoded.city || prev.city,
+                                                            zipCode: geocoded.pincode || prev.zipCode,
+                                                            location: { 
+                                                                ...prev.location, 
+                                                                address: geocoded.fullAddress || prev.location.address,
+                                                                city: geocoded.city || prev.location.city,
+                                                                pincode: geocoded.pincode || prev.location.pincode
+                                                            }
+                                                        }));
+                                                        showToast(`Location Mapped: ${geocoded.city || geocoded.district}`, "success");
+                                                    }
                                                 } catch (err) {
                                                     console.error("Reverse geocoding error:", err);
                                                 }
