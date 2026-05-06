@@ -22,7 +22,10 @@ const LeafletMapPicker = dynamic(() => import("./LeafletMapPicker"), {
         fontSize: 14,
       }}
     >
-      Loading map…
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
+        Initializing Free Map Engine...
+      </div>
     </div>
   ),
 });
@@ -39,5 +42,21 @@ const LeafletMapPicker = dynamic(() => import("./LeafletMapPicker"), {
  *   liveTracking       — auto-start watchPosition on mount
  */
 export default function MapPicker(props) {
-  return <LeafletMapPicker {...props} height={props.height || "400px"} />;
+  return (
+    <>
+      {/* 
+         Injecting Leaflet CSS via CDN as a safety fallback for production environments 
+         where local CSS imports might be inconsistent during dynamic loading.
+      */}
+      <link 
+        rel="stylesheet" 
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossOrigin=""
+      />
+      <div style={{ height: props.height || "400px", width: "100%", position: "relative" }}>
+        <LeafletMapPicker {...props} height={props.height || "400px"} />
+      </div>
+    </>
+  );
 }

@@ -28,10 +28,14 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
   useEffect(() => {
     window.gm_authFailure = () => {
       console.warn("[GoogleMaps] Auth failure detected. Switching to fallback.");
+      setAuthError("Authentication Failed: Check Billing or Domain Restrictions");
       setUseFallback(true);
     };
     return () => { delete window.gm_authFailure; };
   }, []);
+
+  const [authError, setAuthError] = useState("");
+  const keyMissing = !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "YOUR_GOOGLE_MAPS_API_KEY_HERE";
 
   const onLoad = React.useCallback(function callback(m) {
     setMap(m);
@@ -77,7 +81,7 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
   };
 
   // Fallback Logic: Triggered if Load Error happens or key is invalid
-  const triggerFallback = useFallback || loadError || !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.includes('api.postalpincode.in');
+  const triggerFallback = useFallback || loadError || keyMissing || GOOGLE_MAPS_API_KEY.includes('api.postalpincode.in');
 
   if (triggerFallback) {
     return (
@@ -88,14 +92,27 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
           onLocationSelect={(data) => onLocationSelect(data.lat, data.lng)}
           height="100%"
         />
-        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-          <div className="bg-slate-900/80 backdrop-blur-md text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-2xl flex items-center gap-2">
+        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 max-w-[80%]">
+          <div className="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-2xl flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             Standard Map Fallback Active
           </div>
+          {keyMissing && (
+            <div className="bg-orange-500/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl text-[10px] font-bold shadow-xl border border-white/20">
+              <p className="uppercase tracking-widest text-[9px] mb-1 opacity-80">Configuration Error</p>
+              GOOGLE_MAPS_API_KEY is missing in production environment.
+            </div>
+          )}
+          {authError && (
+            <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl text-[10px] font-bold shadow-xl border border-white/20">
+              <p className="uppercase tracking-widest text-[9px] mb-1 opacity-80">API Connection Issue</p>
+              {authError}. <br/>
+              <span className="text-[9px] opacity-70 font-normal mt-1 block">Please ensure 'www.bookmyticket.net' is added to HTTP Referrer restrictions in Google Cloud Console.</span>
+            </div>
+          )}
           {loadError && (
-            <div className="bg-red-500 text-white px-4 py-2 rounded-2xl text-[9px] font-bold uppercase tracking-widest shadow-xl">
-              Google Maps Script Error
+            <div className="bg-red-600 text-white px-4 py-2 rounded-2xl text-[9px] font-bold uppercase tracking-widest shadow-xl">
+              Google Maps Library Load Error
             </div>
           )}
         </div>
