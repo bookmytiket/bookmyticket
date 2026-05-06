@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, MapPin, Target } from "lucide-react";
+import { Search, X, MapPin, Target, Loader2 } from "lucide-react";
 import { COUNTRIES, POPULAR_CITIES, LANDMARK_ICONS } from "@/app/data/locationData";
+import { reverseGeocode } from "@/lib/googleMaps";
 
 export default function LocationSelectionModal({ 
   isOpen, 
@@ -23,6 +24,10 @@ export default function LocationSelectionModal({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => searchRef.current?.focus(), 100);
+      // Auto-detect on first open if no city selected
+      if (!selectedCity && !geoLoading) {
+        handleGeoLocation();
+      }
     }
   }, [isOpen]);
 
@@ -65,32 +70,37 @@ export default function LocationSelectionModal({
   }, [search]);
 
   const handleGeoLocation = () => {
+    if (geoLoading) return;
     setGeoLoading(true);
     if (!("geolocation" in navigator)) {
       setGeoLoading(false);
-      alert("Geolocation is not supported.");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-          const data = await res.json();
-          const addr = data?.address || {};
-          const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || addr.state || "Your location";
-          updateCity(city, { country: addr.country, state: addr.state, city: city, lat: latitude, lng: longitude });
+          const geo = await reverseGeocode(latitude, longitude);
+          updateCity(geo.city, { 
+            country: geo.country, 
+            state: geo.state, 
+            district: geo.district,
+            city: geo.city, 
+            pincode: geo.pincode,
+            lat: latitude, 
+            lng: longitude 
+          });
           onClose();
         } catch (err) {
-          alert("Could not detect location.");
+          console.error("Geo detect error:", err);
         } finally {
           setGeoLoading(false);
         }
       },
       () => {
         setGeoLoading(false);
-        alert("Location permission denied.");
-      }
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
     );
   };
 
@@ -125,7 +135,28 @@ export default function LocationSelectionModal({
       >
         {allowClose && <button onClick={onClose} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s', zIndex: 1100 }} onMouseEnter={(e) => e.currentTarget.style.color = '#1e293b'}><X size={24} /></button>}
 
-        <h2 style={{ textAlign: 'center', fontSize: isMobile ? '18px' : '22px', fontWeight: 800, color: '#1e293b', marginBottom: isMobile ? '20px' : '28px', letterSpacing: '-0.01em', paddingRight: '32px' }}>Select Your Location to Continue</h2>
+        <h2 style={{ textAlign: 'center', fontSize: isMobile ? '18px' : '22px', fontWeight: 800, color: '#1e293b', marginBottom: isMobile ? '12px' : '16px', letterSpacing: '-0.01em', paddingRight: '32px' }}>Select Your Location to Continue</h2>
+        
+        <AnimatePresence>
+          {geoLoading && (
+            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '8px', 
+                marginBottom: '16px',
+                padding: '8px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '12px',
+                border: '1px solid #bae6fd'
+              }}
+            >
+              <Loader2 size={14} className="animate-spin text-sky-500" />
+              <span className="text-[12px] font-bold text-sky-700">Auto-detecting your location...</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* 1. Search Bar */}
         <div style={{ position: 'relative', marginBottom: isMobile ? '24px' : '32px', zIndex: 1000 }}>

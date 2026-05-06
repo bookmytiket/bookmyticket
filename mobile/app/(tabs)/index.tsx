@@ -249,10 +249,14 @@ export default function HomeScreen() {
       .slice(0, 10);
   }, [professionals, userLocation]);
 
-  const allLiveEvents = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const [now, setNow] = useState(new Date());
 
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const allLiveEvents = useMemo(() => {
     return (Array.isArray(events) ? events : []).filter(ev => {
       const s = String(ev.status || '').toLowerCase();
       if (s === "inactive" || s === "draft" || s === "expired") return false;
@@ -261,32 +265,42 @@ export default function HomeScreen() {
       
       // Prioritize End Date/Expiry Date for visibility
       let dt = ev.expiry_date || ev.end_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.basicInfo?.endDate || ev.date || ev.start_date || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
-      if (!dt) return true; // Show if no date found (fallback)
+      if (!dt) return false; // Hide if no date found (strict mode)
 
       let eventDate: Date | null = null;
       try {
-        if (typeof dt === 'string') {
-          if (dt.includes('/')) {
-            const [d, m, y] = dt.split('/');
-            eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
-          } else if (dt.includes('-') && dt.split('-')[0].length === 2) {
-            const [d, m, y] = dt.split('-');
-            eventDate = new Date(`${y}-${m}-${d}T23:59:59`);
-          } else {
-            eventDate = new Date(dt);
-          }
-        } else {
-          eventDate = new Date(dt);
+        let dateStr = String(dt);
+        let timeStr = '23:59:59';
+        
+        // Handle combined "YYYY-MM-DD HH:mm"
+        if (dateStr.includes(' ')) {
+            const parts = dateStr.split(' ');
+            dateStr = parts[0];
+            timeStr = parts[1].includes(':') ? parts[1] : timeStr;
+            if (timeStr.split(':').length === 2) timeStr += ':00';
         }
-      } catch (e) { return true; }
+
+        if (dateStr.includes('/')) {
+            const [d, m, y] = dateStr.split('/');
+            dateStr = `${y}/${m}/${d}`;
+        } else if (dateStr.includes('-') && dateStr.split('-')[0].length === 2) {
+            const [d, m, y] = dateStr.split('-');
+            dateStr = `${y}/${m}/${d}`;
+        } else {
+            dateStr = dateStr.replace(/-/g, '/');
+        }
+        
+        // Force local time by using space instead of T
+        eventDate = new Date(`${dateStr} ${timeStr}`);
+      } catch (e) { return false; }
 
       if (eventDate && !isNaN(eventDate.getTime())) {
-        return eventDate >= new Date();
+        return eventDate >= now;
       }
       
-      return true;
+      return false;
     });
-  }, [events]);
+  }, [events, now]);
 
   const activeEvents = useMemo(() => {
     const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;

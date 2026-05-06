@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
-import InlineMap from "./InlineMap";
+import GoogleInlineMap from "./GoogleInlineMap";
+import { Country, State, City } from 'country-state-city';
+import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
+import { COUNTRIES } from "@/app/data/locationData";
+import { supabase } from "@/lib/supabase";
+import { reverseGeocode, geocode } from "@/lib/googleMaps";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
@@ -39,6 +44,48 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "") =>
         )}
     </div>
 );
+
+const LocationSelect = ({ label, value, onChange, options, isLoading }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="space-y-2 relative">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}*</label>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
+            >
+                <div className="flex items-center gap-2">
+                    {isLoading && <Activity size={14} className="animate-spin text-pink-500" />}
+                    <span>{value || `Select ${label}`}</span>
+                </div>
+                <ChevronDown size={18} className={`text-slate-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+            {isOpen && (
+                <div className="absolute z-[1000] w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden max-h-[300px] overflow-y-auto">
+                    {options.map((opt) => {
+                        const labelText = typeof opt === 'string' ? opt : (opt.name || opt.label || String(opt));
+                        const valText = typeof opt === 'string' ? opt : (opt.value || opt.name || opt.label || String(opt));
+                        return (
+                            <div 
+                                key={valText}
+                                onClick={() => {
+                                    onChange(valText);
+                                    setIsOpen(false);
+                                }}
+                                className={`px-6 py-4 text-sm font-bold transition-all cursor-pointer hover:bg-pink-50 hover:text-[#ec4899] ${value === valText ? 'bg-pink-50 text-[#ec4899]' : 'text-slate-600'}`}
+                            >
+                                {labelText}
+                            </div>
+                        );
+                    })}
+                    {options.length === 0 && (
+                        <div className="px-6 py-4 text-xs font-bold text-slate-400 italic">No options available</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const TicketCard = ({ category, index, config, updateConfig }) => (
     <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative group hover:border-pink-200 transition-all">
@@ -387,7 +434,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         publish: {
             isPublic: true,
             isDraft: false
-        }
+        },
+        country: "India",
+        countryCode: "IN",
+        state: "",
+        stateCode: "",
+        district: "",
+        city: "",
+        zipCode: ""
     });
 
     useEffect(() => {
@@ -563,44 +617,143 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="md:col-span-2">
                             {renderInput("Full Address", config.location.address, (v) => updateConfig('location', { ...config.location, address: v }), "text", "Building, Street, Area")}
                         </div>
-                        <div className="md:col-span-1">
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">City / District</label>
-                            <div className="flex gap-2">
-                                <div className="flex-1">
-                                    <input 
-                                        type="text"
-                                        value={config.location.city || ""}
-                                        onChange={(e) => updateConfig('location', { ...config.location, city: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-600"
-                                        placeholder="City / Area"
+                                    <LocationSelect 
+                                        label="Country"
+                                        value={config.country}
+                                        options={COUNTRIES}
+                                        onChange={(v) => {
+                                            const countryData = COUNTRIES.find(c => c.label === v);
+                                            const code = countryData?.code || "IN";
+                                            
+                                            // Approximate center for countries
+                                            const centers = {
+                                                "IN": { lat: 20.5937, lng: 78.9629 },
+                                                "AE": { lat: 23.4241, lng: 53.8478 },
+                                                "SG": { lat: 1.3521, lng: 103.8198 },
+                                                "MY": { lat: 4.2105, lng: 101.9758 },
+                                                "TH": { lat: 15.8700, lng: 100.9925 },
+                                                "DE": { lat: 51.1657, lng: 10.4515 },
+                                                "US": { lat: 37.0902, lng: -95.7129 }
+                                            };
+
+                                            setConfig(prev => ({
+                                                ...prev,
+                                                country: v,
+                                                countryCode: code,
+                                                state: "",
+                                                stateCode: "",
+                                                district: "",
+                                                city: "",
+                                                zipCode: "",
+                                                location: { 
+                                                    ...prev.location, 
+                                                    city: "", 
+                                                    coordinates: centers[code] || prev.location.coordinates 
+                                                }
+                                            }));
+                                        }}
                                     />
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={async () => {
-                                        const { lat, lng } = config.location.coordinates;
-                                        try {
-                                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
-                                            const data = await res.json();
-                                            const addr = data.address || {};
-                                            updateConfig('location', { 
-                                                ...config.location, 
-                                                address: data.display_name || config.location.address,
-                                                city: addr.city || addr.town || addr.village || addr.suburb || config.location.city,
-                                                pincode: addr.postcode || config.location.pincode
-                                            });
-                                        } catch (err) {
-                                            console.error("Reverse geocoding error:", err);
-                                        }
-                                    }}
-                                    className="w-14 h-14 rounded-2xl bg-[#8b5cf6] text-white hover:bg-[#7c3aed] flex items-center justify-center transition-all shadow-lg shadow-purple-100 group"
-                                    title="Identify Address from Pin"
-                                >
-                                    <MapPin size={22} className="group-hover:scale-110 transition-transform" />
-                                </button>
-                            </div>
-                        </div>
-                        {renderInput("Pincode", config.location.pincode, (v) => updateConfig('location', { ...config.location, pincode: v }))}
+                                    <LocationSelect 
+                                        label="State / Province"
+                                        value={config.state}
+                                        options={State.getStatesOfCountry(config.countryCode)}
+                                        onChange={(v) => {
+                                            const stateObj = State.getStatesOfCountry(config.countryCode).find(s => s.name === v);
+                                            setConfig(prev => ({
+                                                ...prev,
+                                                state: v,
+                                                stateCode: stateObj?.isoCode || "",
+                                                district: "",
+                                                city: "",
+                                                zipCode: "",
+                                                location: { ...prev.location, city: "" }
+                                            }));
+                                        }}
+                                    />
+                                    {config.country === "India" ? (
+                                        <>
+                                            <LocationSelect 
+                                                label="District"
+                                                value={config.district}
+                                                options={getIndianDistricts(config.state)}
+                                                onChange={(v) => setConfig(prev => ({
+                                                    ...prev,
+                                                    district: v,
+                                                    city: "",
+                                                    zipCode: "",
+                                                    location: { ...prev.location, city: "" }
+                                                }))}
+                                            />
+                                            <LocationSelect 
+                                                label="City"
+                                                value={config.city}
+                                                options={getIndianCities(config.district)}
+                                                onChange={(v) => {
+                                                    setConfig(prev => ({
+                                                        ...prev,
+                                                        city: v,
+                                                        location: { ...prev.location, city: v }
+                                                    }));
+                                                }}
+                                            />
+                                        </>
+                                    ) : (
+                                        <LocationSelect 
+                                            label="City"
+                                            value={config.city}
+                                            options={City.getCitiesOfState(config.countryCode, config.stateCode)}
+                                            onChange={(v) => setConfig(prev => ({
+                                                ...prev,
+                                                city: v,
+                                                location: { ...prev.location, city: v }
+                                            }))}
+                                        />
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Pincode / Zip Code</label>
+                                        <input 
+                                            type="text"
+                                            value={config.location.pincode || ""}
+                                            onChange={(e) => updateConfig('location', { ...config.location, pincode: e.target.value })}
+                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-600"
+                                            placeholder="Auto-fills on City selection"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-end">
+                                        <button 
+                                            type="button" 
+                                            onClick={async () => {
+                                                const { lat, lng } = config.location.coordinates;
+                                                try {
+                                                    const geocoded = await reverseGeocode(lat, lng);
+                                                    setConfig(prev => ({
+                                                        ...prev,
+                                                        country: geocoded.country || prev.country,
+                                                        countryCode: geocoded.countryCode || prev.countryCode,
+                                                        state: geocoded.state || prev.state,
+                                                        stateCode: geocoded.stateCode || prev.stateCode,
+                                                        district: geocoded.district || prev.district,
+                                                        city: geocoded.city || prev.city,
+                                                        zipCode: geocoded.pincode || prev.zipCode,
+                                                        location: { 
+                                                            ...prev.location, 
+                                                            address: geocoded.fullAddress || prev.location.address,
+                                                            city: geocoded.city || prev.location.city,
+                                                            pincode: geocoded.pincode || prev.location.pincode
+                                                        }
+                                                    }));
+                                                } catch (err) {
+                                                    console.error("Reverse geocoding error:", err);
+                                                }
+                                            }}
+                                            className="w-full h-14 rounded-2xl bg-[#8b5cf6] text-white hover:bg-[#7c3aed] flex items-center justify-center gap-3 transition-all shadow-lg shadow-purple-100 group font-bold text-[11px] uppercase tracking-widest"
+                                        >
+                                            <MapPin size={18} className="group-hover:scale-110 transition-transform" />
+                                            Identify Address from Pin
+                                        </button>
+                                    </div>
                         
                         {postEvent.sportType === "Marathon" && (
                             <div className="md:col-span-2 space-y-4">
@@ -642,15 +795,25 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             const query = e.target.value;
                                             if (!query) return;
                                             try {
-                                                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-                                                const data = await res.json();
-                                                if (data && data.length > 0) {
-                                                    const { lat, lon } = data[0];
-                                                    updateConfig('location', { 
-                                                        ...config.location, 
-                                                        address: data[0].display_name,
-                                                        coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
-                                                    });
+                                                const geo = await geocode(query, config.countryCode);
+                                                if (geo) {
+                                                    setConfig(prev => ({
+                                                        ...prev,
+                                                        country: geo.country || prev.country,
+                                                        countryCode: geo.countryCode || prev.countryCode,
+                                                        state: geo.state || prev.state,
+                                                        stateCode: geo.stateCode || prev.stateCode,
+                                                        district: geo.district || prev.district,
+                                                        city: geo.city || prev.city,
+                                                        zipCode: geo.pincode || prev.zipCode,
+                                                        location: { 
+                                                            ...prev.location, 
+                                                            address: geo.fullAddress,
+                                                            city: geo.city,
+                                                            pincode: geo.pincode,
+                                                            coordinates: { lat: geo.lat, lng: geo.lng }
+                                                        }
+                                                    }));
                                                 }
                                             } catch (err) {
                                                 console.error("Geocoding error:", err);
@@ -662,10 +825,37 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             </div>
 
                             <div className="h-[350px] rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-2xl relative">
-                                <InlineMap 
+                                <GoogleInlineMap 
                                     lat={config.location.coordinates.lat} 
                                     lng={config.location.coordinates.lng}
-                                    onLocationSelect={(lat, lng) => updateConfig('location', { ...config.location, coordinates: { lat, lng }})}
+                                    onLocationSelect={async (lat, lng) => {
+                                        updateConfig('location', { ...config.location, coordinates: { lat, lng }});
+                                        // Auto-Geocode on pin move
+                                        try {
+                                            const geocoded = await reverseGeocode(lat, lng);
+                                            if (geocoded) {
+                                                setConfig(prev => ({
+                                                    ...prev,
+                                                    country: geocoded.country || prev.country,
+                                                    countryCode: geocoded.countryCode || prev.countryCode,
+                                                    state: geocoded.state || prev.state,
+                                                    stateCode: geocoded.stateCode || prev.stateCode,
+                                                    district: geocoded.district || prev.district,
+                                                    city: geocoded.city || prev.city,
+                                                    zipCode: geocoded.pincode || prev.zipCode,
+                                                    location: { 
+                                                        ...prev.location, 
+                                                        address: geocoded.fullAddress || prev.location.address,
+                                                        city: geocoded.city || prev.location.city,
+                                                        pincode: geocoded.pincode || prev.location.pincode,
+                                                        coordinates: { lat, lng }
+                                                    }
+                                                }));
+                                            }
+                                        } catch (err) {
+                                            console.error("Auto-geocoding error:", err);
+                                        }
+                                    }}
                                 />
                                 <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-lg flex items-center gap-3 z-[100]">
                                     <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center text-white shrink-0">

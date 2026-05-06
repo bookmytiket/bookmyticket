@@ -1,11 +1,11 @@
 export const COUNTRIES = [
-    { flag: "🇮🇳", label: "India" },
-    { flag: "🇦🇪", label: "UAE" },
-    { flag: "🇸🇬", label: "Singapore" },
-    { flag: "🇲🇾", label: "Malaysia" },
-    { flag: "🇹🇭", label: "Thailand" },
-    { flag: "🇩🇪", label: "Germany" },
-    { flag: "🇺🇸", label: "United States" },
+    { flag: "🇮🇳", label: "India", code: "IN" },
+    { flag: "🇦🇪", label: "UAE", code: "AE" },
+    { flag: "🇸🇬", label: "Singapore", code: "SG" },
+    { flag: "🇲🇾", label: "Malaysia", code: "MY" },
+    { flag: "🇹🇭", label: "Thailand", code: "TH" },
+    { flag: "🇩🇪", label: "Germany", code: "DE" },
+    { flag: "🇺🇸", label: "United States", code: "US" },
 ];
 
 export const POPULAR_CITIES = {
@@ -85,4 +85,3 @@ export const LANDMARK_ICONS = {
         </svg>
     )
 };
-

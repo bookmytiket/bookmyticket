@@ -14,6 +14,7 @@ import TimePicker from "./components/TimePicker";
 import CustomSelect from "./components/CustomSelect";
 import BookingAnalytics from "./components/BookingAnalytics";
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
+import { COUNTRIES } from "@/app/data/locationData";
 import PromoteModal from "@/components/PromoteModal";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
@@ -22,7 +23,8 @@ import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import CouponManagement from "./components/CouponManagement";
-import InlineMap from "./components/InlineMap";
+import GoogleInlineMap from "./components/GoogleInlineMap";
+import { reverseGeocode, geocode } from "@/lib/googleMaps";
 
 class OrganiserErrorBoundary extends Component {
     state = { error: null };
@@ -119,18 +121,18 @@ function LocationPickerModal({
         try {
             setIsGeoLoading(true);
             setGeoError("");
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${tempLocation.lat}&lon=${tempLocation.lng}`);
-            if (!res.ok) throw new Error("Failed to fetch");
-            const data = await res.json();
-            const addr = data.address || {};
+            const geocoded = await reverseGeocode(tempLocation.lat, tempLocation.lng);
             setPostEvent(pe => ({
                 ...pe,
                 latitude: String(tempLocation.lat),
                 longitude: String(tempLocation.lng),
-                address: data.display_name || pe.address,
-                country: addr.country || pe.country,
-                city: addr.city || addr.town || addr.village || pe.city,
-                zipCode: addr.postcode || pe.zipCode
+                address: geocoded.fullAddress || pe.address,
+                country: geocoded.country || pe.country,
+                countryCode: geocoded.countryCode || pe.countryCode,
+                state: geocoded.state || pe.state,
+                stateCode: geocoded.stateCode || pe.stateCode,
+                city: geocoded.city || pe.city,
+                zipCode: geocoded.pincode || pe.zipCode
             }));
             setShowMapModal(false);
         } catch (err) {
@@ -310,10 +312,17 @@ function KYCLocationStep({ t, theme, kycFormData, setKycFormData, kycErrors, set
     const handleFetchAddress = async () => {
         try {
             setIsGeoLoading(true);
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${kycFormData.lat}&lon=${kycFormData.lng}`);
-            const data = await res.json();
-            if (data.display_name) {
-                setKycFormData(prev => ({ ...prev, address: data.display_name }));
+            const geocoded = await reverseGeocode(kycFormData.lat, kycFormData.lng);
+            if (geocoded.fullAddress) {
+                setKycFormData(prev => ({ 
+                    ...prev, 
+                    address: geocoded.fullAddress,
+                    country: geocoded.country,
+                    countryCode: geocoded.countryCode,
+                    state: geocoded.state,
+                    stateCode: geocoded.stateCode,
+                    city: geocoded.city
+                }));
                 setKycErrors(prev => prev.filter(f => f !== 'address'));
             }
         } catch (err) {
@@ -1146,6 +1155,13 @@ function OrganiserPanel() {
         externalMeetingUrl: "",
         earlyBirdDiscount: "disable",
         layoutType: "stage",
+        country: "India",
+        countryCode: "IN",
+        state: "",
+        stateCode: "",
+        district: "",
+        city: "",
+        zipCode: "",
     });
     const [postEvent, setPostEvent] = useState(getInitialPostEvent());
     const [lastZipEdit, setLastZipEdit] = useState(0);
@@ -1188,44 +1204,8 @@ function OrganiserPanel() {
             return () => clearTimeout(timer);
         }
     }, [postEvent.latitude, postEvent.longitude]);
-
-    // Auto-fetch City/State from Pincode + Center Map
-    useEffect(() => {
-        if (postEvent.zipCode?.length === 6) {
-            const fetchFromPin = async () => {
-                try {
-                    // 1. Fetch Address Details
-                    const res = await fetch(`https://api.postalpincode.in/pincode/${postEvent.zipCode}`);
-                    const data = await res.json();
-                    
-                    if (data[0] && data[0].Status === "Success") {
-                        const po = data[0].PostOffice[0];
-                        setPostEvent(prev => ({
-                            ...prev,
-                            city: po.District,
-                            district: po.District,
-                            state: po.State,
-                            country: "India"
-                        }));
-                    }
-
-                    // 2. Fetch Lat/Lng to center map on this pincode
-                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${postEvent.zipCode}&country=India`);
-                    const geoData = await geoRes.json();
-                    if (geoData && geoData.length > 0) {
-                        setPostEvent(prev => ({
-                            ...prev,
-                            latitude: parseFloat(geoData[0].lat),
-                            longitude: parseFloat(geoData[0].lon)
-                        }));
-                    }
-                } catch (err) {
-                    console.error("Pincode API error:", err);
-                }
-            };
-            fetchFromPin();
-        }
-    }, [postEvent.zipCode]);
+    // Legacy Pincode auto-fetch removed as per user request to eliminate unreliable dependencies.
+    // Location is now primarily handled by the map picker and geocoding utility.
     const [publishError, setPublishError] = useState("");
 
     useEffect(() => {
@@ -1320,6 +1300,26 @@ function OrganiserPanel() {
         });
         return booked;
     }, [events.length]);
+    
+    const statesOfSelectedCountry = useMemo(() => {
+        if (!postEvent.countryCode) return [];
+        return State.getStatesOfCountry(postEvent.countryCode).map(s => ({ label: s.name, value: s.name }));
+    }, [postEvent.countryCode]);
+
+    const districtsOfSelectedState = useMemo(() => {
+        if (!postEvent.state || postEvent.country !== "India") return [];
+        return getIndianDistricts(postEvent.state).map(d => ({ label: d, value: d }));
+    }, [postEvent.state, postEvent.country]);
+
+    const citiesOfSelectedDistrict = useMemo(() => {
+        if (!postEvent.district || postEvent.country !== "India") return [];
+        return getIndianCities(postEvent.district).map(c => ({ label: c, value: c }));
+    }, [postEvent.district, postEvent.country]);
+
+    const citiesOfSelectedState = useMemo(() => {
+        if (!postEvent.stateCode || !postEvent.countryCode || postEvent.country === "India") return [];
+        return City.getCitiesOfState(postEvent.countryCode, postEvent.stateCode).map(c => ({ label: c.name, value: c.name }));
+    }, [postEvent.stateCode, postEvent.countryCode, postEvent.country]);
 
     const handleBannerChange = (e) => {
         const file = e.target.files?.[0];
@@ -1447,6 +1447,9 @@ function OrganiserPanel() {
             state: !isOnline ? postEvent.state : undefined,
             district: !isOnline ? postEvent.district : undefined,
             city: !isOnline ? postEvent.city : undefined,
+            pincode: !isOnline ? postEvent.zipCode : undefined,
+            latitude: postEvent.latitude ? parseFloat(postEvent.latitude) : undefined,
+            longitude: postEvent.longitude ? parseFloat(postEvent.longitude) : undefined,
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
             meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
@@ -2771,15 +2774,48 @@ function OrganiserPanel() {
                         updates.state = "";
                         updates.district = "";
                         updates.city = "";
-                        const countryObj = Country.getAllCountries().find(c => c.name === val);
-                        updates.countryCode = countryObj?.isoCode || "";
+                        updates.zipCode = "";
+                        const countryData = COUNTRIES.find(c => c.label === (typeof val === 'string' ? val : val.label));
+                        const code = countryData?.code || "IN";
+                        
+                        // Approximate center for countries
+                        const centers = {
+                            "IN": { lat: 20.5937, lng: 78.9629 },
+                            "AE": { lat: 23.4241, lng: 53.8478 },
+                            "SG": { lat: 1.3521, lng: 103.8198 },
+                            "MY": { lat: 4.2105, lng: 101.9758 },
+                            "TH": { lat: 15.8700, lng: 100.9925 },
+                            "DE": { lat: 51.1657, lng: 10.4515 },
+                            "US": { lat: 37.0902, lng: -95.7129 }
+                        };
+
+                        updates.countryCode = code;
+                        updates.latitude = centers[code]?.lat || prev.latitude;
+                        updates.longitude = centers[code]?.lng || prev.longitude;
                     } else if (field === "state") {
                         updates.district = "";
                         updates.city = "";
-                        const stateObj = State.getStatesOfCountry(postEvent.countryCode).find(s => s.name === val);
+                        updates.zipCode = "";
+                        const stateName = typeof val === 'string' ? val : val.label;
+                        const stateObj = State.getStatesOfCountry(postEvent.countryCode).find(s => s.name === stateName);
                         updates.stateCode = stateObj?.isoCode || "";
                     } else if (field === "district") {
                         updates.city = "";
+                        updates.zipCode = "";
+                    } else if (field === "city") {
+                        // Auto-fetch Pincode from location_master for Indian cities
+                        const cityName = typeof val === 'string' ? val : val.label;
+                        if (postEvent.country === "India") {
+                            supabase.from("location_master")
+                                .select("pincode")
+                                .eq("city", cityName)
+                                .limit(1)
+                                .then(({ data }) => {
+                                    if (data && data.length > 0) {
+                                        setPostEvent(prev => ({ ...prev, zipCode: data[0].pincode }));
+                                    }
+                                });
+                        }
                     }
 
                     setPostEvent(prev => ({ ...prev, ...updates }));
@@ -3751,7 +3787,7 @@ function OrganiserPanel() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
                                     <div className="md:col-span-2">
                                         <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Venue Name / Building*</label>
                                         <input 
@@ -3772,27 +3808,26 @@ function OrganiserPanel() {
                                             placeholder="Building, Street, Area"
                                         />
                                     </div>
-                                    <div className="md:col-span-1">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">City / District*</label>
-                                        <input 
-                                            type="text"
-                                            value={postEvent.city || ""}
-                                            onChange={(e) => setPostEvent(prev => ({ ...prev, city: e.target.value }))}
-                                            className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-                                            placeholder="City / Area"
-                                        />
-                                    </div>
+                                    
+                                    {renderSelect("Country", "country", COUNTRIES)}
+                                    {renderSelect("State / Province", "state", statesOfSelectedCountry)}
+                                    {postEvent.country === "India" ? (
+                                        <>
+                                            {renderSelect("District", "district", districtsOfSelectedState)}
+                                            {renderSelect("City", "city", citiesOfSelectedDistrict)}
+                                        </>
+                                    ) : (
+                                        renderSelect("City", "city", citiesOfSelectedState)
+                                    )}
+
                                     <div className="md:col-span-1">
                                         <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1 mb-2">Pincode / Zip Code</label>
                                         <input 
                                             type="text"
                                             value={postEvent.zipCode || ""}
-                                            onChange={(e) => {
-                                                setPostEvent(prev => ({ ...prev, zipCode: e.target.value }));
-                                                setLastZipEdit(Date.now());
-                                            }}
+                                            onChange={(e) => setPostEvent(prev => ({ ...prev, zipCode: e.target.value }))}
                                             className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-                                            placeholder="641XXX"
+                                            placeholder="Auto-fills on City selection"
                                         />
                                     </div>
                                 </div>
@@ -3804,17 +3839,46 @@ function OrganiserPanel() {
                                             type="button"
                                             onClick={() => {
                                                 if (navigator.geolocation) {
+                                                    setIsGeoLoading(true);
                                                     navigator.geolocation.getCurrentPosition(async (pos) => {
                                                         const lat = pos.coords.latitude;
                                                         const lng = pos.coords.longitude;
-                                                        setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                                        showToast("Live Location Set. Address Auto-Fetching...", "success");
-                                                    });
+                                                        try {
+                                                            const geocoded = await reverseGeocode(lat, lng);
+                                                            if (geocoded) {
+                                                                setPostEvent(prev => ({ 
+                                                                    ...prev, 
+                                                                    latitude: lat, 
+                                                                    longitude: lng,
+                                                                    address: geocoded.fullAddress || prev.address,
+                                                                    country: geocoded.country || prev.country,
+                                                                    state: geocoded.state || prev.state,
+                                                                    district: geocoded.district || prev.district,
+                                                                    city: geocoded.city || prev.city,
+                                                                    zipCode: geocoded.pincode || prev.zipCode
+                                                                }));
+                                                                showToast("Location Detected & Fields Autofilled!", "success");
+                                                            } else {
+                                                                setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                                                                showToast("GPS Set. Geocoding failed.", "warning");
+                                                            }
+                                                        } catch (err) {
+                                                            setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                                                            showToast("GPS Set. Geocoding failed.", "warning");
+                                                        } finally {
+                                                            setIsGeoLoading(false);
+                                                        }
+                                                    }, (err) => {
+                                                        showToast("GPS Access Denied: " + err.message, "error");
+                                                        setIsGeoLoading(false);
+                                                    }, { enableHighAccuracy: true, timeout: 10000 });
                                                 }
                                             }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all"
+                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-50"
+                                            disabled={isGeoLoading}
                                         >
-                                            <Target size={14} /> Detect Current Location
+                                            {isGeoLoading ? <Activity size={14} className="animate-spin" /> : <Target size={14} />} 
+                                            {isGeoLoading ? "Detecting..." : "Detect Current Location"}
                                         </button>
                                     </div>
                                     
@@ -3830,15 +3894,17 @@ function OrganiserPanel() {
                                                     const query = e.target.value;
                                                     if (!query) return;
                                                     try {
-                                                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-                                                        const data = await res.json();
-                                                        if (data && data.length > 0) {
-                                                            const { lat, lon } = data[0];
+                                                        const geo = await geocode(query, postEvent.countryCode);
+                                                        if (geo) {
                                                             setPostEvent(prev => ({ 
                                                                 ...prev, 
-                                                                address: data[0].display_name,
-                                                                latitude: parseFloat(lat), 
-                                                                longitude: parseFloat(lon) 
+                                                                address: geo.fullAddress || prev.address,
+                                                                country: geo.country || prev.country,
+                                                                state: geo.state || prev.state,
+                                                                city: geo.city || prev.city,
+                                                                zipCode: geo.pincode || prev.zipCode,
+                                                                latitude: geo.lat, 
+                                                                longitude: geo.lng 
                                                             }));
                                                         }
                                                     } catch (err) {
@@ -3851,10 +3917,29 @@ function OrganiserPanel() {
                                     </div>
 
                                     <div className="h-[350px] rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-2xl relative">
-                                        <InlineMap 
-                                            lat={postEvent.latitude || 11.0168} 
-                                            lng={postEvent.longitude || 76.9558}
-                                            onLocationSelect={(lat, lng) => setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                                        <GoogleInlineMap 
+                                            lat={postEvent.latitude} 
+                                            lng={postEvent.longitude}
+                                            onLocationSelect={async (lat, lng) => {
+                                                setPostEvent(prev => ({ ...prev, latitude: lat, longitude: lng }));
+                                                // Auto-Geocode on pin move
+                                                try {
+                                                    const geocoded = await reverseGeocode(lat, lng);
+                                                    if (geocoded) {
+                                                        setPostEvent(prev => ({
+                                                            ...prev,
+                                                            country: geocoded.country || prev.country,
+                                                            state: geocoded.state || prev.state,
+                                                            district: geocoded.district || prev.district,
+                                                            city: geocoded.city || prev.city,
+                                                            zipCode: geocoded.pincode || prev.zipCode,
+                                                            address: geocoded.fullAddress || prev.address
+                                                        }));
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Auto-geocoding error:", err);
+                                                }
+                                            }}
                                         />
                                         <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-lg flex items-center gap-3 z-[100]">
                                             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shrink-0">

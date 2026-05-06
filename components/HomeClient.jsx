@@ -135,6 +135,13 @@ const parseEventDate = (dateStr, timeStr, event = null) => {
     dt = String(dt).trim();
     t = String(t).trim();
     
+    // If dt already contains time (e.g. "YYYY-MM-DD HH:mm"), split it
+    if (dt && dt.includes(' ')) {
+        const parts = dt.split(' ');
+        dt = parts[0];
+        if (!timeStr) t = parts[1];
+    }
+
     // Handle DD/MM/YYYY or DD-MM-YYYY
     if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
         const separator = dt.includes('/') ? '/' : '-';
@@ -146,7 +153,7 @@ const parseEventDate = (dateStr, timeStr, event = null) => {
     }
     
     let normalizedTime = t;
-    if (t && t.includes(' ')) {
+    if (t && (t.includes('AM') || t.includes('PM'))) {
         let parts = t.split(' ');
         if (parts.length >= 2) {
             let [timePart, modifier] = parts;
@@ -159,7 +166,12 @@ const parseEventDate = (dateStr, timeStr, event = null) => {
         }
     }
     
-    const eventDate = new Date(`${dt}T${normalizedTime}`);
+    // Ensure HH:mm:ss format
+    if (normalizedTime && !normalizedTime.includes(':')) normalizedTime += ':00:00';
+    else if (normalizedTime && normalizedTime.split(':').length === 2) normalizedTime += ':00';
+
+    // Use space instead of T to force local time parsing in most browsers
+    const eventDate = new Date(`${dt.replace(/-/g, '/')} ${normalizedTime}`);
     return isNaN(eventDate.getTime()) ? null : eventDate;
   } catch (err) {
     console.error("parseEventDate error:", err);
@@ -358,6 +370,13 @@ function HomeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, selectedCity } = useAuth();
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000); // Sync every 30s
+    return () => clearInterval(interval);
+  }, []);
+
   const activeCat = searchParams.get("category");
   const searchQuery = searchParams.get("q") || "";
   const [heroSlides, setHeroSlides] = useState([]);
@@ -465,8 +484,6 @@ function HomeClient() {
   }, [serviceProvidersRaw, selectedCity]);
 
   const allLiveEvents = useMemo(() => {
-    const now = new Date();
-
     return (Array.isArray(supabaseEvents) ? supabaseEvents : [])
       .filter(ev => {
         const s = String(ev.status || '').toLowerCase();
@@ -476,7 +493,7 @@ function HomeClient() {
         if (eventDate) {
             return eventDate >= now;
         }
-        return true; // Keep events with no date for safety, or mark as TBA
+        return false; // Hide events with invalid/missing dates to prevent stale data
       })
       .map((ev, idx) => {
         const loc = String(ev.location || ev.venue || ev.address || "").trim();
@@ -503,7 +520,7 @@ function HomeClient() {
           virtual: isVirtual,
         };
       });
-  }, [supabaseEvents]);
+  }, [supabaseEvents, now]);
 
   const normalizedOrgEvents = useMemo(() => {
     return allLiveEvents;
@@ -571,15 +588,13 @@ function HomeClient() {
       results = results.filter(ev => eventMatchesCategory(ev, cat));
     }
 
-    const now = new Date();
-    results = results.filter(ev => {
+    return results.filter(ev => {
       const eventDate = parseEventDate(ev.rawDate || ev.date, ev.rawTime || ev.time, ev);
-      if (!eventDate) return true;
+      if (!eventDate) return false; // Hide expired/invalid
       
       return eventDate >= now;
     });
-    return results;
-  }, [activeCat, searchQuery, allEventsForFilter, selectedCity]);
+  }, [activeCat, searchQuery, allEventsForFilter, selectedCity, now]);
 
   const featuredEventsList = useMemo(() => filteredEvents.filter((e) => e.featured || e.is_spotlight || e.is_exclusive), [filteredEvents]);
 

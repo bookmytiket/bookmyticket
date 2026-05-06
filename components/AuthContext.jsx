@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedCity, setSelectedCity] = useState("");
-    const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "" });
+    const [locationHierarchy, setLocationHierarchy] = useState({ country: "", state: "", district: "", city: "", pincode: "" });
     const isProcessingRef = useRef(false);
     const ongoingFetchRef = useRef(null);
     const router = useRouter();

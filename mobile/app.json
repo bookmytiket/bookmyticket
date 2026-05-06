@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bookmyticket.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBWUDzdtQ8M7ka2VaSnI3Z_-f_WNT1uBgI"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,8 +34,15 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.CAMERA",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
-      ]
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBWUDzdtQ8M7ka2VaSnI3Z_-f_WNT1uBgI"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
