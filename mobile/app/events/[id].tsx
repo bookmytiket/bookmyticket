@@ -168,6 +168,9 @@ export default function EventDetailScreen() {
   const date = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
   const time = event.start_time || event.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
 
+  const eventLat = dynamicConfig.location?.coordinates?.lat || event.latitude;
+  const eventLng = dynamicConfig.location?.coordinates?.lng || event.longitude;
+
   return (
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -270,7 +273,7 @@ export default function EventDetailScreen() {
           </RNView>
 
           {/* Event Map Section */}
-          {dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
+          {eventLat && eventLng && (
             <RNView style={styles.mapSection}>
               <RNView style={[styles.mapContainer, { borderColor: colors.border, backgroundColor: colors.card }]}>
                 <WebView 
@@ -298,7 +301,7 @@ export default function EventDetailScreen() {
                             scrollWheelZoom: false,
                             boxZoom: false,
                             keyboard: false
-                          }).setView([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], 17);
+                          }).setView([${eventLat}, ${eventLng}], 17);
                           
                           // Use Google Satellite for more reliable mobile rendering
                           L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
@@ -312,7 +315,7 @@ export default function EventDetailScreen() {
                             iconSize: [14, 14],
                             iconAnchor: [7, 7]
                           });
-                          L.marker([${dynamicConfig.location.coordinates.lat}, ${dynamicConfig.location.coordinates.lng}], { icon: markerIcon }).addTo(map);
+                          L.marker([${eventLat}, ${eventLng}], { icon: markerIcon }).addTo(map);
                         </script>
                       </body>
                     </html>
@@ -320,7 +323,7 @@ export default function EventDetailScreen() {
                   style={styles.webView}
                 />
                 <Pressable 
-                  onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dynamicConfig.location.coordinates.lat},${dynamicConfig.location.coordinates.lng}`)}
+                  onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${eventLat},${eventLng}`)}
                   style={styles.mapDirectionsBtn}
                 >
                   <Text style={styles.mapDirectionsText}>GET DIRECTIONS</Text>

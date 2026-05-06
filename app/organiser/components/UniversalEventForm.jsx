@@ -394,56 +394,62 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     const [currentStep, setCurrentStep] = useState(1);
     
     // Default dynamic config structure
-    const [config, setConfig] = useState(postEvent.dynamic_config || {
-        basicInfo: {
-            eligibility: "Open to All",
-            organizerContact: "",
-            regStart: "",
-            regEnd: "",
-            expiryDate: "",
-            endDate: "",
-            endTime: ""
-        },
-        location: {
-            venueName: "",
-            address: "",
-            city: "",
-            pincode: "",
-            coordinates: { lat: 11.0168, lng: 76.9558 }
-        },
-        amenities: postEvent.sportType === "Marathon" ? ['Ambulance', 'First Aid', 'Medal', 'T-Shirt', 'Breakfast', 'Refreshments', 'Safety', 'Bib'] : [],
-        categories: postEvent.sportType === "Marathon" ? [
-            { id: 1, name: "5K Run", gender: "All", price: 0, totalSlots: 500, prizes: [{ label: "1st Prize", value: "" }, { label: "2nd Prize", value: "" }, { label: "3rd Prize", value: "" }], agePricing: [] },
-            { id: 2, name: "10K Run", gender: "All", price: 0, totalSlots: 300, prizes: [{ label: "1st Prize", value: "" }, { label: "2nd Prize", value: "" }, { label: "3rd Prize", value: "" }], agePricing: [] }
-        ] : [
-            { id: Date.now(), name: "Standard Entry", gender: "All", price: 0, totalSlots: 100, prizes: [{ label: "1st Prize", value: "" }], agePricing: [] }
-        ],
-        registrationForm: [
-            { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
-            { id: 2, label: "Email Address", type: "email", required: true, isDefault: true },
-            { id: 3, label: "Phone Number", type: "tel", required: true, isDefault: true },
-            ...(postEvent.sportType === "Marathon" ? [{ id: 4, label: "T-Shirt Size", type: "select", options: ["XS", "S", "M", "L", "XL", "XXL"], required: true }] : [])
-        ],
-        communication: {
-            whatsappLink: "",
-            supportNumber: "",
-            notifications: { email: true, sms: false }
-        },
-        countdown: {
-            enabled: true,
-            deadline: ""
-        },
-        publish: {
-            isPublic: true,
-            isDraft: false
-        },
-        country: "India",
-        countryCode: "IN",
-        state: "",
-        stateCode: "",
-        district: "",
-        city: "",
-        zipCode: ""
+    const [config, setConfig] = useState(() => {
+        const base = postEvent.dynamic_config || {};
+        return {
+            ...base,
+            basicInfo: {
+                eligibility: "Open to All",
+                organizerContact: "",
+                regStart: "",
+                regEnd: "",
+                expiryDate: "",
+                endDate: "",
+                endTime: "",
+                ...(base.basicInfo || {})
+            },
+            location: {
+                venueName: "",
+                address: "",
+                city: "",
+                pincode: "",
+                coordinates: { lat: 11.0168, lng: 76.9558 },
+                ...(base.location || {})
+            },
+            amenities: base.amenities || (postEvent.sportType === "Marathon" ? ['Ambulance', 'First Aid', 'Medal', 'T-Shirt', 'Breakfast', 'Refreshments', 'Safety', 'Bib'] : []),
+            categories: base.categories || (postEvent.sportType === "Marathon" ? [
+                { id: 1, name: "5K Run", gender: "All", price: 0, totalSlots: 500, prizes: [{ label: "1st Prize", value: "" }, { label: "2nd Prize", value: "" }, { label: "3rd Prize", value: "" }], agePricing: [] },
+                { id: 2, name: "10K Run", gender: "All", price: 0, totalSlots: 300, prizes: [{ label: "1st Prize", value: "" }, { label: "2nd Prize", value: "" }, { label: "3rd Prize", value: "" }], agePricing: [] }
+            ] : [
+                { id: Date.now(), name: "Standard Entry", gender: "All", price: 0, totalSlots: 100, prizes: [{ label: "1st Prize", value: "" }], agePricing: [] }
+            ]),
+            registrationForm: base.registrationForm || [
+                { id: 1, label: "Full Name", type: "text", required: true, isDefault: true },
+                { id: 2, label: "Email Address", type: "email", required: true, isDefault: true },
+                { id: 3, label: "Phone Number", type: "tel", required: true, isDefault: true },
+                ...(postEvent.sportType === "Marathon" ? [{ id: 4, label: "T-Shirt Size", type: "select", options: ["XS", "S", "M", "L", "XL", "XXL"], required: true }] : [])
+            ],
+            communication: base.communication || {
+                whatsappLink: "",
+                supportNumber: "",
+                notifications: { email: true, sms: false }
+            },
+            countdown: base.countdown || {
+                enabled: true,
+                deadline: ""
+            },
+            publish: base.publish || {
+                isPublic: true,
+                isDraft: false
+            },
+            country: base.country || "India",
+            countryCode: base.countryCode || "IN",
+            state: base.state || "",
+            stateCode: base.stateCode || "",
+            district: base.district || "",
+            city: base.city || "",
+            zipCode: base.zipCode || ""
+        };
     });
 
     useEffect(() => {
@@ -463,6 +469,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         setPostEvent(prev => ({ 
             ...prev, 
             dynamic_config: config,
+            latitude: config.location?.coordinates?.lat,
+            longitude: config.location?.coordinates?.lng,
+            endDate: config.basicInfo?.endDate,
+            endTime: config.basicInfo?.endTime,
             type: "Dynamic",
             category: "Event"
         }));
@@ -568,8 +578,8 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             {renderInput("Event Time", postEvent.startTime, (v) => setPostEvent(p => ({ ...p, startTime: v })), "time")}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            {renderInput("End Date", config.basicInfo.endDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, endDate: v }), "date")}
-                            {renderInput("End Time", config.basicInfo.endTime, (v) => updateConfig('basicInfo', { ...config.basicInfo, endTime: v }), "time")}
+                            {renderInput("End Date*", config.basicInfo.endDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, endDate: v }), "date")}
+                            {renderInput("End Time*", config.basicInfo.endTime, (v) => updateConfig('basicInfo', { ...config.basicInfo, endTime: v }), "time")}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             {renderInput("Registration Starts", config.basicInfo.regStart, (v) => updateConfig('basicInfo', { ...config.basicInfo, regStart: v }), "date")}

@@ -544,6 +544,8 @@ function OrganiserPanel() {
                     seatingEnabled: ev.seating_enabled !== false,
                     isFeature: ev.is_featured ? "Yes" : "No",
                     isExclusive: ev.is_exclusive ? "Yes" : "No",
+                    endDate: ev.end_date || ev.endDate || "",
+                    endTime: ev.end_time || ev.endTime || "",
                     eventStatus: ev.status || "published"
                 });
                 setActiveTab("post_event");
@@ -1434,6 +1436,8 @@ function OrganiserPanel() {
             type: postEvent.type || undefined,
             date: firstSlot.date || today,
             expiry_date: postEvent.expiryDate || undefined,
+            end_date: postEvent.endDate || undefined,
+            end_time: postEvent.endTime || undefined,
             time: firstSlot.time || "TBA",
             img: imgUrl,
             banner_preview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,

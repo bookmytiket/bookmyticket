@@ -81,7 +81,7 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
   };
 
   // Fallback Logic: Triggered if Load Error happens or key is invalid
-  const triggerFallback = useFallback || loadError || keyMissing || GOOGLE_MAPS_API_KEY.includes('api.postalpincode.in');
+  const triggerFallback = useFallback || loadError || keyMissing;
 
   if (triggerFallback) {
     return (
@@ -107,7 +107,12 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
             <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl text-[10px] font-bold shadow-xl border border-white/20">
               <p className="uppercase tracking-widest text-[9px] mb-1 opacity-80">API Connection Issue</p>
               {authError}. <br/>
-              <span className="text-[9px] opacity-70 font-normal mt-1 block">Please ensure 'www.bookmyticket.net' is added to HTTP Referrer restrictions in Google Cloud Console.</span>
+              <span className="text-[9px] opacity-70 font-normal mt-1 block">
+                Common Fixes: <br/>
+                1. Ensure Billing is enabled on GCP. <br/>
+                2. Add both <b>bookmyticket.net/*</b> and <b>www.bookmyticket.net/*</b> to HTTP Referrers. <br/>
+                3. Enable Maps JS API, Geocoding API, and Places API.
+              </span>
             </div>
           )}
           {loadError && (
