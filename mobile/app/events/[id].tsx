@@ -308,10 +308,9 @@ export default function EventDetailScreen() {
                             keyboard: false
                           }).setView([${eventLat}, ${eventLng}], 17);
                           
-                          // Use Google Satellite for more reliable mobile rendering
-                          L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-                            maxZoom: 20,
-                            subdomains:['mt0','mt1','mt2','mt3']
+                          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '© OpenStreetMap'
                           }).addTo(map);
                           
                           var markerIcon = L.divIcon({

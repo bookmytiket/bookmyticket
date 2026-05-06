@@ -453,6 +453,49 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     });
 
     useEffect(() => {
+        // Auto-detect location on mount with a small delay for browser readiness
+        const timer = setTimeout(() => {
+            if (typeof window !== "undefined" && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const { latitude: lat, longitude: lng } = pos.coords;
+                    try {
+                        const geo = await reverseGeocode(lat, lng);
+                        if (geo) {
+                            setConfig(prev => ({
+                                ...prev,
+                                country: geo.country || prev.country,
+                                countryCode: geo.countryCode || prev.countryCode,
+                                state: geo.state || prev.state,
+                                stateCode: geo.stateCode || prev.stateCode,
+                                district: geo.district || prev.district,
+                                city: geo.city || prev.city,
+                                zipCode: geo.pincode || prev.zipCode,
+                                location: { 
+                                    ...prev.location, 
+                                    address: geo.fullAddress,
+                                    city: geo.city,
+                                    pincode: geo.pincode,
+                                    coordinates: { lat, lng }
+                                }
+                            }));
+                            showToast(`Auto-Located: ${geo.city || geo.district}`, "success");
+                        }
+                    } catch (err) {
+                        console.error("Auto-location geocode error:", err);
+                    }
+                }, (err) => {
+                    console.warn("Auto-location permission denied or failed:", err);
+                    if (err.code === 1) { // PERMISSION_DENIED
+                        showToast("Location access denied. Please enable it in browser settings.", "error");
+                    }
+                }, { enableHighAccuracy: true, timeout: 10000 });
+            }
+        }, 1000); // 1s delay
+        
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
         // Ensure basicInfo has regStart/regEnd defaults if missing
         if (config.basicInfo && (config.basicInfo.regStart === undefined || config.basicInfo.regEnd === undefined || config.basicInfo.expiryDate === undefined)) {
             setConfig(prev => ({
@@ -734,42 +777,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                         />
                                     </div>
 
-                                    <div className="flex items-end">
-                                        <button 
-                                            type="button" 
-                                            onClick={async () => {
-                                                const { lat, lng } = config.location.coordinates;
-                                                try {
-                                                    const geocoded = await reverseGeocode(lat, lng);
-                                                    if (geocoded) {
-                                                        setConfig(prev => ({
-                                                            ...prev,
-                                                            country: geocoded.country || prev.country,
-                                                            countryCode: geocoded.countryCode || prev.countryCode,
-                                                            state: geocoded.state || prev.state,
-                                                            stateCode: geocoded.stateCode || prev.stateCode,
-                                                            district: geocoded.district || prev.district,
-                                                            city: geocoded.city || prev.city,
-                                                            zipCode: geocoded.pincode || prev.zipCode,
-                                                            location: { 
-                                                                ...prev.location, 
-                                                                address: geocoded.fullAddress || prev.location.address,
-                                                                city: geocoded.city || prev.location.city,
-                                                                pincode: geocoded.pincode || prev.location.pincode
-                                                            }
-                                                        }));
-                                                        showToast(`Location Mapped: ${geocoded.city || geocoded.district}`, "success");
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Reverse geocoding error:", err);
-                                                }
-                                            }}
-                                            className="w-full h-14 rounded-2xl bg-[#8b5cf6] text-white hover:bg-[#7c3aed] flex items-center justify-center gap-3 transition-all shadow-lg shadow-purple-100 group font-bold text-[11px] uppercase tracking-widest"
-                                        >
-                                            <MapPin size={18} className="group-hover:scale-110 transition-transform" />
-                                            Identify Address from Pin
-                                        </button>
-                                    </div>
+                                    <div /> {/* Replaced manual button with auto-detection */}
                         
                         {postEvent.sportType === "Marathon" && (
                             <div className="md:col-span-2 space-y-4">
@@ -784,19 +792,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="md:col-span-2 space-y-4 pt-6 border-t border-slate-50">
                             <div className="flex items-center justify-between">
                                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Venue Location (Pin on Map)</label>
-                                <button 
-                                    type="button"
-                                    onClick={() => {
-                                        if (navigator.geolocation) {
-                                            navigator.geolocation.getCurrentPosition((pos) => {
-                                                updateConfig('location', { ...config.location, coordinates: { lat: pos.coords.latitude, lng: pos.coords.longitude }});
-                                            });
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-pink-50 text-[#ec4899] text-[9px] font-black uppercase tracking-widest rounded-xl border border-pink-100 hover:bg-[#ec4899] hover:text-white transition-all"
-                                >
-                                    <Target size={14} /> My Location
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Auto-Detection Active</span>
+                                </div>
                             </div>
                             
                             {/* Address Search */}

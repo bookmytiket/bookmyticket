@@ -127,54 +127,28 @@ import { supabase } from "@/lib/supabase";
 
 const parseEventDate = (dateStr, timeStr, event = null) => {
   try {
-    // Support explicit expiry_date or dynamic_config dates
-    let dt = event?.expiry_date || event?.dynamic_config?.basicInfo?.expiryDate || dateStr;
-    let t = timeStr || event?.startTime || '23:59';
+    const config = event?.dynamic_config ? (typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : event.dynamic_config) : {};
+    const configBasic = config.basicInfo || {};
+    let dt = event?.end_date || event?.endDate || configBasic.endDate || 
+             event?.expiry_date || configBasic.expiryDate || 
+             dateStr || event?.date || event?.start_date;
+    let t = event?.end_time || event?.endTime || configBasic.endTime || 
+            timeStr || event?.time || event?.startTime || '23:59';
 
     if (!dt) return null;
     dt = String(dt).trim();
     t = String(t).trim();
     
-    // If dt already contains time (e.g. "YYYY-MM-DD HH:mm"), split it
-    if (dt && dt.includes(' ')) {
-        const parts = dt.split(' ');
-        dt = parts[0];
-        if (!timeStr) t = parts[1];
-    }
-
-    // Handle DD/MM/YYYY or DD-MM-YYYY
     if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
         const separator = dt.includes('/') ? '/' : '-';
         const parts = dt.split(separator);
-        if (parts.length === 3) {
-            const [day, month, year] = parts;
-            dt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        }
+        const [day, month, year] = parts;
+        dt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
-    let normalizedTime = t;
-    if (t && (t.includes('AM') || t.includes('PM'))) {
-        let parts = t.split(' ');
-        if (parts.length >= 2) {
-            let [timePart, modifier] = parts;
-            let timeParts = timePart.split(':');
-            let hours = Number(timeParts[0]);
-            let mins = Number(timeParts[1] || 0);
-            if (modifier === 'PM' && hours < 12) hours += 12;
-            if (modifier === 'AM' && hours === 12) hours = 0;
-            normalizedTime = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-        }
-    }
-    
-    // Ensure HH:mm:ss format
-    if (normalizedTime && !normalizedTime.includes(':')) normalizedTime += ':00:00';
-    else if (normalizedTime && normalizedTime.split(':').length === 2) normalizedTime += ':00';
 
-    // Use space instead of T to force local time parsing in most browsers
-    const eventDate = new Date(`${dt.replace(/-/g, '/')} ${normalizedTime}`);
+    const eventDate = new Date(`${dt.replace(/-/g, '/')} ${t}`);
     return isNaN(eventDate.getTime()) ? null : eventDate;
   } catch (err) {
-    console.error("parseEventDate error:", err);
     return null;
   }
 };
@@ -867,13 +841,6 @@ function HomeClient() {
           <div style={{ width: '100%' }}>
             <NewEventPublishedBanner />
             <VideoHeroBanner />
-
-            {/* Cloned Brand Coupons Section (Top Trending Offers) - Placed under Hero Banner */}
-            <BrandCouponsSection 
-               coupons={allCoupons} 
-               title="Top Trending Offers" 
-               subtitle="Grab these limited time deals before they expire!" 
-            />
 
             {/* 1) Recently Viewed */}
             <RecentlyViewedEvents liveEvents={allLiveEvents} />

@@ -31,35 +31,6 @@ function parseEventDate(dateStr, timeStr) {
     } catch (_) { return null; }
 }
 
-/* ── Overlay variants ── */
-function ExpiredOverlay() {
-    return (
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(239,68,68,0.2) 0%,rgba(0,0,0,0.65) 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-            <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "rgba(239,68,68,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                </svg>
-            </div>
-            <span style={{ background: "#ef4444", color: "#fff", fontWeight: 900, fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", padding: "3px 10px", borderRadius: "100px" }}>Expired</span>
-        </div>
-    );
-}
-
-function DeletedOverlay() {
-    return (
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(245,158,11,0.2) 0%,rgba(0,0,0,0.65) 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-            <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: "rgba(245,158,11,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6" /><path d="M14 11v6" />
-                </svg>
-            </div>
-            <span style={{ background: "#f59e0b", color: "#fff", fontWeight: 900, fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", padding: "3px 10px", borderRadius: "100px" }}>Removed</span>
-        </div>
-    );
-}
-
 export default function RecentlyViewedEvents({ events: propEvents, liveEvents }) {
     const [events, setEvents] = useState(Array.isArray(propEvents) ? propEvents : []);
     const scrollRef = useRef(null);
@@ -83,17 +54,22 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             const list = raw ? JSON.parse(raw) : [];
-            // Keep ALL events — expired & deleted shown with indicators
-            setEvents((Array.isArray(list) ? list : []).slice(0, MAX_ITEMS));
+            // Filter out expired events immediately on load
+            const activeOnly = (Array.isArray(list) ? list : []).filter(ev => !isExpiredEvent(ev));
+            setEvents(activeOnly.slice(0, MAX_ITEMS));
         } catch (_) { setEvents([]); }
     }, []);
 
     useEffect(() => {
-        if (Array.isArray(propEvents) && propEvents.length > 0) { setEvents(propEvents); return; }
+        if (Array.isArray(propEvents) && propEvents.length > 0) {
+            const activeOnly = propEvents.filter(ev => !isExpiredEvent(ev));
+            setEvents(activeOnly);
+            return;
+        }
         loadFromStorage();
     }, [propEvents, loadFromStorage]);
 
-    /* ── Sync: update fields AND detect deleted events ── */
+    /* ── Sync: update fields AND remove deleted events ── */
     useEffect(() => {
         if (!liveEvents || liveEvents.length === 0) return;
         setLiveLoaded(true);
@@ -101,26 +77,26 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
         setEvents(prev => {
             let changed = false;
             const synced = prev.map(ev => {
-                // Static demo events (id starts with "static-") — never deleted from DB
                 const isStaticEvent = String(ev.id || "").startsWith("static-");
                 if (isStaticEvent) return ev;
 
                 const live = liveEvents.find(l => String(l._id || l.id) === String(ev.id));
 
                 if (!live) {
-                    // Event not in live DB → deleted by organiser
-                    if (!ev.isDeleted) { changed = true; return { ...ev, isDeleted: true }; }
-                    return ev;
+                    // Event not in live DB → removed
+                    changed = true;
+                    return null;
                 }
 
-                // Event exists — sync fields & clear deleted flag
                 const nl = { ...live, id: live._id || live.id };
-                if (nl.type !== ev.type || nl.price !== ev.price || ev.isDeleted) {
+                if (nl.type !== ev.type || nl.price !== ev.price) {
                     changed = true;
-                    return { ...ev, ...nl, isDeleted: false };
+                    return { ...ev, ...nl };
                 }
                 return ev;
-            });
+            }).filter(ev => ev !== null && !isExpiredEvent(ev)); // Filter out nulls and newly expired
+
+            if (synced.length !== prev.length) changed = true;
             return changed ? synced : prev;
         });
     }, [liveEvents]);
@@ -168,10 +144,6 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                 <div ref={scrollRef} className="recently-viewed-scroll"
                     style={{ display: "flex", gap: "16px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: "8px" }}>
                     {events.map((event) => {
-                        const expired = !event.isDeleted && isExpiredEvent(event);
-                        const deleted = event.isDeleted === true;
-                        const isAbnormal = expired || deleted;
-
                         return (
                             <Link
                                 key={event.id}
@@ -186,19 +158,14 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                                         overflow: "hidden",
                                         display: "flex",
                                         flexDirection: "column",
-                                        border: deleted ? "1.5px solid #fde68a" : expired ? "1.5px solid #fecaca" : "1px solid #e5e7eb",
+                                        border: "1px solid #e5e7eb",
                                         transition: "all 0.3s ease",
                                         cursor: "pointer",
                                         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                                        opacity: isAbnormal ? 0.88 : 1,
                                     }}
                                     onMouseEnter={e => {
                                         e.currentTarget.style.transform = "translateY(-4px)";
-                                        e.currentTarget.style.boxShadow = deleted
-                                            ? "0 8px 30px rgba(245,158,11,0.18)"
-                                            : expired
-                                            ? "0 8px 30px rgba(239,68,68,0.15)"
-                                            : "0 8px 30px rgba(0,0,0,0.12)";
+                                        e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.12)";
                                     }}
                                     onMouseLeave={e => {
                                         e.currentTarget.style.transform = "translateY(0)";
@@ -210,33 +177,22 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                                         <img
                                             src={event.img || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=280&fit=crop"}
                                             alt={event.title || "Event"}
-                                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isAbnormal ? "grayscale(55%) brightness(0.65)" : "none" }}
+                                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                                         />
-                                        {expired && <ExpiredOverlay />}
-                                        {deleted && <DeletedOverlay />}
                                     </div>
 
                                     {/* Body */}
                                     <div style={{ padding: "10px", display: "flex", flexDirection: "column", flex: 1 }}>
                                         <h3 style={{
                                             fontSize: "14px", fontWeight: 700,
-                                            color: isAbnormal ? "#6b7280" : "#111827",
+                                            color: "#111827",
                                             margin: "0 0 8px", lineHeight: "1.25",
                                             display: "-webkit-box", WebkitLineClamp: 2,
                                             WebkitBoxOrient: "vertical", overflow: "hidden",
                                             fontFamily: "var(--font-body)",
-                                            textDecoration: isAbnormal ? "line-through" : "none",
                                         }}>
                                             {event.title || "Event"}
                                         </h3>
-
-                                        {/* Deleted banner notice */}
-                                        {deleted && (
-                                            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "5px 8px", marginBottom: "6px", display: "flex", alignItems: "center", gap: "5px" }}>
-                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
-                                                <span style={{ fontSize: "10px", fontWeight: 800, color: "#92400e" }}>Removed by Organiser</span>
-                                            </div>
-                                        )}
 
                                         <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "6px" }}>
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
@@ -249,41 +205,24 @@ export default function RecentlyViewedEvents({ events: propEvents, liveEvents })
                                                 <span style={{ fontSize: "13px", color: "#6b7280", fontWeight: 600 }}>{event.date || "TBA"}</span>
                                             </div>
 
-                                            {/* Status badge */}
-                                            {deleted ? (
-                                                <span style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde68a", borderRadius: "100px", padding: "2px 8px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Deleted</span>
-                                            ) : expired ? (
-                                                <span style={{ background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: "100px", padding: "2px 8px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase" }}>Expired</span>
-                                            ) : (
-                                                <div style={{ 
-                                                    fontSize: '11px', 
-                                                    fontWeight: 900, 
-                                                    color: isFreeEvent(event) ? '#22c55e' : '#111827',
-                                                    backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
-                                                    padding: '4px 10px',
-                                                    borderRadius: '100px',
-                                                    letterSpacing: '0.02em',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    {isFreeEvent(event) ? "FREE" : "PAID"}
-                                                </div>
-                                            )}
+                                            <div style={{ 
+                                                fontSize: '11px', 
+                                                fontWeight: 900, 
+                                                color: isFreeEvent(event) ? '#22c55e' : '#111827',
+                                                backgroundColor: isFreeEvent(event) ? '#22c55e10' : '#f1f5f9',
+                                                padding: '4px 10px',
+                                                borderRadius: '100px',
+                                                letterSpacing: '0.02em',
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {isFreeEvent(event) ? "FREE" : "PAID"}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </Link>
                         );
                     })}
-                </div>
-
-                {/* Legend */}
-                <div style={{ display: "flex", gap: "16px", marginTop: "12px", flexWrap: "wrap" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 600, color: "#9ca3af" }}>
-                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }} /> Expired events
-                    </span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 600, color: "#9ca3af" }}>
-                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} /> Removed by organiser
-                    </span>
                 </div>
             </div>
             <style>{`.recently-viewed-scroll::-webkit-scrollbar{display:none}`}</style>

@@ -1,27 +1,26 @@
-const { createClient } = require('@supabase/supabase-js');
-// Read env from .env.local if it exists, or mobile/.env
-const fs = require('fs');
-let url, key;
 
-try {
-    const env = fs.readFileSync('/home/raja/bookmyticket/.env.local', 'utf8');
-    url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1];
-    key = env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1];
-} catch (e) {
-    const env = fs.readFileSync('/home/raja/bookmyticket/mobile/.env', 'utf8');
-    url = env.match(/EXPO_PUBLIC_SUPABASE_URL=(.*)/)?.[1];
-    key = env.match(/EXPO_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1];
+const { createClient } = require('@supabase/supabase-client');
+require('dotenv').config({ path: '.env.local' });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function checkEvents() {
+    const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .ilike('title', '%Test Marathon%');
+
+    if (error) {
+        console.error('Error fetching events:', error);
+        return;
+    }
+
+    console.log('Test Marathon Events:');
+    data.forEach(e =\u003e {
+        console.log(`- ID: ${e.id}, Title: ${e.title}, Status: ${e.status}, Date: ${e.date}, Location: ${e.city || e.location || 'N/A'}`);
+    });
 }
 
-const supabase = createClient(url, key);
-
-async function check() {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .ilike('title', '%marathon%');
-    
-  if (error) console.error(error);
-  else console.log(JSON.stringify(data, null, 2));
-}
-check();
+checkEvents();

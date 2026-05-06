@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   FlatList,
@@ -11,7 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useSupabase';
+import { useAuth, useSupabaseQuery } from '@/hooks/useSupabase';
 import { Calendar, MapPin, Ticket, ChevronRight, QrCode } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -31,7 +31,7 @@ export default function TicketsScreen() {
     { realtime: true, enabled: !!user }
   );
 
-  const bookings = React.useMemo(() => {
+  const bookings = useMemo(() => {
     if (!bookingsRaw) return [];
     return (bookingsRaw as any[]).filter(b => {
       if (b.payment_status === 'pending' || b.status === 'Pending') {
@@ -63,7 +63,7 @@ export default function TicketsScreen() {
         data={loading ? Array(3).fill({}) : bookings}
         keyExtractor={(item, index) => item.id ?? `sk-${index}`}
         contentContainerStyle={styles.list}
-        onRefresh={fetchBookings}
+        onRefresh={refresh}
         refreshing={loading}
         renderItem={({ item, index }) =>
           loading ? (

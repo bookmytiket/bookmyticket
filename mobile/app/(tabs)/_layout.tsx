@@ -22,24 +22,27 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: 85,
-          paddingBottom: 25,
-          paddingTop: 10,
+          height: Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+          paddingTop: 8,
           borderTopWidth: 1,
-          elevation: 10,
+          elevation: 20,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.1,
-          shadowRadius: 10,
+          shadowRadius: 12,
         },
         headerShown: false,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '900',
+          fontWeight: '800',
           textTransform: 'uppercase',
-          letterSpacing: 0.5,
-          marginTop: 4,
+          letterSpacing: 0.8,
+          marginTop: 2,
         },
+        tabBarIconStyle: {
+          marginBottom: -2,
+        }
       }}
     >
       <Tabs.Screen
@@ -57,37 +60,12 @@ export default function TabLayout() {
           tabBarLabel: 'EVENTS',
           tabBarIcon: ({ color }) => <Calendar size={22} color={color} />,
         }}
-      />
-
-      <Tabs.Screen
+      />      <Tabs.Screen
         name="book"
         options={{
-          title: 'Book Now',
-          tabBarLabel: '',
-          tabBarIcon: () => (
-            <View style={styles.bookNowContainer}>
-              <LinearGradient
-                colors={['#f844a4', '#a855f7']}
-                style={styles.bookNowGradient}
-              >
-                <Text style={styles.bookNowText}>BOOK</Text>
-                <Text style={styles.bookNowTextSub}>NOW</Text>
-              </LinearGradient>
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            if (!user) {
-              router.push('/auth/sign-in');
-            } else {
-              router.push('/events');
-            }
-          },
+          href: null,
         }}
       />
-
       <Tabs.Screen
         name="services"
         options={{
@@ -105,44 +83,19 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ticket size={22} color={color} />,
         }}
       />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarLabel: 'PROFILE',
+          tabBarIcon: ({ color }) => <User size={22} color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  bookNowContainer: {
-    top: -20,
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#fff',
-    padding: 4,
-    elevation: 8,
-    shadowColor: '#f844a4',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-  },
-  bookNowGradient: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookNowText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '900',
-    lineHeight: 12,
-    textTransform: 'uppercase',
-  },
-  bookNowTextSub: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: '800',
-    lineHeight: 9,
-    textTransform: 'uppercase',
-    marginTop: 1,
-  }
+  // Floating button styles removed for better alignment
 });

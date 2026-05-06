@@ -1,207 +1,63 @@
 "use client";
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_LIBRARIES } from "@/lib/googleMaps";
-import MapPicker from "@/components/MapPicker"; // Leaflet Fallback
+import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { LocateFixed } from "lucide-react";
+
+const MapPicker = dynamic(() => import("@/components/MapPicker"), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full min-h-[300px] bg-slate-50 animate-pulse rounded-3xl" />
+});
 
 /**
- * GoogleInlineMap — High-fidelity Google Maps component with robust initialization
- * and seamless fallback to Leaflet if API fails or is unavailable.
+ * OSMInlineMap — OpenStreetMap replacement for GoogleInlineMap.
+ * Zero-billing, robust, and performs exactly like the original.
  */
 const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
-  const [map, setMap] = useState(null);
-  const [useFallback, setUseFallback] = useState(false);
-  
-  // Robust JS API Loader
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const [geoLoading, setGeoLoading] = useState(false);
 
   const center = useMemo(() => ({ 
     lat: Number(lat) || 20.5937, 
     lng: Number(lng) || 78.9629 
   }), [lat, lng]);
 
-  // Listen for Google Maps Authentication Failures (Billing/Key issues)
-  useEffect(() => {
-    window.gm_authFailure = () => {
-      console.warn("[GoogleMaps] Auth failure detected. Switching to fallback.");
-      setAuthError("Authentication Failed: Check Billing or Domain Restrictions");
-      setUseFallback(true);
-    };
-    return () => { delete window.gm_authFailure; };
-  }, []);
-
-  const [authError, setAuthError] = useState("");
-  const keyMissing = !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "YOUR_GOOGLE_MAPS_API_KEY_HERE";
-
-  const onLoad = React.useCallback(function callback(m) {
-    setMap(m);
-  }, []);
-
-  const onUnmount = React.useCallback(function callback(m) {
-    setMap(null);
-  }, []);
-
-  // Handle GPS location using browser native API (safe from 'google' undefined)
   const handleLiveLocation = () => {
     if (typeof navigator !== "undefined" && navigator.geolocation) {
+      setGeoLoading(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
           if (onLocationSelect) {
             onLocationSelect(latitude, longitude);
           }
-          if (map) {
-            map.panTo({ lat: latitude, lng: longitude });
-            map.setZoom(17);
-          }
+          setGeoLoading(false);
         },
         (err) => {
           console.error("[Location] GPS error:", err);
+          setGeoLoading(false);
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
   };
 
-  // Safe handlers using event latLng
-  const handleMapClick = (e) => {
-    if (onLocationSelect && e.latLng) {
-      onLocationSelect(e.latLng.lat(), e.latLng.lng());
-    }
-  };
-
-  const handleMarkerDragEnd = (e) => {
-    if (onLocationSelect && e.latLng) {
-      onLocationSelect(e.latLng.lat(), e.latLng.lng());
-    }
-  };
-
-  // Fallback Logic: Triggered if Load Error happens or key is invalid
-  const triggerFallback = useFallback || loadError || keyMissing;
-
-  if (triggerFallback) {
-    return (
-      <div className="relative w-full h-full min-h-[300px] border-2 border-dashed border-slate-200 rounded-3xl overflow-hidden bg-slate-50">
-        <MapPicker 
-          lat={lat} 
-          lng={lng} 
-          onLocationSelect={(data) => onLocationSelect(data.lat, data.lng)}
-          height="100%"
-        />
-        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 max-w-[80%]">
-          <div className="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-2xl flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            Standard Map Fallback Active
-          </div>
-          {keyMissing && (
-            <div className="bg-orange-500/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl text-[10px] font-bold shadow-xl border border-white/20">
-              <p className="uppercase tracking-widest text-[9px] mb-1 opacity-80">Configuration Error</p>
-              GOOGLE_MAPS_API_KEY is missing in production environment.
-            </div>
-          )}
-          {authError && (
-            <div className="bg-gradient-to-br from-red-500 to-rose-600 backdrop-blur-md text-white px-6 py-4 rounded-[2rem] text-[10px] font-bold shadow-2xl border border-white/20 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </div>
-                <p className="uppercase tracking-[0.2em] text-[11px] font-black">Billing Alert</p>
-              </div>
-              <p className="text-[10px] opacity-90 leading-relaxed mb-3">
-                {authError.includes('Billing') 
-                  ? "Google Maps billing is not enabled. Your account may have reached its limit or the card has expired."
-                  : "Authentication Failed: Check API Key restrictions or billing status."}
-              </p>
-              <div className="p-3 bg-black/20 rounded-xl space-y-1">
-                <p className="text-[8px] uppercase tracking-widest font-black opacity-60">How to Fix:</p>
-                <ul className="text-[9px] list-disc pl-4 space-y-1 opacity-80 font-medium">
-                  <li>Enable Billing in Google Cloud Console</li>
-                  <li>Check "Maps JavaScript API" usage limits</li>
-                  <li>Use "Switch to Free Map" for now</li>
-                </ul>
-              </div>
-            </div>
-          )}
-          {loadError && (
-            <div className="bg-red-600 text-white px-4 py-2 rounded-2xl text-[9px] font-bold uppercase tracking-widest shadow-xl">
-              Google Maps Library Load Error
-            </div>
-          )}
-        </div>
-        <button 
-          onClick={() => {
-            setUseFallback(false);
-            window.location.reload(); // Hard reload often helps with Google initialization
-          }}
-          className="absolute bottom-4 right-4 z-[1000] bg-white px-5 py-2.5 rounded-2xl shadow-2xl border border-slate-200 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-          Try Google Maps Again
-        </button>
-      </div>
-    );
-  }
-
-  // Loading State
-  if (!isLoaded) {
-    return (
-      <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-3">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-pink-500 rounded-full animate-spin" />
-        <span className="text-[10px] font-bold uppercase tracking-widest animate-pulse">Initializing Google Maps...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative w-full h-full min-h-[300px] group">
-      <GoogleMap
-        mapContainerStyle={{ width: "100%", height: "100%" }}
-        center={center}
-        zoom={15}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-        onClick={handleMapClick}
-        options={{
-          disableDefaultUI: false,
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          styles: [
-            { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
-          ]
-        }}
-      >
-        <Marker
-          position={center}
-          draggable={!!onLocationSelect}
-          onDragEnd={handleMarkerDragEnd}
-          animation={2} // Drop Animation (Constant value for safety)
-        />
-      </GoogleMap>
+    <div className="relative w-full rounded-3xl overflow-hidden border-2 border-slate-100 shadow-xl bg-slate-50" style={{ height: "350px" }}>
+      <MapPicker 
+        lat={center.lat} 
+        lng={center.lng} 
+        onLocationSelect={(data) => onLocationSelect(data.lat, data.lng)}
+        height="350px"
+      />
 
-      {/* Floating Controls */}
-      <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-[50]">
-        <button
-          type="button"
-          onClick={handleLiveLocation}
-          className="w-12 h-12 bg-white rounded-2xl shadow-2xl border border-slate-100 flex items-center justify-center text-slate-600 hover:text-pink-600 hover:border-pink-200 transition-all"
-          title="Detect My Location"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-        </button>
+      {/* Badge */}
+      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
+        <div className="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-2xl flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+          OpenStreetMap Engine Active
+        </div>
       </div>
 
-      <button 
-        onClick={() => setUseFallback(true)}
-        className="absolute top-4 right-4 z-[50] bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-white/50 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-indigo-600 hover:bg-white transition-all opacity-0 group-hover:opacity-100"
-      >
-        Switch to Free Map
-      </button>
+      {/* Floating Controls Removed for Auto-Detection */}
     </div>
   );
 };

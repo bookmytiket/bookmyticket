@@ -15,7 +15,6 @@
     "@capacitor/core": "^8.2.0",
     "@cashfreepayments/cashfree-js": "^1.0.7",
     "@paypal/react-paypal-js": "^9.0.1",
-    "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.103.0",
     "@types/nodemailer": "^7.0.11",
     "canvas-confetti": "^1.9.4",
@@ -60,6 +59,7 @@
   "overrides": {
     "node-fetch": "^2.7.0",
     "postcss": "^8.5.12",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "axios": "^1.16.0"
   }
 }

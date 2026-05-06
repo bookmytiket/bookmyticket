@@ -52,7 +52,7 @@ export default function EventsScreen() {
     // Process Events
     let eventList = (events || []).filter(ev => {
       const s = String(ev.status || '').toLowerCase();
-      if (s === "draft" || s === "inactive") return false;
+      if (s === "draft" || s === "inactive" || s === "expired") return false;
       
       const safeParse = (val: any) => {
         if (!val) return null;
@@ -63,27 +63,31 @@ export default function EventsScreen() {
       };
       const dynamicConfig = safeParse(ev.dynamic_config) || {};
       const configBasic = dynamicConfig.basicInfo || {};
-      let dt = ev.end_date || ev.endDate || configBasic.endDate || ev.expiry_date || configBasic.expiryDate || ev.date || ev.start_date || ev.startDate || configBasic.date || configBasic.basicInfo?.date;
-      if (!dt) return true;
+      const configExpiry = configBasic.expiryDate || ev.expiry_date;
+      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate;
       
-      let eventDate: Date | null = null;
+      if (!dateStr) return false;
+
       try {
-        if (String(dt).includes('/') || String(dt).includes('-')) {
-          const sep = String(dt).includes('/') ? '/' : '-';
-          const parts = String(dt).split(sep);
+        if (typeof dateStr === 'string' && (dateStr.includes('/') || dateStr.includes('-'))) {
+          const separator = dateStr.includes('/') ? '/' : '-';
+          const parts = dateStr.split(separator);
           if (parts[0].length <= 2) {
             const [d, m, y] = parts;
-            eventDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T23:59:59`);
-          } else {
-            eventDate = new Date(dt);
+            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
           }
-        } else {
-          eventDate = new Date(dt);
         }
-      } catch (e) { return true; }
 
-      if (eventDate && eventDate > now) return true;
-      if (s === "expired") return false;
+        const timeStr = ev.end_time || ev.endTime || configBasic.endTime || ev.time || ev.startTime || '23:59';
+        const eventDateTime = new Date(`${dateStr}T${timeStr}`);
+
+        if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
+          return false; // Expired
+        }
+      } catch (err) {
+        return false;
+      }
+
       return true;
     });
 

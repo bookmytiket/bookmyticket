@@ -10,6 +10,8 @@ import { useRouter } from 'expo-router';
 import { MotiView, MotiText } from 'moti';
 import { MapPin, Search, Menu, Bell, Sparkles, Ticket, Zap, Camera, Hammer, Utensils, Laptop, Rocket, ChevronRight, X as CloseIcon, User, Star } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import HierarchicalLocationSelector from '@/components/HierarchicalLocationSelector';
+import { useLocation } from '@/context/LocationContext';
 
 const { width } = Dimensions.get('window');
 
@@ -117,26 +119,6 @@ const RECENT_MEMORIES = [
   { id: 6, img: "https://images.unsplash.com/photo-1620023412351-86a014a093ed?w=400&h=600&fit=crop", caption: "Marriage" },
 ];
 
-const COUNTRIES = [
-  { flag: '🇮🇳', label: 'India' },
-  { flag: '🇦🇪', label: 'UAE' },
-  { flag: '🇸🇬', label: 'Singapore' },
-  { flag: '🇲🇾', label: 'Malaysia' },
-  { flag: '🇹🇭', label: 'Thailand' },
-  { flag: '🇩🇪', label: 'Germany' },
-  { flag: '🇺🇸', label: 'United States' }
-];
-const CITIES = [
-  { name: 'Bengaluru', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/city-buildings.png' },
-  { name: 'Chennai', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/museum.png' },
-  { name: 'Coimbatore', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/mountain.png' },
-  { name: 'Hyderabad', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/fortress.png' },
-  { name: 'Kochi', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/sailboat.png' },
-  { name: 'Kolkata', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/bridge.png' },
-  { name: 'New Delhi', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/india-gate.png' },
-  { name: 'Mumbai', iconUrl: 'https://img.icons8.com/ios-filled/100/000000/gateway-of-india.png' },
-];
-
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -154,13 +136,14 @@ export default function HomeScreen() {
     }
     return val;
   };
-  const [userLocation, setUserLocation] = useState('Coimbatore');
+  const { location: userLocationData, setLocation } = useLocation();
+  const userLocation = userLocationData.city || 'Coimbatore';
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [activeCountry, setActiveCountry] = useState('India');
 
   useEffect(() => {
     SecureStore.getItemAsync('userLocation').then(loc => {
-      if (loc) setUserLocation(loc);
+      if (loc) setLocation({ city: loc });
     });
   }, []);
 
@@ -172,12 +155,6 @@ export default function HomeScreen() {
       router.replace('/staff');
     }
   }, [user, role, hasCheckedRedirect]);
-
-  const handleSetLocation = async (loc: string) => {
-    setUserLocation(loc);
-    await SecureStore.setItemAsync('userLocation', loc);
-    setIsLocationModalOpen(false);
-  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -261,44 +238,35 @@ export default function HomeScreen() {
       const s = String(ev.status || '').toLowerCase();
       if (s === "inactive" || s === "draft" || s === "expired") return false;
 
-      const dynamicConfig = safeParse(ev.dynamic_config);
+      const dynamicConfig = safeParse(ev.dynamic_config) || {};
+      const configBasic = dynamicConfig.basicInfo || {};
+      const configExpiry = configBasic.expiryDate || ev.expiry_date;
+      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate;
       
-      // Prioritize End Date/Expiry Date for visibility
-      let dt = ev.expiry_date || ev.end_date || dynamicConfig?.basicInfo?.expiryDate || dynamicConfig?.basicInfo?.endDate || ev.date || ev.start_date || dynamicConfig?.date || dynamicConfig?.basicInfo?.date;
-      if (!dt) return false; // Hide if no date found (strict mode)
+      if (!dateStr) return false;
 
-      let eventDate: Date | null = null;
       try {
-        let dateStr = String(dt);
-        let timeStr = '23:59:59';
-        
-        // Handle combined "YYYY-MM-DD HH:mm"
-        if (dateStr.includes(' ')) {
-            const parts = dateStr.split(' ');
-            dateStr = parts[0];
-            timeStr = parts[1].includes(':') ? parts[1] : timeStr;
-            if (timeStr.split(':').length === 2) timeStr += ':00';
+        // Standardize dateStr to YYYY-MM-DD
+        if (typeof dateStr === 'string' && (dateStr.includes('/') || dateStr.includes('-'))) {
+          const separator = dateStr.includes('/') ? '/' : '-';
+          const parts = dateStr.split(separator);
+          if (parts[0].length <= 2) {
+            const [d, m, y] = parts;
+            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+          }
         }
 
-        if (dateStr.includes('/')) {
-            const [d, m, y] = dateStr.split('/');
-            dateStr = `${y}/${m}/${d}`;
-        } else if (dateStr.includes('-') && dateStr.split('-')[0].length === 2) {
-            const [d, m, y] = dateStr.split('-');
-            dateStr = `${y}/${m}/${d}`;
-        } else {
-            dateStr = dateStr.replace(/-/g, '/');
-        }
-        
-        // Force local time by using space instead of T
-        eventDate = new Date(`${dateStr} ${timeStr}`);
-      } catch (e) { return false; }
+        const timeStr = ev.end_time || ev.endTime || configBasic.endTime || ev.time || ev.startTime || '23:59';
+        const eventDateTime = new Date(`${dateStr}T${timeStr}`);
 
-      if (eventDate && !isNaN(eventDate.getTime())) {
-        return eventDate >= now;
+        if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
+          return false; // Expired
+        }
+      } catch (err) {
+        return false; // Error parsing means we hide it for safety
       }
-      
-      return false;
+
+      return true;
     });
   }, [events, now]);
 
@@ -588,67 +556,66 @@ export default function HomeScreen() {
             }} 
           />
         )}
-        {/* Partner Deals Section */}
-        <View style={[styles.section, { marginTop: 10, marginBottom: 10 }]}>
-          <View style={[styles.sectionHeader, { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 12 }}>🏷️</Text>
-              <Text style={{ fontSize: 10, fontWeight: '900', color: '#a855f7', letterSpacing: 1, textTransform: 'uppercase' }}>Partner Deals</Text>
+        {/* 1) Featured Events (Popular) - Moved to Top */}
+        {popularEvents.length > 0 && (
+          <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
+            <View style={[styles.sectionHeader, { flexDirection: 'column', alignItems: 'flex-start', gap: 4, marginBottom: 16 }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 24, letterSpacing: -0.5 }]}>
+                Featured <Text style={{ color: '#f844a4' }}>Events</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>Discover what everyone is talking about</Text>
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 24 }]}>Top Trending <Text style={{ color: '#f844a4' }}>Offers</Text></Text>
-            <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>Grab these limited time deals before they expire!</Text>
-          </View>
 
-          <FlatList
-            data={allCoupons}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id || item._id || Math.random().toString()}
-            contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
-            renderItem={({ item }) => {
-              const bannerImage = item.bannerUrl || item.img || item.image_url || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=800';
-              const logoImage = item.logoUrl || item.logo_url || 'https://upload.wikimedia.org/wikipedia/commons/d/de/Amazon_icon.png';
-              
-              let daysLeft = '30 days left';
-              if (item.endDate) {
-                const end = new Date(item.endDate).getTime();
-                const diff = Math.ceil((end - Date.now()) / (1000 * 60 * 60 * 24));
-                if (diff > 0) daysLeft = `${diff} days left`;
-              }
+            <FlatList
+              data={popularEvents}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => `popular-${item.id}`}
+              contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
+              renderItem={({ item }) => {
+                const dynamicConfig = safeParse(item.dynamic_config) || {};
+                const eventVenue = item.venue || item.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || item.city || 'Venue TBA';
+                const eventDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
+                const eventTime = item.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
 
-              return (
-              <Pressable style={{ width: 320, height: 130, flexDirection: 'row', backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
-                <View style={{ width: 120, height: '100%', position: 'relative' }}>
-                  <Image source={{ uri: bannerImage }} style={{ width: '100%', height: '100%' }} />
-                  <View style={{ position: 'absolute', top: 8, left: 8, width: 24, height: 24, backgroundColor: '#fff', borderRadius: 6, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
-                    <Image source={{ uri: logoImage }} style={{ width: 14, height: 14 }} resizeMode="contain" />
-                  </View>
-                </View>
-                <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
-                  <View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#f84464', textTransform: 'uppercase' }}>{item.brandName || item.brand_name || 'Brand'}</Text>
-                      <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>{item.discountValue ? `${item.discountValue}${item.discountType === 'Percentage' ? '%' : '₹'} OFF` : (item.discount || 'OFFER')}</Text>
+                return (
+                <Pressable 
+                  style={{ width: 180, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 }}
+                  onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
+                >
+                  <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: 120 }} />
+                  
+                  <View style={{ padding: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, flex: 1 }} numberOfLines={1}>{item.title || item.name || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}</Text>
+                      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', marginLeft: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>✓</Text>
                       </View>
                     </View>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: colors.text, marginBottom: 4 }} numberOfLines={1}>{item.title}</Text>
-                    <Text style={{ fontSize: 10, color: colors.muted, lineHeight: 14 }} numberOfLines={2}>{item.description}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    <Text style={{ fontSize: 9, fontWeight: '600', color: colors.muted }}>{daysLeft}</Text>
-                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#f84464' }}>GET DEAL →</Text>
-                  </View>
-                </View>
-              </Pressable>
-              );
-            }}
-          />
-        </View>
 
-        {/* Spotlight Events (Premium/Admin Highlighted) */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 }}>
+                      <Text style={{ fontSize: 10, color: '#f84464' }}>📍</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '600', color: colors.muted }} numberOfLines={1}>{eventVenue}</Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 10, color: '#10b981' }}>📅</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.muted }}>{eventDate} {eventTime}</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: colors.text }}>{item.type === 'Free' ? 'Free' : 'Paid'}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+                );
+              }}
+            />
+          </View>
+        )}
+
+        {/* 2) Spotlight Events */}
         {spotlightEvents.length > 0 && (
-          <View style={[styles.section, { paddingBottom: 10 }]}>
+          <View style={[styles.section, { paddingBottom: 20 }]}>
             <View style={styles.sectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Sparkles size={20} color="#ffda00" />
@@ -684,6 +651,9 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Partner Deals Section removed */}
+
+
         {/* Professional Services Section removed as requested */}
 
         {/* Ad Banner Slot */}
@@ -716,28 +686,8 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Featured Events List */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Featured Events</Text>
-            <Pressable onPress={() => router.push('/events')}>
-              <Text style={[styles.seeAll, { color: colors.tint }]}>See All</Text>
-            </Pressable>
-          </View>
-          <FlatList
-            data={featuredEvents}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingLeft: 20 }}
-            renderItem={({ item }) => (
-              <EventCard 
-                event={item} 
-                onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })} 
-              />
-            )}
-          />
-        </View>
+        {/* Redundant Featured Events Section removed */}
+
 
         {/* Coming Soon Section */}
         {comingSoonEvents.length > 0 && (
@@ -845,7 +795,7 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <View>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Just In ⚡</Text>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Just <Text style={{ color: '#f844a4' }}>In</Text> <Text style={{ color: '#a855f7' }}>⚡</Text></Text>
                 <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>The latest events added to BookMyTicket</Text>
               </View>
             </View>
@@ -867,8 +817,10 @@ export default function HomeScreen() {
                   />
                 ))
               ) : (
-                <View style={{ width: width - 40, padding: 40, alignItems: 'center', backgroundColor: colors.card, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border }}>
-                   <Text style={{ color: colors.muted, fontWeight: '600' }}>Loading fresh events...</Text>
+                <View style={{ width: width - 40, height: 150, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, borderRadius: 24, borderStyle: 'dashed', borderWidth: 2, borderColor: colors.border }}>
+                   <Zap size={24} color={colors.muted} />
+                   <Text style={{ marginTop: 12, color: colors.muted, fontWeight: '700', fontSize: 14 }}>Curating the latest events...</Text>
+                   <Text style={{ marginTop: 4, color: colors.muted, fontSize: 12 }}>Check back in a few moments!</Text>
                 </View>
               )}
             </ScrollView>
@@ -878,7 +830,7 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <View>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Events Near You 📍</Text>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.text }}>Events Near <Text style={{ color: '#f844a4' }}>You</Text> <Text style={{ color: '#a855f7' }}>📍</Text></Text>
                 <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>Handpicked for you in {userLocation}</Text>
               </View>
               <Pressable onPress={() => router.push('/events')}>
@@ -903,71 +855,17 @@ export default function HomeScreen() {
                   />
                 ))
               ) : (
-                <View style={{ width: width - 40, padding: 40, alignItems: 'center', backgroundColor: colors.card, borderRadius: 20, borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border }}>
-                   <Ticket size={32} color={colors.muted} />
-                   <Text style={{ marginTop: 12, color: colors.muted, fontWeight: '600' }}>No events in your city yet</Text>
+                <View style={{ width: width - 40, height: 150, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, borderRadius: 24, borderStyle: 'dashed', borderWidth: 2, borderColor: colors.border }}>
+                   <MapPin size={24} color={colors.muted} />
+                   <Text style={{ marginTop: 12, color: colors.muted, fontWeight: '700', fontSize: 14 }}>No events in your city yet</Text>
+                   <Text style={{ marginTop: 4, color: colors.muted, fontSize: 12 }}>Check back soon for local updates!</Text>
                 </View>
               )}
             </ScrollView>
           </View>
 
-        {/* Explore Popular Events Section */}
-        {popularEvents.length > 0 && (
-          <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
-            <View style={[styles.sectionHeader, { flexDirection: 'column', alignItems: 'flex-start', gap: 4, marginBottom: 16 }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text, fontSize: 24, letterSpacing: -0.5 }]}>
-                Explore Popular <Text style={{ color: '#f844a4' }}>Events</Text>
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>Discover what everyone is talking about</Text>
-            </View>
+        {/* Old Explore Popular Events position removed */}
 
-            <FlatList
-              data={popularEvents}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingLeft: 20, paddingRight: 20, gap: 16 }}
-              renderItem={({ item }) => {
-
-                const dynamicConfig = safeParse(item.dynamic_config) || {};
-                const eventVenue = item.venue || item.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || item.city || 'Venue TBA';
-                const eventDate = item.start_date || item.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
-                const eventTime = item.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
-
-                return (
-                <Pressable 
-                  style={{ width: 180, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 }}
-                  onPress={() => router.push({ pathname: "/events/[id]", params: { id: item.id } })}
-                >
-                  <Image source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800' }} style={{ width: '100%', height: 120 }} />
-                  
-                  <View style={{ padding: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text, flex: 1 }} numberOfLines={1}>{item.title || item.name || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}</Text>
-                      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', marginLeft: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>✓</Text>
-                      </View>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 }}>
-                      <Text style={{ fontSize: 10, color: '#f84464' }}>📍</Text>
-                      <Text style={{ fontSize: 10, fontWeight: '600', color: colors.muted }} numberOfLines={1}>{eventVenue}</Text>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontSize: 10, color: '#10b981' }}>📅</Text>
-                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.muted }}>{eventDate} {eventTime}</Text>
-                      </View>
-                      <Text style={{ fontSize: 10, fontWeight: '900', color: colors.text }}>{item.type === 'Free' ? 'Free' : 'Paid'}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-                );
-              }}
-            />
-          </View>
-        )}
 
         {/* Professional Services Section */}
         <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
@@ -1180,14 +1078,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.menuContent}>
-              <Pressable style={styles.menuItem} onPress={() => setIsMenuOpen(false)}>
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Become a Partner</Text>
-              </Pressable>
-              <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-              <Pressable style={styles.menuItem} onPress={() => setIsMenuOpen(false)}>
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Join Now</Text>
-              </Pressable>
-              <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+
               
               {user && role && ['staff', 'admin', 'organiser', 'superadmin'].includes(role.toLowerCase()) && (
                 <>
@@ -1225,110 +1116,7 @@ export default function HomeScreen() {
             style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} 
             onPress={() => setIsLocationModalOpen(false)} 
           />
-          <MotiView
-            from={{ opacity: 0, scale: 0.95, translateY: 20 }}
-            animate={{ opacity: 1, scale: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 300 }}
-            style={{ width: '100%', maxWidth: 900, backgroundColor: '#fff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 30 }, shadowOpacity: 0.15, shadowRadius: 60, elevation: 10, maxHeight: '90%' }}
-          >
-            {/* Header */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1e293b', letterSpacing: -0.5 }}>Select Your Location to Continue</Text>
-              <Pressable onPress={() => setIsLocationModalOpen(false)} style={{ position: 'absolute', right: 0 }}>
-                <CloseIcon size={24} color="#94a3b8" />
-              </Pressable>
-            </View>
-
-            {/* Search Bar */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 1.5, borderColor: '#e2e8f0', marginBottom: 24 }}>
-              <Search size={22} color="#f844a4" />
-              <TextInput 
-                placeholder="Search For A Location..."
-                placeholderTextColor="#94a3b8"
-                style={{ flex: 1, paddingHorizontal: 12, fontSize: 16, fontWeight: '600', color: '#334155' }}
-              />
-              <View style={{ width: 1.5, height: 24, backgroundColor: '#e2e8f0', marginHorizontal: 10 }} />
-              <Pressable onPress={() => {
-                Alert.alert("Location Permission", "Allow BookMyTicket to access your live location?", [
-                  { text: 'Deny', style: 'cancel' },
-                  { text: 'Allow', onPress: () => { 
-                      setTimeout(() => {
-                        handleSetLocation('Coimbatore'); 
-                      }, 400);
-                  } }
-                ]);
-              }}>
-                <MapPin size={24} color="#f844a4" />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
-              {/* Countries Tabs */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                {COUNTRIES.map(c => {
-                  const isActive = activeCountry === c.label;
-                  return (
-                    <Pressable 
-                      key={c.label} 
-                      onPress={() => setActiveCountry(c.label)}
-                      style={{ 
-                        flexDirection: 'row', alignItems: 'center', gap: 6, 
-                        paddingHorizontal: 14, paddingVertical: 8, 
-                        borderRadius: 40, 
-                        borderWidth: isActive ? 2.5 : 1.5, 
-                        borderColor: isActive ? '#4f46e5' : '#e2e8f0', 
-                        backgroundColor: '#fff',
-                      }}
-                    >
-                      <Text style={{ fontSize: 14 }}>{c.flag}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: isActive ? '#4f46e5' : '#64748b' }}>{c.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Popular Cities */}
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94a3b8', marginBottom: 16 }}>Popular Cities</Text>
-              
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
-                {CITIES.map(city => {
-                  const isSelected = city.name === userLocation;
-                  return (
-                    <Pressable 
-                      key={city.name} 
-                      style={{ width: '22%', minWidth: 75, alignItems: 'center', marginBottom: 16 }}
-                      onPress={() => handleSetLocation(city.name)}
-                    >
-                      <View style={{ 
-                        width: '100%', aspectRatio: 1, 
-                        borderRadius: 16, 
-                        backgroundColor: '#f8fafc', 
-                        borderWidth: isSelected ? 2.5 : 1.5, 
-                        borderColor: isSelected ? '#4f46e5' : '#f1f5f9', 
-                        justifyContent: 'center', alignItems: 'center', 
-                        marginBottom: 8, 
-                        shadowColor: isSelected ? '#4f46e5' : '#000', 
-                        shadowOffset: { width: 0, height: 4 }, 
-                        shadowOpacity: isSelected ? 0.3 : 0, 
-                        shadowRadius: 10, 
-                        elevation: isSelected ? 4 : 0,
-                        padding: 16
-                      }}>
-                        <Image source={{ uri: city.iconUrl }} style={{ width: '80%', height: '80%', opacity: 0.9, tintColor: isSelected ? '#4f46e5' : '#000' }} resizeMode="contain" />
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: isSelected ? '#4f46e5' : '#475569', textAlign: 'center' }} numberOfLines={1}>{city.name}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            
-            {/* Footer BookMyTicket Image / Branding Placeholder */}
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, alignItems: 'center', justifyContent: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: 'hidden', pointerEvents: 'none' }}>
-               <View style={{ position: 'absolute', bottom: -10, width: '100%', height: 40, backgroundColor: '#f1f5f9', opacity: 0.3 }} />
-               <Text style={{ fontSize: 14, fontWeight: '900', color: '#cbd5e1', letterSpacing: 2 }}>book<Text style={{ color: '#94a3b8' }}>my</Text>ticket</Text>
-            </View>
-          </MotiView>
+          <HierarchicalLocationSelector onClose={() => setIsLocationModalOpen(false)} />
         </View>
       )}
     </View>

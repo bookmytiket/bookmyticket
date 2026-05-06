@@ -14,7 +14,10 @@ async function nominatimReverseGeocode(lat, lng) {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`,
-      { headers: { "Accept-Language": "en" }, signal: AbortSignal.timeout(6000) }
+      { 
+        headers: { "Accept-Language": "en" },
+        signal: AbortSignal.timeout(10000)
+      }
     );
     const data = await res.json();
     const addr = data?.address || {};
@@ -227,7 +230,6 @@ export default function LeafletMapPicker({
         state: geo.state,
         pincode: geo.pincode,
         country: geo.country,
-        indiaPostUrl: geo.indiaPostUrl,
       });
     }
   }, [onLocationSelect]);
@@ -450,35 +452,7 @@ export default function LeafletMapPicker({
         </div>
 
         {/* ── Detect Location Button ── */}
-        {!readOnly && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[800]">
-            <motion.button
-              id="leaflet-detect-btn"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={(e) => { e.stopPropagation(); toggleTracking(); }}
-              disabled={trackLoading}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-2xl text-white transition-all disabled:opacity-60"
-              style={{
-                background: tracking
-                  ? "linear-gradient(135deg,#ef4444,#b91c1c)"
-                  : trackLoading
-                  ? "rgba(79,70,229,0.7)"
-                  : "linear-gradient(135deg,#4f46e5,#7c3aed)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-              }}
-            >
-              {trackLoading ? (
-                <><Loader2 size={15} className="animate-spin" /> Locating…</>
-              ) : tracking ? (
-                <><WifiOff size={15} /> Stop Tracking</>
-              ) : (
-                <><Wifi size={15} /> Live Track Me</>
-              )}
-            </motion.button>
-          </div>
-        )}
+        {/* Button Removed for Auto-Detection */}
 
         {/* ── Leaflet Map ── */}
         <MapContainer
@@ -486,7 +460,7 @@ export default function LeafletMapPicker({
           zoom={mapZoom}
           scrollWheelZoom
           zoomControl={false}
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: height }}
           className="z-0"
         >
           <TileLayer

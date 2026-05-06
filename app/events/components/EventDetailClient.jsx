@@ -113,7 +113,7 @@ export default function EventDetailClient({ id }) {
     }, [rawEvent]);
 
     useEffect(() => {
-        if (!event || typeof window === 'undefined') return;
+        if (!event || typeof window === 'undefined' || isExpired) return;
         try {
             const key = 'recently_viewed_events';
             const raw = localStorage.getItem(key);
@@ -123,7 +123,7 @@ export default function EventDetailClient({ id }) {
             const next = [item, ...filtered].slice(0, 12);
             localStorage.setItem(key, JSON.stringify(next));
         } catch (_) { }
-    }, [event]);
+    }, [event, isExpired]);
 
     if (eventLoading || !storageLoaded) {
         return (

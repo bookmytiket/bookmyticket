@@ -300,6 +300,7 @@ export default function SignInPage() {
         e.preventDefault();
         setSignupError("");
         if (!signupEmail) { setSignupError("Please enter your email."); return; }
+        if (!signupName) { setSignupError("Please enter your name."); return; }
         const email = signupEmail.trim();
         setSignupOtpSending(true);
         try {
@@ -327,6 +328,7 @@ export default function SignInPage() {
         if (signupOtpCode.length !== 6) { setSignupError("Please enter the 6-digit code."); return; }
         setSignupOtpVerifying(true);
         try {
+            // 1. Verify OTP
             const res = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -334,11 +336,27 @@ export default function SignInPage() {
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || "Invalid OTP.");
+
+            // 2. Create User (Passwordless)
+            // We'll use a random password since it's OTP-based signup
+            const randomPass = Math.random().toString(36).slice(-12);
+            const signupRes = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: signupEmail.trim().toLowerCase(),
+                    password: randomPass,
+                    full_name: signupName.trim(),
+                    role: 'user'
+                }),
+            });
+            const signupData = await signupRes.json();
+            if (!signupData.success) throw new Error(signupData.error);
             
             setSignupOtpVerified(true);
-            setSignupStep(3);
+            setSignupSuccess(true);
         } catch (err) {
-            setSignupError(err.message || "Invalid code.");
+            setSignupError(err.message || "Verification or signup failed.");
         } finally {
             setSignupOtpVerifying(false);
         }
@@ -983,20 +1001,18 @@ export default function SignInPage() {
                                     </p>
                                 </div>
 
-                                {/* ── Step 1: Enter email + Send OTP ── */}
+                                {/* ── Step 1: Enter details + Send OTP ── */}
                                 {!signupSuccess && signupStep === 1 && (
                                     <form onSubmit={handleSignupSendOTP}>
+                                        <label style={lbl}>Full Name</label>
+                                        <input type="text" required placeholder="John Doe" value={signupName} onChange={e => setSignupName(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+                                        
                                         <label style={lbl}>Email Address</label>
-                                        <input
-                                            type="email" required
-                                            placeholder="you@example.com"
-                                            value={signupEmail}
-                                            onChange={e => setSignupEmail(e.target.value)}
-                                            style={inp} onFocus={fr} onBlur={bg}
-                                        />
+                                        <input type="email" required placeholder="you@example.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} style={inp} onFocus={fr} onBlur={bg} />
+                                        
                                         {signupError && <p style={{ fontSize: "13px", color: "#ef4444", marginBottom: "12px", marginTop: "-10px" }}>⚠ {signupError}</p>}
                                         <button type="submit" disabled={signupOtpSending} style={submitBtn}>
-                                            {signupOtpSending ? "Sending OTP..." : "Send OTP →"}
+                                            {signupOtpSending ? "Sending OTP..." : "Get Verification Code →"}
                                         </button>
                                     </form>
                                 )}

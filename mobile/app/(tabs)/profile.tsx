@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Shield,
   Star,
+  Wallet,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
@@ -131,12 +132,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(tabs)/tickets')}
             colors={colors}
           />
-          <ProfileItem
-            icon={<Wallet size={20} color={colors.secondary} />}
-            label="My Wallet"
-            onPress={() => router.push('/wallet')}
-            colors={colors}
-          />
+
           <ProfileItem
             icon={<Bell size={20} color={colors.secondary} />}
             label="Notifications"
@@ -146,7 +142,20 @@ export default function ProfileScreen() {
           <ProfileItem
             icon={<Settings size={20} color={colors.icon} />}
             label="Account Settings"
-            onPress={() => {}}
+            onPress={() => router.push('/account-settings')}
+            colors={colors}
+            isLast
+          />
+        </RNView>
+      </RNView>
+
+      <RNView style={styles.menuSection}>
+        <Text style={[styles.sectionTitle, { color: colors.muted }]}>PARTNER</Text>
+        <RNView style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <ProfileItem
+            icon={<Star size={20} color="#f97316" />}
+            label="Become a Partner"
+            onPress={() => router.push('/partner-request')}
             colors={colors}
             isLast
           />
@@ -159,13 +168,13 @@ export default function ProfileScreen() {
           <ProfileItem
             icon={<HelpCircle size={20} color={colors.muted} />}
             label="Help & Support"
-            onPress={() => {}}
+            onPress={() => router.push({ pathname: '/web', params: { url: 'https://bookmyticket.vercel.app/contact', title: 'Help & Support' } })}
             colors={colors}
           />
           <ProfileItem
             icon={<Shield size={20} color={colors.muted} />}
             label="Privacy Policy"
-            onPress={() => {}}
+            onPress={() => router.push({ pathname: '/web', params: { url: 'https://bookmyticket.vercel.app/privacy', title: 'Privacy Policy' } })}
             colors={colors}
             isLast
           />

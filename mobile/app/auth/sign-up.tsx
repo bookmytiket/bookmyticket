@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  View as RNView,
-} from 'react-native';
+import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert, View as RNView, Image, ActivityIndicator } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -16,48 +8,50 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from 'lucide-react-native';
+import { Mail, Phone, ArrowLeft, User, ChevronRight } from 'lucide-react-native';
 
 export default function SignUpScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
 
+  const [authType, setAuthType] = useState<'email' | 'phone'>('email');
+  const [inputValue, setInputValue] = useState('');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Missing Fields', 'Please fill in all fields.');
+    if (!name.trim()) {
+      Alert.alert('Required', 'Please enter your full name.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
+    if (!inputValue.trim()) {
+      Alert.alert('Required', `Please enter your ${authType === 'email' ? 'email' : 'phone number'}.`);
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          data: { full_name: name.trim() },
-        },
-      });
-
-      if (error) throw error;
-
-      Alert.alert(
-        'Account Created! 🎉',
-        'Please check your email to verify your account, then sign in.',
-        [{ text: 'Go to Sign In', onPress: () => router.replace('/auth/sign-in') }]
+      // Phone or Email + OTP Signup (Custom API)
+      const { sendOtp } = require('@/lib/authApi');
+      const result = await sendOtp(
+        authType === 'email' 
+          ? { email: inputValue.trim().toLowerCase() }
+          : { phone: inputValue.trim() }
       );
+
+      if (!result.success) throw new Error(result.error);
+
+      router.push({
+        pathname: '/auth/otp-verify',
+        params: {
+          [authType]: inputValue.trim(),
+          name: name.trim(),
+          type: 'signup'
+        }
+      });
     } catch (err: any) {
-      Alert.alert('Sign Up Failed', err.message || 'Something went wrong. Please try again.');
+      Alert.alert('Failed to start signup', err.message);
     } finally {
       setLoading(false);
     }
@@ -68,135 +62,92 @@ export default function SignUpScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Pressable style={styles.back} onPress={() => router.canGoBack() ? router.back() : router.replace('/auth/sign-in')} hitSlop={12}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Pressable style={styles.back} onPress={() => router.back()}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
 
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 500 }}
+        <MotiView 
+          from={{ opacity: 0, translateY: -20 }} 
+          animate={{ opacity: 1, translateY: 0 }} 
           style={styles.brand}
         >
-          <LinearGradient
-            colors={colors.gradient as any}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logoBox}
-          >
-            <Text style={styles.logoText}>🎟️</Text>
-          </LinearGradient>
-          <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>
-            Join BookMyTicket and discover amazing events
-          </Text>
+          <Image source={require('../../assets/images/logo_brand.png')} style={styles.brandLogo} resizeMode="contain" />
+          <Text style={[styles.title, { color: colors.text }]}>Join Us</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Create your account and start booking</Text>
         </MotiView>
 
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 500, delay: 150 }}
-          style={styles.form}
-        >
-          {/* Full Name */}
+        <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.form}>
+          {/* Name Field */}
           <RNView style={styles.fieldWrapper}>
             <Text style={[styles.label, { color: colors.muted }]}>Full Name</Text>
-            <RNView
-              style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
+            <RNView style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <User size={18} color={colors.muted} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="Your full name"
+                placeholder="John Doe"
                 placeholderTextColor={colors.muted}
                 value={name}
                 onChangeText={setName}
-                autoCapitalize="words"
-                returnKeyType="next"
               />
             </RNView>
           </RNView>
 
-          {/* Email */}
-          <RNView style={styles.fieldWrapper}>
-            <Text style={[styles.label, { color: colors.muted }]}>Email Address</Text>
-            <RNView
-              style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+          <View style={styles.authTypeTabs}>
+            <Pressable 
+              style={[styles.tab, authType === 'email' && { borderBottomColor: colors.tint, borderBottomWidth: 2 }]}
+              onPress={() => { setAuthType('email'); setInputValue(''); }}
             >
-              <Mail size={18} color={colors.muted} />
+              <Text style={[styles.tabText, { color: authType === 'email' ? colors.tint : colors.muted }]}>Email</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.tab, authType === 'phone' && { borderBottomColor: colors.tint, borderBottomWidth: 2 }]}
+              onPress={() => { setAuthType('phone'); setInputValue(''); }}
+            >
+              <Text style={[styles.tabText, { color: authType === 'phone' ? colors.tint : colors.muted }]}>Phone</Text>
+            </Pressable>
+          </View>
+
+          <RNView style={styles.fieldWrapper}>
+            <Text style={[styles.label, { color: colors.muted }]}>{authType === 'email' ? 'Email Address' : 'Phone Number'}</Text>
+            <RNView style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {authType === 'email' ? <Mail size={18} color={colors.muted} /> : <Phone size={18} color={colors.muted} />}
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="you@example.com"
+                placeholder={authType === 'email' ? 'you@example.com' : '+91 98765 43210'}
                 placeholderTextColor={colors.muted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={inputValue}
+                onChangeText={setInputValue}
+                keyboardType={authType === 'email' ? 'email-address' : 'phone-pad'}
                 autoCapitalize="none"
-                autoComplete="email"
-                returnKeyType="next"
               />
             </RNView>
           </RNView>
 
-          {/* Password */}
-          <RNView style={styles.fieldWrapper}>
-            <Text style={[styles.label, { color: colors.muted }]}>Password</Text>
-            <RNView
-              style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <Lock size={18} color={colors.muted} />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Min. 6 characters"
-                placeholderTextColor={colors.muted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                returnKeyType="done"
-                onSubmitEditing={handleSignUp}
-              />
-              <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                {showPassword ? (
-                  <EyeOff size={18} color={colors.muted} />
-                ) : (
-                  <Eye size={18} color={colors.muted} />
-                )}
-              </Pressable>
-            </RNView>
-          </RNView>
-
-          <Pressable
-            style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}
-            onPress={handleSignUp}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={colors.gradient as any}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.btnGradient}
-            >
-              <Text style={styles.btnText}>
-                {loading ? 'Creating account...' : 'Create Account'}
-              </Text>
+          <Pressable style={styles.btn} onPress={handleSignUp} disabled={loading}>
+            <LinearGradient colors={['#f844a4', '#a855f7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGradient}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.btnText}>Continue</Text>
+                  <ChevronRight size={20} color="#fff" />
+                </>
+              )}
             </LinearGradient>
           </Pressable>
 
-          <Pressable
-            style={styles.linkRow}
-            onPress={() => router.replace('/auth/sign-in')}
-          >
-            <Text style={[styles.linkText, { color: colors.muted }]}>
-              Already have an account?{' '}
+          <View style={styles.terms}>
+            <Text style={[styles.termsText, { color: colors.muted }]}>
+              By signing up, you agree to our{' '}
+              <Text style={{ color: colors.tint, fontWeight: '700' }}>Terms of Service</Text> and{' '}
+              <Text style={{ color: colors.tint, fontWeight: '700' }}>Privacy Policy</Text>.
             </Text>
-            <Text style={[styles.linkText, { color: colors.tint, fontWeight: '800' }]}>
-              Sign In
-            </Text>
+          </View>
+
+          <Pressable style={styles.linkRow} onPress={() => router.replace('/auth/sign-in')}>
+            <Text style={[styles.linkText, { color: colors.muted }]}>Already have an account? </Text>
+            <Text style={[styles.linkText, { color: colors.tint, fontWeight: '800' }]}>Sign In</Text>
           </Pressable>
         </MotiView>
       </ScrollView>
@@ -208,34 +159,23 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   back: { marginBottom: 32 },
-  brand: { alignItems: 'center', marginBottom: 40 },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  logoText: { fontSize: 36 },
-  title: { fontSize: 28, fontWeight: '900', marginBottom: 8 },
+  brand: { alignItems: 'center', marginBottom: 30 },
+  brandLogo: { width: 180, height: 60, marginBottom: 15 },
+  title: { fontSize: 26, fontWeight: '900', marginBottom: 8 },
   subtitle: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  form: { gap: 16 },
-  fieldWrapper: { gap: 6 },
-  label: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 52,
-    gap: 10,
-  },
-  input: { flex: 1, fontSize: 15, fontWeight: '600' },
-  btn: { borderRadius: 14, overflow: 'hidden', marginTop: 8 },
-  btnGradient: { paddingVertical: 16, alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  linkRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  linkText: { fontSize: 14, fontWeight: '600' },
+  authTypeTabs: { flexDirection: 'row', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  tabText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
+  form: { gap: 15 },
+  fieldWrapper: { gap: 8 },
+  label: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56, gap: 12 },
+  input: { flex: 1, fontSize: 16, fontWeight: '600' },
+  btn: { borderRadius: 16, overflow: 'hidden', marginTop: 10 },
+  btnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 8 },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  terms: { marginTop: 10 },
+  termsText: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  linkRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 15 },
+  linkText: { fontSize: 15, fontWeight: '600' },
 });

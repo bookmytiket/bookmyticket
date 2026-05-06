@@ -233,7 +233,31 @@ export function AuthProvider({ children }) {
         }
         if (user?.id && supabase) {
             try {
+                // Update profile for quick access
                 await supabase.from('profiles').update({ selected_city: city, location_hierarchy: hierarchy || undefined }).eq('id', user.id);
+                
+                // Update user_locations for shared tracking with mobile
+                if (hierarchy) {
+                    const [countryRes, stateRes, districtRes, cityRes] = await Promise.all([
+                      hierarchy.country ? supabase.from('countries').select('id').eq('name', hierarchy.country).maybeSingle() : Promise.resolve({ data: null }),
+                      hierarchy.state ? supabase.from('states').select('id').eq('name', hierarchy.state).maybeSingle() : Promise.resolve({ data: null }),
+                      hierarchy.district ? supabase.from('districts').select('id').eq('name', hierarchy.district).maybeSingle() : Promise.resolve({ data: null }),
+                      hierarchy.city ? supabase.from('cities').select('id').eq('name', hierarchy.city).maybeSingle() : Promise.resolve({ data: null }),
+                    ]);
+
+                    await supabase.from('user_locations').upsert({
+                        user_id: user.id,
+                        country_id: countryRes.data?.id,
+                        state_id: stateRes.data?.id,
+                        district_id: districtRes.data?.id,
+                        city_id: cityRes.data?.id,
+                        address: hierarchy.address,
+                        latitude: hierarchy.lat,
+                        longitude: hierarchy.lng,
+                        is_default: true,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id, is_default' });
+                }
             } catch (err) { console.error(err); }
         }
     };

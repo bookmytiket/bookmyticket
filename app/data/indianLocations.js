@@ -83,16 +83,29 @@ export const getIndianDistricts = (stateNameOrSlug) => {
     return districts.map(d => d.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '));
 };
 
+export const INDIAN_CITIES = {
+    "coimbatore": ["Coimbatore", "Pollachi", "Mettupalayam", "Sulur", "Annur", "Karamadai", "Madukkarai", "Thudiyalur", "Kuniyamuthur", "Saravanampatti", "Vadavalli", "Kaniyur", "Udumalaipettai", "Valparai"],
+    "chennai": ["Chennai", "Ambattur", "Adyar", "Guindy", "T Nagar", "Velachery", "Annanagar", "Porur", "Tambaram", "Pallavaram"],
+    "madurai": ["Madurai", "Melur", "Thirumangalam", "Usilampatti", "Vadipatti", "Alanganallur"],
+    "trichy": ["Trichy", "Srirangam", "Thiruverumbur", "Manapparai", "Lalgudi", "Musiri"],
+    "bangalore": ["Bangalore", "Electronic City", "Whitefield", "Koramangala", "Indiranagar", "Jayanagar", "HSR Layout", "Hebbal", "Yelahanka"],
+    "kochi": ["Kochi", "Ernakulam", "Aluva", "Kalamassery", "Thrippunithura", "Kakkanad", "Angamaly"],
+    "hyderabad": ["Hyderabad", "Secunderabad", "Gachibowli", "Hitech City", "Madhapur", "Jubilee Hills", "Banjara Hills", "Kukatpally"]
+};
+
 /**
  * Returns a list of cities/areas for a given district.
- * For now, we return the same list or a sub-list if we had one.
- * Since our data is currently [State -> Cities], we'll treat districts as cities.
  */
 export const getIndianCities = (districtNameOrSlug) => {
     if (!districtNameOrSlug) return [];
-    // For now, if it's India, we might just return the district itself as the only city option
-    // or return a few common areas if we had them.
-    // To avoid "Loading..." when there's no deeper data, we return the district name itself.
+    const slug = slugify(districtNameOrSlug);
+    
+    // Check if we have specific cities for this district
+    if (INDIAN_CITIES[slug]) {
+        return INDIAN_CITIES[slug];
+    }
+
+    // Fallback to the district name itself if no sub-cities defined
     const name = districtNameOrSlug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     return [name];
 };
