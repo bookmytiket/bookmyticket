@@ -252,6 +252,43 @@ export default function DynamicEventClient({ event }) {
                         </h1>
                     </div>
                 </div>
+                
+                {/* SCHEDULE & VENUE QUICK INFO */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899] shadow-inner">
+                            <Calendar size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                                {event.date}{event.end_date && event.end_date !== event.date ? ` - ${event.end_date}` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 shadow-inner">
+                            <Clock size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                                {event.time}{event.end_time ? ` - ${event.end_time}` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-inner">
+                            <MapPin size={28} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Venue</p>
+                            <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[150px]">
+                                {event.venue || event.location || 'TBA'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
                     

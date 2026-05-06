@@ -932,6 +932,9 @@ function AdminHomePage() {
     }, []);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [showSsoModal, setShowSsoModal] = useState(false);
+    const [ssoEditingType, setSsoEditingType] = useState(""); // "google" | "facebook"
+    const [ssoForm, setSsoForm] = useState({ clientId: "", clientSecret: "" });
     const [theme, setTheme] = useState("light");
     const [showTempPasswordModal, setShowTempPasswordModal] = useState(false);
     const [showApprovalModal, setShowApprovalModal] = useState(false);

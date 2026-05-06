@@ -403,9 +403,9 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 organizerContact: "",
                 regStart: "",
                 regEnd: "",
-                expiryDate: "",
-                endDate: "",
-                endTime: "",
+                expiryDate: postEvent.expiryDate || postEvent.expiry_date || "",
+                endDate: postEvent.endDate || postEvent.end_date || "",
+                endTime: postEvent.endTime || postEvent.end_time || "",
                 ...(base.basicInfo || {})
             },
             location: {
@@ -473,6 +473,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             longitude: config.location?.coordinates?.lng,
             endDate: config.basicInfo?.endDate,
             endTime: config.basicInfo?.endTime,
+            expiryDate: config.basicInfo?.expiryDate,
             type: "Dynamic",
             category: "Event"
         }));

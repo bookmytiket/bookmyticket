@@ -104,15 +104,26 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
             </div>
           )}
           {authError && (
-            <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl text-[10px] font-bold shadow-xl border border-white/20">
-              <p className="uppercase tracking-widest text-[9px] mb-1 opacity-80">API Connection Issue</p>
-              {authError}. <br/>
-              <span className="text-[9px] opacity-70 font-normal mt-1 block">
-                Common Fixes: <br/>
-                1. Ensure Billing is enabled on GCP. <br/>
-                2. Add both <b>bookmyticket.net/*</b> and <b>www.bookmyticket.net/*</b> to HTTP Referrers. <br/>
-                3. Enable Maps JS API, Geocoding API, and Places API.
-              </span>
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 backdrop-blur-md text-white px-6 py-4 rounded-[2rem] text-[10px] font-bold shadow-2xl border border-white/20 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <p className="uppercase tracking-[0.2em] text-[11px] font-black">Billing Alert</p>
+              </div>
+              <p className="text-[10px] opacity-90 leading-relaxed mb-3">
+                {authError.includes('Billing') 
+                  ? "Google Maps billing is not enabled. Your account may have reached its limit or the card has expired."
+                  : "Authentication Failed: Check API Key restrictions or billing status."}
+              </p>
+              <div className="p-3 bg-black/20 rounded-xl space-y-1">
+                <p className="text-[8px] uppercase tracking-widest font-black opacity-60">How to Fix:</p>
+                <ul className="text-[9px] list-disc pl-4 space-y-1 opacity-80 font-medium">
+                  <li>Enable Billing in Google Cloud Console</li>
+                  <li>Check "Maps JavaScript API" usage limits</li>
+                  <li>Use "Switch to Free Map" for now</li>
+                </ul>
+              </div>
             </div>
           )}
           {loadError && (

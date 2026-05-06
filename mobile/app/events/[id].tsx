@@ -165,8 +165,13 @@ export default function EventDetailScreen() {
   const venueAddress = event.address || dynamicConfig.location?.address || dynamicConfig.venue?.address || '';
   const city = event.city || dynamicConfig.location?.city || dynamicConfig.venue?.city || dynamicConfig.basicInfo?.city || '';
   
-  const date = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
-  const time = event.start_time || event.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
+  const startDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate || 'TBA';
+  const endDate = event.end_date || dynamicConfig.basicInfo?.endDate;
+  const date = (startDate && endDate && startDate !== endDate) ? `${startDate} - ${endDate}` : startDate;
+  
+  const startTime = event.start_time || event.time || dynamicConfig.time || dynamicConfig.basicInfo?.time || '';
+  const endTime = event.end_time || dynamicConfig.basicInfo?.endTime || '';
+  const time = (startTime && endTime) ? `${startTime} - ${endTime}` : startTime;
 
   const eventLat = dynamicConfig.location?.coordinates?.lat || event.latitude;
   const eventLng = dynamicConfig.location?.coordinates?.lng || event.longitude;

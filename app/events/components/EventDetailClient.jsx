@@ -184,7 +184,14 @@ export default function EventDetailClient({ id }) {
                             {event.title}
                         </h1>
                         <div className="flex flex-wrap items-center gap-10 text-white/60 font-bold uppercase text-[12px] tracking-[0.15em]">
-                            <div className="flex items-center gap-3"><Calendar size={20} className="text-pink-500" /> {event.date}</div>
+                            <div className="flex items-center gap-3">
+                                <Calendar size={20} className="text-pink-500" /> 
+                                {event.date}{event.end_date && event.end_date !== event.date ? ` - ${event.end_date}` : ''}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Clock size={20} className="text-pink-500" /> 
+                                {event.time}{event.end_time ? ` - ${event.end_time}` : ''}
+                            </div>
                             <div className="flex items-center gap-3"><MapPin size={20} className="text-pink-500" /> {event.venue}</div>
                         </div>
                     </div>

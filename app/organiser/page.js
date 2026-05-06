@@ -546,6 +546,7 @@ function OrganiserPanel() {
                     isExclusive: ev.is_exclusive ? "Yes" : "No",
                     endDate: ev.end_date || ev.endDate || "",
                     endTime: ev.end_time || ev.endTime || "",
+                    expiryDate: ev.expiry_date || ev.expiryDate || "",
                     eventStatus: ev.status || "published"
                 });
                 setActiveTab("post_event");
@@ -804,30 +805,36 @@ function OrganiserPanel() {
             const now = new Date();
             const processed = eventsData.map(e => {
                 let status = e.status || 'published';
-                // Check if event has passed its date/time
-                const configExpiry = e.dynamic_config?.basicInfo?.expiryDate || e.expiry_date;
-                const effectiveDate = configExpiry || e.date || e.startDate;
-
+                
+                // Use the same logic as publishSeatEvent for consistency
+                const configBasic = e.dynamic_config?.basicInfo || {};
+                const configExpiry = configBasic.expiryDate || e.expiry_date;
+                let dateStr = e.end_date || e.endDate || configBasic.endDate || configExpiry || e.date || e.startDate;
+                
                 const isAutoStatus = status === 'published' || status === 'expired';
-                if (isAutoStatus && effectiveDate) {
+                if (isAutoStatus && dateStr) {
                     try {
-                        let newStatus = 'published';
-                        let dateStr = effectiveDate;
-                        // Handle DD/MM/YYYY format
-                        if (dateStr.includes('/') && dateStr.split('/')[0].length <= 2) {
-                            const [d, m, y] = dateStr.split('/');
-                            dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        // Standardize dateStr to YYYY-MM-DD
+                        if (typeof dateStr === 'string' && (dateStr.includes('/') || dateStr.includes('-'))) {
+                            const separator = dateStr.includes('/') ? '/' : '-';
+                            const parts = dateStr.split(separator);
+                            if (parts[0].length <= 2) {
+                                const [d, m, y] = parts;
+                                dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                            }
                         }
 
-                        const timeStr = e.time || e.startTime || '23:59';
+                        const timeStr = e.end_time || e.endTime || configBasic.endTime || e.time || e.startTime || '23:59';
                         const eventDateTime = new Date(`${dateStr}T${timeStr}`);
 
                         if (!isNaN(eventDateTime.getTime()) && eventDateTime < now) {
-                            newStatus = 'expired';
+                            status = 'expired';
+                        } else if (!isNaN(eventDateTime.getTime()) && status === 'expired') {
+                            // If it was expired but now the date is in the future (e.g. user updated it), move back to published
+                            status = 'published';
                         }
-                        status = newStatus;
                     } catch (err) {
-                        console.error("Error parsing event date:", effectiveDate, err);
+                        console.error("Error parsing event date:", dateStr, err);
                     }
                 }
                 return { ...e, id: e.id, status };
@@ -1435,9 +1442,9 @@ function OrganiserPanel() {
             category: postEvent.category || undefined,
             type: postEvent.type || undefined,
             date: firstSlot.date || today,
-            expiry_date: postEvent.expiryDate || undefined,
-            end_date: postEvent.endDate || undefined,
-            end_time: postEvent.endTime || undefined,
+            expiry_date: postEvent.expiryDate || null,
+            end_date: postEvent.endDate || null,
+            end_time: postEvent.endTime || null,
             time: firstSlot.time || "TBA",
             img: imgUrl,
             banner_preview: typeof postEvent.bannerPreview === "string" ? postEvent.bannerPreview : undefined,
@@ -1536,6 +1543,7 @@ function OrganiserPanel() {
                     try { localStorage.removeItem("organiser_draft"); } catch (_) { }
                     setActiveTab("manage_events");
                     showToast("Event updated successfully", "success");
+                    refreshEvents();
                 })
                 .catch(err => {
                     console.error("Error updating event:", err);
@@ -3007,8 +3015,14 @@ function OrganiserPanel() {
                                                                         </div>
                                                                     </td>
                                                                     <td style={{ padding: "16px" }}>
-                                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>{ev.date || ev.startDate || ev.dynamic_config?.basicInfo?.regEnd || "TBA"}</div>
-                                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>{ev.time || ev.startTime || "TBA"}</div>
+                                                                        <div style={{ fontSize: "14px", fontWeight: 700, color: t.textMain }}>
+                                                                            {ev.date || ev.startDate || ev.dynamic_config?.basicInfo?.regEnd || "TBA"}
+                                                                            {ev.end_date && ev.end_date !== (ev.date || ev.startDate) ? ` - ${ev.end_date}` : ''}
+                                                                        </div>
+                                                                        <div style={{ fontSize: "12px", color: t.textSub, marginTop: "2px" }}>
+                                                                            {ev.time || ev.startTime || "TBA"}
+                                                                            {ev.end_time ? ` - ${ev.end_time}` : ''}
+                                                                        </div>
                                                                     </td>
                                                                     <td style={{ padding: "16px" }}>
                                                                         {(ev.total_seats || ev.totalSeats) ? (
@@ -3069,8 +3083,10 @@ function OrganiserPanel() {
                                                                                     isExclusive: (ev.exclusive === true || ev.isExclusive === "Yes") ? "Yes" : "No",
                                                                                     eventStatus: ev.status || "published",
                                                                                     dateType: (ev.date_slots || ev.dateSlots) ? "multiple" : "single",
-                                                                                    startDate: ev.date,
-                                                                                    startTime: ev.time,
+                                                                                    startDate: ev.date || ev.startDate,
+                                                                                    startTime: ev.time || ev.startTime,
+                                                                                    endDate: ev.end_date || ev.endDate,
+                                                                                    endTime: ev.end_time || ev.endTime,
                                                                                     expiryDate: ev.expiry_date || ev.expiryDate,
                                                                                     bannerPreview: ev.banner_preview || ev.bannerPreview || ev.img,
                                                                                     image_url: ev.banner_preview || ev.bannerPreview || ev.img, // Used by Sports/Universal forms

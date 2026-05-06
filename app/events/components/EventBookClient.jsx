@@ -259,7 +259,11 @@ export default function EventBookClient({ id }) {
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Schedule</p>
-                                            <p className="text-sm font-black text-slate-900">{selectedDate ? selectedDate.toDateString() : event.date}</p>
+                                            <p className="text-sm font-black text-slate-900">
+                                                {selectedDate ? selectedDate.toDateString() : (
+                                                    event.date + (event.end_date && event.end_date !== event.date ? ` - ${event.end_date}` : '')
+                                                )}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
