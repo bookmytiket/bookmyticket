@@ -29,13 +29,44 @@ export function AuthProvider({ children }) {
             }
 
             const storedCity = localStorage.getItem("selectedCity");
-            if (storedCity) setSelectedCity(storedCity);
-
-            try {
-                const storedHierarchy = localStorage.getItem("locationHierarchy");
-                if (storedHierarchy) setLocationHierarchy(JSON.parse(storedHierarchy));
-            } catch (err) {
-                console.error("Error parsing stored hierarchy:", err);
+            if (storedCity) {
+                setSelectedCity(storedCity);
+                try {
+                    const storedHierarchy = localStorage.getItem("locationHierarchy");
+                    if (storedHierarchy) setLocationHierarchy(JSON.parse(storedHierarchy));
+                } catch (err) {
+                    console.error("Error parsing stored hierarchy:", err);
+                }
+            } else {
+                // First visit logic: Try geo-detection, then default
+                setSelectedCity("Coimbatore");
+                localStorage.setItem("selectedCity", "Coimbatore");
+                
+                // Fire and forget geo-detection to improve initial experience
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (pos) => {
+                            const { latitude, longitude } = pos.coords;
+                            try {
+                                const { reverseGeocode } = await import("@/lib/googleMaps");
+                                const geo = await reverseGeocode(latitude, longitude);
+                                if (geo.city) {
+                                    const hierarchy = {
+                                        city: geo.city,
+                                        state: geo.state,
+                                        country: geo.country,
+                                        lat: latitude,
+                                        lng: longitude,
+                                        address: `${geo.city}, ${geo.state}, ${geo.country}`
+                                    };
+                                    updateCity(geo.city, hierarchy);
+                                }
+                            } catch (e) {}
+                        },
+                        null,
+                        { enableHighAccuracy: false, timeout: 5000 }
+                    );
+                }
             }
         };
 

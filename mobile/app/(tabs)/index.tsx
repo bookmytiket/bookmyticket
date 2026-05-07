@@ -156,12 +156,25 @@ export default function HomeScreen() {
     }
   }, [user, role, hasCheckedRedirect]);
 
+  const { data: brandingCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
+  const displayPromos = useMemo(() => {
+    if (brandingCoupons && brandingCoupons.length > 0) {
+      return brandingCoupons.map(c => ({
+        code: c.code,
+        text: c.title,
+        img: c.logoUrl || c.img || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400'
+      }));
+    }
+    return PROMOS.map(p => ({ ...p, img: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }));
+  }, [brandingCoupons]);
+
   useEffect(() => {
+    if (displayPromos.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentPromoIndex((prev) => (prev + 1) % PROMOS.length);
+      setCurrentPromoIndex((prev) => (prev + 1) % displayPromos.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, []);
+  }, [displayPromos]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -486,7 +499,7 @@ export default function HomeScreen() {
               {/* Left Image */}
               <View style={{ width: 80, height: '100%', backgroundColor: '#f1f5f9' }}>
                 <Image 
-                  source={{ uri: PROMOS[currentPromoIndex].code === 'NYKAA' ? 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Nykaa_logo.svg/1200px-Nykaa_logo.svg.png' : 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }} 
+                  source={{ uri: displayPromos[currentPromoIndex].img }} 
                   style={{ width: '100%', height: '100%' }} 
                   resizeMode="cover"
                 />
@@ -495,13 +508,13 @@ export default function HomeScreen() {
               {/* Right Content */}
               <View style={{ flex: 1, paddingHorizontal: 12, justifyContent: 'center' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4' }}>{PROMOS[currentPromoIndex].code}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#f844a4' }}>{displayPromos[currentPromoIndex].code}</Text>
                   <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                     <Text style={{ fontSize: 8, fontWeight: '900', color: '#16a34a' }}>LIMITED DEAL</Text>
                   </View>
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 2 }} numberOfLines={1}>
-                  {PROMOS[currentPromoIndex].text}
+                  {displayPromos[currentPromoIndex].text}
                 </Text>
               </View>
 

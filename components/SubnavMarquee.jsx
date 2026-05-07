@@ -21,7 +21,82 @@ const FALLBACK_NAV_ITEMS = [
 ];
 
 function CouponFlipTicker() {
-    return null;
+    const { data: coupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        if (!coupons || coupons.length <= 1) return;
+        const timer = setInterval(() => {
+            setIndex((prev) => (prev + 1) % coupons.length);
+        }, 3000);
+        return () => clearInterval(timer);
+    }, [coupons]);
+
+    if (!coupons || coupons.length === 0) return null;
+
+    const current = coupons[index];
+
+    const copyCode = () => {
+        navigator.clipboard.writeText(current.code);
+        alert(`Coupon code ${current.code} copied!`);
+    };
+
+    return (
+        <div style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 20,
+            pointerEvents: "none"
+        }}>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={index}
+                    onClick={copyCode}
+                    initial={{ rotateX: -90, opacity: 0 }}
+                    animate={{ rotateX: 0, opacity: 1 }}
+                    exit={{ rotateX: 90, opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                        backgroundColor: "#111827",
+                        padding: "6px 20px",
+                        borderRadius: "100px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        pointerEvents: "auto",
+                        cursor: "pointer",
+                        minWidth: "280px",
+                        justifyContent: "center"
+                    }}
+                >
+                    <div style={{
+                        backgroundColor: "#f84464",
+                        color: "#fff",
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em"
+                    }}>
+                        CODE
+                    </div>
+                    <span style={{ 
+                        color: "#fff", 
+                        fontSize: "13px", 
+                        fontWeight: 700,
+                        letterSpacing: "0.02em"
+                    }}>
+                        {current.code}: <span style={{ color: "#f84464" }}>{current.title}</span>
+                    </span>
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
 }
 
 export default function SubnavMarquee() {
@@ -73,6 +148,7 @@ export default function SubnavMarquee() {
                         alignItems: "center",
                         overflow: "hidden"
                     }}>
+                        <CouponFlipTicker />
                         <Marquee
                             speed={50}
                             gradient={true}

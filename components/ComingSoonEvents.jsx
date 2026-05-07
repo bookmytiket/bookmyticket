@@ -54,7 +54,14 @@ export default function ComingSoonEvents({ events = [] }) {
     const [idx, setIdx] = useState(0);
     const [direction, setDirection] = useState(0); // 1 for right, -1 for left
     const [isHovered, setIsHovered] = useState(false);
-    
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const now = new Date();
     const parseEventDate = (dateStr, timeStr) => {
         if (!dateStr) return null;
@@ -161,8 +168,8 @@ export default function ComingSoonEvents({ events = [] }) {
                     </h2>
                 </div>
 
-                <div style={{ position: "relative", height: "380px" }}>
-                    <AnimatePresence initial={false} custom={direction}>
+                <div style={{ position: "relative", height: isMobile ? "580px" : "380px" }}>
+                    <AnimatePresence initial={false} custom={direction} mode="wait">
                         <motion.div
                             key={idx}
                             custom={direction}
@@ -176,26 +183,28 @@ export default function ComingSoonEvents({ events = [] }) {
                             }}
                             style={{
                                 position: "absolute",
+                                top: 0,
+                                left: 0,
                                 width: "100%",
+                                height: "100%",
                                 display: "grid",
-                                gridTemplateColumns: "1.8fr 1fr",
+                                gridTemplateColumns: isMobile ? "1fr" : "1.8fr 1fr",
                                 borderRadius: "24px",
                                 overflow: "hidden",
                                 boxShadow: "0 15px 50px rgba(0,0,0,0.12)",
                                 border: "1px solid #f1f5f9",
-                                height: "380px",
                                 background: "#fff",
                             }}
                         >
-                            {/* Left Grid: Banner Image */}
-                            <div style={{ position: "relative", overflow: "hidden" }}>
+                            {/* Banner Image */}
+                            <div style={{ position: "relative", height: isMobile ? "200px" : "100%", overflow: "hidden" }}>
                                 <img src={event.img} alt={event.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             </div>
 
-                            {/* Right Grid: Timer & Content */}
+                            {/* Timer & Content */}
                             <div style={{ 
                                 background: "#fff", 
-                                padding: "40px 30px", 
+                                padding: isMobile ? "20px" : "40px 30px", 
                                 display: "flex", 
                                 flexDirection: "column", 
                                 justifyContent: "space-between",

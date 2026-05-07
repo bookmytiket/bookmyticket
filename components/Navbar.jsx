@@ -399,31 +399,73 @@ export default function Navbar({ compact = false }) {
       <header className={`site-header${scrolled ? " header-scrolled" : ""}${compact ? " header-compact" : ""}`}>
         {/* Main Navbar */}
         <div className="header-main" style={{ justifyContent: 'space-between', position: 'relative', zIndex: 100 }}>
-          <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
-            <motion.img
-              src="/logo.png"
-              alt="BookMyTicket"
-              initial={{ y: -60, opacity: 0, scale: 0.7 }}
-              animate={{ y: [null, 0], opacity: 1, scale: 1 }}
-              transition={{
-                y: { type: 'spring', stiffness: 320, damping: 14, duration: 0.7 },
-                opacity: { duration: 0.3 },
-                scale: { type: 'spring', stiffness: 280, damping: 16 },
-              }}
-              whileHover={{ y: -5, scale: 1.06, transition: { type: 'spring', stiffness: 400, damping: 12 } }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                height: scrolled ? '44px' : '64px',
-                width: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-                transition: 'height 0.3s ease, filter 0.3s ease',
-                filter: scrolled ? 'brightness(0) invert(1)' : 'none',
-                cursor: 'pointer',
-              }}
-            />
-          </Link>
+          {/* Logo & Location Group for Mobile Alignment */}
+          <div style={{ display: 'flex', alignItems: 'center', flex: isMobile ? 1 : 'none' }}>
+            <Link href="/" className="header-logo" onClick={handleLogoClick} style={{ display: 'flex', alignItems: 'center' }}>
+              <motion.img
+                src="/logo.png"
+                alt="BookMyTicket"
+                initial={{ y: -60, opacity: 0, scale: 0.7 }}
+                animate={{ y: [null, 0], opacity: 1, scale: 1 }}
+                transition={{
+                  y: { type: 'spring', stiffness: 320, damping: 14, duration: 0.7 },
+                  opacity: { duration: 0.3 },
+                  scale: { type: 'spring', stiffness: 280, damping: 16 },
+                }}
+                whileHover={{ y: -5, scale: 1.06, transition: { type: 'spring', stiffness: 400, damping: 12 } }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  height: scrolled ? (isMobile ? '32px' : '44px') : (isMobile ? '40px' : '64px'),
+                  width: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  transition: 'height 0.3s ease, filter 0.3s ease',
+                  filter: scrolled ? 'brightness(0) invert(1)' : 'none',
+                  cursor: 'pointer',
+                }}
+              />
+            </Link>
 
+            {/* Location Selection Button - Mobile Only (next to logo) */}
+            {isMobile && (
+              <motion.button
+                whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
+                whileTap={{ scale: 0.95 }}
+                className="nav-loc-btn"
+                onClick={() => setLocOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(241, 245, 249, 0.8)',
+                  border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  color: scrolled ? '#fff' : '#1e293b',
+                  marginRight: 'auto',
+                  marginLeft: '8px',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(8px)',
+                  maxWidth: '120px',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}
+              >
+                <MapPin size={12} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
+                <div suppressHydrationWarning style={{ 
+                  fontWeight: 800, 
+                  fontSize: '10px', 
+                  letterSpacing: '-0.01em', 
+                  whiteSpace: 'nowrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis' 
+                }}>
+                  {mounted ? (selectedCity || "Location") : "Location"}
+                </div>
+              </motion.button>
+            )}
+          </div>
 
           <div className="nav-search-wrap hide-mobile" style={{
             marginLeft: '20px',
@@ -480,35 +522,37 @@ export default function Navbar({ compact = false }) {
               Search
             </motion.button>
           </div>
-
-          {/* Location Selection Button */}
-          <motion.button
-            whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
-            whileTap={{ scale: 0.95 }}
-            className="nav-loc-btn hide-mobile"
-            onClick={() => setLocOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(241, 245, 249, 0.8)',
-              border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
-              padding: '8px 16px',
-              borderRadius: '14px',
-              cursor: 'pointer',
-              color: scrolled ? '#fff' : '#1e293b',
-              marginRight: 'auto',
-              marginLeft: '10px',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(8px)'
-            }}
-          >
-            <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
-            <div suppressHydrationWarning style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em' }}>
-              {mounted ? (selectedCity || "Select Location") : "Select Location"}
-            </div>
-            <ChevronDown size={14} opacity={0.5} />
-          </motion.button>
+          
+          {/* Location Selection Button - Desktop (next to search) */}
+          {!isMobile && (
+            <motion.button
+              whileHover={{ scale: 1.05, background: scrolled ? 'rgba(255,255,255,0.2)' : 'rgba(248, 68, 100, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
+              className="nav-loc-btn hide-mobile"
+              onClick={() => setLocOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: scrolled ? 'rgba(255,255,255,0.1)' : 'rgba(241, 245, 249, 0.8)',
+                border: scrolled ? '1px solid rgba(255,255,255,0.2)' : '1px solid #e2e8f0',
+                padding: '8px 16px',
+                borderRadius: '14px',
+                cursor: 'pointer',
+                color: scrolled ? '#fff' : '#1e293b',
+                marginRight: 'auto',
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(8px)',
+                flexShrink: 0
+              }}
+            >
+              <MapPin size={18} color={scrolled ? "#fff" : "#f84464"} strokeWidth={2.5} />
+              <div suppressHydrationWarning style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '-0.01em' }}>
+                {mounted ? (selectedCity || "Select Location") : "Select Location"}
+              </div>
+              <ChevronDown size={14} opacity={0.5} />
+            </motion.button>
+          )}
 
           {/* New Desktop Navigation Buttons - gated on mounted to prevent SSR/localStorage hydration mismatch */}
           <div className="nav-desktop-actions hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '24px', marginRight: '20px' }}>
