@@ -10,11 +10,14 @@ import {
 import CalendarPicker from "./CalendarPicker";
 import TimePicker from "./TimePicker";
 import { useAuth } from '@/components/AuthContext';
+import LocationSelectionModal from "@/components/LocationSelectionModal";
+import { Search } from "lucide-react";
 
 const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditing }) => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
+    const [showLocationModal, setShowLocationModal] = useState(false);
     
     // Ensure correct type and seating defaults on mount
     useEffect(() => {
@@ -358,7 +361,38 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             {renderInput("Event Expiry Date", "expiryDate", "date")}
                             <div />
                         </div>
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Venue & Location</label>
+                                <button 
+                                    onClick={() => setShowLocationModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100 group"
+                                >
+                                    <Search size={12} className="group-hover:scale-125 transition-transform" />
+                                    Search Global Location
+                                </button>
+                            </div>
+                            
+                            <LocationSelectionModal 
+                                isOpen={showLocationModal}
+                                onClose={() => setShowLocationModal(false)}
+                                selectedCity={postEvent.city}
+                                updateCity={(cityName, details) => {
+                                    if (details) {
+                                        setPostEvent(prev => ({
+                                            ...prev,
+                                            city: details.city || cityName,
+                                            address: details.address || details.fullAddress || prev.address,
+                                            state: details.state || prev.state,
+                                            country: details.country || prev.country,
+                                            zipCode: details.pincode || details.zipCode || prev.zipCode,
+                                            latitude: details.lat || prev.latitude,
+                                            longitude: details.lng || prev.longitude
+                                        }));
+                                    }
+                                }}
+                            />
+                            
                             {renderInput("Venue Full Address", "address", "text", "Full searchable address")}
                         </div>
                         <div className="md:col-span-2">
@@ -451,144 +485,129 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                                     </div>
                                 )}
 
-                                <div className="mt-4 flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
-                                            <Wallet size={16} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{isAdmin ? 'Custom Fees' : 'Platform Controlled'}</p>
-                                        </div>
-                                    </div>
-                                    {isAdmin ? (
-                                        <label className="relative inline-flex items-center cursor-pointer scale-75">
-                                            <input 
-                                                type="checkbox" 
-                                                className="sr-only peer"
-                                                checked={postEvent.fee_config?.override_global || false}
-                                                onChange={e => updateField('fee_config', { 
-                                                    ...(postEvent.fee_config || {}), 
-                                                    override_global: e.target.checked 
-                                                })}
-                                            />
-                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
-                                    ) : (
-                                        <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-400 uppercase">Admin Only</div>
-                                    )}
-                                </div>
-
-                                {isAdmin && postEvent.fee_config?.override_global && (
-                                    <div className="space-y-4 pt-4 border-t border-slate-200/50">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Type</label>
-                                                <select 
-                                                    value={postEvent.fee_config?.fee_type || 'percentage'}
-                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, fee_type: e.target.value })}
-                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
-                                                >
-                                                    <option value="percentage">%</option>
-                                                    <option value="fixed">₹</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">Value</label>
-                                                <input 
-                                                    type="number"
-                                                    value={postEvent.fee_config?.fee_value || 0}
-                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, fee_value: Number(e.target.value) })}
-                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
-                                                />
-                                            </div>
-                                        </div>
+                            {/* Advanced Marathon Category Manager */}
+                            <div className="p-8 bg-slate-900 rounded-[3rem] space-y-8 shadow-2xl shadow-slate-300">
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <input 
-                                                type="checkbox" 
-                                                id="apply_gst_sports"
-                                                checked={postEvent.fee_config?.apply_gst || false}
-                                                onChange={e => updateField('fee_config', { ...postEvent.fee_config, apply_gst: e.target.checked })}
-                                                className="w-4 h-4 rounded border-slate-200 text-blue-600 focus:ring-blue-500/20"
-                                            />
-                                            <label htmlFor="apply_gst_sports" className="text-[9px] font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Apply GST</label>
+                                            <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center">
+                                                <TrendingUp size={16} />
+                                            </div>
+                                            <h4 className="text-[11px] font-bold text-white uppercase tracking-widest">Marathon Pricing Logic</h4>
                                         </div>
-                                        {postEvent.fee_config?.apply_gst && (
-                                            <div className="space-y-1.5">
-                                                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-1">GST %</label>
-                                                <input 
-                                                    type="number"
-                                                    value={postEvent.fee_config?.gst_percent || 18}
-                                                    onChange={e => updateField('fee_config', { ...postEvent.fee_config, gst_percent: Number(e.target.value) })}
-                                                    className="w-full bg-white border border-slate-100 text-slate-900 text-xs font-semibold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
-                                                />
+                                        <button 
+                                            onClick={() => {
+                                                const newCats = [...(postEvent.marathonCategories || [])];
+                                                newCats.push({ id: Date.now(), title: "New Category", distance_km: 5, min_age: 18, max_age: 60, price: 499, slots: 100 });
+                                                updateField("marathonCategories", newCats);
+                                            }}
+                                            className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all"
+                                        >
+                                            + Add Category
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {(postEvent.marathonCategories || []).map((cat, idx) => (
+                                            <div key={cat.id} className="bg-white/5 backdrop-blur-sm p-6 rounded-[2rem] border border-white/10 space-y-6 group hover:border-blue-500/50 transition-all">
+                                                <div className="flex items-center justify-between">
+                                                    <input 
+                                                        className="bg-transparent border-none text-sm font-black text-white placeholder:text-white/20 focus:ring-0 p-0 w-2/3"
+                                                        placeholder="Category Title (e.g. 5KM Adults)"
+                                                        value={cat.title}
+                                                        onChange={e => {
+                                                            const next = [...postEvent.marathonCategories];
+                                                            next[idx].title = e.target.value;
+                                                            updateField("marathonCategories", next);
+                                                        }}
+                                                    />
+                                                    <button 
+                                                        onClick={() => {
+                                                            const next = postEvent.marathonCategories.filter((_, i) => i !== idx);
+                                                            updateField("marathonCategories", next);
+                                                        }}
+                                                        className="p-2 text-white/20 hover:text-rose-500 transition-colors"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Distance (KM)</label>
+                                                        <input 
+                                                            type="number"
+                                                            className="w-full bg-white/10 border-none text-white text-xs font-bold p-3 rounded-xl focus:ring-1 focus:ring-blue-500/50"
+                                                            value={cat.distance_km}
+                                                            onChange={e => {
+                                                                const next = [...postEvent.marathonCategories];
+                                                                next[idx].distance_km = parseFloat(e.target.value) || 0;
+                                                                updateField("marathonCategories", next);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[8px] font-black text-purple-400 uppercase tracking-widest">Age Range</label>
+                                                        <div className="flex items-center gap-1">
+                                                            <input 
+                                                                type="number"
+                                                                className="w-full bg-white/10 border-none text-white text-xs font-bold p-3 rounded-xl focus:ring-1 focus:ring-purple-500/50"
+                                                                placeholder="Min"
+                                                                value={cat.min_age}
+                                                                onChange={e => {
+                                                                    const next = [...postEvent.marathonCategories];
+                                                                    next[idx].min_age = parseInt(e.target.value) || 0;
+                                                                    updateField("marathonCategories", next);
+                                                                }}
+                                                            />
+                                                            <input 
+                                                                type="number"
+                                                                className="w-full bg-white/10 border-none text-white text-xs font-bold p-3 rounded-xl focus:ring-1 focus:ring-purple-500/50"
+                                                                placeholder="Max"
+                                                                value={cat.max_age}
+                                                                onChange={e => {
+                                                                    const next = [...postEvent.marathonCategories];
+                                                                    next[idx].max_age = parseInt(e.target.value) || 0;
+                                                                    updateField("marathonCategories", next);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Price (₹)</label>
+                                                        <input 
+                                                            type="number"
+                                                            className="w-full bg-white/10 border-none text-white text-xs font-bold p-3 rounded-xl focus:ring-1 focus:ring-emerald-500/50"
+                                                            value={cat.price}
+                                                            onChange={e => {
+                                                                const next = [...postEvent.marathonCategories];
+                                                                next[idx].price = parseFloat(e.target.value) || 0;
+                                                                updateField("marathonCategories", next);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[8px] font-black text-amber-400 uppercase tracking-widest">Slots</label>
+                                                        <input 
+                                                            type="number"
+                                                            className="w-full bg-white/10 border-none text-white text-xs font-bold p-3 rounded-xl focus:ring-1 focus:ring-amber-500/50"
+                                                            value={cat.slots}
+                                                            onChange={e => {
+                                                                const next = [...postEvent.marathonCategories];
+                                                                next[idx].slots = parseInt(e.target.value) || 0;
+                                                                updateField("marathonCategories", next);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(postEvent.marathonCategories || []).length === 0 && (
+                                            <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-[2rem]">
+                                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest italic">No categories added. Click "+ Add Category" to start.</p>
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Combined Pricing Structure */}
-                            <div className="p-8 bg-slate-900 rounded-[3rem] space-y-8 shadow-2xl shadow-slate-300">
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center">
-                                            <TrendingUp size={16} />
-                                        </div>
-                                        <h4 className="text-[11px] font-bold text-white uppercase tracking-widest">Registration Structure</h4>
-                                    </div>
-
-                                    {/* Distance Pricing */}
-                                    {sportType === "marathon" && (postEvent.distanceOptions || []).length > 0 && (
-                                        <div className="space-y-4">
-                                            {(postEvent.distanceOptions || []).map(dist => (
-                                                <div key={dist} className="bg-white/5 backdrop-blur-sm p-5 rounded-2xl border border-white/10 flex items-center justify-between group hover:border-blue-500/50 transition-all">
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{dist} Category</span>
-                                                    <div className="relative w-28">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-bold text-xs">₹</span>
-                                                        <input 
-                                                            type="number"
-                                                            value={postEvent.distancePricing?.[dist] || ""}
-                                                            onChange={(e) => {
-                                                                const newPricing = { ...(postEvent.distancePricing || {}), [dist]: e.target.value };
-                                                                updateField("distancePricing", newPricing);
-                                                            }}
-                                                            className="w-full bg-white/10 border-none text-white text-sm font-bold pl-7 pr-3 py-2 rounded-xl focus:outline-none"
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Age-based Pricing (Same Section) */}
-                                    {sportType === "marathon" && (
-                                        <div className="pt-6 border-t border-white/10 space-y-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Users size={14} className="text-purple-400" />
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Age-based Discounts</span>
-                                            </div>
-                                            {['Under 18', 'Senior (60+)'].map(group => (
-                                                <div key={group} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10 group hover:border-purple-500/50 transition-all">
-                                                    <span className="text-[10px] font-bold text-slate-300 uppercase">{group}</span>
-                                                    <div className="relative w-24">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 font-bold text-xs">₹</span>
-                                                        <input 
-                                                            type="number" 
-                                                            value={postEvent.agePricing?.[group] || ""} 
-                                                            onChange={(e) => {
-                                                                const newPricing = { ...(postEvent.agePricing || {}), [group]: e.target.value };
-                                                                updateField("agePricing", newPricing);
-                                                            }}
-                                                            className="w-full bg-white/10 border-none text-white text-sm font-bold pl-7 pr-3 py-2 rounded-xl focus:outline-none"
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             
@@ -603,12 +622,14 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                                     <span className="text-sm font-bold uppercase">{postEvent.sportType}</span>
                                 </div>
                                 <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                                    <span className="text-xs text-slate-400">Date</span>
-                                    <span className="text-sm font-bold">{postEvent.startDate || "TBA"}</span>
+                                    <span className="text-xs text-slate-400">Categories</span>
+                                    <span className="text-sm font-bold">{(postEvent.marathonCategories || []).length} Tiers</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-400">Price</span>
-                                    <span className="text-xl font-bold">₹{postEvent.price || "0"}</span>
+                                    <span className="text-xs text-slate-400">Starting From</span>
+                                    <span className="text-xl font-bold">
+                                        ₹{Math.min(...(postEvent.marathonCategories || [{price: 0}]).map(c => c.price))}
+                                    </span>
                                 </div>
                             </div>
                             <div className="pt-4 flex items-center gap-3 text-emerald-400">
@@ -617,6 +638,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                             </div>
                         </div>
                     </div>
+                </div>
 
                     <div className="pt-12 flex justify-between">
                         <button onClick={() => setCurrentStep(2)} className="px-8 py-3.5 text-slate-400 hover:text-slate-900 font-bold uppercase tracking-widest text-[10px] transition-colors flex items-center gap-2">

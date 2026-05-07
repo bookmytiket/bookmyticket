@@ -151,7 +151,7 @@ export default function FeaturedEvents({ events }) {
                                             <circle cx="12" cy="10" r="3" />
                                         </svg>
                                         <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                            {event.location}
+                                            {event.location || event.city || "TBA"}
                                         </span>
                                     </div>
                                     

@@ -15,9 +15,11 @@ import GoogleInlineMap from "./GoogleInlineMap";
 import { Country, State, City } from 'country-state-city';
 import { INDIAN_STATES, getIndianDistricts, getIndianCities } from "@/app/data/indianLocations";
 import { COUNTRIES } from "@/app/data/locationData";
+import CustomSelect from "./CustomSelect";
 import { supabase } from "@/lib/supabase";
 import { reverseGeocode, geocode } from "@/lib/googleMaps";
 import { useToast } from "@/context/ToastContext";
+import LocationSelectionModal from "@/components/LocationSelectionModal";
 
 const renderInput = (label, value, onChange, type = "text", placeholder = "") => (
     <div className="space-y-2">
@@ -39,54 +41,13 @@ const renderInput = (label, value, onChange, type = "text", placeholder = "") =>
                 type={type}
                 value={value || ""}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-600"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-bold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-800"
                 placeholder={placeholder}
             />
         )}
     </div>
 );
 
-const LocationSelect = ({ label, value, onChange, options, isLoading }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    return (
-        <div className="space-y-2 relative">
-            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}*</label>
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
-            >
-                <div className="flex items-center gap-2">
-                    {isLoading && <Activity size={14} className="animate-spin text-pink-500" />}
-                    <span>{value || `Select ${label}`}</span>
-                </div>
-                <ChevronDown size={18} className={`text-slate-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </div>
-            {isOpen && (
-                <div className="absolute z-[1000] w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden max-h-[300px] overflow-y-auto">
-                    {options.map((opt) => {
-                        const labelText = typeof opt === 'string' ? opt : (opt.name || opt.label || String(opt));
-                        const valText = typeof opt === 'string' ? opt : (opt.value || opt.name || opt.label || String(opt));
-                        return (
-                            <div 
-                                key={valText}
-                                onClick={() => {
-                                    onChange(valText);
-                                    setIsOpen(false);
-                                }}
-                                className={`px-6 py-4 text-sm font-bold transition-all cursor-pointer hover:bg-pink-50 hover:text-[#ec4899] ${value === valText ? 'bg-pink-50 text-[#ec4899]' : 'text-slate-600'}`}
-                            >
-                                {labelText}
-                            </div>
-                        );
-                    })}
-                    {options.length === 0 && (
-                        <div className="px-6 py-4 text-xs font-bold text-slate-400 italic">No options available</div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
 
 const TicketCard = ({ category, index, config, updateConfig }) => (
     <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative group hover:border-pink-200 transition-all">
@@ -101,9 +62,10 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Category Name</label>
+                <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Category Name</label>
                 <input 
-                    className="w-full bg-slate-50 border-none text-sm font-bold p-3 rounded-xl"
+                    className="w-full bg-slate-50 border border-slate-100 text-sm font-black p-3 rounded-xl text-slate-900 placeholder:text-slate-800"
+                    placeholder="e.g. Standard Entry"
                     value={category.name}
                     onChange={e => {
                         const newCats = [...config.categories];
@@ -134,10 +96,11 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
             />
             {/* Category-based price removed in favor of Age-based pricing */}
             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Total Slots</label>
+                <label className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Total Slots</label>
                 <input 
                     type="number"
-                    className="w-full bg-slate-50 border-none text-sm font-bold p-3 rounded-xl"
+                    className="w-full bg-slate-50 border border-slate-100 text-sm font-black p-3 rounded-xl text-slate-900 placeholder:text-slate-800"
+                    placeholder="500"
                     value={category.totalSlots}
                     onChange={e => {
                         const newCats = [...config.categories];
@@ -146,9 +109,27 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                     }}
                 />
             </div>
+            <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#ec4899] uppercase tracking-widest">Ticket Price (₹)</label>
+                <input 
+                    type="number"
+                    className="w-full bg-pink-50 border border-pink-100 text-sm font-black p-3 rounded-xl text-[#ec4899]"
+                    value={category.price}
+                    onChange={e => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const newCats = [...config.categories];
+                        newCats[index].price = val;
+                        updateConfig('categories', newCats);
+                        // Also update the top-level config price for non-seating display
+                        if (index === 0) {
+                            setConfig(prev => ({ ...prev, price: val }));
+                        }
+                    }}
+                />
+            </div>
             <div className="md:col-span-2 space-y-3">
                 <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Prize Distribution</label>
+                    <label className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Prize Distribution</label>
                     <button 
                         onClick={() => {
                             const newCats = [...config.categories];
@@ -165,7 +146,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                     {(category.prizes || []).map((prize, pIdx) => (
                         <div key={pIdx} className="flex gap-2 items-center group">
                             <input 
-                                className="w-1/3 bg-white border border-slate-100 text-[10px] font-bold uppercase p-3 rounded-xl focus:ring-1 focus:ring-pink-500/20"
+                                className="w-1/3 bg-white border border-slate-200 text-[10px] font-black uppercase p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 text-slate-900 placeholder:text-slate-800"
                                 value={prize.label}
                                 onChange={e => {
                                     const newCats = [...config.categories];
@@ -174,7 +155,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                 }}
                             />
                             <input 
-                                className="flex-1 bg-white border border-slate-100 text-sm font-bold p-3 rounded-xl focus:ring-1 focus:ring-pink-500/20"
+                                className="flex-1 bg-white border border-slate-200 text-sm font-black p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 text-slate-900 placeholder:text-slate-800"
                                 placeholder="e.g. ₹5,000/-"
                                 value={prize.value}
                                 onChange={e => {
@@ -189,7 +170,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     newCats[index].prizes.splice(pIdx, 1);
                                     updateConfig('categories', newCats);
                                 }}
-                                className="p-3 text-slate-500 hover:text-rose-500 transition-colors"
+                                className="p-3 text-slate-800 hover:text-rose-500 transition-colors"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -200,7 +181,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
             <div className="md:col-span-2 space-y-3 pt-4 border-t border-slate-50">
                 <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Age-Based Pricing</label>
+                        <label className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Age-Based Pricing</label>
                         <p className="text-[8px] font-bold text-slate-700 uppercase tracking-tight">Set different prices for age ranges (Optional)</p>
                     </div>
                     <button 
@@ -230,7 +211,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                         updateConfig('categories', newCats);
                                     }}
                                 />
-                                <span className="text-slate-600 font-bold">to</span>
+                                <span className="text-slate-800 font-bold">to</span>
                                 <input 
                                     type="number" placeholder="Max"
                                     className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold text-slate-900"
@@ -242,9 +223,9 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     }}
                                 />
                             </div>
-                            <div className="col-span-1 text-slate-600 font-bold text-[10px] uppercase">Years</div>
+                            <div className="col-span-1 text-slate-800 font-bold text-[10px] uppercase">Years</div>
                             <div className="col-span-5 relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-xs">₹</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-800 font-bold text-xs">₹</span>
                                 <input 
                                     type="number" placeholder="Price"
                                     className="w-full bg-white border border-slate-200 pl-7 pr-4 py-3 rounded-xl text-xs font-bold text-slate-900"
@@ -262,14 +243,14 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     newCats[index].agePricing.splice(apIdx, 1);
                                     updateConfig('categories', newCats);
                                 }}
-                                className="col-span-2 flex justify-center text-slate-500 hover:text-rose-500 transition-colors"
+                                className="col-span-2 flex justify-center text-slate-800 hover:text-rose-500 transition-colors"
                             >
                                 <Trash size={16} />
                             </button>
                         </div>
                     ))}
                     {category.agePricing?.length === 0 && (
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center italic py-2">No age ranges added. Category price will apply to everyone.</p>
+                        <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest text-center italic py-2">No age ranges added. Category price will apply to everyone.</p>
                     )}
                 </div>
             </div>
@@ -277,42 +258,11 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
     </div>
 );
 
-const CustomSelect = ({ label, value, onChange, options }) => {
-    const [isOpen, setIsOpen] = React.useState(false);
-    return (
-        <div className="space-y-2 relative">
-            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">{label}</label>
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none ring-offset-2 ring-pink-500/20 shadow-inner transition-all flex items-center justify-between cursor-pointer group hover:border-pink-200"
-            >
-                <span>{value || "Select Option"}</span>
-                <ChevronDown size={18} className={`text-slate-600 transition-transform  ${isOpen ? 'rotate-180' : ''}`} />
-            </div>
-            {isOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-[2rem] overflow-hidden    ">
-                    {options.map((opt) => (
-                        <div 
-                            key={opt}
-                            onClick={() => {
-                                onChange(opt);
-                                setIsOpen(false);
-                            }}
-                            className={`px-6 py-4 text-sm font-bold transition-all cursor-pointer hover:bg-pink-50 hover:text-[#ec4899] ${value === opt ? 'bg-pink-50 text-[#ec4899]' : 'text-slate-600'}`}
-                        >
-                            {opt}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
 
 const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
     <div className={`p-6 rounded-[2rem] border ${field.isDefault ? 'bg-slate-50 border-slate-100 opacity-80' : 'bg-white border-pink-100 shadow-sm'} flex flex-col gap-4 group`}>
         <div className="flex items-center gap-6">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-600">
+            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-800">
                 {field.type === 'text' && <FileText size={18} />}
                 {field.type === 'email' && <Mail size={18} />}
                 {field.type === 'tel' && <Phone size={18} />}
@@ -329,7 +279,7 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
                     }}
                 />
                 <select 
-                    className="bg-transparent text-[10px] font-bold text-slate-600 uppercase tracking-widest focus:outline-none"
+                    className="bg-transparent text-[10px] font-bold text-slate-800 uppercase tracking-widest focus:outline-none"
                     value={field.type}
                     onChange={e => {
                         const newFields = [...config.registrationForm];
@@ -354,7 +304,7 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
                             newFields[idx].required = !newFields[idx].required;
                             updateConfig('registrationForm', newFields);
                         }}
-                        className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${field.required ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                        className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${field.required ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-800'}`}
                     >
                         {field.required ? 'Required' : 'Optional'}
                     </button>
@@ -392,6 +342,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     const { showToast } = useToast();
     const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
+    const [showLocationModal, setShowLocationModal] = useState(false);
     
     // Default dynamic config structure
     const [config, setConfig] = useState(() => {
@@ -442,6 +393,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 isPublic: true,
                 isDraft: false
             },
+            faqs: base.faqs || [
+                { question: "Is parking available?", answer: "Yes, free parking is available at the venue." }
+            ],
+            terms: base.terms || "1. Tickets are non-refundable.\n2. Please carry a valid ID proof.\n3. Masks are mandatory.",
             country: base.country || "India",
             countryCode: base.countryCode || "IN",
             state: base.state || "",
@@ -453,7 +408,11 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     });
 
     useEffect(() => {
-        // Auto-detect location on mount with a small delay for browser readiness
+        // Auto-detect location on mount ONLY if this is a new event (not editing)
+        // and we don't have coordinates set yet.
+        const hasStoredLocation = postEvent.latitude && postEvent.longitude;
+        if (isEditing || hasStoredLocation) return;
+
         const timer = setTimeout(() => {
             if (typeof window !== "undefined" && navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -495,6 +454,85 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         return () => clearTimeout(timer);
     }, []);
 
+    const [dbDistricts, setDbDistricts] = useState([]);
+    const [dbCities, setDbCities] = useState([]);
+    const [distLoading, setDistLoading] = useState(false);
+    const [cityLoading, setCityLoading] = useState(false);
+
+    // Fetch Districts when State changes
+    useEffect(() => {
+        const fetchDistricts = async () => {
+            if (!config.state || config.country !== "India") {
+                setDbDistricts([]);
+                return;
+            }
+            setDistLoading(true);
+            try {
+                const { data: stateData } = await supabase
+                    .from('states')
+                    .select('id')
+                    .eq('name', config.state)
+                    .maybeSingle();
+
+                if (stateData) {
+                    const { data: dists } = await supabase
+                        .from('districts')
+                        .select('name')
+                        .eq('state_id', stateData.id)
+                        .order('name');
+                    setDbDistricts(dists?.map(d => d.name) || []);
+                } else {
+                    setDbDistricts([]);
+                }
+            } catch (err) {
+                console.error("Fetch districts error:", err);
+            } finally {
+                setDistLoading(false);
+            }
+        };
+        fetchDistricts();
+    }, [config.state, config.country]);
+
+    // Fetch Cities when District changes
+    useEffect(() => {
+        const fetchCities = async () => {
+            if (!config.district || config.country !== "India") {
+                setDbCities([]);
+                return;
+            }
+            setCityLoading(true);
+            try {
+                const { data: distData } = await supabase
+                    .from('districts')
+                    .select('id')
+                    .eq('name', config.district)
+                    .maybeSingle();
+
+                if (distData) {
+                    const { data: cts } = await supabase
+                        .from('cities')
+                        .select('name')
+                        .eq('district_id', distData.id)
+                        .order('name');
+                    
+                    if (cts && cts.length > 0) {
+                        setDbCities(cts.map(c => c.name));
+                    } else {
+                        // If no cities for this district, check if there's a catch-all "District"
+                        setDbCities([]);
+                    }
+                } else {
+                    setDbCities([]);
+                }
+            } catch (err) {
+                console.error("Fetch cities error:", err);
+            } finally {
+                setCityLoading(false);
+            }
+        };
+        fetchCities();
+    }, [config.district, config.country]);
+
     useEffect(() => {
         // Ensure basicInfo has regStart/regEnd defaults if missing
         if (config.basicInfo && (config.basicInfo.regStart === undefined || config.basicInfo.regEnd === undefined || config.basicInfo.expiryDate === undefined)) {
@@ -512,13 +550,22 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         setPostEvent(prev => ({ 
             ...prev, 
             dynamic_config: config,
-            latitude: config.location?.coordinates?.lat,
-            longitude: config.location?.coordinates?.lng,
-            endDate: config.basicInfo?.endDate,
-            endTime: config.basicInfo?.endTime,
-            expiryDate: config.basicInfo?.expiryDate,
+            city: config.city || config.location?.city || prev.city,
+            price: config.price !== undefined ? config.price : prev.price,
+            country: config.country || prev.country,
+            state: config.state || prev.state,
+            district: config.district || prev.district,
+            venue: config.location?.venueName || prev.venue,
+            address: config.location?.address || prev.address,
+            location: config.location?.address || prev.location,
+            zipCode: config.zipCode || config.location?.pincode || prev.zipCode,
+            latitude: config.location?.coordinates?.lat || prev.latitude,
+            longitude: config.location?.coordinates?.lng || prev.longitude,
+            endDate: config.basicInfo?.endDate || prev.endDate,
+            endTime: config.basicInfo?.endTime || prev.endTime,
+            expiryDate: config.basicInfo?.expiryDate || prev.expiryDate,
             type: "Dynamic",
-            category: "Event"
+            category: prev.category || "Event"
         }));
     }, [config]);
 
@@ -551,11 +598,11 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all  border-2 ${
                                 currentStep >= s.id 
                                 ? 'bg-[#ec4899] border-[#ec4899] text-white shadow-xl shadow-pink-200' 
-                                : 'bg-white border-slate-100 text-slate-500'
+                                : 'bg-white border-slate-100 text-slate-800'
                             }`}>
                                 <s.icon size={22} />
                             </div>
-                            <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-[#ec4899]' : 'text-slate-600'}`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-[#ec4899]' : 'text-slate-800'}`}>
                                 {s.title}
                             </span>
                         </div>
@@ -575,7 +622,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Event Identity</h2>
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Main details and core presentation</p>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Main details and core presentation</p>
                         </div>
                     </div>
 
@@ -603,8 +650,8 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     </>
                                 ) : (
                                     <label className="cursor-pointer flex flex-col items-center gap-2">
-                                        <Camera size={24} className="text-slate-500" />
-                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Upload Banner</span>
+                                        <Camera size={24} className="text-slate-800" />
+                                        <span className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Upload Banner</span>
                                         <input type="file" className="hidden" onChange={(e) => {
                                             const f = e.target.files[0];
                                             if(f) {
@@ -657,14 +704,48 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             {currentStep === 2 && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
                     <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
-                            <MapPin size={24} />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue & Map</h2>
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Where will the magic happen?</p>
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Venue & Map</h2>
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Where will the magic happen?</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowLocationModal(true)}
+                                className="flex items-center gap-2 px-6 py-3 bg-pink-50 text-pink-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-pink-600 hover:text-white transition-all shadow-sm border border-pink-100 self-start md:self-auto group"
+                            >
+                                <Search size={14} className="group-hover:scale-125 transition-transform" />
+                                Search Global Location
+                            </button>
                         </div>
                     </div>
+
+                    <LocationSelectionModal 
+                        isOpen={showLocationModal}
+                        onClose={() => setShowLocationModal(false)}
+                        selectedCity={config.city}
+                        updateCity={(cityName, details) => {
+                            if (details) {
+                                setConfig(prev => ({
+                                    ...prev,
+                                    country: details.country || prev.country,
+                                    state: details.state || prev.state,
+                                    city: details.city || cityName,
+                                    zipCode: details.pincode || details.zipCode || prev.zipCode,
+                                    location: {
+                                        ...prev.location,
+                                        address: details.address || details.fullAddress || prev.location.address,
+                                        city: details.city || cityName,
+                                        pincode: details.pincode || details.zipCode || prev.location.pincode,
+                                        coordinates: {
+                                            lat: details.lat || prev.location.coordinates.lat,
+                                            lng: details.lng || prev.location.coordinates.lng
+                                        }
+                                    }
+                                }));
+                                showToast(`Location Updated: ${cityName}`, "success");
+                            }
+                        }}
+                    />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="md:col-span-2">
@@ -673,15 +754,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="md:col-span-2">
                             {renderInput("Full Address", config.location.address, (v) => updateConfig('location', { ...config.location, address: v }), "text", "Building, Street, Area")}
                         </div>
-                                    <LocationSelect 
+                                    <CustomSelect 
                                         label="Country"
                                         value={config.country}
                                         options={COUNTRIES}
                                         onChange={(v) => {
-                                            const countryData = COUNTRIES.find(c => c.label === v);
+                                            const countryData = COUNTRIES.find(c => (c.label || c) === v);
                                             const code = countryData?.code || "IN";
                                             
-                                            // Approximate center for countries
                                             const centers = {
                                                 "IN": { lat: 20.5937, lng: 78.9629 },
                                                 "AE": { lat: 23.4241, lng: 53.8478 },
@@ -709,10 +789,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             }));
                                         }}
                                     />
-                                    <LocationSelect 
+                                    <CustomSelect 
                                         label="State / Province"
                                         value={config.state}
-                                        options={State.getStatesOfCountry(config.countryCode)}
+                                        options={State.getStatesOfCountry(config.countryCode).map(s => s.name)}
                                         onChange={(v) => {
                                             const stateObj = State.getStatesOfCountry(config.countryCode).find(s => s.name === v);
                                             setConfig(prev => ({
@@ -728,10 +808,11 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     />
                                     {config.country === "India" ? (
                                         <>
-                                            <LocationSelect 
+                                            <CustomSelect 
                                                 label="District"
                                                 value={config.district}
-                                                options={getIndianDistricts(config.state)}
+                                                options={dbDistricts.length > 0 ? dbDistricts : getIndianDistricts(config.state)}
+                                                isLoading={distLoading}
                                                 onChange={(v) => setConfig(prev => ({
                                                     ...prev,
                                                     district: v,
@@ -740,29 +821,58 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                                     location: { ...prev.location, city: "" }
                                                 }))}
                                             />
-                                            <LocationSelect 
+                                            <CustomSelect 
                                                 label="City"
                                                 value={config.city}
-                                                options={getIndianCities(config.district)}
-                                                onChange={(v) => {
+                                                options={dbCities.length > 0 ? dbCities : getIndianCities(config.district)}
+                                                onChange={async (v) => {
                                                     setConfig(prev => ({
                                                         ...prev,
                                                         city: v,
                                                         location: { ...prev.location, city: v }
                                                     }));
+                                                    // Auto-geocode city to update map pin AGGRESSIVELY
+                                                    try {
+                                                        const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
+                                                        if (coords) {
+                                                            setConfig(prev => ({
+                                                                ...prev,
+                                                                location: { ...prev.location, coordinates: { lat: coords.lat, lng: coords.lng }}
+                                                            }));
+                                                            // Also push directly to postEvent state to be safe
+                                                            setPostEvent(prevPE => ({
+                                                                ...prevPE,
+                                                                city: v,
+                                                                latitude: coords.lat,
+                                                                longitude: coords.lng
+                                                            }));
+                                                        }
+                                                    } catch (err) { console.error("Geocoding city error:", err); }
                                                 }}
                                             />
                                         </>
                                     ) : (
-                                        <LocationSelect 
+                                        <CustomSelect 
                                             label="City"
                                             value={config.city}
-                                            options={City.getCitiesOfState(config.countryCode, config.stateCode)}
-                                            onChange={(v) => setConfig(prev => ({
-                                                ...prev,
-                                                city: v,
-                                                location: { ...prev.location, city: v }
-                                            }))}
+                                            options={City.getCitiesOfState(config.countryCode, config.stateCode).map(c => c.name)}
+                                            onChange={async (v) => {
+                                                setConfig(prev => ({
+                                                    ...prev,
+                                                    city: v,
+                                                    location: { ...prev.location, city: v }
+                                                }));
+                                                // Auto-geocode city to update map pin
+                                                try {
+                                                    const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
+                                                    if (coords) {
+                                                        setConfig(prev => ({
+                                                            ...prev,
+                                                            location: { ...prev.location, coordinates: { lat: coords.lat, lng: coords.lng }}
+                                                        }));
+                                                    }
+                                                } catch (err) { console.error("Geocoding city error:", err); }
+                                            }}
                                         />
                                     )}
 
@@ -772,7 +882,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             type="text"
                                             value={config.location.pincode || ""}
                                             onChange={(e) => updateConfig('location', { ...config.location, pincode: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-600"
+                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-800"
                                             placeholder="Auto-fills on City selection"
                                         />
                                     </div>
@@ -789,62 +899,27 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             </div>
                         )}
 
-                        <div className="md:col-span-2 space-y-4 pt-6 border-t border-slate-50">
-                            <div className="flex items-center justify-between">
-                                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Venue Location (Pin on Map)</label>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Auto-Detection Active</span>
+                        <div className="md:col-span-2 space-y-6 pt-6 border-t border-slate-50">
+                            <div className="flex items-center justify-between px-1">
+                                <div>
+                                    <label className="block text-sm font-black text-slate-900 uppercase tracking-tight">Exact Event Location</label>
+                                    <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mt-1">Drag the pin to your specific building or venue gate</p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">High Precision Active</span>
                                 </div>
                             </div>
                             
-                            {/* Address Search */}
-                            <div className="relative group">
-                                <input 
-                                    type="text"
-                                    placeholder="Search venue or address to center map..."
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-600"
-                                    onKeyDown={async (e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const query = e.target.value;
-                                            if (!query) return;
-                                            try {
-                                                const geo = await geocode(query, config.countryCode);
-                                                if (geo) {
-                                                    setConfig(prev => ({
-                                                        ...prev,
-                                                        country: geo.country || prev.country,
-                                                        countryCode: geo.countryCode || prev.countryCode,
-                                                        state: geo.state || prev.state,
-                                                        stateCode: geo.stateCode || prev.stateCode,
-                                                        district: geo.district || prev.district,
-                                                        city: geo.city || prev.city,
-                                                        zipCode: geo.pincode || prev.zipCode,
-                                                        location: { 
-                                                            ...prev.location, 
-                                                            address: geo.fullAddress,
-                                                            city: geo.city,
-                                                            pincode: geo.pincode,
-                                                            coordinates: { lat: geo.lat, lng: geo.lng }
-                                                        }
-                                                    }));
-                                                }
-                                            } catch (err) {
-                                                console.error("Geocoding error:", err);
-                                            }
-                                        }
-                                    }}
-                                />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-600 uppercase tracking-widest opacity-0 group-focus-within:opacity-100 transition-opacity">Press Enter to Search</div>
-                            </div>
-
-                            <div className="h-[350px] rounded-[2.5rem] overflow-hidden border-2 border-slate-100 shadow-2xl relative">
+                            <div className="h-[500px] rounded-[3rem] overflow-hidden border border-slate-200 shadow-2xl relative">
                                 <GoogleInlineMap 
                                     lat={config.location.coordinates.lat} 
                                     lng={config.location.coordinates.lng}
                                     onLocationSelect={async (lat, lng) => {
-                                        updateConfig('location', { ...config.location, coordinates: { lat, lng }});
+                                        setConfig(prev => ({
+                                            ...prev,
+                                            location: { ...prev.location, coordinates: { lat, lng }}
+                                        }));
                                         // Auto-Geocode on pin move
                                         try {
                                             const geocoded = await reverseGeocode(lat, lng);
@@ -877,7 +952,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                         <MapPin size={16} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-none mb-1">Current Selection</p>
+                                        <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest leading-none mb-1">Current Selection</p>
                                         <p className="text-[10px] font-bold text-slate-900 truncate">
                                             {config.location.coordinates.lat.toFixed(4)}, {config.location.coordinates.lng.toFixed(4)}
                                         </p>
@@ -885,12 +960,12 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     <div className="text-[8px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 px-2 py-1 rounded-md">Live</div>
                                 </div>
                             </div>
-                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest text-center italic">Pin location on map for automatic directions on the booking page.</p>
+                            <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest text-center italic">Pin location on map for automatic directions on the booking page.</p>
                         </div>
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
                         <button onClick={() => setCurrentStep(3)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Amenities <ArrowRight size={18} /></button>
                     </div>
                 </div>
@@ -905,7 +980,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Amenities & Benefits</h2>
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Select what's included for participants</p>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Select what's included for participants</p>
                         </div>
                     </div>
 
@@ -939,7 +1014,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 className={`flex flex-col items-center gap-4 p-6 rounded-[2.5rem] border transition-all ${
                                     config.amenities.includes(item.id)
                                     ? 'bg-[#ec4899] border-[#ec4899] text-white shadow-xl shadow-pink-200'
-                                    : 'bg-white border-slate-100 text-slate-600 hover:border-pink-200'
+                                    : 'bg-white border-slate-100 text-slate-800 hover:border-pink-200'
                                 }`}
                             >
                                 <item.icon size={24} />
@@ -949,7 +1024,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(2)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(2)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
                         <button onClick={() => setCurrentStep(4)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Ticket Categories <ArrowRight size={18} /></button>
                     </div>
                 </div>
@@ -965,7 +1040,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Categories</h2>
-                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Define your ticket types and pricing</p>
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Define your ticket types and pricing</p>
                             </div>
                         </div>
                         <button 
@@ -983,7 +1058,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(3)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(3)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
                         <button onClick={() => setCurrentStep(5)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Form Builder <ArrowRight size={18} /></button>
                     </div>
                 </div>
@@ -999,7 +1074,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Form Builder</h2>
-                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Customize participant registration fields</p>
+                                <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Customize participant registration fields</p>
                             </div>
                         </div>
                         <button 
@@ -1011,7 +1086,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-6">
-                        <span className="w-full text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Quick Add Fields:</span>
+                        <span className="w-full text-[10px] font-black text-slate-800 uppercase tracking-widest mb-2">Quick Add Fields:</span>
                         {[
                             { label: "Blood Group", type: "select", options: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] },
                             { label: "T-Shirt Size", type: "select", options: ["S", "M", "L", "XL", "XXL"] },
@@ -1036,7 +1111,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(4)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
                         <button onClick={() => setCurrentStep(6)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Pricing & Rules <ArrowRight size={18} /></button>
                     </div>
                 </div>
@@ -1051,7 +1126,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
                         <div>
                             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Pricing & Rules</h2>
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Fees, deadlines, and logic</p>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Fees, deadlines, and logic</p>
                         </div>
                     </div>
 
@@ -1065,10 +1140,10 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Admin Special Status</h3>
-                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Highlight this event on the platform</p>
+                                        <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest">Highlight this event on the platform</p>
                                     </div>
                                 </div>
-                                {!isAdmin && <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-600 uppercase">Admin Only</div>}
+                                {!isAdmin && <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-800 uppercase">Admin Only</div>}
                             </div>
 
                             {isAdmin && (
@@ -1080,7 +1155,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Exclusive Event</p>
-                                                <p className="text-[8px] font-bold text-slate-600 uppercase">Premium Badge</p>
+                                                <p className="text-[8px] font-bold text-slate-800 uppercase">Premium Badge</p>
                                             </div>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
@@ -1101,7 +1176,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Spotlight</p>
-                                                <p className="text-[8px] font-bold text-slate-600 uppercase">Top of Feed</p>
+                                                <p className="text-[8px] font-bold text-slate-800 uppercase">Top of Feed</p>
                                             </div>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
@@ -1118,85 +1193,6 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                             )}
                         </div>
 
-                        {/* 💰 Event-Specific Fee Overrides */}
-                        <div className="md:col-span-2 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-inner">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
-                                        <Wallet size={20} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Fee Overrides</h3>
-                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{isAdmin ? 'Custom Platform Fees for this event' : 'Platform Controlled'}</p>
-                                    </div>
-                                </div>
-                                {isAdmin ? (
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            className="sr-only peer"
-                                            checked={postEvent.fee_config?.override_global || false}
-                                            onChange={e => setPostEvent({ 
-                                                ...postEvent, 
-                                                fee_config: { 
-                                                    ...(postEvent.fee_config || {}), 
-                                                    override_global: e.target.checked 
-                                                } 
-                                            })}
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
-                                    </label>
-                                ) : (
-                                    <div className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-bold text-slate-600 uppercase">Admin Only</div>
-                                )}
-                            </div>
-
-                            {isAdmin && postEvent.fee_config?.override_global && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50">
-                                    <div className="space-y-2">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Fee Type</label>
-                                        <select 
-                                            value={postEvent.fee_config?.fee_type || 'percentage'}
-                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, fee_type: e.target.value } })}
-                                            className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
-                                        >
-                                            <option value="percentage">Percentage (%)</option>
-                                            <option value="fixed">Fixed Amount (₹)</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Fee Value</label>
-                                        <input 
-                                            type="number"
-                                            value={postEvent.fee_config?.fee_value || 0}
-                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, fee_value: Number(e.target.value) } })}
-                                            className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 pt-2">
-                                        <input 
-                                            type="checkbox" 
-                                            id="apply_gst_event"
-                                            checked={postEvent.fee_config?.apply_gst || false}
-                                            onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, apply_gst: e.target.checked } })}
-                                            className="w-5 h-5 rounded-lg border-slate-200 text-pink-500 focus:ring-pink-500/20"
-                                        />
-                                        <label htmlFor="apply_gst_event" className="text-xs font-bold text-slate-700 uppercase tracking-widest cursor-pointer">Apply GST on Fees</label>
-                                    </div>
-                                    {postEvent.fee_config?.apply_gst && (
-                                        <div className="space-y-2">
-                                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">GST Percentage (%)</label>
-                                            <input 
-                                                type="number"
-                                                value={postEvent.fee_config?.gst_percent || 18}
-                                                onChange={e => setPostEvent({ ...postEvent, fee_config: { ...postEvent.fee_config, gst_percent: Number(e.target.value) } })}
-                                                className="w-full bg-white border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-sm transition-all"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
                         <div className="md:col-span-2 py-6 border-y border-slate-50 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -1224,14 +1220,95 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10 flex justify-between">
-                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(7)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(5)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(7)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Content & FAQs <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 7: Final Review & Publish */}
+            {/* Step 7: FAQs & Terms */}
             {currentStep === 7 && (
+                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <HelpCircle size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Content & FAQs</h2>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Add helpful information and event rules</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-8">
+                        {/* FAQs Section */}
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Frequently Asked Questions</h3>
+                                <button 
+                                    onClick={() => updateConfig('faqs', [...config.faqs, { question: "", answer: "" }])}
+                                    className="px-4 py-2 bg-pink-50 text-pink-500 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    + Add FAQ
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {config.faqs.map((faq, idx) => (
+                                    <div key={idx} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 relative group">
+                                        <button 
+                                            onClick={() => updateConfig('faqs', config.faqs.filter((_, i) => i !== idx))}
+                                            className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                        <div className="space-y-4">
+                                            <input 
+                                                className="w-full bg-transparent border-none text-sm font-black text-slate-900 placeholder:text-slate-700 focus:ring-0 p-0"
+                                                placeholder="Question (e.g. Is food provided?)"
+                                                value={faq.question}
+                                                onChange={e => {
+                                                    const next = [...config.faqs];
+                                                    next[idx].question = e.target.value;
+                                                    updateConfig('faqs', next);
+                                                }}
+                                            />
+                                            <textarea 
+                                                className="w-full bg-transparent border-none text-xs font-bold text-slate-800 placeholder:text-slate-700 focus:ring-0 p-0 resize-none"
+                                                placeholder="Answer (e.g. Yes, breakfast will be served at 8 AM)"
+                                                rows={2}
+                                                value={faq.answer}
+                                                onChange={e => {
+                                                    const next = [...config.faqs];
+                                                    next[idx].answer = e.target.value;
+                                                    updateConfig('faqs', next);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Terms Section */}
+                        <div className="space-y-4 pt-8 border-t border-slate-50">
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Terms & Conditions</h3>
+                            <textarea 
+                                className="w-full bg-slate-50 border border-slate-200 text-sm font-black text-slate-900 p-6 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all resize-none min-h-[150px] placeholder:text-slate-700"
+                                placeholder="Enter event rules, refund policies, and safety instructions..."
+                                value={config.terms}
+                                onChange={e => updateConfig('terms', e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(6)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(8)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 8: Final Review & Publish */}
+            {currentStep === 8 && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10    text-center">
                     <div className="flex flex-col items-center gap-6 py-10">
                         <div className="w-24 h-24 rounded-[3rem] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-100 ">
@@ -1239,13 +1316,13 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Ready to Go!</h2>
-                            <p className="text-[11px] font-bold text-slate-600 uppercase tracking-[0.2em] mt-2">Your dynamic event is fully configured</p>
+                            <p className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em] mt-2">Your dynamic event is fully configured</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                         <div className="p-8 bg-slate-50 rounded-[3rem] border border-slate-100 text-left space-y-4">
-                            <h4 className="text-[10px] font-bold text-slate-600 uppercase tracking-widest italic">Summary</h4>
+                            <h4 className="text-[10px] font-bold text-slate-800 uppercase tracking-widest italic">Summary</h4>
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs font-bold text-slate-700"><span>Title</span> <span className="text-slate-900">{postEvent.title || "Untitled"}</span></div>
                                 <div className="flex justify-between text-xs font-bold text-slate-700"><span>Categories</span> <span className="text-slate-900">{config.categories.length} Types</span></div>
@@ -1257,7 +1334,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="flex flex-col gap-4 justify-center">
                             <button 
                                 onClick={() => updateConfig('publish', { ...config.publish, isPublic: !config.publish.isPublic })}
-                                className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all ${config.publish.isPublic ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-600'}`}
+                                className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all ${config.publish.isPublic ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-800'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     {config.publish.isPublic ? <Globe size={20} /> : <Lock size={20} />}
@@ -1278,7 +1355,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     </div>
 
                     <div className="pt-10">
-                        <button onClick={() => setCurrentStep(6)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2 mx-auto"><ArrowLeft size={16} /> Back to Pricing</button>
+                        <button onClick={() => setCurrentStep(7)} className="px-10 py-4 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2 mx-auto"><ArrowLeft size={16} /> Back to Content</button>
                     </div>
                 </div>
             )}

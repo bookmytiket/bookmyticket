@@ -150,7 +150,7 @@ export default function EventBookClient({ id }) {
     const totalSeatPrice = selectedSeats.reduce((s, seat) => s + (seat.isFree ? 0 : seat.price), 0);
     const ticketPrice = isSeating
         ? (selectedSeats.length > 0 ? totalSeatPrice : 0)
-        : (event?.price ?? 499);
+        : (event?.dynamic_config?.price || event?.price || 499);
     const currentPrice = selectedPackage ? selectedPackage.price : ticketPrice;
     const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
     const { convenienceFee, gst, total } = getFeeBreakdown(baseAmount, feeSettings);
@@ -230,7 +230,7 @@ export default function EventBookClient({ id }) {
                 </div>
             </div>
 
-            <div className="max-w-[1400px] mx-auto px-6 py-12">
+            <div className="max-w-[950px] mx-auto px-4 md:px-6 py-4">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     
                     {/* Left Column: Selection Flow */}
@@ -445,9 +445,9 @@ export default function EventBookClient({ id }) {
                                                 
                                                 <button 
                                                     onClick={handleContinue}
-                                                    className="w-full md:w-auto px-16 py-6 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-3"
+                                                    className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2"
                                                 >
-                                                    Secure Booking <ArrowRight size={20} />
+                                                    Secure Booking <ArrowRight size={16} />
                                                 </button>
                                             </motion.div>
                                         )}
@@ -537,7 +537,7 @@ export default function EventBookClient({ id }) {
                                             onClick={handleContinue}
                                             disabled={selectedSeats.length === 0}
                                             className={`
-                                                w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[13px] transition-all shadow-xl
+                                                w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-lg
                                                 ${selectedSeats.length > 0 
                                                     ? 'bg-slate-900 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95' 
                                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}

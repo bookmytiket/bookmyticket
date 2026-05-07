@@ -49,16 +49,33 @@ const AMENITY_ICONS = {
 export default function DynamicEventClient({ event }) {
     const { user } = useAuth();
     const router = useRouter();
-    const config = event.dynamic_config || {};
+    const config = useMemo(() => {
+        if (!event.dynamic_config) return {};
+        try {
+            return typeof event.dynamic_config === 'string' ? JSON.parse(event.dynamic_config) : event.dynamic_config;
+        } catch (e) {
+            console.error("Failed to parse dynamic_config:", e);
+            return {};
+        }
+    }, [event.dynamic_config]);
     
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedAgeRate, setSelectedAgeRate] = useState(null);
+    const [selectedKM, setSelectedKM] = useState(null);
     const [isAgeDropdownOpen, setIsAgeDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({});
     const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
     const [notification, setNotification] = useState(null);
 
-    // Toast Timer
+    // Initialize selected KM if marathon categories exist
+    useEffect(() => {
+        if (config?.marathonCategories?.length > 0 && !selectedKM) {
+            const kms = [...new Set(config.marathonCategories.map(c => c.distance_km))].sort((a, b) => a - b);
+            if (kms.length > 0) setSelectedKM(kms[0]);
+        }
+    }, [config?.marathonCategories, selectedKM]);
+
+    // Handle timer
     useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => setNotification(null), 4000);
@@ -66,16 +83,33 @@ export default function DynamicEventClient({ event }) {
         }
     }, [notification]);
 
+    const registrationDeadline = useMemo(() => {
+        if (config.registrationEnd) return new Date(config.registrationEnd).getTime();
+        if (config.countdown?.deadline) return new Date(config.countdown.deadline).getTime();
+        if (event.expiry_date) return new Date(event.expiry_date).getTime();
+        // Fallback to event date if no specific registration end is set
+        if (event.date) {
+            const d = new Date(event.date);
+            d.setHours(23, 59, 59);
+            return d.getTime();
+        }
+        return null;
+    }, [config.registrationEnd, config.countdown?.deadline, event.expiry_date, event.date]);
+
+    const isRegistrationClosed = useMemo(() => {
+        if (!registrationDeadline) return false;
+        return new Date().getTime() > registrationDeadline;
+    }, [registrationDeadline]);
+
+    // Handle timer
     useEffect(() => {
-        if (!config.countdown?.enabled || !config.countdown?.deadline) return;
+        if (!registrationDeadline || isRegistrationClosed) return;
         
-        const timer = setInterval(() => {
+        const updateTimer = () => {
             const now = new Date().getTime();
-            const deadline = new Date(config.countdown.deadline).getTime();
-            const diff = deadline - now;
+            const diff = registrationDeadline - now;
             
             if (diff <= 0) {
-                clearInterval(timer);
                 setTimeLeft({ days: 0, hrs: 0, min: 0, sec: 0 });
             } else {
                 setTimeLeft({
@@ -85,10 +119,12 @@ export default function DynamicEventClient({ event }) {
                     sec: Math.floor((diff % (1000 * 60)) / 1000)
                 });
             }
-        }, 1000);
-        
+        };
+
+        updateTimer();
+        const timer = setInterval(updateTimer, 1000);
         return () => clearInterval(timer);
-    }, [config.countdown]);
+    }, [registrationDeadline, isRegistrationClosed]);
 
     const { data: feeSettingsRaw } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
     const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
@@ -123,13 +159,14 @@ export default function DynamicEventClient({ event }) {
         if (selectedAgeRate) return selectedAgeRate.price;
 
         // Priority 2: Automatically calculate based on 'Age' field if it exists
-        const ageField = (config.registrationForm || []).find(f => 
-            f.label.toLowerCase().includes('age') || 
-            f.label.toLowerCase().includes('year')
-        );
+        const ageField = (config.registrationForm || []).find(f => {
+            if (!f || !f.label) return false;
+            const l = String(f.label).toLowerCase();
+            return l.includes('age') || l.includes('year');
+        });
 
         if (normalizedAgeRates.length > 0) {
-            if (ageField && formData[ageField.label]) {
+            if (ageField && ageField.label && formData[ageField.label]) {
                 const age = parseInt(formData[ageField.label]);
                 if (!isNaN(age)) {
                     const rate = normalizedAgeRates.find(r => age >= r.min && age <= r.max);
@@ -137,7 +174,8 @@ export default function DynamicEventClient({ event }) {
                 }
             }
             // Fallback: Minimum price from age rates
-            return Math.min(...normalizedAgeRates.map(r => r.price));
+            const validPrices = normalizedAgeRates.map(r => r.price).filter(p => !isNaN(p));
+            return validPrices.length > 0 ? Math.min(...validPrices) : 0;
         }
         
         return selectedCategory.price || 0;
@@ -151,7 +189,8 @@ export default function DynamicEventClient({ event }) {
     const uniqueFormFields = useMemo(() => {
         const seen = new Set();
         return (config.registrationForm || []).filter(field => {
-            const label = field.label.toLowerCase();
+            if (!field || !field.label) return false;
+            const label = String(field.label).toLowerCase();
             let key = label;
             if (label.includes('email')) key = 'email';
             if (label.includes('phone') || label.includes('mobile') || label.includes('whatsapp')) key = 'phone';
@@ -217,7 +256,7 @@ export default function DynamicEventClient({ event }) {
                 )}
             </AnimatePresence>
 
-            <div className="max-w-[1100px] mx-auto px-4 pt-6">
+            <div className="max-w-[850px] mx-auto px-4 pt-2">
                 
                 {/* Back Button & Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -243,11 +282,11 @@ export default function DynamicEventClient({ event }) {
                 </div>
 
                 {/* HERO BANNER */}
-                <div className="relative w-full h-[300px] md:h-[380px] rounded-[3rem] overflow-hidden shadow-2xl mb-8">
+                <div className="relative w-full h-[200px] md:h-[260px] rounded-[2.5rem] overflow-hidden shadow-lg mb-6">
                     <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-10 left-10 right-10 z-10">
-                        <h1 className="text-3xl md:text-5xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">
+                        <h1 className="text-2xl md:text-3xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">
                             {event.title}
                         </h1>
                     </div>
@@ -290,15 +329,15 @@ export default function DynamicEventClient({ event }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     
                     {/* Left Column: Form Content */}
-                    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-4">
                         <motion.div 
                             initial={{ clipPath: 'inset(0 100% 0 0)' }}
                             animate={{ clipPath: 'inset(0 0% 0 0)' }}
                             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                            className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-8 space-y-6 relative overflow-hidden"
+                            className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5 md:p-6 space-y-4 relative overflow-hidden"
                         >
                             {/* Animated Background Shimmer for Masking effect */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer pointer-events-none" />
@@ -311,14 +350,14 @@ export default function DynamicEventClient({ event }) {
                                 >
                                     Registration
                                 </motion.h2>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Participant Details</p>
+                                <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.2em]">Participant Details</p>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {uniqueFormFields.map((field, idx) => (
                                         <div key={idx} className="space-y-1">
-                                            <label className="text-[8px] font-black text-[#8b5cf6] uppercase tracking-tight ml-1">
+                                            <label className="text-[8px] font-black text-slate-900 uppercase tracking-tight ml-1">
                                                 {field.label} {field.required && <span className="text-rose-500">*</span>}
                                             </label>
                                             {field.type === 'select' ? (
@@ -343,39 +382,42 @@ export default function DynamicEventClient({ event }) {
                                 </div>
 
                                 <div className="space-y-6 pt-8 border-t border-slate-50">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {(config.categories || []).map((cat, idx) => {
-                                            const isSelected = selectedCategory?.id === cat.id;
-                                            
-                                            // Local normalization for display
-                                            const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || config.ageRates || config.agePricing || [];
-                                            const ageRates = (Array.isArray(rawRates) ? rawRates : []).map(r => ({
-                                                min: parseInt(r.min || r.minAge || 0),
-                                                max: parseInt(r.max || r.maxAge || 999),
-                                                price: parseFloat(r.price || 0)
-                                            }));
-                                            
-                                            const hasAgeRates = ageRates.length > 0;
-                                            
-                                            let priceDisplay = "";
-                                            if (isSelected) {
-                                                priceDisplay = `₹${calculatedPrice}`;
-                                            } else if (hasAgeRates) {
-                                                const min = Math.min(...ageRates.map(r => r.price));
-                                                const max = Math.max(...ageRates.map(r => r.price));
-                                                priceDisplay = min === max ? `₹${min}` : `₹${min} - ₹${max}`;
-                                            } else {
-                                                priceDisplay = cat.price > 0 ? `₹${cat.price}` : "Free";
-                                            }
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</h4>
+                                        {config.marathonCategories?.length > 0 && (
+                                            <div className="flex gap-2">
+                                                {[...new Set(config.marathonCategories.map(c => c.distance_km))].sort((a,b) => a-b).map(km => (
+                                                    <button 
+                                                        key={km}
+                                                        onClick={() => setSelectedKM(km)}
+                                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                                            selectedKM === km 
+                                                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
+                                                            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-900 hover:text-slate-900'
+                                                        }`}
+                                                    >
+                                                        {km} KM
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
 
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {(config.marathonCategories?.length > 0 
+                                            ? config.marathonCategories.filter(c => !selectedKM || c.distance_km === selectedKM)
+                                            : (config.categories || [])
+                                        ).map((cat, idx) => {
+                                            const isSelected = selectedCategory?.id === cat.id;
+                                            const priceDisplay = cat.price > 0 ? `₹${cat.price}` : "Free";
+                                            
                                             return (
                                                 <div 
                                                     key={idx}
                                                     onClick={() => {
-                                                        if (cat.totalSlots > 0) {
+                                                        if (cat.slots > 0 || cat.totalSlots > 0) {
                                                             setSelectedCategory(cat);
-                                                            setSelectedAgeRate(null); // Reset age selection when category changes
+                                                            setSelectedAgeRate(null);
                                                         }
                                                     }}
                                                     className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer relative group flex flex-col justify-between h-full ${
@@ -384,15 +426,17 @@ export default function DynamicEventClient({ event }) {
                                                         : 'bg-slate-50 border-slate-50 hover:border-pink-500'
                                                     }`}
                                                 >
-                                                    {(cat.img || cat.image) && (
-                                                        <div className="w-full h-24 rounded-2xl overflow-hidden mb-4">
-                                                            <img src={cat.img || cat.image} className="w-full h-full object-cover" alt={cat.name} />
-                                                        </div>
-                                                    )}
-                                                    
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="space-y-1">
-                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-[#fde047]' : 'text-slate-900'}`}>{cat.name}</h5>
+                                                            <div className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                                                                {cat.distance_km ? `${cat.distance_km}KM DISTANCE` : 'Category'}
+                                                            </div>
+                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.title || cat.name}</h5>
+                                                            {cat.min_age !== undefined && (
+                                                                <p className={`text-[9px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                                                                    Age: {cat.min_age} - {cat.max_age} Years
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="text-right">
                                                             <div className={`text-xl font-bold tracking-tight ${isSelected ? 'text-[#fde047]' : 'text-[#ec4899]'}`}>
@@ -401,17 +445,10 @@ export default function DynamicEventClient({ event }) {
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-2 mb-4">
-                                                        {(cat.prizes || config.prizes || []).slice(0, 3).map((p, pIdx) => (
-                                                            <div key={pIdx} className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                                                                <span className={isSelected ? 'text-white/90' : 'text-slate-500'}>{p.label || p.name}</span>
-                                                                <span className={isSelected ? 'text-[#fde047]' : 'text-slate-900'}>{p.value || p.amount}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
                                                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/20">
-                                                        <span className={`text-[11px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-slate-400'}`}>{cat.gender || 'All'} • {cat.totalSlots} Slots</span>
+                                                        <span className={`text-[11px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-slate-400'}`}>
+                                                            {cat.slots || cat.totalSlots} Slots Available
+                                                        </span>
                                                         {isSelected && <CheckCircle2 size={24} className="text-[#fde047]" />}
                                                     </div>
                                                 </div>
@@ -489,14 +526,20 @@ export default function DynamicEventClient({ event }) {
 
                                 <button 
                                     onClick={handleBooking}
-                                    disabled={!selectedCategory || (normalizedAgeRates.length > 0 && !selectedAgeRate)}
-                                    className={`w-full py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[13px] transition-all shadow-2xl flex items-center justify-center gap-4 ${
-                                        (selectedCategory && (normalizedAgeRates.length === 0 || selectedAgeRate))
+                                    disabled={isRegistrationClosed || !selectedCategory || (normalizedAgeRates.length > 0 && !selectedAgeRate)}
+                                    className={`w-full py-4 rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-xl flex items-center justify-center gap-3 ${
+                                        isRegistrationClosed
+                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        : (selectedCategory && (normalizedAgeRates.length === 0 || selectedAgeRate))
                                         ? 'bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] text-[#fde047] shadow-pink-300/50 hover:scale-[1.02] active:scale-95' 
                                         : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                                     }`}
                                 >
-                                    Review and Book <ArrowRight size={18} />
+                                    {isRegistrationClosed ? (
+                                        <>Registration Closed <Lock size={18} /></>
+                                    ) : (
+                                        <>Review and Book <ArrowRight size={18} /></>
+                                    )}
                                 </button>
 
                                 {/* Compact Registration Disclaimer */}
@@ -584,30 +627,44 @@ export default function DynamicEventClient({ event }) {
                         </div>
 
                         {/* Countdown Sidebar */}
-                        {config.countdown?.enabled && (
-                            <div className="bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] rounded-[40px] p-10 text-center space-y-6 shadow-2xl shadow-pink-200/50">
-                                <h4 className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em]">Registration Deadline</h4>
-                                <div className="flex items-center justify-center gap-6">
-                                    <div className="text-center">
-                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.days}</div>
-                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">DAYS</div>
-                                    </div>
-                                    <div className="w-px h-8 bg-white/20" />
-                                    <div className="text-center">
-                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.hrs}</div>
-                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">HRS</div>
-                                    </div>
-                                    <div className="w-px h-8 bg-white/20" />
-                                    <div className="text-center">
-                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.min}</div>
-                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">MIN</div>
-                                    </div>
-                                    <div className="w-px h-8 bg-white/20" />
-                                    <div className="text-center">
-                                        <div className="text-4xl font-black text-[#fde047] leading-none drop-shadow-md">{timeLeft.sec}</div>
-                                        <div className="text-[10px] font-black text-white/70 mt-1 uppercase tracking-widest">SEC</div>
-                                    </div>
+                        {registrationDeadline && (
+                            <div className={`rounded-[40px] p-8 text-center space-y-6 shadow-2xl transition-all ${
+                                isRegistrationClosed 
+                                ? 'bg-slate-900 shadow-slate-200' 
+                                : 'bg-gradient-to-br from-[#ec4899] to-[#8b5cf6] shadow-pink-200/50'
+                            }`}>
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full">
+                                    <Timer size={16} className={isRegistrationClosed ? 'text-slate-400' : 'text-[#fde047] animate-pulse'} />
+                                    <h4 className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">
+                                        {isRegistrationClosed ? "REGISTRATION CLOSED" : "REGISTRATION DEADLINE"}
+                                    </h4>
                                 </div>
+
+                                {!isRegistrationClosed ? (
+                                    <div className="flex items-center justify-between gap-1 px-2">
+                                        {[
+                                            { val: timeLeft.days, label: 'DAYS' },
+                                            { val: timeLeft.hrs, label: 'HRS' },
+                                            { val: timeLeft.min, label: 'MIN' },
+                                            { val: timeLeft.sec, label: 'SEC' }
+                                        ].map((unit, idx) => (
+                                            <React.Fragment key={idx}>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="text-2xl md:text-3xl font-black text-[#fde047] leading-none drop-shadow-sm">
+                                                        {String(unit.val).padStart(2, '0')}
+                                                    </div>
+                                                    <div className="text-[7px] font-black text-white/60 mt-2 uppercase tracking-tighter whitespace-nowrap">{unit.label}</div>
+                                                </div>
+                                                {idx < 3 && <div className="text-xl font-black text-white/20 pb-4">:</div>}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="text-3xl font-black text-white/40 uppercase tracking-tighter">Registration Closed</div>
+                                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Entry Limit or Deadline Reached</p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -630,13 +687,13 @@ export default function DynamicEventClient({ event }) {
                         </div>
 
                         {/* Event Map Section */}
-                        {config.location?.coordinates?.lat && config.location?.coordinates?.lng && (
+                        {(config.location?.coordinates?.lat || event.latitude) && (config.location?.coordinates?.lng || event.longitude) && (
                             <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-4">
                                 <EventMap 
-                                    lat={config.location.coordinates.lat}
-                                    lng={config.location.coordinates.lng}
-                                    venueName={config.location.venueName}
-                                    address={config.location.address}
+                                    lat={config.location?.coordinates?.lat || event.latitude}
+                                    lng={config.location?.coordinates?.lng || event.longitude}
+                                    venueName={config.location?.venueName || event.venue}
+                                    address={config.location?.address || event.location || event.address}
                                 />
                                 
                                 {(config.location.startingPoint || config.location.routeMapUrl) && (

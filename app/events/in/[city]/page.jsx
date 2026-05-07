@@ -66,6 +66,16 @@ export default async function CityEventsPage({ params }) {
   const activeEvents = (events || []).filter(ev => {
     const s = String(ev.status || '').toLowerCase();
     if (s === "inactive" || s === "expired" || s === "draft") return false;
+    
+    // Check if event belongs to this city (robust check)
+    const cityLower = city.toLowerCase();
+    const inTopLevel = ev.city?.toLowerCase().includes(cityLower) || 
+                       ev.location?.toLowerCase().includes(cityLower) || 
+                       ev.venue?.toLowerCase().includes(cityLower);
+    const inDynConfig = ev.dynamic_config?.location?.city?.toLowerCase() === cityLower;
+    
+    if (!inTopLevel && !inDynConfig) return false;
+
     const eventDate = parseEventDate(ev.date, ev.time);
     return !eventDate || eventDate >= new Date();
   });

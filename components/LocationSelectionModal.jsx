@@ -165,12 +165,22 @@ export default function LocationSelectionModal({
   const combinedResults = useMemo(() => {
     if (!search) return [];
     
-    // DB matches - Filter strictly by selected country
+    // DB matches
     const dbMatches = allCities
         .filter(c => {
             const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-            const matchesCountry = c.full.toLowerCase().includes(selectedCountry.toLowerCase());
-            return matchesSearch && matchesCountry;
+            
+            // If a country is selected, optionally filter by it if the full address contains it
+            // But don't be too strict if the joining failed
+            const countryFilter = selectedCountry.toLowerCase();
+            const hasCountryInfo = c.full.toLowerCase().includes('india') || c.full.toLowerCase().includes('uae') || c.full.toLowerCase().includes('united states');
+            
+            if (hasCountryInfo) {
+                return matchesSearch && c.full.toLowerCase().includes(countryFilter);
+            }
+            
+            // Fallback: if no country info in string, just match search
+            return matchesSearch;
         })
         .map(c => ({ ...c, type: 'database' }));
 

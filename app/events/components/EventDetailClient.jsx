@@ -3,13 +3,12 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { 
     Calendar, MapPin, Clock, Users, Languages, Share2, Heart, 
     CheckCircle, ShieldCheck, Warehouse, Info, Sparkles, ChevronRight,
-    ArrowRight, CheckCircle2, InfoIcon
+    ArrowRight, CheckCircle2, InfoIcon, ArrowLeft, Phone, MessageCircle, ChevronDown, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
-import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EventMap from './EventMap';
 
@@ -29,19 +28,16 @@ const DEFAULT_REFUND = [
 
 function parseEventDate(dateStr, timeStr) {
     try {
-        // Use the actual event date/time, NOT expiry_date
         let dt = dateStr;
         let t = timeStr || '23:59';
         if (!dt) return null;
         dt = String(dt).trim();
         t = String(t).trim();
-        // Handle 'YYYY-MM-DD HH:MM' combined format
         if (dt.includes(' ') && !dt.includes('T')) {
             const parts = dt.split(' ');
             dt = parts[0];
             if (!t || t === '23:59') t = parts[1] || '23:59';
         }
-        // Handle DD/MM/YYYY or DD-MM-YYYY
         if (dt.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
             const separator = dt.includes('/') ? '/' : '-';
             const parts = dt.split(separator);
@@ -69,7 +65,6 @@ export default function EventDetailClient({ id }) {
     const router = useRouter();
     const { user } = useAuth();
     const [storageLoaded, setStorageLoaded] = useState(false);
-
     useEffect(() => { setStorageLoaded(true); }, []);
 
     const { data: rawEvent, loading: eventLoading } = useSupabaseQuery('events', (q) => 
@@ -84,10 +79,10 @@ export default function EventDetailClient({ id }) {
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
-        
-        const location = rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue';
-        const city = rawEvent.city || (location && location.split(',')[0]?.trim()) || '—';
-        const venue = rawEvent.venue || rawEvent.location || location;
+        const dynLoc = rawEvent.dynamic_config?.location;
+        const location = dynLoc?.address || rawEvent.location || rawEvent.venue || rawEvent.address || 'Venue';
+        const city = rawEvent.city || dynLoc?.city || (location && location.split(',')[0]?.trim()) || '—';
+        const venue = dynLoc?.venueName || rawEvent.venue || rawEvent.location || location;
         
         return {
             ...rawEvent,
@@ -98,10 +93,11 @@ export default function EventDetailClient({ id }) {
             time: rawEvent.time || '',
             location,
             venue,
-            city: rawEvent.city || city,
+            city,
+            price: rawEvent.price ?? 0,
             category: rawEvent.category || 'Event',
-            ageLimit: rawEvent.ageLimit || 'All ages',
-            language: rawEvent.language || 'English',
+            amenities: rawEvent.dynamic_config?.amenities || DEFAULT_FEATURES,
+            isFree: Number(rawEvent.price) === 0,
             description: rawEvent.description || 'Join us for this event. Book your tickets now.',
             features: Array.isArray(rawEvent.features) && rawEvent.features.length > 0 ? rawEvent.features : DEFAULT_FEATURES,
             refundPolicy: Array.isArray(rawEvent.refundPolicy) && rawEvent.refundPolicy.length > 0 ? rawEvent.refundPolicy : DEFAULT_REFUND,
@@ -111,6 +107,9 @@ export default function EventDetailClient({ id }) {
             dynamic_config: typeof rawEvent.dynamic_config === 'string' ? JSON.parse(rawEvent.dynamic_config) : (rawEvent.dynamic_config || {})
         };
     }, [rawEvent]);
+
+    const eventDate = parseEventDate(event?.date, event?.time);
+    const isExpired = eventDate ? eventDate < new Date() : false;
 
     useEffect(() => {
         if (!event || typeof window === 'undefined' || isExpired) return;
@@ -124,6 +123,41 @@ export default function EventDetailClient({ id }) {
             localStorage.setItem(key, JSON.stringify(next));
         } catch (_) { }
     }, [event, isExpired]);
+
+    const [selectedCatId, setSelectedCatId] = useState(null);
+
+    const parsedConfig = useMemo(() => {
+        if (!event?.dynamic_config) return {};
+        try {
+            return typeof event.dynamic_config === 'string' 
+                ? JSON.parse(event.dynamic_config) 
+                : event.dynamic_config;
+        } catch (e) {
+            console.error("Config parse error:", e);
+            return {};
+        }
+    }, [event?.dynamic_config]);
+
+    const categories = parsedConfig?.categories || [];
+    const selectedCat = useMemo(() => {
+        if (categories.length === 0) return null;
+        return categories.find(c => c.id === selectedCatId) || categories[0];
+    }, [categories, selectedCatId]);
+
+    const { data: feeSettingsRaw } = useSupabaseQuery('fee_settings', (q) => q.limit(1).maybeSingle(), []);
+    const feeSettingsSystem = feeSettingsRaw || DEFAULT_FEE_SETTINGS;
+    const organiserId = event?.organiser_id || event?.organiserId;
+    const { data: organiserData } = useSupabaseQuery('profiles', (q) => q.eq('id', organiserId).single(), [organiserId], { enabled: !!organiserId });
+
+    const feeSettings = useMemo(() => {
+        return resolveFeeSettings(feeSettingsSystem, organiserData, event?.fee_config);
+    }, [feeSettingsSystem, organiserData, event?.fee_config]);
+
+    const displayPrice = selectedCat ? selectedCat.price : (parsedConfig?.price || event?.price || 0);
+    
+    const fees = useMemo(() => {
+        return getFeeBreakdown(displayPrice, feeSettings);
+    }, [displayPrice, feeSettings]);
 
     if (eventLoading || !storageLoaded) {
         return (
@@ -149,38 +183,27 @@ export default function EventDetailClient({ id }) {
         );
     }
 
-    const eventDate = parseEventDate(event.rawDate || event.date, event.rawTime || event.time);
-    // Only mark as expired if date is clearly in the past; future-dated events always show booking
-    const isExpired = eventDate ? eventDate < new Date() : false;
-
-    if (isExpired) {
-        return (
-            <main className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-100">
-                    <Clock size={40} />
-                </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">Event Expired</h1>
-                <p className="text-slate-500 mb-8">This event took place on {event.date}.</p>
-                <button onClick={() => router.push('/events')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold uppercase tracking-widest text-xs">Explore Other Events</button>
-            </main>
-        );
-    }
-
     return (
-        <main className="min-h-screen bg-[#FAF9F6] pb-24">
-            <Navbar />
-            
-            <div className="max-w-[1300px] mx-auto px-4 md:px-8 py-8">
-                {/* Hero Header (Image-Free) */}
-                <div className="w-full py-20 md:py-32 rounded-[40px] overflow-hidden shadow-2xl relative mb-12 bg-slate-900 border border-slate-800">
+        <main className="min-h-screen bg-slate-50/50">
+            {/* --- FLOATING BACK BUTTON --- */}
+            <div className="fixed top-6 left-6 z-[100] pointer-events-none">
+                <button 
+                    onClick={() => window.history.back()}
+                    className="pointer-events-auto p-3 bg-white/80 backdrop-blur-md rounded-full shadow-lg border border-white/20 text-slate-600 hover:text-pink-500 hover:scale-110 transition-all group"
+                >
+                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                </button>
+            </div>
+
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                {/* Hero Header */}
+                <div className="w-full py-8 md:py-12 rounded-[32px] overflow-hidden shadow-xl relative mb-6 bg-slate-900 border border-slate-800">
                     <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-purple-600/10 to-transparent opacity-50" />
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-pink-500/5 blur-[120px] -mr-32 -mt-32 rounded-full" />
-                    
                     <div className="relative z-10 px-8 md:px-16">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-pink-500 text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8">
                             <Sparkles size={14} /> Featured Experience
                         </div>
-                        <h1 className="text-white text-4xl md:text-8xl font-black uppercase tracking-tight leading-[0.9] mb-10 max-w-4xl">
+                        <h1 className="text-white text-3xl md:text-5xl font-black uppercase tracking-tight leading-[0.9] mb-6 max-w-4xl">
                             {event.title}
                         </h1>
                         <div className="flex flex-wrap items-center gap-10 text-white/60 font-bold uppercase text-[12px] tracking-[0.15em]">
@@ -199,24 +222,40 @@ export default function EventDetailClient({ id }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* Main Content */}
-                    <div className="lg:col-span-8 flex flex-col gap-12">
-                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm p-10 md:p-16">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
-                                <Info className="text-pink-500" size={28} /> About the Event
+                    <div className="lg:col-span-8 flex flex-col gap-6">
+                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 md:p-10">
+                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-3">
+                                <Info className="text-pink-500" size={24} /> About the Event
                             </h2>
-                            <p className="text-[17px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-12">
+                            <p className="text-[15px] font-medium text-slate-600 leading-relaxed whitespace-pre-line mb-8">
                                 {event.description}
                             </p>
                             
-                            <hr className="border-slate-100 mb-12" />
+                            <hr className="border-slate-100 mb-8" />
                             
-                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
-                                <Warehouse className="text-pink-500" size={28} /> Venue & Amenities
+                            {(parsedConfig?.location?.coordinates?.lat || event.latitude) && (
+                                <div className="mt-8 pt-8 border-t border-slate-100">
+                                    <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3 uppercase tracking-tight">
+                                        <MapPin className="text-pink-500" size={24} /> Venue Location
+                                    </h2>
+                                    <EventMap 
+                                        lat={parsedConfig?.location?.coordinates?.lat || event.latitude}
+                                        lng={parsedConfig?.location?.coordinates?.lng || event.longitude}
+                                        venueName={parsedConfig?.location?.venueName || event.venue}
+                                        address={parsedConfig?.location?.address || event.address}
+                                    />
+                                </div>
+                            )}
+
+                            <hr className="border-slate-100 my-8" />
+                            
+                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-3">
+                                <Warehouse className="text-pink-500" size={24} /> Venue & Amenities
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {event.features.map((feature, idx) => (
-                                    <div key={idx} className="flex items-center gap-5 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-2xl">
+                                    <div key={idx} className="flex items-center gap-3 p-4 bg-slate-50 rounded-[24px] border border-slate-100">
+                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-xl">
                                             {feature.icon || "✓"}
                                         </div>
                                         <span className="text-[13px] font-bold text-slate-800 uppercase tracking-widest">{feature.label || feature}</span>
@@ -224,106 +263,170 @@ export default function EventDetailClient({ id }) {
                                 ))}
                             </div>
 
-                            {/* Event Map */}
-                            {event.dynamic_config?.location?.coordinates?.lat && (
-                                <div className="mt-12 pt-12 border-t border-slate-100">
-                                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
-                                        <MapPin className="text-pink-500" size={28} /> Live Location
+                            {parsedConfig?.faqs?.length > 0 && (
+                                <div className="mt-12">
+                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-6 flex items-center gap-3">
+                                        <HelpCircle className="text-pink-500" size={24} /> Frequently Asked Questions
                                     </h2>
-                                    <EventMap 
-                                        lat={event.dynamic_config.location.coordinates.lat}
-                                        lng={event.dynamic_config.location.coordinates.lng}
-                                        venueName={event.dynamic_config.location.venueName || event.venue}
-                                        address={event.dynamic_config.location.address || event.location}
-                                    />
+                                    <div className="space-y-4">
+                                        {parsedConfig.faqs.map((faq, idx) => (
+                                            <details key={idx} className="group p-6 bg-slate-50 rounded-[24px] border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all cursor-pointer">
+                                                <summary className="flex items-center justify-between font-bold text-slate-800 uppercase tracking-wider text-[12px] list-none">
+                                                    {faq.question}
+                                                    <ChevronDown className="group-open:rotate-180 transition-transform text-pink-500" size={18} />
+                                                </summary>
+                                                <p className="mt-4 text-[13px] font-medium text-slate-600 leading-relaxed normal-case tracking-normal">
+                                                    {faq.answer}
+                                                </p>
+                                            </details>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
+
+                            {parsedConfig?.terms && (
+                                <div className="mt-12 p-8 bg-amber-50/50 rounded-[32px] border border-amber-100/50">
+                                    <h2 className="text-lg font-black text-amber-900 uppercase tracking-tight mb-4 flex items-center gap-3">
+                                        <ShieldCheck className="text-amber-500" size={22} /> Event Rules & Terms
+                                    </h2>
+                                    <div className="text-[12px] font-semibold text-amber-800/80 leading-relaxed whitespace-pre-wrap uppercase tracking-wider">
+                                        {parsedConfig.terms}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-12 p-8 bg-slate-900 rounded-[32px] text-white">
+                                <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Organised By</h2>
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-2xl font-black">
+                                        {(parsedConfig?.organiser_name || event.organiser || "O")[0]}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black uppercase tracking-tight">{parsedConfig?.organiser_name || event.organiser || "Ticket9 Partner"}</h3>
+                                        <div className="flex items-center gap-4 mt-2">
+                                            {parsedConfig?.communication?.supportNumber && (
+                                                <a href={`tel:${parsedConfig.communication.supportNumber}`} className="flex items-center gap-2 text-[10px] font-bold text-pink-400 uppercase tracking-widest hover:text-pink-300">
+                                                    <Phone size={12} /> Support
+                                                </a>
+                                            )}
+                                            {parsedConfig?.communication?.whatsappLink && (
+                                                <a href={parsedConfig.communication.whatsappLink} target="_blank" className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest hover:text-emerald-300">
+                                                    <MessageCircle size={12} /> WhatsApp
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Booking Sidebar */}
-                    <div className="lg:col-span-4 sticky top-[100px]">
-                        <div className="bg-white rounded-[48px] border border-slate-100 shadow-xl p-10">
-                            <div className="mb-10">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Ticket Price</div>
-                                <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                                    ₹{event.price || "950"}<span className="text-sm font-bold text-slate-400 ml-1">/person</span>
-                                </div>
-                            </div>
-                            
+                    <div className="lg:col-span-4 sticky top-[20px]">
+                        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-2xl shadow-slate-200/50 space-y-6">
                             {existingBooking ? (
-                                <div className="flex flex-col gap-4">
+                                <div className="space-y-6">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Your Booking</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-slate-900 tracking-tighter">Confirmed</span>
+                                        </div>
+                                    </div>
                                     <button 
                                         onClick={() => router.push('/profile?tab=my_booking')} 
                                         className="w-full py-6 bg-slate-900 text-white rounded-[32px] font-bold uppercase tracking-widest text-[13px] shadow-xl hover:scale-[1.02] transition-all"
                                     >
                                         View My Tickets
                                     </button>
-                                    <button 
-                                        onClick={() => {
-                                            const bookUrl = `/events/book?id=${id}`;
-                                            if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
-                                            else router.push(bookUrl);
-                                        }}
-                                        className="w-full py-6 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[32px] font-bold uppercase tracking-[0.2em] text-[13px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
-                                    >
-                                        Book More Tickets
-                                    </button>
                                 </div>
                             ) : (
+                                <>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Ticket Price</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-slate-900 tracking-tighter">
+                                                ₹{displayPrice}
+                                            </span>
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">/person</span>
+                                        </div>
+                                    </div>
+
+                                    {categories.length > 1 && (
+                                        <div className="space-y-3 py-4 border-t border-slate-50">
+                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</p>
+                                            <div className="space-y-2">
+                                                {categories.map((cat) => (
+                                                    <button
+                                                        key={cat.id}
+                                                        onClick={() => setSelectedCatId(cat.id)}
+                                                        className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${
+                                                            (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
+                                                                ? 'border-pink-500 bg-pink-50/50'
+                                                                : 'border-slate-100 bg-slate-50 hover:border-pink-200'
+                                                        }`}
+                                                    >
+                                                        <div>
+                                                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{cat.name}</p>
+                                                            <p className="text-[10px] font-bold text-pink-500 mt-0.5">₹{cat.price}</p>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                                                            (selectedCatId === cat.id || (!selectedCatId && cat === categories[0]))
+                                                                ? 'bg-pink-500 border-pink-500 text-white'
+                                                                : 'bg-white border-slate-200 group-hover:border-pink-300'
+                                                        }`}>
+                                                            {(selectedCatId === cat.id || (!selectedCatId && cat === categories[0])) && <CheckCircle size={12} />}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isExpired ? (
+                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3">
+                                            <ShieldCheck size={16} className="text-rose-500" />
+                                            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Closed</p>
+                                        </div>
+                                    ) : (
+                                        <button 
+                                            onClick={() => {
+                                                const bookUrl = `/events/book?id=${id}${selectedCatId ? `&catId=${selectedCatId}` : ''}`;
+                                                if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
+                                                else router.push(bookUrl);
+                                            }}
+                                            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-bold uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                        >
+                                            {event.isFree ? "Get Free Ticket" : "Reserve Spot Now"}
+                                        </button>
+                                    )}
+                                </>
+                            )}
+
+                            <div className="mt-4 pt-4 border-t border-slate-50">
                                 <button 
                                     onClick={() => {
-                                        const bookUrl = `/events/book?id=${id}`;
-                                        if (!user) router.push(`/signin?redirect=${encodeURIComponent(bookUrl)}`);
-                                        else router.push(bookUrl);
+                                        const lat = parsedConfig?.location?.coordinates?.lat || event.latitude;
+                                        const lng = parsedConfig?.location?.coordinates?.lng || event.longitude;
+                                        if (lat && lng) window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
                                     }}
-                                    className="w-full py-7 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[32px] font-bold uppercase tracking-[0.3em] text-[15px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+                                    className="w-full py-4 rounded-[28px] border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all"
                                 >
-                                    {event.price === 0 ? "Get Free Ticket" : "Reserve Spot Now"}
+                                    <MapPin size={14} className="text-[#f84464]" /> View on Maps
                                 </button>
-                            )}
+                            </div>
                             
                             <div className="mt-8 flex flex-col gap-4">
                                 <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <ShieldCheck size={16} className="text-green-500" /> Secure SSL Checkout
+                                    <ShieldCheck size={16} className="text-green-500" /> Secure Checkout
                                 </div>
                                 <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <CheckCircle size={16} className="text-green-500" /> Instant E-Ticket Delivery
+                                    <CheckCircle size={16} className="text-green-500" /> Instant Delivery
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {/* --- PROGRAMMATIC SEO GUIDE SECTION --- */}
-                <div className="mt-24 pt-24 border-t border-slate-100">
-                    <div className="max-w-[900px] mx-auto text-slate-600">
-                        <h2 className="text-3xl font-black text-slate-900 mb-10 uppercase tracking-tight">Your Essential Guide to {event.title} Tickets</h2>
-                        
-                        <div className="prose prose-slate max-w-none space-y-8 text-[17px] leading-relaxed">
-                            <p>
-                                Looking for <strong>online event registration</strong> for <strong>{event.title}</strong>? BookMyTicket is India's most trusted <strong>premium event booking</strong> platform, designed to help you secure your spot at the biggest events in <strong>{event.city || event.location}</strong>. Whether you're searching for <strong>music festival passes</strong>, <strong>live sports tickets</strong>, or <strong>professional workshops</strong>, we provide a seamless 60-second booking experience.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Why Book {event.title} on BookMyTicket?</h3>
-                            <p>
-                                Choosing BookMyTicket for your <strong>{event.category}</strong> tickets means you benefit from our <strong>secure checkout ticketing</strong> system. We use industry-standard encryption to protect your data. Plus, our instant e-ticket system ensures your entry pass is delivered to your phone immediately after payment.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Event Venue & Safety</h3>
-                            <p>
-                                {event.title} will be hosted at <strong>{event.venue}</strong>. We prioritize attendee safety by working closely with venue partners to enforce strict crowd management and emergency protocols. Enjoy <strong>{event.title}</strong> with total peace of mind.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">About BookMyTicket</h3>
-                            <p>
-                                As India's fastest-growing discovery platform, we specialize in <em>Concerts, Comedy Shows, and Sports Events</em>. Our mission is to bridge the gap between people and world-class experiences. Join millions of users who trust us for their weekly entertainment and professional networking needs.
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </div>
-            
             <Footer />
         </main>
     );

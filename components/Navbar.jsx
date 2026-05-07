@@ -329,8 +329,8 @@ export default function Navbar({ compact = false }) {
                     style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        width: isMobileMode ? '100%' : '360px',
-                        height: '60px',
+                        width: isMobileMode ? '100%' : '480px',
+                        height: '50px',
                         background: '#fff',
                         borderRadius: '12px',
                         border: '1px solid rgba(0,0,0,0.06)',
@@ -341,7 +341,7 @@ export default function Navbar({ compact = false }) {
                     }}
                 >
                     {/* Landscape Mini Image */}
-                    <div style={{ width: '80px', height: '100%', position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '100px', height: '100%', position: 'relative', flexShrink: 0 }}>
                         <img src={bannerUrl} alt="offer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1))' }} />
                     </div>
@@ -356,7 +356,7 @@ export default function Navbar({ compact = false }) {
                             </span>
                         </div>
                         <span style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {title}
+                            {current.code ? `${current.code}: ` : ""}{title}
                         </span>
                     </div>
 
@@ -933,7 +933,10 @@ export default function Navbar({ compact = false }) {
               ))}
             </div>
 
-            {/* Dynamic Coupon Flip Ticker removed as requested */}
+            {/* Dynamic Coupon Flip Ticker restored */}
+            <div className="hide-mobile" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <CouponFlipTicker />
+            </div>
 
             <div className="subnav-actions hide-mobile" style={{ gap: '30px' }}>
               <motion.button

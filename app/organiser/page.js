@@ -1412,13 +1412,23 @@ function OrganiserPanel() {
             }
         }
 
-        // Price (minimum across categories)
+        // Price (minimum across categories and their age-based rates)
         let finalPrice = 0;
         if (isOnline) {
             finalPrice = postEvent.ticketsAreFree ? 0 : (Number(postEvent.price) || 0);
-        } else if (isSeating && categories.length > 0) {
-            const prices = categories.map(c => c.isFree ? 0 : Number(c.price) || 0);
-            finalPrice = Math.min(...prices);
+        } else if ((isSeating || postEvent.type === "Dynamic" || postEvent.type === "Sports") && categories.length > 0) {
+            const prices = categories.flatMap(c => {
+                if (c.isFree) return [0];
+                
+                // Check for age-based pricing inside category
+                const ageRates = c.agePricing || c.ageRates || c.age_pricing || c.age_rates || [];
+                if (Array.isArray(ageRates) && ageRates.length > 0) {
+                    return ageRates.map(r => Number(r.price) || 0);
+                }
+                
+                return [Number(c.price) || 0];
+            });
+            finalPrice = prices.length > 0 ? Math.min(...prices) : (Number(postEvent.price || postEvent.normalTicketPrice) || 0);
         } else {
             // Support both price and normalTicketPrice
             finalPrice = Number(postEvent.price || postEvent.normalTicketPrice) || 0;
@@ -1456,11 +1466,11 @@ function OrganiserPanel() {
             address: isOnline ? postEvent.meetingUrl : (postEvent.address || undefined),
             country: !isOnline ? postEvent.country : undefined,
             state: !isOnline ? postEvent.state : undefined,
-            district: !isOnline ? postEvent.district : undefined,
-            city: !isOnline ? postEvent.city : undefined,
-            pincode: !isOnline ? postEvent.zipCode : undefined,
-            latitude: postEvent.latitude ? parseFloat(postEvent.latitude) : undefined,
-            longitude: postEvent.longitude ? parseFloat(postEvent.longitude) : undefined,
+            district: !isOnline ? (postEvent.district || postEvent.dynamic_config?.location?.district) : undefined,
+            city: !isOnline ? (postEvent.city || postEvent.dynamic_config?.location?.city) : undefined,
+            pincode: !isOnline ? (postEvent.zipCode || postEvent.location?.pincode) : undefined,
+            latitude: postEvent.latitude ? parseFloat(postEvent.latitude) : (postEvent.dynamic_config?.location?.coordinates?.lat ? parseFloat(postEvent.dynamic_config.location.coordinates.lat) : undefined),
+            longitude: postEvent.longitude ? parseFloat(postEvent.longitude) : (postEvent.dynamic_config?.location?.coordinates?.lng ? parseFloat(postEvent.dynamic_config.location.coordinates.lng) : undefined),
             environment: isOnline ? "Virtual" : (postEvent.environment || undefined),
             meeting_url: isOnline ? (postEvent.meetingUrl || (editingEvent?.meeting_url || undefined)) : undefined,
             featured: postEvent.isFeature === "Yes" ? true : false,
@@ -1527,7 +1537,10 @@ function OrganiserPanel() {
             seating_type: postEvent.seatingType || "FCFS",
             mandatory_checkin: !!postEvent.mandatoryCheckin,
             gallery: postEvent.galleryPreviews || [],
-            dynamic_config: postEvent.dynamic_config || undefined
+            dynamic_config: {
+                ...(postEvent.dynamic_config || {}),
+                marathonCategories: postEvent.marathonCategories || []
+            }
         };
 
         // Remove undefined keys

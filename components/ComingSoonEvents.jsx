@@ -257,7 +257,7 @@ export default function ComingSoonEvents({ events = [] }) {
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                             <span style={{ fontSize: "16px", color: "#f84464" }}>📍</span>
-                                            <span style={{ fontSize: "15px", color: "#475569", fontWeight: 700 }}>{event.location}</span>
+                                            <span style={{ fontSize: "15px", color: "#475569", fontWeight: 700 }}>{event.location || event.city || "TBA"}</span>
                                         </div>
                                     </div>
                                 </div>

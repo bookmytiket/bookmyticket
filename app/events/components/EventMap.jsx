@@ -43,25 +43,28 @@ const EventMap = ({ lat, lng, venueName, address }) => {
                 shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
             });
 
-            if (!mapRef.current) {
-                mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 14);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '© OpenStreetMap'
-                }).addTo(mapRef.current);
-
-                // Event Marker
-                const eventIcon = L.icon({
-                    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40],
-                    popupAnchor: [0, -40]
-                });
+            if (mapContainerRef.current && !mapRef.current) {
+                const centerLat = parseFloat(lat);
+                const centerLng = parseFloat(lng);
                 
-                L.marker([lat, lng], { icon: eventIcon }).addTo(mapRef.current)
-                    .bindPopup(`<b>${venueName || 'Event Location'}</b><br>${address || ''}`)
-                    .openPopup();
-            } else {
-                mapRef.current.setView([lat, lng]);
+                if (!isNaN(centerLat) && !isNaN(centerLng)) {
+                    mapRef.current = L.map(mapContainerRef.current).setView([centerLat, centerLng], 14);
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: '© OpenStreetMap'
+                    }).addTo(mapRef.current);
+
+                    // Event Marker
+                    const eventIcon = L.icon({
+                        iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 40],
+                        popupAnchor: [0, -40]
+                    });
+                    
+                    L.marker([centerLat, centerLng], { icon: eventIcon }).addTo(mapRef.current);
+                }
+            } else if (mapRef.current) {
+                mapRef.current.setView([parseFloat(lat), parseFloat(lng)]);
             }
         };
 
@@ -92,9 +95,7 @@ const EventMap = ({ lat, lng, venueName, address }) => {
                     className: 'user-location-marker',
                     iconSize: [16, 16]
                 });
-                L.marker([latitude, longitude], { icon: userIcon }).addTo(mapRef.current)
-                    .bindPopup("You are here")
-                    .openPopup();
+                L.marker([latitude, longitude], { icon: userIcon }).addTo(mapRef.current);
                 
                 // Fit bounds
                 const bounds = L.latLngBounds([latitude, longitude], [lat, lng]);
@@ -104,43 +105,51 @@ const EventMap = ({ lat, lng, venueName, address }) => {
     };
 
     const openDirections = () => {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        const dLat = parseFloat(lat);
+        const dLng = parseFloat(lng);
+        let url = `https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}`;
+        
+        if (userLoc) {
+            url += `&origin=${userLoc.lat},${userLoc.lng}`;
+        }
+        
+        window.open(url, '_blank');
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
-                        <MapPin size={20} />
+        <div className="space-y-3">
+            <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-[#ec4899]">
+                        <MapPin size={16} />
                     </div>
                     <div>
-                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Venue Map</h4>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                            {distance ? `${distance} km from you` : 'Locate the event'}
+                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Venue Map</h4>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                            {distance ? `${distance} km away` : 'Locate the event'}
                         </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                     <button 
                         onClick={getMyLocation}
-                        className="p-2.5 rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-pink-500 hover:border-pink-200 transition-all shadow-sm"
+                        className="p-2 rounded-lg bg-white border border-slate-100 text-slate-400 hover:text-pink-500 hover:border-pink-200 transition-all shadow-sm"
                         title="Show my location"
                     >
-                        <LocateFixed size={18} />
+                        <LocateFixed size={14} />
                     </button>
                     <button 
                         onClick={openDirections}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md"
                     >
-                        <Navigation size={14} /> Directions
+                        <Navigation size={12} /> Directions
                     </button>
                 </div>
             </div>
             
             <div 
                 ref={mapContainerRef} 
-                className="w-full h-[300px] rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-inner bg-slate-50 relative z-10"
+                className="w-full h-[240px] rounded-[2rem] overflow-hidden border border-slate-100 shadow-inner bg-slate-50 relative z-10"
             />
         </div>
     );

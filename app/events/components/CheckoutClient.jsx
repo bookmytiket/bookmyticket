@@ -472,7 +472,7 @@ export default function CheckoutClient({ id }) {
                 )}
             </AnimatePresence>
 
-            <div className="max-w-[1200px] mx-auto px-6 py-12">
+            <div className="max-w-[850px] mx-auto px-4 md:px-6 py-4">
                 <div className="mb-12">
                     <button 
                         onClick={() => router.push(`/events/detail?id=${id}`)}

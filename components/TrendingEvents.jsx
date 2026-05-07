@@ -47,7 +47,7 @@ function EventCard({ event }) {
                     <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                         <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {event.location || "Coimbatore"}
+                            {event.location || event.city || "TBA"}
                         </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>

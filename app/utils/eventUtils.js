@@ -48,18 +48,30 @@ export function isFreeEvent(event) {
     // 3. Check categories/seatCategories if available
     const cats = event.seat_categories || event.seatCategories || event.categories || event.dynamic_config?.categories;
     if (Array.isArray(cats) && cats.length > 0) {
-        // If all categories are free
-        return cats.every(cat => 
-            isFreeFlag(cat.isFree) || 
-            isFreeFlag(cat.is_free) || 
-            isZero(cat.price) ||
-            cat.price === null || 
-            cat.price === undefined
-        );
+        // If all categories are free (both at category level and within age-based pricing)
+        return cats.every(cat => {
+            const isCatFreeFlag = isFreeFlag(cat.isFree) || isFreeFlag(cat.is_free);
+            const isCatPriceZero = isZero(cat.price) || cat.price === null || cat.price === undefined;
+            
+            // Check if this category has age-based pricing
+            const ageRates = cat.agePricing || cat.ageRates || cat.age_pricing || cat.age_rates || [];
+            if (Array.isArray(ageRates) && ageRates.length > 0) {
+                // If there are age rates, ALL must be free for the category to be considered free
+                const allAgeRatesFree = ageRates.every(r => isZero(r.price) || r.price === null || r.price === undefined);
+                return allAgeRatesFree;
+            }
+
+            return isCatFreeFlag || isCatPriceZero;
+        });
     }
 
-    // 4. Check dynamic_config defaults
+    // 4. Check dynamic_config defaults and top-level age pricing
     if (isFreeFlag(event.dynamic_config?.basicInfo?.isFree)) return true;
+    
+    const topLevelAgeRates = event.dynamic_config?.agePricing || event.dynamic_config?.ageRates || [];
+    if (Array.isArray(topLevelAgeRates) && topLevelAgeRates.length > 0) {
+        return topLevelAgeRates.every(r => isZero(r.price) || r.price === null || r.price === undefined);
+    }
 
     // 5. Type check
     if (String(event.type || '').toLowerCase() === 'free') return true;

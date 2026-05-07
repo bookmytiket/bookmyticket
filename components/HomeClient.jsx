@@ -283,7 +283,7 @@ function HomeClient() {
         return false; // Hide events with invalid/missing dates to prevent stale data
       })
       .map((ev, idx) => {
-        const loc = String(ev.location || ev.venue || ev.address || "").trim();
+        const loc = String(ev.location || ev.venue || ev.address || ev.city || "").trim();
         const isVirtual = ev.virtual === true || 
                  String(ev.type || '').toLowerCase() === "online" || 
                  String(ev.type || '').toLowerCase() === "virtual" ||
