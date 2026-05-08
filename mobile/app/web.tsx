@@ -31,8 +31,9 @@ export default function WebViewerScreen() {
 
       <WebView 
         source={{ uri: targetUrl }} 
-        style={styles.webview}
+        style={[styles.webview, { backgroundColor: '#fff' }]}
         startInLoadingState={true}
+        scalesPageToFit={false}
         renderLoading={() => (
           <View style={[StyleSheet.absoluteFill, styles.loading]}>
             <ActivityIndicator size="large" color="#f84464" />

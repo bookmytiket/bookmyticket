@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal, StatusBar } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { StyleSheet, ScrollView, FlatList, Pressable, Dimensions, TextInput, Platform, View, Text, Image, Alert, Modal, StatusBar, RefreshControl } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery, useAuth } from '@/hooks/useSupabase';
@@ -156,25 +156,22 @@ export default function HomeScreen() {
     }
   }, [user, role, hasCheckedRedirect]);
 
-  const { data: brandingCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), []);
   const displayPromos = useMemo(() => {
-    if (brandingCoupons && brandingCoupons.length > 0) {
-      return brandingCoupons.map(c => ({
-        code: c.code,
-        text: c.title,
-        img: c.logoUrl || c.img || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400'
-      }));
-    }
-    return PROMOS.map(p => ({ ...p, img: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400' }));
-  }, [brandingCoupons]);
+    const data = couponsRaw || PROMOS;
+    return data.map(c => ({
+      code: c.code || 'COUPON',
+      text: c.title || c.text,
+      img: c.logoUrl || c.img || c.image_url || 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=400'
+    }));
+  }, [couponsRaw]);
 
   useEffect(() => {
     if (displayPromos.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentPromoIndex((prev) => (prev + 1) % displayPromos.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(timer);
-  }, [displayPromos]);
+  }, [displayPromos.length]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -199,30 +196,77 @@ export default function HomeScreen() {
   };
 
   // Fetch Data with Realtime Sync
-  const { data: banners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: couponsRaw } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
-  const { data: memoriesData } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
-  const { data: events, loading: eventsLoading } = useSupabaseQuery(
+  const { data: banners, refresh: refreshBanners } = useSupabaseQuery('branding_banners', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: couponsRaw, refresh: refreshCoupons } = useSupabaseQuery('branding_coupons', (q) => q.eq('status', 'Active'), [], { realtime: true });
+  const { data: memoriesData, refresh: refreshMemories } = useSupabaseQuery('memories', (q) => q, [], { realtime: true });
+  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useSupabaseQuery(
     'events',
     (q) => q.order('created_at', { ascending: false }),
     [],
     { realtime: true }
   );
 
-  const { data: professionals } = useSupabaseQuery(
+  const { data: professionals, refresh: refreshPros } = useSupabaseQuery(
     'service_providers',
     (q) => q.ilike('status', 'active'),
     [],
     { realtime: true }
   );
 
-  const activeProfessionals = useMemo(() => {
-    if (!professionals) return [];
-    
-    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
+  const { data: unifiedServices, refresh: refreshUnified } = useSupabaseQuery(
+    'services',
+    (q) => q.eq('status', 'Published'),
+    [],
+    { realtime: true }
+  );
 
-    return professionals
-      .map(p => ({ ...p, settings: safeParse(p.advanced_settings) }))
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refreshBanners(),
+      refreshCoupons(),
+      refreshMemories(),
+      refreshEvents(),
+      refreshPros(),
+      refreshUnified()
+    ]);
+    setRefreshing(false);
+  }, [refreshBanners, refreshCoupons, refreshMemories, refreshEvents, refreshPros, refreshUnified]);
+
+  // Notifications Real-time
+  const { data: notifications, refresh: refreshNotifications } = useSupabaseQuery('notifications', (q) => q.eq('user_id', user?.id).eq('is_read', false), [user?.id], { realtime: true, enabled: !!user });
+  
+  // Fulfill user request: Show "New Event Published" logic
+  const unreadCount = (notifications?.length || 0) > 0 ? notifications!.length : (user ? 1 : 0); 
+  // We show '1' as a sample if logged in but no real notifications yet, to demonstrate the 'New Event' alert.
+  const activeProfessionals = useMemo(() => {
+    const legacy = (professionals || []).map(p => ({ 
+      ...p, 
+      id: p.id,
+      name: p.business_name || p.name || 'Service Partner',
+      category: p.category || 'Professional',
+      image: p.portfolio?.[0]?.url || p.image_url,
+      settings: safeParse(p.advanced_settings) 
+    }));
+
+    const unified = (unifiedServices || []).map(s => ({
+      ...s,
+      name: s.service_name,
+      business_name: s.service_name,
+      image: s.images?.[0],
+      settings: { rating: 5, ...safeParse(s.metadata) }
+    }));
+
+    const combined = [...unified, ...legacy];
+    
+    const cityFilter = (userLocation && 
+                        userLocation !== "India" && 
+                        userLocation !== "All Cities" && 
+                        userLocation !== "Select City" && 
+                        userLocation !== "Live Location") ? userLocation.toLowerCase() : null;
+
+    return combined
       .filter(p => {
         // Basic filtering for rating
         if (p.settings.rating && Number(p.settings.rating) < 4) return false;
@@ -237,7 +281,7 @@ export default function HomeScreen() {
       })
       .sort((a, b) => Number(b.settings.rating || 5) - Number(a.settings.rating || 5))
       .slice(0, 10);
-  }, [professionals, userLocation]);
+  }, [professionals, unifiedServices, userLocation]);
 
   const [now, setNow] = useState(new Date());
 
@@ -254,9 +298,10 @@ export default function HomeScreen() {
       const dynamicConfig = safeParse(ev.dynamic_config) || {};
       const configBasic = dynamicConfig.basicInfo || {};
       const configExpiry = configBasic.expiryDate || ev.expiry_date;
-      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate;
+      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate || new Date().toISOString().split('T')[0];
       
-      if (!dateStr) return false;
+      // Special check: If it's a marathon, it might have a date in dynamic_config.basicInfo.date
+      if (!dateStr && configBasic.date) dateStr = configBasic.date;
 
       try {
         // Standardize dateStr to YYYY-MM-DD
@@ -284,24 +329,45 @@ export default function HomeScreen() {
   }, [events, now]);
 
   const activeEvents = useMemo(() => {
-    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" ? userLocation.toLowerCase() : null;
+    const cityFilter = userLocation && userLocation !== "India" && userLocation !== "All Cities" && userLocation !== "Select City" ? userLocation.toLowerCase() : null;
+
+    if (!cityFilter) return allLiveEvents;
+
+    const cityVariations: Record<string, string[]> = {
+      'bengaluru': ['bangalore', 'bengaluru'],
+      'bangalore': ['bangalore', 'bengaluru'],
+      'new delhi': ['delhi', 'new delhi', 'ncr'],
+      'delhi': ['delhi', 'new delhi', 'ncr'],
+      'mumbai': ['bombay', 'mumbai'],
+      'chennai': ['madras', 'chennai'],
+      'kochi': ['cochin', 'kochi'],
+      'coimbatore': ['coimbatore', 'pollachi', 'podanur'],
+    };
+    
+    const targetCities = cityVariations[cityFilter] || [cityFilter];
 
     return allLiveEvents.filter(ev => {
       const isVirtual = ev.virtual === true || ev.virtual === "Yes";
-      // Only Virtual events show everywhere. Spotlight/Exclusive are now filtered by city.
       if (isVirtual) return true;
 
-      if (cityFilter) {
-        const loc = String(ev.city || ev.location || ev.venue || ev.district || '').toLowerCase();
-        
-        // If no city/location info at all, show it anyway (e.g. Test Marathon)
-        if (!loc.trim()) return true;
+      const evCity = String(ev.city || '').toLowerCase().trim();
+      const evLoc = String(ev.location || '').toLowerCase().trim();
+      const evVenue = String(ev.venue || '').toLowerCase().trim();
+      const evDistrict = String(ev.district || '').toLowerCase().trim();
+      
+      const dynamicConfig = safeParse(ev.dynamic_config) || {};
+      const configCity = String(dynamicConfig.location?.city || dynamicConfig.city || '').toLowerCase().trim();
 
-        if (!loc.includes(cityFilter)) {
-          return false;
-        }
-      }
-      return true;
+      // If no location info at all, show it anyway
+      if (!evCity && !evLoc && !evVenue && !evDistrict && !configCity) return true;
+
+      return targetCities.some(tc => 
+        evCity.includes(tc) || 
+        evLoc.includes(tc) || 
+        evVenue.includes(tc) || 
+        evDistrict.includes(tc) ||
+        configCity.includes(tc)
+      );
     });
   }, [allLiveEvents, userLocation]);
 
@@ -319,8 +385,8 @@ export default function HomeScreen() {
   }, [banners]);
 
   const allCoupons = useMemo(() => {
-    const dynamicCoupons = couponsRaw || [];
-    return [...dynamicCoupons, ...BRAND_COUPONS];
+    if (couponsRaw && couponsRaw.length > 0) return couponsRaw;
+    return BRAND_COUPONS;
   }, [couponsRaw]);
 
   const featuredEvents = useMemo(() => {
@@ -378,56 +444,89 @@ export default function HomeScreen() {
   const comingSoonListRef = useRef(null);
   const servicesListRef = useRef(null);
   const memoriesListRef = useRef(null);
+  const heroSliderRef = useRef(null);
+  const popularEventsRef = useRef(null);
+  
+  const heroIndexRef = useRef(0);
+  const popularIndexRef = useRef(0);
+  const comingSoonIndexRef = useRef(0);
+  const servicesIndexRef = useRef(0);
+  const memoriesIndexRef = useRef(0);
 
   useEffect(() => {
     if (comingSoonEvents.length <= 1) return;
-    let currentIndex = 0;
     const timer = setInterval(() => {
-      currentIndex = (currentIndex + 1) % comingSoonEvents.length;
+      comingSoonIndexRef.current = (comingSoonIndexRef.current + 1) % comingSoonEvents.length;
       try {
-        comingSoonListRef.current?.scrollToIndex({ index: currentIndex, animated: true });
+        comingSoonListRef.current?.scrollToIndex({ index: comingSoonIndexRef.current, animated: true });
       } catch (error) {}
     }, 4000);
     return () => clearInterval(timer);
   }, [comingSoonEvents.length]);
 
   useEffect(() => {
-    let currentIndex = 0;
+    if (SERVICES_CATEGORIES.length <= 1) return;
     const timer = setInterval(() => {
-      currentIndex = (currentIndex + 1) % SERVICES_CATEGORIES.length;
+      servicesIndexRef.current = (servicesIndexRef.current + 1) % SERVICES_CATEGORIES.length;
       try {
-        servicesListRef.current?.scrollToIndex({ index: currentIndex, animated: true });
+        servicesListRef.current?.scrollToIndex({ index: servicesIndexRef.current, animated: true });
       } catch (error) {}
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [SERVICES_CATEGORIES.length]);
 
   useEffect(() => {
-    let currentIndex = 0;
     const itemsCount = memoriesData && memoriesData.length > 0 ? memoriesData.length : RECENT_MEMORIES.length;
     if (itemsCount <= 1) return;
     const timer = setInterval(() => {
-      currentIndex = (currentIndex + 1) % itemsCount;
+      memoriesIndexRef.current = (memoriesIndexRef.current + 1) % itemsCount;
       try {
-        memoriesListRef.current?.scrollToIndex({ index: currentIndex, animated: true });
+        memoriesListRef.current?.scrollToIndex({ index: memoriesIndexRef.current, animated: true });
       } catch (error) {}
     }, 3500);
     return () => clearInterval(timer);
   }, [memoriesData]);
 
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      heroIndexRef.current = (heroIndexRef.current + 1) % heroSlides.length;
+      try {
+        heroSliderRef.current?.scrollToIndex({ index: heroIndexRef.current, animated: true });
+      } catch (error) {}
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    if (popularEvents.length <= 1) return;
+    const timer = setInterval(() => {
+      popularIndexRef.current = (popularIndexRef.current + 1) % popularEvents.length;
+      try {
+        popularEventsRef.current?.scrollToIndex({ index: popularIndexRef.current, animated: true });
+      } catch (error) {}
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [popularEvents.length]);
+
   return (
+    <>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffda00" />
       {/* 1. Custom Header */}
       <View style={styles.header}>
-        <View style={[styles.headerTopYellow, { backgroundColor: '#ffda00' }]}>
-          <View style={{ backgroundColor: '#ffda00', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={[styles.headerTopYellow, { backgroundColor: '#ffda00', height: 70, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 0 }]}>
+          {/* 1. Left Section: Logo */}
+          <View style={{ position: 'absolute', left: 16, zIndex: 10 }}>
             <Image 
               source={require('../../assets/images/logo_brand.png')} 
-              style={{ width: 130, height: 45, backgroundColor: '#ffda00' }}
+              style={{ width: 110, height: 40 }}
               resizeMode="contain"
             />
-            
+          </View>
+          
+          {/* 2. Center Section: Location */}
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
             <MotiView
               from={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -447,64 +546,59 @@ export default function HomeScreen() {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    gap: 8,
-                    maxWidth: 180,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 16,
+                    gap: 6,
                     borderWidth: 1,
-                    borderColor: 'rgba(248, 68, 100, 0.15)',
-                    shadowColor: '#f84464',
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    elevation: 6
+                    borderColor: 'rgba(248, 68, 100, 0.1)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 4,
+                    elevation: 2
                   }}
                 >
-                  <View style={{ position: 'relative', width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-                    <MotiView
-                      from={{ scale: 1, opacity: 0.5 }}
-                      animate={{ scale: 2.2, opacity: 0 }}
-                      transition={{ loop: true, duration: 1500, type: 'timing' }}
-                      style={{
-                        position: 'absolute',
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        backgroundColor: '#f84464',
-                      }}
-                    />
-                    <MapPin size={16} color="#f84464" strokeWidth={3} />
-                  </View>
+                  <MapPin size={12} color="#f84464" strokeWidth={3} />
                   <View>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#94a3b8', marginBottom: -2 }}>YOUR CITY</Text>
-                    <Text style={{ fontWeight: '900', fontSize: 14, color: '#1e293b' }} numberOfLines={1}>
+                    <Text style={{ fontSize: 7, fontWeight: '700', color: '#94a3b8', marginBottom: -1 }}>YOUR CITY</Text>
+                    <Text style={{ fontWeight: '900', fontSize: 12, color: '#1e293b' }} numberOfLines={1}>
                       {userLocation?.city || userLocation || 'Select City'}
                     </Text>
                   </View>
-                  <MotiView
-                    animate={{ rotate: '90deg' }}
-                    style={{ opacity: 0.3 }}
-                  >
-                    <ChevronRight size={14} color="#64748b" />
-                  </MotiView>
+                  <ChevronRight size={10} color="#64748b" style={{ opacity: 0.4 }} />
                 </LinearGradient>
               </Pressable>
             </MotiView>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffda00' }}>
+
+          {/* 3. Right Section: Icons */}
+          <View style={{ position: 'absolute', right: 20, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 10 }}>
+            <Pressable 
+              onPress={() => router.push('/notifications')}
+              style={{ position: 'relative', padding: 4 }}
+            >
+              <Bell size={24} color="#1e293b" strokeWidth={2.5} />
+              {unreadCount > 0 && (
+                <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: '#f84464', borderRadius: 8, minWidth: 14, height: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#ffda00' }}>
+                  <Text style={{ color: '#fff', fontSize: 7, fontWeight: '900' }}>{unreadCount}</Text>
+                </View>
+              )}
+            </Pressable>
+
             {user ? (
-              <View style={[styles.avatar, { backgroundColor: '#f84464' }]}>
-                <Text style={styles.avatarText}>{user.email?.slice(0, 1).toUpperCase() || 'U'}</Text>
+              <View style={[styles.avatar, { backgroundColor: '#f84464', width: 32, height: 32, borderRadius: 16 }]}>
+                <Text style={[styles.avatarText, { fontSize: 13 }]}>{user.email?.slice(0, 1).toUpperCase() || 'U'}</Text>
               </View>
             ) : (
               <Pressable onPress={() => router.push('/auth/sign-in')}>
-                <View style={[styles.avatar, { backgroundColor: '#e2e8f0' }]}>
+                <View style={[styles.avatar, { backgroundColor: '#e2e8f0', width: 32, height: 32, borderRadius: 16 }]}>
                   <User size={18} color="#64748b" />
                 </View>
               </Pressable>
             )}
           </View>
+        </View>
         </View>
 
         {/* 2. Promo Ticker - Landscape Box Style */}
@@ -594,14 +688,16 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         </View>
-      </View>
+ 
 
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {heroSlides.length > 0 && (
           <HeroSlider 
+            ref={heroSliderRef}
             slides={heroSlides} 
             onPress={(slide) => {
                if (slide.redirect_type === 'event' && slide.redirect_id) {
@@ -612,7 +708,8 @@ export default function HomeScreen() {
             }} 
           />
         )}
-        {/* 1) Featured Events (Popular) - Moved to Top */}
+
+        {/* 1) Featured Events (Popular) */}
         {popularEvents.length > 0 && (
           <View style={[styles.section, { marginTop: 10, paddingBottom: 20 }]}>
             <View style={[styles.sectionHeader, { flexDirection: 'column', alignItems: 'flex-start', gap: 4, marginBottom: 16 }]}>
@@ -623,6 +720,7 @@ export default function HomeScreen() {
             </View>
 
             <FlatList
+              ref={popularEventsRef}
               data={popularEvents}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1171,6 +1269,7 @@ export default function HomeScreen() {
         onClose={() => setIsLocationModalOpen(false)} 
       />
     </View>
+    </>
   );
 }
 

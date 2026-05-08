@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Calendar, Star, Ticket } from 'lucide-react-native';
+import { MapPin, Calendar, Star, Clock } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { MotiView } from 'moti';
@@ -29,7 +29,6 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   const eventVenue = event.venue || event.location || dynamicConfig.location?.venueName || dynamicConfig.venue?.name || dynamicConfig.basicInfo?.venue || event.city || "TBA";
   const rawDate = event.start_date || event.date || dynamicConfig.date || dynamicConfig.basicInfo?.date || dynamicConfig.basicInfo?.expiryDate;
   const rawTime = event.time || event.start_time || dynamicConfig.time || dynamicConfig.basicInfo?.time;
-  const eventDate = [rawDate, rawTime].filter(Boolean).join(" ") || "TBA";
 
   return (
     <MotiView
@@ -52,9 +51,6 @@ export default function EventCard({ event, onPress }: EventCardProps) {
             contentFit="cover"
             transition={1000}
           />
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{event.category || 'Event'}</Text>
-          </View>
           
           {event.featured && (
             <LinearGradient
@@ -70,27 +66,39 @@ export default function EventCard({ event, onPress }: EventCardProps) {
         </View>
 
         <View style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
             {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event'}
           </Text>
           
           <View style={styles.infoRow}>
-            <MapPin size={12} color={colors.error} />
+            <MapPin size={10} color={colors.error} />
             <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
               {eventVenue}
             </Text>
           </View>
 
+          <View style={styles.dateRow}>
+            <View style={styles.dateItem}>
+              <Calendar size={10} color={colors.success} />
+              <Text style={[styles.dateText, { color: colors.muted }]}>{rawDate || 'TBA'}</Text>
+            </View>
+            {rawTime && (
+              <View style={styles.dateItem}>
+                <Clock size={10} color={colors.secondary} />
+                <Text style={[styles.dateText, { color: colors.muted }]}>{rawTime}</Text>
+              </View>
+            )}
+          </View>
+
           <View style={styles.footer}>
-            <View style={styles.infoRow}>
-              <Calendar size={12} color={colors.success} />
-              <Text style={[styles.dateText, { color: colors.muted }]}>
-                {eventDate}
+            <View style={[styles.priceBadge, { backgroundColor: colors.tint + '10' }]}>
+              <Text style={[styles.priceText, { color: colors.tint }]}>
+                {event.is_free || event.type === 'Free' ? "FREE" : "BOOK"}
               </Text>
             </View>
-            <View style={[styles.priceBadge, { backgroundColor: colors.background }]}>
-              <Text style={[styles.priceText, { color: colors.text }]}>
-                {event.is_free || event.type === 'Free' ? "FREE" : "PAID"}
+            <View style={[styles.typeBadge, { backgroundColor: colors.background }]}>
+              <Text style={[styles.typeText, { color: colors.muted }]}>
+                {event.category || 'Event'}
               </Text>
             </View>
           </View>
@@ -124,21 +132,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  categoryBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
   featuredBadge: {
     position: 'absolute',
     top: 10,
@@ -157,12 +150,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 12,
-    gap: 6,
+    gap: 8,
   },
   title: {
     fontSize: 14,
     fontWeight: '800',
     lineHeight: 18,
+    height: 36,
   },
   infoRow: {
     flexDirection: 'row',
@@ -174,23 +168,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
+  dateRow: {
+    gap: 4,
+  },
+  dateItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
   },
-  dateText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
   priceBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  priceText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  priceText: {
+  typeText: {
     fontSize: 9,
-    fontWeight: '900',
-  },
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  }
 });

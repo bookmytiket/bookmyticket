@@ -64,9 +64,9 @@ export default function EventsScreen() {
       const dynamicConfig = safeParse(ev.dynamic_config) || {};
       const configBasic = dynamicConfig.basicInfo || {};
       const configExpiry = configBasic.expiryDate || ev.expiry_date;
-      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate;
+      let dateStr = ev.end_date || ev.endDate || configBasic.endDate || configExpiry || ev.date || ev.startDate || new Date().toISOString().split('T')[0];
       
-      if (!dateStr) return false;
+      if (!dateStr && configBasic.date) dateStr = configBasic.date;
 
       try {
         if (typeof dateStr === 'string' && (dateStr.includes('/') || dateStr.includes('-'))) {
@@ -125,6 +125,9 @@ export default function EventsScreen() {
                  String(e.type || '').toLowerCase() === "virtual" ||
                  loc.includes("online") || loc.includes("virtual");
                  
+        // Skip filtering if location is a generic placeholder
+        if (userLocation === "India" || userLocation === "Live Location" || userLocation === "Select City") return true;
+
         if (!loc.includes(userLocation.toLowerCase()) && !isVirtual) {
           return false;
         }

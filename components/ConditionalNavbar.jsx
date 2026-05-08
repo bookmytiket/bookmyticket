@@ -20,8 +20,7 @@ export default function ConditionalNavbar() {
         pathname?.startsWith("/movies") ||
         pathname?.startsWith("/branding") ||
         pathname?.startsWith("/advertising") ||
-        pathname?.startsWith("/events/detail") ||
-        pathname?.startsWith("/events/book") ||
+        pathname?.startsWith("/events") ||
         pathname?.startsWith("/services/") ||
         pathname?.startsWith("/profile") ||
         pathname?.startsWith("/meeting") ||

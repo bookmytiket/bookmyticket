@@ -104,26 +104,50 @@ export default function EventDetailScreen() {
   useEffect(() => {
     if (!id) return;
     
-    const channel = supabase
+    // Listen for changes to the event itself
+    const eventChannel = supabase
+      .channel(`event-sync-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('[Supabase] Event updated:', payload.eventType);
+          if (payload.eventType === 'DELETE') {
+            Alert.alert('Event Removed', 'This event is no longer available.');
+            router.back();
+          } else {
+            setEvent(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    // Listen for changes to marathon categories
+    const catChannel = supabase
       .channel(`marathon-cats-${id}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'marathon_categories',
           filter: `event_id=eq.${id}`,
         },
         (payload) => {
-          setMarathonCategories(prev => 
-            prev.map(cat => cat.id === payload.new.id ? { ...cat, ...payload.new } : cat)
-          );
+          console.log('[Supabase] Categories updated:', payload.eventType);
+          fetchEvent(); // Re-fetch all to be safe with sorting/KM logic
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(eventChannel);
+      supabase.removeChannel(catChannel);
     };
   }, [id]);
 

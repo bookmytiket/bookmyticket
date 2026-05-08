@@ -81,7 +81,7 @@ export default function OrganiserDashboard() {
   return (
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
       <RNView style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Organiser Dashboard</Text>
@@ -117,7 +117,10 @@ export default function OrganiserDashboard() {
         <RNView style={styles.actionBar}>
           <Pressable 
             style={[styles.actionBtn, { backgroundColor: colors.tint }]}
-            onPress={() => router.push('/organiser/create-event')}
+            onPress={() => {
+              const targetUrl = 'https://bookmyticket.net/organiser?tab=post_event';
+              router.push({ pathname: '/web', params: { url: targetUrl } });
+            }}
           >
             <Plus size={20} color="#fff" />
             <Text style={styles.actionBtnText}>Create Event</Text>

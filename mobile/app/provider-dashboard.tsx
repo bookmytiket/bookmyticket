@@ -46,7 +46,7 @@ export default function ProviderDashboard() {
   return (
     <RNView style={[styles.container, { backgroundColor: colors.background }]}>
       <RNView style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Provider Dashboard</Text>
@@ -75,7 +75,10 @@ export default function ProviderDashboard() {
         {/* Action Button */}
         <Pressable 
           style={[styles.addServiceBtn, { backgroundColor: colors.tint }]}
-          onPress={() => router.push('/services/create')}
+          onPress={() => {
+            const targetUrl = 'https://bookmyticket.net/vendor/services?action=new';
+            router.push({ pathname: '/web', params: { url: targetUrl } });
+          }}
         >
           <Plus size={20} color="#fff" />
           <Text style={styles.addServiceBtnText}>Add New Service</Text>

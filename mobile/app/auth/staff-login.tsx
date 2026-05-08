@@ -14,6 +14,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +25,7 @@ export default function StaffLoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const navigation = useNavigation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,10 +74,10 @@ export default function StaffLoginScreen() {
   };
 
   const handleBack = () => {
-    if (router.canGoBack()) {
+    if (navigation.canGoBack()) {
       router.back();
     } else {
-      router.replace('/auth/sign-in');
+      router.replace('/(tabs)');
     }
   };
 

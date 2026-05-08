@@ -64,7 +64,7 @@ export default function AccountSettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.backBtn}>
           <ChevronLeft size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Account Settings</Text>

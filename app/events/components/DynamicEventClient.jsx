@@ -256,7 +256,8 @@ export default function DynamicEventClient({ event }) {
                 )}
             </AnimatePresence>
 
-            <div className="max-w-[850px] mx-auto px-4 pt-2">
+            <div className="max-w-[1240px] mx-auto px-4 md:px-8 pt-8">
+
                 
                 {/* Back Button & Category Badge */}
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -332,7 +333,8 @@ export default function DynamicEventClient({ event }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     
                     {/* Left Column: Form Content */}
-                    <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+                    <div className="lg:col-span-8 space-y-6">
+
                         <motion.div 
                             initial={{ clipPath: 'inset(0 100% 0 0)' }}
                             animate={{ clipPath: 'inset(0 0% 0 0)' }}
@@ -346,11 +348,12 @@ export default function DynamicEventClient({ event }) {
                                 <motion.h2 
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="text-xl md:text-2xl font-[900] uppercase tracking-tighter bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
+                                    className="text-2xl md:text-3xl font-[900] uppercase tracking-normal bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
                                 >
                                     Registration
                                 </motion.h2>
-                                <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.2em]">Participant Details</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Participant Details</p>
+
                             </div>
 
                             <div className="space-y-6">
@@ -563,19 +566,24 @@ export default function DynamicEventClient({ event }) {
                     </div>
 
                     {/* Right Column Sidebar */}
-                    <div className="lg:col-span-5 xl:col-span-4 space-y-8 sticky top-12">
+                    <div className="lg:col-span-4 space-y-8 sticky top-8">
+
                         {/* Summary Widget */}
                         <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl p-8 space-y-8">
-                            <div className="space-y-1">
-                                <motion.h3 
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="text-lg font-[900] uppercase tracking-tighter bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
-                                >
-                                    Order Details
-                                </motion.h3>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Review</p>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <motion.h3 
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-lg font-[900] uppercase tracking-normal bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
+                                    >
+                                        Order Details
+                                    </motion.h3>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Review Summary</p>
+                                </div>
+                                <Trophy size={24} className="text-pink-100" />
                             </div>
+
 
                             {selectedCategory ? (
                                 <div className="space-y-6">

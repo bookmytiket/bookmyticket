@@ -72,7 +72,7 @@ function SlideItem({ item, index, scrollX, onPress, colors }: SlideItemProps) {
   );
 }
 
-export default function HeroSlider({ slides, onPress }: HeroSliderProps) {
+export default React.forwardRef(function HeroSlider({ slides, onPress }: HeroSliderProps, ref: React.Ref<any>) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const scrollX = useSharedValue(0);
@@ -86,6 +86,7 @@ export default function HeroSlider({ slides, onPress }: HeroSliderProps) {
   return (
     <View style={styles.container}>
       <Animated.FlatList
+        ref={ref}
         data={slides}
         keyExtractor={(item, index) => item.id || index.toString()}
         horizontal
@@ -107,7 +108,7 @@ export default function HeroSlider({ slides, onPress }: HeroSliderProps) {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

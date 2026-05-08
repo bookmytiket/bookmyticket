@@ -12,6 +12,7 @@ import { MotiView } from 'moti';
 import { Mail, Phone, ArrowLeft, ShieldCheck, Apple } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { useNavigation } from '@react-navigation/native';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,6 +20,7 @@ export default function SignInScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const navigation = useNavigation();
 
   const [authType, setAuthType] = useState<'email' | 'phone'>('email');
   const [inputValue, setInputValue] = useState('');
@@ -118,7 +120,17 @@ export default function SignInScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Pressable style={styles.back} onPress={() => router.back()}>
+        <Pressable 
+          style={styles.back} 
+          onPress={() => {
+            const state = navigation.getState();
+            if (navigation.canGoBack() && state && state.index > 0) {
+              navigation.goBack();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+        >
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
 
@@ -128,6 +140,7 @@ export default function SignInScreen() {
           style={styles.brand}
         >
           <Image source={require('../../assets/images/logo_brand.png')} style={styles.brandLogo} resizeMode="contain" />
+          <View style={{ height: 10 }} />
           <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Sign in to your BookMyTicket account</Text>
         </MotiView>
@@ -231,11 +244,10 @@ export default function SignInScreen() {
                   elevation: 2
                 }]}
               >
-                <LottieView
-                  source={require('../../assets/google_animation.json')}
-                  autoPlay
-                  loop
-                  style={{ width: 55, height: 55, marginTop: -5, marginBottom: -5 }}
+                <Image 
+                  source={require('../../assets/images/google_logo_v3.png')} 
+                  style={{ width: 24, height: 24, marginRight: 12 }} 
+                  resizeMode="contain"
                 />
                 <Text style={{ fontSize: 18, fontWeight: '900', color: '#0f172a' }}>Sign in with Google</Text>
               </RNView>
@@ -256,8 +268,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   back: { marginBottom: 32 },
-  brand: { alignItems: 'center', marginBottom: 30 },
-  brandLogo: { width: 180, height: 60, marginBottom: 15 },
+  brand: { alignItems: 'center', marginBottom: 40, marginTop: 20 },
+  brandLogo: { width: 220, height: 75, marginBottom: 10 },
   title: { fontSize: 26, fontWeight: '900', marginBottom: 8 },
   subtitle: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
   authTypeTabs: { flexDirection: 'row', marginBottom: 25, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },

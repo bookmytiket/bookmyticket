@@ -94,19 +94,19 @@ export default function PartnerRequestScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <View style={[styles.header, { borderBottomColor: colors.border, height: 140, justifyContent: 'center' }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border, height: 160, justifyContent: 'center' }]}>
         <View style={styles.headerAbsoluteTop}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={styles.backBtn}>
             <ChevronLeft size={24} color={colors.text} />
           </Pressable>
         </View>
-        <View style={{ alignItems: 'center', marginTop: 35 }}>
+        <View style={{ alignItems: 'center', marginTop: 25 }}>
           <Image 
             source={require('../assets/images/logo_brand.png')} 
-            style={{ width: 180, height: 65 }}
+            style={{ width: 220, height: 75 }}
             resizeMode="contain"
           />
-          <Text style={[styles.headerTitle, { marginTop: 4 }]}>Partner Request</Text>
+          <Text style={[styles.headerTitle, { marginTop: 2, color: colors.text }]}>Partner Request</Text>
         </View>
       </View>
 

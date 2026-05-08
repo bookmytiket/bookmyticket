@@ -50,10 +50,12 @@ export function useSupabaseQuery(
     fetchData();
 
     // Fix: subscribe BEFORE calling .subscribe(), and only when realtime=true
-    if (realtime && table) {
-      const channelId = `realtime-${table}-${Math.random().toString(36).substring(7)}`;
+    const channelId = `sync-${table}-${Math.random().toString(36).substring(7)}`;
+    let channel: any;
+
+    if (realtime && table && enabled) {
       console.log(`[Supabase] Subscribing to real-time for: ${table} (ID: ${channelId})`);
-      const channel = supabase
+      channel = supabase
         .channel(channelId)
         .on(
           'postgres_changes',
@@ -65,6 +67,9 @@ export function useSupabaseQuery(
         )
         .subscribe((status) => {
           console.log(`[Supabase] Subscription status for ${table}:`, status);
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+             // Optional: Try to reconnect or log
+          }
         });
         
       subscriptionRef.current = channel;
@@ -72,12 +77,12 @@ export function useSupabaseQuery(
 
     return () => {
       isMounted.current = false;
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
+      if (channel) {
+        console.log(`[Supabase] Unsubscribing from: ${table} (ID: ${channelId})`);
+        supabase.removeChannel(channel);
       }
     };
-  }, [table, JSON.stringify(deps), realtime, enabled]);
+  }, [table, JSON.stringify(deps), realtime, enabled, fetchData]);
 
   return { data, loading, error, refresh: fetchData };
 }

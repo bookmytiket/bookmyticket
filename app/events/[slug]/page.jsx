@@ -13,12 +13,22 @@ export async function generateMetadata({ params }) {
 
     if (!supabase) return { title: 'BookMyTicket | Event' };
 
-    // Fetch by slug or ID fallback
-    const { data: event } = await supabase
+    // Fetch by slug first (preferred for SEO)
+    let { data: event } = await supabase
         .from('events')
         .select('*')
-        .or(`slug.eq.${slug},id.eq.${slug}`)
+        .eq('slug', slug)
         .maybeSingle();
+
+    // If not found by slug, try by ID fallback (only if slug is a valid UUID)
+    if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+        const { data: byId } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', slug)
+            .maybeSingle();
+        event = byId;
+    }
 
     if (!event) return { title: 'Event Not Found | BookMyTicket' };
 
@@ -50,11 +60,22 @@ export default async function SlugEventPage({ params }) {
 
     if (!supabase) notFound();
 
-    const { data: event } = await supabase
+    // Fetch by slug first (preferred for SEO)
+    let { data: event } = await supabase
         .from('events')
         .select('*')
-        .or(`slug.eq.${slug},id.eq.${slug}`)
+        .eq('slug', slug)
         .maybeSingle();
+
+    // If not found by slug, try by ID fallback (only if slug is a valid UUID)
+    if (!event && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+        const { data: byId } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', slug)
+            .maybeSingle();
+        event = byId;
+    }
 
     if (!event) notFound();
 

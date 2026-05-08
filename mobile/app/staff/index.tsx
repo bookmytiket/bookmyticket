@@ -48,8 +48,8 @@ export default function UnifiedManagerDashboard() {
 
   // 1. Fetch Role-Specific Data
   const lowerRole = (role || '').trim().toLowerCase();
-  const isOrganiser = lowerRole === 'organiser' || lowerRole === 'admin' || lowerRole === 'superadmin';
-  const isProvider = lowerRole === 'provider';
+  const isOrganiser = lowerRole === 'organiser' || lowerRole === 'admin' || lowerRole === 'superadmin' || lowerRole === 'super_admin';
+  const isProvider = lowerRole === 'provider' || lowerRole === 'service_provider' || lowerRole === 'vendor';
   const isStaff = !isOrganiser && !isProvider; // Safe default for staff/unauthorized users
 
   // Stats Data (Real-time)
@@ -149,10 +149,6 @@ export default function UnifiedManagerDashboard() {
             <ActivityIndicator animating={refreshing} size="small" color="#fff" />
             {!refreshing && <TrendingUp size={18} color="#fff" />}
           </Pressable>
-          <Pressable onPress={() => router.replace('/(tabs)')} style={styles.exitBtn}>
-            <ArrowLeft size={16} color="#fff" />
-            <Text style={[styles.exitBtnText, { color: '#fff' }]}>Exit</Text>
-          </Pressable>
           <Pressable 
             onPress={() => {
               Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -248,9 +244,10 @@ export default function UnifiedManagerDashboard() {
                 <Pressable 
                   style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                   onPress={() => {
-                    if (isOrganiser) {
-                      router.push({ pathname: '/web', params: { url: 'https://bookmyticket.net/organiser?tab=post_event' } });
-                    }
+                    const targetUrl = isOrganiser 
+                      ? 'https://bookmyticket.net/organiser?tab=post_event' 
+                      : 'https://bookmyticket.net/vendor/services?action=new';
+                    router.push({ pathname: '/web', params: { url: targetUrl } });
                   }}
                 >
                   <View style={[styles.actionIcon, { backgroundColor: '#fdf2f8' }]}>
@@ -319,8 +316,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  exitBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100 },
-  exitBtnText: { fontSize: 11, fontWeight: '800' },
   logoutBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(239, 68, 68, 0.05)', justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 20, paddingBottom: 40 },
   mainCard: {

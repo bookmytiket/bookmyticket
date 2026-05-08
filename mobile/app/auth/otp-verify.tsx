@@ -7,9 +7,11 @@ import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useNavigation } from '@react-navigation/native';
 
 export default function OTPVerifyScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ email?: string; phone?: string; name?: string; type: 'signup' | 'signin' }>();
   const { email, phone, type } = params;
   const colorScheme = useColorScheme() ?? 'light';
@@ -112,7 +114,17 @@ export default function OTPVerifyScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable 
+          onPress={() => {
+            const state = navigation.getState();
+            if (navigation.canGoBack() && state && state.index > 0) {
+              navigation.goBack();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }} 
+          style={styles.backBtn}
+        >
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
       </View>

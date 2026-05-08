@@ -1540,7 +1540,11 @@ function OrganiserPanel() {
             dynamic_config: {
                 ...(postEvent.dynamic_config || {}),
                 marathonCategories: postEvent.marathonCategories || []
-            }
+            },
+            seo_title: postEvent.dynamic_config?.seo?.title || undefined,
+            seo_description: postEvent.dynamic_config?.seo?.description || undefined,
+            slug: postEvent.dynamic_config?.seo?.slug || undefined,
+            tags: postEvent.dynamic_config?.seo?.keywords ? postEvent.dynamic_config.seo.keywords.split(',').map(t => t.trim()) : undefined
         };
 
         // Remove undefined keys

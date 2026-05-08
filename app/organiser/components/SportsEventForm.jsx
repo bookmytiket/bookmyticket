@@ -146,29 +146,27 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
     return (
         <div className="max-w-4xl mx-auto    ">
             {/* Stepper Header */}
-            <div className="flex items-center justify-between mb-12 px-4">
+            <div className="flex items-center justify-between mb-12 px-6 overflow-x-auto pb-4 scrollbar-hide gap-8">
                 {steps.map((s, idx) => (
                     <React.Fragment key={s.id}>
-                        <div className="flex flex-col items-center gap-3">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all  ${
-                                currentStep >= s.id ? 'bg-blue-500 text-white shadow-xl shadow-blue-500/20' : 'bg-slate-100 text-slate-400'
+                        <div className="flex flex-col items-center gap-3 shrink-0">
+                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all border-2 ${
+                                currentStep >= s.id ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200' : 'bg-white border-slate-100 text-slate-400'
                             }`}>
-                                <s.icon size={20} />
+                                <s.icon size={22} />
                             </div>
-                            <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${currentStep >= s.id ? 'text-blue-600' : 'text-slate-800'}`}>
                                 {s.title}
                             </span>
                         </div>
-                        {idx < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 max-w-[60px] mx-4 transition-colors  ${currentStep > s.id ? 'bg-blue-500' : 'bg-slate-100'}`} />
-                        )}
+                        {idx < steps.length - 1 && <div className={`w-12 h-0.5 mx-2 shrink-0 ${currentStep > s.id ? 'bg-blue-600' : 'bg-slate-100'}`} />}
                     </React.Fragment>
                 ))}
             </div>
 
             {/* Step 1: Sport Specifics */}
             {currentStep === 1 && (
-                <div className="space-y-8 p-8 md:p-12 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
+                <div className="space-y-8 p-5 md:p-12 bg-white rounded-[2.5rem] md:rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
                             <Activity size={20} />
@@ -240,12 +238,12 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                                             }}
                                             className={`flex flex-col items-center gap-3 p-5 rounded-[2rem] border transition-all ${
                                                 (postEvent.amenities || []).includes(item.id)
-                                                ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                                : 'bg-white border-slate-100 text-slate-400 hover:border-blue-200'
+                                                ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200'
+                                                : 'bg-white border-slate-100 text-slate-800 hover:border-blue-200'
                                             }`}
                                         >
-                                            <item.icon size={20} />
-                                            <span className="text-[9px] font-bold uppercase tracking-widest">{item.label}</span>
+                                            <item.icon size={22} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-center">{item.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -298,7 +296,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
             {/* Step 2: Basic Event Details */}
             {currentStep === 2 && (
-                <div className="space-y-8 p-8 md:p-12 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
+                <div className="space-y-8 p-6 md:p-12 bg-white rounded-[2.5rem] md:rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
                             <Info size={20} />
@@ -349,17 +347,17 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                         </div>
 
                         {renderInput("Event Title", "title", "text", "e.g. Monsoon Marathon 2024")}
-                        <div className="grid grid-cols-2 gap-4">
-                            {renderInput("Start Date", "startDate", "date")}
-                            {renderInput("Start Time", "startTime", "time")}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {renderInput("Event Start Date", "startDate", "date")}
+                            {renderInput("Event Start Time", "startTime", "time")}
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {renderInput("End Date", "endDate", "date")}
-                            {renderInput("End Time", "endTime", "time")}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {renderInput("Event End Date*", "endDate", "date")}
+                            {renderInput("Event End Time*", "endTime", "time")}
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {renderInput("Event Expiry Date", "expiryDate", "date")}
-                            <div />
+                            <div className="hidden md:block" />
                         </div>
                         <div className="md:col-span-2 space-y-4">
                             <div className="flex items-center justify-between">
@@ -422,7 +420,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
 
             {/* Step 3: Pricing & Review */}
             {currentStep === 3 && (
-                <div className="space-y-8 p-8 md:p-12 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
+                <div className="space-y-8 p-6 md:p-12 bg-white rounded-[2.5rem] md:rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
                             <DollarSign size={20} />
@@ -532,7 +530,7 @@ const SportsEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEditi
                                                     </button>
                                                 </div>
 
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                                     <div className="space-y-1.5">
                                                         <label className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Distance (KM)</label>
                                                         <input 

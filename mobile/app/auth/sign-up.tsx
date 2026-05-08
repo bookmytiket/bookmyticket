@@ -9,11 +9,13 @@ import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Mail, Phone, ArrowLeft, User, ChevronRight } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SignUpScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const navigation = useNavigation();
 
   const [authType, setAuthType] = useState<'email' | 'phone'>('email');
   const [inputValue, setInputValue] = useState('');
@@ -63,7 +65,17 @@ export default function SignUpScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Pressable style={styles.back} onPress={() => router.back()}>
+        <Pressable 
+          style={styles.back} 
+          onPress={() => {
+            const state = navigation.getState();
+            if (navigation.canGoBack() && state && state.index > 0) {
+              navigation.goBack();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+        >
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
 

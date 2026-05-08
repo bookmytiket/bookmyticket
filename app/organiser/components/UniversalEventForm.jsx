@@ -127,57 +127,6 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                     }}
                 />
             </div>
-            <div className="md:col-span-2 space-y-3">
-                <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Prize Distribution</label>
-                    <button 
-                        onClick={() => {
-                            const newCats = [...config.categories];
-                            if (!newCats[index].prizes) newCats[index].prizes = [];
-                            newCats[index].prizes.push({ label: `${newCats[index].prizes.length + 1}${['st', 'nd', 'rd'][newCats[index].prizes.length] || 'th'} Prize`, value: "" });
-                            updateConfig('categories', newCats);
-                        }}
-                        className="text-[10px] font-black text-pink-500 uppercase tracking-widest hover:underline"
-                    >
-                        + Add Prize
-                    </button>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                    {(category.prizes || []).map((prize, pIdx) => (
-                        <div key={pIdx} className="flex gap-2 items-center group">
-                            <input 
-                                className="w-1/3 bg-white border border-slate-200 text-[10px] font-black uppercase p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 text-slate-900 placeholder:text-slate-800"
-                                value={prize.label}
-                                onChange={e => {
-                                    const newCats = [...config.categories];
-                                    newCats[index].prizes[pIdx].label = e.target.value;
-                                    updateConfig('categories', newCats);
-                                }}
-                            />
-                            <input 
-                                className="flex-1 bg-white border border-slate-200 text-sm font-black p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 text-slate-900 placeholder:text-slate-800"
-                                placeholder="e.g. ₹5,000/-"
-                                value={prize.value}
-                                onChange={e => {
-                                    const newCats = [...config.categories];
-                                    newCats[index].prizes[pIdx].value = e.target.value;
-                                    updateConfig('categories', newCats);
-                                }}
-                            />
-                            <button 
-                                onClick={() => {
-                                    const newCats = [...config.categories];
-                                    newCats[index].prizes.splice(pIdx, 1);
-                                    updateConfig('categories', newCats);
-                                }}
-                                className="p-3 text-slate-800 hover:text-rose-500 transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
             <div className="md:col-span-2 space-y-3 pt-4 border-t border-slate-50">
                 <div className="flex justify-between items-center">
                     <div className="space-y-1">
@@ -199,8 +148,8 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                 
                 <div className="space-y-3">
                     {(category.agePricing || []).map((ap, apIdx) => (
-                        <div key={apIdx} className="grid grid-cols-12 gap-3 items-center   ">
-                            <div className="col-span-4 flex items-center gap-2">
+                        <div key={apIdx} className="flex flex-col md:grid md:grid-cols-12 gap-3 md:items-center   ">
+                            <div className="md:col-span-4 flex items-center gap-2">
                                 <input 
                                     type="number" placeholder="Min"
                                     className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold text-slate-900"
@@ -223,8 +172,8 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     }}
                                 />
                             </div>
-                            <div className="col-span-1 text-slate-800 font-bold text-[10px] uppercase">Years</div>
-                            <div className="col-span-5 relative">
+                            <div className="md:col-span-1 text-slate-800 font-bold text-[10px] uppercase">Years</div>
+                            <div className="md:col-span-5 relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-800 font-bold text-xs">₹</span>
                                 <input 
                                     type="number" placeholder="Price"
@@ -243,7 +192,7 @@ const TicketCard = ({ category, index, config, updateConfig }) => (
                                     newCats[index].agePricing.splice(apIdx, 1);
                                     updateConfig('categories', newCats);
                                 }}
-                                className="col-span-2 flex justify-center text-slate-800 hover:text-rose-500 transition-colors"
+                                className="md:col-span-2 flex justify-center text-slate-800 hover:text-rose-500 transition-colors py-2 md:py-0"
                             >
                                 <Trash size={16} />
                             </button>
@@ -293,9 +242,6 @@ const RegistrationFieldItem = ({ field, idx, config, updateConfig }) => (
                     <option value="tel">Phone</option>
                     <option value="date">Date</option>
                     <option value="select">Dropdown</option>
-                    <option value="radio">Radio Buttons</option>
-                    <option value="checkbox">Checkbox</option>
-                    <option value="file">File Upload</option>
                 </select>
                 <div className="flex items-center gap-2">
                     <button 
@@ -343,8 +289,14 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     const isAdmin = user?.role === 'admin';
     const [currentStep, setCurrentStep] = useState(1);
     const [showLocationModal, setShowLocationModal] = useState(false);
+
+    const updateConfig = (key, value) => {
+        setConfig(prev => ({
+            ...prev,
+            [key]: typeof value === 'function' ? value(prev[key]) : value
+        }));
+    };
     
-    // Default dynamic config structure
     const [config, setConfig] = useState(() => {
         const base = postEvent.dynamic_config || {};
         return {
@@ -403,13 +355,22 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             stateCode: base.stateCode || "",
             district: base.district || "",
             city: base.city || "",
-            zipCode: base.zipCode || ""
+            zipCode: base.zipCode || "",
+            seo: base.seo || {
+                title: "",
+                description: "",
+                keywords: "",
+                slug: ""
+            },
+            media: base.media || {
+                gallery: [],
+                videoUrl: "",
+                sponsorLogos: []
+            }
         };
     });
 
     useEffect(() => {
-        // Auto-detect location on mount ONLY if this is a new event (not editing)
-        // and we don't have coordinates set yet.
         const hasStoredLocation = postEvent.latitude && postEvent.longitude;
         if (isEditing || hasStoredLocation) return;
 
@@ -444,12 +405,9 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                     }
                 }, (err) => {
                     console.warn("Auto-location permission denied or failed:", err);
-                    if (err.code === 1) { // PERMISSION_DENIED
-                        showToast("Location access denied. Please enable it in browser settings.", "error");
-                    }
                 }, { enableHighAccuracy: true, timeout: 10000 });
             }
-        }, 1000); // 1s delay
+        }, 1000);
         
         return () => clearTimeout(timer);
     }, []);
@@ -459,7 +417,6 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
     const [distLoading, setDistLoading] = useState(false);
     const [cityLoading, setCityLoading] = useState(false);
 
-    // Fetch Districts when State changes
     useEffect(() => {
         const fetchDistricts = async () => {
             if (!config.state || config.country !== "India") {
@@ -468,32 +425,16 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             }
             setDistLoading(true);
             try {
-                const { data: stateData } = await supabase
-                    .from('states')
-                    .select('id')
-                    .eq('name', config.state)
-                    .maybeSingle();
-
+                const { data: stateData } = await supabase.from('states').select('id').eq('name', config.state).maybeSingle();
                 if (stateData) {
-                    const { data: dists } = await supabase
-                        .from('districts')
-                        .select('name')
-                        .eq('state_id', stateData.id)
-                        .order('name');
+                    const { data: dists } = await supabase.from('districts').select('name').eq('state_id', stateData.id).order('name');
                     setDbDistricts(dists?.map(d => d.name) || []);
-                } else {
-                    setDbDistricts([]);
                 }
-            } catch (err) {
-                console.error("Fetch districts error:", err);
-            } finally {
-                setDistLoading(false);
-            }
+            } catch (err) { console.error(err); } finally { setDistLoading(false); }
         };
         fetchDistricts();
     }, [config.state, config.country]);
 
-    // Fetch Cities when District changes
     useEffect(() => {
         const fetchCities = async () => {
             if (!config.district || config.country !== "India") {
@@ -502,51 +443,17 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
             }
             setCityLoading(true);
             try {
-                const { data: distData } = await supabase
-                    .from('districts')
-                    .select('id')
-                    .eq('name', config.district)
-                    .maybeSingle();
-
+                const { data: distData } = await supabase.from('districts').select('id').eq('name', config.district).maybeSingle();
                 if (distData) {
-                    const { data: cts } = await supabase
-                        .from('cities')
-                        .select('name')
-                        .eq('district_id', distData.id)
-                        .order('name');
-                    
-                    if (cts && cts.length > 0) {
-                        setDbCities(cts.map(c => c.name));
-                    } else {
-                        // If no cities for this district, check if there's a catch-all "District"
-                        setDbCities([]);
-                    }
-                } else {
-                    setDbCities([]);
+                    const { data: cts } = await supabase.from('cities').select('name').eq('district_id', distData.id).order('name');
+                    setDbCities(cts?.map(c => c.name) || []);
                 }
-            } catch (err) {
-                console.error("Fetch cities error:", err);
-            } finally {
-                setCityLoading(false);
-            }
+            } catch (err) { console.error(err); } finally { setCityLoading(false); }
         };
         fetchCities();
     }, [config.district, config.country]);
 
     useEffect(() => {
-        // Ensure basicInfo has regStart/regEnd defaults if missing
-        if (config.basicInfo && (config.basicInfo.regStart === undefined || config.basicInfo.regEnd === undefined || config.basicInfo.expiryDate === undefined)) {
-            setConfig(prev => ({
-                ...prev,
-                basicInfo: {
-                    ...prev.basicInfo,
-                    regStart: prev.basicInfo.regStart || "",
-                    regEnd: prev.basicInfo.regEnd || "",
-                    expiryDate: prev.basicInfo.expiryDate || ""
-                }
-            }));
-        }
-
         setPostEvent(prev => ({ 
             ...prev, 
             dynamic_config: config,
@@ -576,29 +483,19 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
         { id: 4, title: "Tickets", icon: Ticket },
         { id: 5, title: "Form Builder", icon: ListTodo },
         { id: 6, title: "Pricing & Rules", icon: DollarSign },
-        { id: 7, title: "Publish", icon: Globe }
+        { id: 7, title: "Content & FAQs", icon: HelpCircle },
+        { id: 8, title: "SEO & Social", icon: Globe },
+        { id: 9, title: "Publish", icon: ShieldCheck }
     ];
-
-    const updateConfig = (section, data) => {
-        setConfig(prev => ({
-            ...prev,
-            [section]: typeof data === 'function' ? data(prev[section]) : data
-        }));
-    };
-
-
 
     return (
         <div className="max-w-5xl mx-auto py-8">
-            {/* Steps Indicator */}
             <div className="flex items-center justify-between mb-12 px-6 overflow-x-auto pb-4 scrollbar-hide">
                 {steps.map((s, idx) => (
                     <React.Fragment key={s.id}>
                         <div className="flex flex-col items-center gap-3 shrink-0">
-                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all  border-2 ${
-                                currentStep >= s.id 
-                                ? 'bg-[#ec4899] border-[#ec4899] text-white shadow-xl shadow-pink-200' 
-                                : 'bg-white border-slate-100 text-slate-800'
+                            <div className={`w-14 h-14 rounded-[2rem] flex items-center justify-center transition-all border-2 ${
+                                currentStep >= s.id ? 'bg-[#ec4899] border-[#ec4899] text-white shadow-xl shadow-pink-200' : 'bg-white border-slate-100 text-slate-800'
                             }`}>
                                 <s.icon size={22} />
                             </div>
@@ -606,16 +503,13 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 {s.title}
                             </span>
                         </div>
-                        {idx < steps.length - 1 && (
-                            <div className={`w-12 h-0.5 mx-2 transition-colors  ${currentStep > s.id ? 'bg-[#ec4899]' : 'bg-slate-100'}`} />
-                        )}
+                        {idx < steps.length - 1 && <div className={`w-12 h-0.5 mx-2 ${currentStep > s.id ? 'bg-[#ec4899]' : 'bg-slate-100'}`} />}
                     </React.Fragment>
                 ))}
             </div>
 
-            {/* Step 1: Basic Information */}
             {currentStep === 1 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <Layout size={24} />
@@ -664,21 +558,21 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                 )}
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {renderInput("Event Date", postEvent.startDate, (v) => setPostEvent(p => ({ ...p, startDate: v })), "date")}
-                            {renderInput("Event Time", postEvent.startTime, (v) => setPostEvent(p => ({ ...p, startTime: v })), "time")}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                            {renderInput("Event Start Date", postEvent.startDate, (v) => setPostEvent(p => ({ ...p, startDate: v })), "date")}
+                            {renderInput("Event Start Time", postEvent.startTime, (v) => setPostEvent(p => ({ ...p, startTime: v })), "time")}
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {renderInput("End Date*", config.basicInfo.endDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, endDate: v }), "date")}
-                            {renderInput("End Time*", config.basicInfo.endTime, (v) => updateConfig('basicInfo', { ...config.basicInfo, endTime: v }), "time")}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                            {renderInput("Event End Date*", config.basicInfo.endDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, endDate: v }), "date")}
+                            {renderInput("Event End Time*", config.basicInfo.endTime, (v) => updateConfig('basicInfo', { ...config.basicInfo, endTime: v }), "time")}
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                             {renderInput("Registration Starts", config.basicInfo.regStart, (v) => updateConfig('basicInfo', { ...config.basicInfo, regStart: v }), "date")}
                             {renderInput("Registration Ends", config.basicInfo.regEnd, (v) => updateConfig('basicInfo', { ...config.basicInfo, regEnd: v }), "date")}
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                             {renderInput("Event Expiry Date", config.basicInfo.expiryDate, (v) => updateConfig('basicInfo', { ...config.basicInfo, expiryDate: v }), "date")}
-                            <div /> {/* Spacer */}
+                            <div className="hidden md:block" /> 
                         </div>
                         <CustomSelect 
                             label="Eligibility"
@@ -700,9 +594,8 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                 </div>
             )}
 
-            {/* Step 2: Location Setup */}
             {currentStep === 2 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -754,164 +647,105 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                         <div className="md:col-span-2">
                             {renderInput("Full Address", config.location.address, (v) => updateConfig('location', { ...config.location, address: v }), "text", "Building, Street, Area")}
                         </div>
-                                    <CustomSelect 
-                                        label="Country"
-                                        value={config.country}
-                                        options={COUNTRIES}
-                                        onChange={(v) => {
-                                            const countryData = COUNTRIES.find(c => (c.label || c) === v);
-                                            const code = countryData?.code || "IN";
-                                            
-                                            const centers = {
-                                                "IN": { lat: 20.5937, lng: 78.9629 },
-                                                "AE": { lat: 23.4241, lng: 53.8478 },
-                                                "SG": { lat: 1.3521, lng: 103.8198 },
-                                                "MY": { lat: 4.2105, lng: 101.9758 },
-                                                "TH": { lat: 15.8700, lng: 100.9925 },
-                                                "DE": { lat: 51.1657, lng: 10.4515 },
-                                                "US": { lat: 37.0902, lng: -95.7129 }
-                                            };
+                        <CustomSelect 
+                            label="Country"
+                            value={config.country}
+                            options={COUNTRIES}
+                            onChange={(v) => {
+                                const countryData = COUNTRIES.find(c => (c.label || c) === v);
+                                const code = countryData?.code || "IN";
+                                setConfig(prev => ({
+                                    ...prev,
+                                    country: v,
+                                    countryCode: code,
+                                    state: "", district: "", city: "", zipCode: ""
+                                }));
+                            }}
+                        />
+                        <CustomSelect 
+                            label="State / Province"
+                            value={config.state}
+                            options={State.getStatesOfCountry(config.countryCode).map(s => s.name)}
+                            onChange={(v) => {
+                                const stateObj = State.getStatesOfCountry(config.countryCode).find(s => s.name === v);
+                                setConfig(prev => ({
+                                    ...prev,
+                                    state: v,
+                                    stateCode: stateObj?.isoCode || "",
+                                    district: "", city: ""
+                                }));
+                            }}
+                        />
+                        {config.country === "India" ? (
+                            <>
+                                <CustomSelect 
+                                    label="District"
+                                    value={config.district}
+                                    options={dbDistricts.length > 0 ? dbDistricts : getIndianDistricts(config.state)}
+                                    isLoading={distLoading}
+                                    onChange={(v) => setConfig(prev => ({ ...prev, district: v, city: "", zipCode: "" }))}
+                                />
+                                <CustomSelect 
+                                    label="City"
+                                    value={config.city}
+                                    options={dbCities.length > 0 ? dbCities : getIndianCities(config.district)}
+                                    onChange={async (v) => {
+                                        setConfig(prev => ({ ...prev, city: v, location: { ...prev.location, city: v }}));
+                                        try {
+                                            const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
+                                            if (coords) setConfig(prev => ({ ...prev, location: { ...prev.location, coordinates: coords }}));
+                                        } catch (err) {}
+                                    }}
+                                />
+                            </>
+                        ) : (
+                            <CustomSelect 
+                                label="City"
+                                value={config.city}
+                                options={City.getCitiesOfState(config.countryCode, config.stateCode).map(c => c.name)}
+                                onChange={async (v) => {
+                                    setConfig(prev => ({ ...prev, city: v, location: { ...prev.location, city: v }}));
+                                    try {
+                                        const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
+                                        if (coords) setConfig(prev => ({ ...prev, location: { ...prev.location, coordinates: coords }}));
+                                    } catch (err) {}
+                                }}
+                            />
+                        )}
 
-                                            setConfig(prev => ({
-                                                ...prev,
-                                                country: v,
-                                                countryCode: code,
-                                                state: "",
-                                                stateCode: "",
-                                                district: "",
-                                                city: "",
-                                                zipCode: "",
-                                                location: { 
-                                                    ...prev.location, 
-                                                    city: "", 
-                                                    coordinates: centers[code] || prev.location.coordinates 
-                                                }
-                                            }));
-                                        }}
-                                    />
-                                    <CustomSelect 
-                                        label="State / Province"
-                                        value={config.state}
-                                        options={State.getStatesOfCountry(config.countryCode).map(s => s.name)}
-                                        onChange={(v) => {
-                                            const stateObj = State.getStatesOfCountry(config.countryCode).find(s => s.name === v);
-                                            setConfig(prev => ({
-                                                ...prev,
-                                                state: v,
-                                                stateCode: stateObj?.isoCode || "",
-                                                district: "",
-                                                city: "",
-                                                zipCode: "",
-                                                location: { ...prev.location, city: "" }
-                                            }));
-                                        }}
-                                    />
-                                    {config.country === "India" ? (
-                                        <>
-                                            <CustomSelect 
-                                                label="District"
-                                                value={config.district}
-                                                options={dbDistricts.length > 0 ? dbDistricts : getIndianDistricts(config.state)}
-                                                isLoading={distLoading}
-                                                onChange={(v) => setConfig(prev => ({
-                                                    ...prev,
-                                                    district: v,
-                                                    city: "",
-                                                    zipCode: "",
-                                                    location: { ...prev.location, city: "" }
-                                                }))}
-                                            />
-                                            <CustomSelect 
-                                                label="City"
-                                                value={config.city}
-                                                options={dbCities.length > 0 ? dbCities : getIndianCities(config.district)}
-                                                onChange={async (v) => {
-                                                    setConfig(prev => ({
-                                                        ...prev,
-                                                        city: v,
-                                                        location: { ...prev.location, city: v }
-                                                    }));
-                                                    // Auto-geocode city to update map pin AGGRESSIVELY
-                                                    try {
-                                                        const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
-                                                        if (coords) {
-                                                            setConfig(prev => ({
-                                                                ...prev,
-                                                                location: { ...prev.location, coordinates: { lat: coords.lat, lng: coords.lng }}
-                                                            }));
-                                                            // Also push directly to postEvent state to be safe
-                                                            setPostEvent(prevPE => ({
-                                                                ...prevPE,
-                                                                city: v,
-                                                                latitude: coords.lat,
-                                                                longitude: coords.lng
-                                                            }));
-                                                        }
-                                                    } catch (err) { console.error("Geocoding city error:", err); }
-                                                }}
-                                            />
-                                        </>
-                                    ) : (
-                                        <CustomSelect 
-                                            label="City"
-                                            value={config.city}
-                                            options={City.getCitiesOfState(config.countryCode, config.stateCode).map(c => c.name)}
-                                            onChange={async (v) => {
-                                                setConfig(prev => ({
-                                                    ...prev,
-                                                    city: v,
-                                                    location: { ...prev.location, city: v }
-                                                }));
-                                                // Auto-geocode city to update map pin
-                                                try {
-                                                    const coords = await geocode(`${v}, ${config.state}, ${config.country}`);
-                                                    if (coords) {
-                                                        setConfig(prev => ({
-                                                            ...prev,
-                                                            location: { ...prev.location, coordinates: { lat: coords.lat, lng: coords.lng }}
-                                                        }));
-                                                    }
-                                                } catch (err) { console.error("Geocoding city error:", err); }
-                                            }}
-                                        />
-                                    )}
+                        <div className="space-y-2">
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Pincode / Zip Code</label>
+                            <input 
+                                type="text"
+                                value={config.location.pincode || ""}
+                                onChange={(e) => updateConfig('location', { ...config.location, pincode: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner"
+                                placeholder="Auto-fills on City selection"
+                            />
+                        </div>
 
-                                    <div className="space-y-2">
-                                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Pincode / Zip Code</label>
-                                        <input 
-                                            type="text"
-                                            value={config.location.pincode || ""}
-                                            onChange={(e) => updateConfig('location', { ...config.location, pincode: e.target.value })}
-                                            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-inner transition-all placeholder:text-slate-800"
-                                            placeholder="Auto-fills on City selection"
-                                        />
-                                    </div>
-
-                                    <div /> {/* Replaced manual button with auto-detection */}
-                        
                         {postEvent.sportType === "Marathon" && (
                             <div className="md:col-span-2 space-y-4">
                                 <label className="block text-[11px] font-bold text-[#ec4899] uppercase tracking-widest pl-1">Marathon Specifics</label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {renderInput("Route Map URL", config.location.routeMapUrl, (v) => updateConfig('location', { ...config.location, routeMapUrl: v }), "url", "Link to GPX or Google Maps Route")}
-                                    {renderInput("Starting Point", config.location.startingPoint, (v) => updateConfig('location', { ...config.location, startingPoint: v }), "text", "e.g. Main Gate, Sector 4")}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {renderInput("Route Map URL", config.location.routeMapUrl, (v) => updateConfig('location', { ...config.location, routeMapUrl: v }), "url", "Link to GPX or Route")}
+                                    {renderInput("Starting Point", config.location.startingPoint, (v) => updateConfig('location', { ...config.location, startingPoint: v }), "text", "e.g. Main Gate")}
                                 </div>
                             </div>
                         )}
 
                         <div className="md:col-span-2 space-y-6 pt-6 border-t border-slate-50">
-                            <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center justify-between">
                                 <div>
-                                    <label className="block text-sm font-black text-slate-900 uppercase tracking-tight">Exact Event Location</label>
-                                    <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mt-1">Drag the pin to your specific building or venue gate</p>
+                                    <h2 className="text-xl font-black text-slate-900 uppercase">Map Location</h2>
+                                    <p className="text-[10px] font-bold text-slate-700 uppercase">Pin exact venue</p>
                                 </div>
                                 <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">High Precision Active</span>
+                                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Active</span>
                                 </div>
                             </div>
-                            
-                            <div className="h-[500px] rounded-[3rem] overflow-hidden border border-slate-200 shadow-2xl relative">
+                            <div className="h-[400px] rounded-[2rem] overflow-hidden border border-slate-200 shadow-2xl relative">
                                 <GoogleInlineMap 
                                     lat={config.location.coordinates.lat} 
                                     lng={config.location.coordinates.lng}
@@ -920,60 +754,37 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
                                             ...prev,
                                             location: { ...prev.location, coordinates: { lat, lng }}
                                         }));
-                                        // Auto-Geocode on pin move
                                         try {
                                             const geocoded = await reverseGeocode(lat, lng);
                                             if (geocoded) {
                                                 setConfig(prev => ({
                                                     ...prev,
                                                     country: geocoded.country || prev.country,
-                                                    countryCode: geocoded.countryCode || prev.countryCode,
-                                                    state: geocoded.state || prev.state,
-                                                    stateCode: geocoded.stateCode || prev.stateCode,
-                                                    district: geocoded.district || prev.district,
                                                     city: geocoded.city || prev.city,
-                                                    zipCode: geocoded.pincode || prev.zipCode,
                                                     location: { 
                                                         ...prev.location, 
                                                         address: geocoded.fullAddress || prev.location.address,
-                                                        city: geocoded.city || prev.location.city,
-                                                        pincode: geocoded.pincode || prev.location.pincode,
                                                         coordinates: { lat, lng }
                                                     }
                                                 }));
                                             }
-                                        } catch (err) {
-                                            console.error("Auto-geocoding error:", err);
-                                        }
+                                        } catch (err) {}
                                     }}
                                 />
-                                <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-slate-100 shadow-lg flex items-center gap-3 z-[100]">
-                                    <div className="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center text-white shrink-0">
-                                        <MapPin size={16} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest leading-none mb-1">Current Selection</p>
-                                        <p className="text-[10px] font-bold text-slate-900 truncate">
-                                            {config.location.coordinates.lat.toFixed(4)}, {config.location.coordinates.lng.toFixed(4)}
-                                        </p>
-                                    </div>
-                                    <div className="text-[8px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 px-2 py-1 rounded-md">Live</div>
-                                </div>
                             </div>
-                            <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest text-center italic">Pin location on map for automatic directions on the booking page.</p>
                         </div>
                     </div>
 
                     <div className="pt-10 flex justify-between">
                         <button onClick={() => setCurrentStep(1)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(3)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Amenities <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(3)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
             {/* Step 3: Amenities & Benefits */}
             {currentStep === 3 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <Gift size={24} />
@@ -1032,7 +843,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 4: Ticket Management */}
             {currentStep === 4 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
@@ -1066,7 +877,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 5: Form Builder */}
             {currentStep === 5 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
@@ -1119,7 +930,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 6: Pricing & Rules */}
             {currentStep === 6 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10   ">
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899]">
                             <DollarSign size={24} />
@@ -1228,7 +1039,7 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
             {/* Step 7: FAQs & Terms */}
             {currentStep === 7 && (
-                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10">
+                <div className="space-y-8 p-5 md:p-12 bg-white rounded-[2.5rem] md:rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
                     <div className="flex items-center gap-5">
                         <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                             <HelpCircle size={24} />
@@ -1302,13 +1113,98 @@ const UniversalEventForm = ({ postEvent, setPostEvent, onCancel, onPublish, isEd
 
                     <div className="pt-10 flex justify-between">
                         <button onClick={() => setCurrentStep(6)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
-                        <button onClick={() => setCurrentStep(8)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
+                        <button onClick={() => setCurrentStep(8)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: SEO & Social <ArrowRight size={18} /></button>
                     </div>
                 </div>
             )}
 
-            {/* Step 8: Final Review & Publish */}
+            {/* Step 8: SEO & Social */}
             {currentStep === 8 && (
+                <div className="bg-white rounded-[2rem] md:rounded-[3.5rem] border border-slate-100 shadow-2xl p-5 md:p-14 space-y-8 md:space-y-10   ">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                            <TrendingUp size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">SEO & Social Meta</h2>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Optimize your event for search engines and sharing</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">Custom URL Slug</label>
+                                <button 
+                                    onClick={() => {
+                                        const slug = (postEvent.title || "").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                        updateConfig('seo', { ...config.seo, slug });
+                                    }}
+                                    className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                                >
+                                    Auto-Generate
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl shadow-inner">
+                                <span className="text-slate-500 text-sm font-medium">bookmyticket.net/events/</span>
+                                <input 
+                                    value={config.seo.slug}
+                                    onChange={(e) => updateConfig('seo', { ...config.seo, slug: e.target.value })}
+                                    className="flex-1 bg-transparent border-none text-slate-900 text-sm font-bold focus:ring-0 p-0"
+                                    placeholder="event-url-slug"
+                                />
+                            </div>
+                        </div>
+
+                        {renderInput("SEO Title", config.seo.title, (v) => updateConfig('seo', { ...config.seo, title: v }), "text", "Maximum 60 characters recommended")}
+                        
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Meta Description</label>
+                            <textarea 
+                                value={config.seo.description}
+                                onChange={(e) => updateConfig('seo', { ...config.seo, description: e.target.value })}
+                                rows={4}
+                                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl shadow-inner outline-none focus:ring-2 focus:ring-blue-500/10"
+                                placeholder="Summary for Google search results (150-160 chars)"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1">Keywords / Tags</label>
+                            <input 
+                                value={config.seo.keywords}
+                                onChange={(e) => updateConfig('seo', { ...config.seo, keywords: e.target.value })}
+                                className="w-full bg-slate-50 border border-slate-100 text-slate-900 text-sm font-semibold px-6 py-4 rounded-2xl shadow-inner outline-none"
+                                placeholder="sports, marathon, chennai, marathon2024 (comma separated)"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Google Search Preview Mockup */}
+                    <div className="absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 top-full z-[100] w-[90vw] max-w-[320px] bg-white/95 backdrop-blur-xl border border-slate-100 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-4 md:p-6 select-none overflow-hidden space-y-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Google Preview</p>
+                        <div className="space-y-1">
+                            <h4 className="text-blue-700 text-xl font-medium hover:underline cursor-pointer truncate max-w-lg">
+                                {config.seo.title || postEvent.title || "Your Event Title Will Appear Here"}
+                            </h4>
+                            <p className="text-emerald-700 text-sm">
+                                https://bookmyticket.net/events/{config.seo.slug || "your-slug"}
+                            </p>
+                            <p className="text-slate-600 text-sm line-clamp-2 max-w-xl">
+                                {config.seo.description || postEvent.description || "Add a meta description to see how it looks in search results."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-10 flex justify-between">
+                        <button onClick={() => setCurrentStep(7)} className="px-10 py-4 text-slate-800 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"><ArrowLeft size={16} /> Back</button>
+                        <button onClick={() => setCurrentStep(9)} className="px-12 py-4 bg-slate-900 text-white rounded-[2rem] text-xs font-bold uppercase tracking-widest flex items-center gap-3">Next: Review & Publish <ArrowRight size={18} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 9: Final Review & Publish */}
+            {currentStep === 9 && (
                 <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl p-10 md:p-14 space-y-10    text-center">
                     <div className="flex flex-col items-center gap-6 py-10">
                         <div className="w-24 h-24 rounded-[3rem] bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-100 ">
