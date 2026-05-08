@@ -227,7 +227,7 @@ export default function ServiceBookScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Item Summary Card */}
-        <MotiView from={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Image source={{ uri: item?.image_url || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400' }} style={styles.itemImage} />
           <View style={styles.itemInfo}>
             <Text style={[styles.itemCat, { color: '#f844a4' }]}>{item?.category || (item?.isTurf ? 'Turf' : 'Service')}</Text>

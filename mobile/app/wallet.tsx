@@ -94,7 +94,7 @@ export default function WalletScreen() {
       setShowWithdrawModal(false);
       Alert.alert('Success', 'Withdrawal request submitted successfully');
     } else {
-      Alert.alert('Error', error?.message || 'Failed to submit request');
+      Alert.alert('Error', (error as any)?.message || 'Failed to submit request');
     }
   };
 

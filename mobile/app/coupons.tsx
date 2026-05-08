@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, ScrollView, Pressable, View, Text, FlatList, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { StyleSheet, ScrollView, Pressable, View, Text, Alert, ActivityIndicator, Share } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSupabaseQuery } from '@/hooks/useSupabase';
@@ -20,8 +19,16 @@ export default function CouponsScreen() {
   const { data: platformCoupons, loading: platformLoading } = useSupabaseQuery('coupons', (q) => q.eq('is_active', true), []);
 
   const copyToClipboard = async (code: string) => {
-    await Clipboard.setStringAsync(code);
-    Alert.alert('Copied!', `Coupon code ${code} copied to clipboard.`);
+    try {
+      // Since expo-clipboard is missing, we use Share as a fallback to show the code
+      // or try to use Clipboard if available (aliased or polyfilled)
+      await Share.share({
+        message: `Coupon Code: ${code}`,
+        title: 'Copy Coupon Code'
+      });
+    } catch (error) {
+      Alert.alert('Coupon Code', code);
+    }
   };
 
   const renderCoupon = ({ item, type }: { item: any, type: 'brand' | 'platform' }) => {
@@ -63,7 +70,7 @@ export default function CouponsScreen() {
             style={({ pressed }) => [styles.copyBtn, { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 }]}
           >
             <Copy size={14} color="#fff" />
-            <Text style={styles.copyBtnText}>COPY</Text>
+            <Text style={styles.copyBtnText}>SHARE</Text>
           </Pressable>
         </View>
 
@@ -96,14 +103,14 @@ export default function CouponsScreen() {
         <LinearGradient
           colors={[colors.tint, '#a855f7']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          end={{ x: 1, y: 0 }}
           style={styles.heroBanner}
         >
           <View style={styles.heroContent}>
             <Gift size={40} color="#fff" />
             <View>
               <Text style={styles.heroTitle}>Unlock Exclusive Savings</Text>
-              <Text style={styles.heroSub}>Copy codes and apply them during checkout</Text>
+              <Text style={styles.heroSub}>Use codes during checkout</Text>
             </View>
           </View>
         </LinearGradient>
@@ -135,6 +142,12 @@ export default function CouponsScreen() {
                 {renderCoupon({ item, type: 'platform' })}
               </React.Fragment>
             ))}
+          </View>
+        )}
+
+        {(brandingLoading || platformLoading) && (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={colors.tint} />
           </View>
         )}
 

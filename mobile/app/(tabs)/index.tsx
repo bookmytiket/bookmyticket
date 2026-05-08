@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { MotiView, MotiText } from 'moti';
 import { MapPin, Search, Menu, Bell, Sparkles, Ticket, Zap, Camera, Hammer, Utensils, Laptop, Rocket, ChevronRight, X as CloseIcon, User, Star } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import HierarchicalLocationSelector from '@/components/HierarchicalLocationSelector';
+import LocationSelectionModal from '@/components/LocationSelectionModal';
 import { useLocation } from '@/context/LocationContext';
 
 const { width } = Dimensions.get('window');
@@ -136,16 +136,16 @@ export default function HomeScreen() {
     }
     return val;
   };
-  const { location: userLocationData, setLocation } = useLocation();
-  const userLocation = userLocationData.city || 'Coimbatore';
+  const { location: userLocationData, setLocation, loading: locationLoading } = useLocation();
+  const userLocation = userLocationData.city || 'Select City';
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [activeCountry, setActiveCountry] = useState('India');
 
   useEffect(() => {
-    SecureStore.getItemAsync('userLocation').then(loc => {
-      if (loc) setLocation({ city: loc });
-    });
-  }, []);
+    if (!locationLoading && !userLocationData.city) {
+      setIsLocationModalOpen(true);
+    }
+  }, [locationLoading, userLocationData.city]);
 
   // Auto-redirect staff to dashboard on initial app load
   const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false);
@@ -428,23 +428,69 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             
-            <Pressable 
-              onPress={() => setIsLocationModalOpen(true)}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                backgroundColor: 'rgba(255,255,255,0.8)', 
-                paddingHorizontal: 10, 
-                paddingVertical: 6, 
-                borderRadius: 10,
-                gap: 4,
-                maxWidth: 140
-              }}
+            <MotiView
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', damping: 15 }}
             >
-              <MapPin size={14} color="#f84464" />
-              <Text style={{ fontWeight: '800', fontSize: 12, color: '#000' }} numberOfLines={1}>{userLocation}</Text>
-              <ChevronRight size={12} color="#64748b" style={{ transform: [{ rotate: '90deg' }] }} />
-            </Pressable>
+              <Pressable 
+                onPress={() => setIsLocationModalOpen(true)}
+                style={({ pressed }) => ({
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.9 : 1
+                })}
+              >
+                <LinearGradient
+                  colors={['#ffffff', '#f8fafc']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    gap: 8,
+                    maxWidth: 180,
+                    borderWidth: 1,
+                    borderColor: 'rgba(248, 68, 100, 0.15)',
+                    shadowColor: '#f84464',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 12,
+                    elevation: 6
+                  }}
+                >
+                  <View style={{ position: 'relative', width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    <MotiView
+                      from={{ scale: 1, opacity: 0.5 }}
+                      animate={{ scale: 2.2, opacity: 0 }}
+                      transition={{ loop: true, duration: 1500, type: 'timing' }}
+                      style={{
+                        position: 'absolute',
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: '#f84464',
+                      }}
+                    />
+                    <MapPin size={16} color="#f84464" strokeWidth={3} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#94a3b8', marginBottom: -2 }}>YOUR CITY</Text>
+                    <Text style={{ fontWeight: '900', fontSize: 14, color: '#1e293b' }} numberOfLines={1}>
+                      {userLocation?.city || userLocation || 'Select City'}
+                    </Text>
+                  </View>
+                  <MotiView
+                    animate={{ rotate: '90deg' }}
+                    style={{ opacity: 0.3 }}
+                  >
+                    <ChevronRight size={14} color="#64748b" />
+                  </MotiView>
+                </LinearGradient>
+              </Pressable>
+            </MotiView>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#ffda00' }}>
             {user ? (
@@ -458,9 +504,6 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
             )}
-            <Pressable style={styles.menuBtn} onPress={() => setIsMenuOpen(true)}>
-              <Menu size={24} color="#000" />
-            </Pressable>
           </View>
         </View>
 
@@ -1123,15 +1166,10 @@ export default function HomeScreen() {
       )}
 
       {/* Location Modal Overlay */}
-      {isLocationModalOpen && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 2000, justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
-          <Pressable 
-            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} 
-            onPress={() => setIsLocationModalOpen(false)} 
-          />
-          <HierarchicalLocationSelector onClose={() => setIsLocationModalOpen(false)} />
-        </View>
-      )}
+      <LocationSelectionModal 
+        isOpen={isLocationModalOpen} 
+        onClose={() => setIsLocationModalOpen(false)} 
+      />
     </View>
   );
 }

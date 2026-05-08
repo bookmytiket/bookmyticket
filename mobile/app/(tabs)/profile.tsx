@@ -23,6 +23,7 @@ import {
   Shield,
   Star,
   Wallet,
+  Activity,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
@@ -148,6 +149,42 @@ export default function ProfileScreen() {
           />
         </RNView>
       </RNView>
+
+      {(profile?.role === 'organiser' || profile?.role === 'admin') && (
+        <RNView style={styles.menuSection}>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>ORGANISER PANEL</Text>
+          <RNView style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <ProfileItem
+              icon={<Shield size={20} color={colors.tint} />}
+              label="Organiser Dashboard"
+              onPress={() => router.push('/organiser-dashboard')}
+              colors={colors}
+            />
+            <ProfileItem
+              icon={<Wallet size={20} color="#22c55e" />}
+              label="My Wallet"
+              onPress={() => router.push('/wallet')}
+              colors={colors}
+              isLast
+            />
+          </RNView>
+        </RNView>
+      )}
+
+      {(profile?.role === 'service_provider' || profile?.role === 'admin') && (
+        <RNView style={styles.menuSection}>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>SERVICE PROVIDER</Text>
+          <RNView style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <ProfileItem
+              icon={<Activity size={20} color={colors.secondary} />}
+              label="Provider Dashboard"
+              onPress={() => router.push('/provider-dashboard')}
+              colors={colors}
+              isLast
+            />
+          </RNView>
+        </RNView>
+      )}
 
       <RNView style={styles.menuSection}>
         <Text style={[styles.sectionTitle, { color: colors.muted }]}>PARTNER</Text>

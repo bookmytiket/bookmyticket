@@ -94,14 +94,20 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           latitude: data.latitude,
           longitude: data.longitude,
           is_default: true,
-          updated_at: new Error().toISOString(), // trigger update
+          updated_at: new Date().toISOString(), // trigger update
         };
 
         const { error } = await supabase
           .from('user_locations')
-          .upsert(upsertData, { onConflict: 'user_id, is_default' });
+          .upsert(upsertData, { onConflict: 'user_id' }); // Use user_id as conflict target
 
-        if (error) console.error('Error syncing location to Supabase:', error);
+        if (error) {
+          // If upsert fails, fallback to simple insert without unique constraint dependency
+          const { error: insertError } = await supabase
+            .from('user_locations')
+            .insert(upsertData);
+          if (insertError) console.log('Location sync suppressed:', insertError.message);
+        }
       } catch (error) {
         console.error('Error in setLocation sync:', error);
       }

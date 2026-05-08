@@ -60,6 +60,8 @@ export default function EventDetailScreen() {
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
+  const [marathonCategories, setMarathonCategories] = useState<any[]>([]);
+  const [selectedKM, setSelectedKM] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
 
@@ -77,12 +79,53 @@ export default function EventDetailScreen() {
         .single();
       if (error) throw error;
       setEvent(data);
+
+      // Fetch Marathon Categories if available
+      const { data: catData, error: catError } = await supabase
+        .from('marathon_categories')
+        .select('*')
+        .eq('event_id', id)
+        .order('distance_km', { ascending: true });
+      
+      if (!catError && catData) {
+        setMarathonCategories(catData);
+        if (catData.length > 0) {
+          const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+          setSelectedKM(kms[0]);
+        }
+      }
     } catch (err) {
       console.error('Error fetching event:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!id) return;
+    
+    const channel = supabase
+      .channel(`marathon-cats-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'marathon_categories',
+          filter: `event_id=eq.${id}`,
+        },
+        (payload) => {
+          setMarathonCategories(prev => 
+            prev.map(cat => cat.id === payload.new.id ? { ...cat, ...payload.new } : cat)
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   const handleShare = async () => {
     try {
@@ -94,6 +137,12 @@ export default function EventDetailScreen() {
   };
 
   const handleBook = () => {
+    const deadline = dynamicConfig.countdown?.deadline;
+    if (deadline && new Date(deadline).getTime() < new Date().getTime()) {
+      Alert.alert('Registration Closed', 'The registration deadline for this event has passed.');
+      return;
+    }
+
     if (!user) {
       Alert.alert(
         'Sign In Required',
@@ -377,21 +426,59 @@ export default function EventDetailScreen() {
           )}
 
           {/* Ticket Categories & Prizes */}
-          {dynamicConfig.categories?.length > 0 && (
+          {(marathonCategories.length > 0 || dynamicConfig.categories?.length > 0) && (
             <RNView style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ticket Categories</Text>
-              {dynamicConfig.categories.map((cat: any, i: number) => (
+              <RNView style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Ticket Categories</Text>
+                
+                {marathonCategories.length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={styles.kmTabs}
+                  >
+                    {[...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b).map(km => (
+                      <Pressable 
+                        key={km}
+                        onPress={() => setSelectedKM(km)}
+                        style={[
+                          styles.kmTab,
+                          selectedKM === km && { backgroundColor: colors.tint, borderColor: colors.tint }
+                        ]}
+                      >
+                        <Text style={[
+                          styles.kmTabText,
+                          selectedKM === km && { color: '#fff' }
+                        ]}>{km} KM</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+              </RNView>
+
+              {(marathonCategories.length > 0 
+                ? marathonCategories.filter(c => !selectedKM || Number(c.distance_km) === selectedKM)
+                : (dynamicConfig.categories || [])
+              ).map((cat: any, i: number) => (
                 <RNView
-                  key={i}
+                  key={cat.id || i}
                   style={[
                     styles.categoryCard,
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
                   <RNView style={styles.categoryHeader}>
-                    <Text style={[styles.categoryName, { color: colors.text }]}>{cat.name}</Text>
+                    <RNView style={{ flex: 1 }}>
+                      <Text style={[styles.categoryName, { color: colors.text }]}>{cat.title || cat.name}</Text>
+                      {cat.min_age !== undefined && (
+                        <Text style={[styles.categoryAge, { color: colors.muted }]}>
+                          Age: {cat.min_age} - {cat.max_age} Years
+                        </Text>
+                      )}
+                    </RNView>
                     <Text style={[styles.categoryPrice, { color: colors.tint }]}>
                       {(() => {
+                        if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
                         const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
                         if (Array.isArray(rawRates) && rawRates.length > 0) {
                           const prices = rawRates.map((r: any) => Number(r.price || 0));
@@ -417,8 +504,13 @@ export default function EventDetailScreen() {
                   
                   <RNView style={styles.categoryFooter}>
                     <Text style={[styles.categorySlots, { color: colors.muted }]}>
-                      {cat.gender || 'All'} • {cat.totalSlots || 0} SLOTS
+                      {(cat.slots !== undefined ? cat.slots : cat.totalSlots) || 0} SLOTS AVAILABLE
                     </Text>
+                    {cat.distance_km && (
+                      <RNView style={[styles.kmBadge, { backgroundColor: colors.tint + '15' }]}>
+                        <Text style={[styles.kmBadgeText, { color: colors.tint }]}>{cat.distance_km} KM</Text>
+                      </RNView>
+                    )}
                   </RNView>
                 </RNView>
               ))}
@@ -507,6 +599,7 @@ function Countdown({ deadline }: { deadline: string }) {
       const diff = new Date(deadline).getTime() - new Date().getTime();
       if (diff <= 0) {
         clearInterval(timer);
+        setTimeLeft({ days: 0, hrs: 0, min: 0, sec: 0 });
         return;
       }
       setTimeLeft({
@@ -518,6 +611,16 @@ function Countdown({ deadline }: { deadline: string }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [deadline]);
+
+  const isClosed = new Date(deadline).getTime() < new Date().getTime();
+
+  if (isClosed) {
+    return (
+      <RNView style={{ paddingVertical: 10 }}>
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>REGISTRATION CLOSED</Text>
+      </RNView>
+    );
+  }
 
   return (
     <RNView style={styles.countdownRow}>
@@ -632,17 +735,24 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 14, fontWeight: '800', marginTop: 2 },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16 },
+  sectionHeader: { marginBottom: 16 },
+  kmTabs: { paddingBottom: 8, gap: 8 },
+  kmTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', backgroundColor: 'transparent' },
+  kmTabText: { fontSize: 12, fontWeight: '800' },
   description: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
   categoryCard: { borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 12 },
-  categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   categoryName: { fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
+  categoryAge: { fontSize: 11, fontWeight: '700', marginTop: 2 },
   categoryPrice: { fontSize: 18, fontWeight: '900' },
   prizeList: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', gap: 8 },
   prizeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   prizeLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   prizeValue: { fontSize: 14, fontWeight: '800' },
-  categoryFooter: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 10 },
+  categoryFooter: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   categorySlots: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  kmBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  kmBadgeText: { fontSize: 10, fontWeight: '900' },
   amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   amenityItem: { width: '22%', alignItems: 'center', gap: 8 },
   amenityIcon: { width: 50, height: 50, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

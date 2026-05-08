@@ -40,6 +40,8 @@ export default function BookEventScreen() {
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
+  const [marathonCategories, setMarathonCategories] = useState<any[]>([]);
+  const [selectedKM, setSelectedKM] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedTier, setSelectedTier] = useState<any>(null);
@@ -85,8 +87,29 @@ export default function BookEventScreen() {
       )
       .subscribe();
 
+    const catChannel = supabase
+      .channel(`marathon-cats-book-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'marathon_categories',
+          filter: `event_id=eq.${id}`,
+        },
+        (payload) => {
+          setMarathonCategories((prev: any[]) => 
+            prev.map(cat => cat.id === payload.new.id ? { ...cat, ...payload.new } : cat)
+          );
+          // If the selected tier was updated, update it in state too
+          setSelectedTier((prev: any) => prev?.id === payload.new.id ? { ...prev, ...payload.new } : prev);
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(catChannel);
     };
   }, [id]);
 
@@ -164,6 +187,24 @@ export default function BookEventScreen() {
       if (error) throw error;
       setEvent(data);
       processEventData(data);
+
+      // Fetch Marathon Categories
+      const { data: catData, error: catError } = await supabase
+        .from('marathon_categories')
+        .select('*')
+        .eq('event_id', id)
+        .order('distance_km', { ascending: true });
+      
+      if (!catError && catData) {
+        setMarathonCategories(catData);
+        if (catData.length > 0) {
+          const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+          setSelectedKM(kms[0]);
+          // Auto-select first tier in first KM
+          const firstTier = catData.find(c => Number(c.distance_km) === kms[0]);
+          if (firstTier) setSelectedTier(firstTier);
+        }
+      }
     } catch (err) {
       console.error('Error fetching event for booking:', err);
     } finally {
@@ -192,6 +233,7 @@ export default function BookEventScreen() {
   const getBasePrice = () => {
     if (selectedAgeGroup) return Number(selectedAgeGroup.price || 0);
     if (selectedTier) {
+      if (selectedTier.price !== undefined) return Number(selectedTier.price);
       const rawRates = selectedTier.ageRates || selectedTier.agePricing || selectedTier.age_rates || selectedTier.age_pricing || [];
       if (Array.isArray(rawRates) && rawRates.length > 0) {
         return Number(rawRates[0].price || 0);
@@ -321,8 +363,13 @@ export default function BookEventScreen() {
           name: finalName,
           email: finalEmail,
           phone: finalPhone || null,
-          age_group: selectedAgeGroup?.label || null,
-          ticket_type: selectedTier?.name || selectedTier?.type || 'General',
+          distance_km: selectedKM,
+          category_id: selectedTier?.id || null,
+          category_title: selectedTier?.title || selectedTier?.name || selectedTier?.type || 'General',
+          age_group: selectedAgeGroup 
+            ? (selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`)
+            : (selectedTier?.min_age !== undefined ? `${selectedTier.min_age}-${selectedTier.max_age} Yrs` : null),
+          ticket_type: selectedTier?.title || selectedTier?.name || selectedTier?.type || 'General',
           ...formResponses
         },
       };
@@ -672,14 +719,54 @@ export default function BookEventScreen() {
             </Pressable>
           </RNView>
         )}
-        {ticketTiers.length > 0 && (
+        {(marathonCategories.length > 0 || ticketTiers.length > 0) && (
           <RNView style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Category</Text>
-            {ticketTiers.map((tier: any, i: number) => {
-              const isSelected = selectedTier?.name === tier.name || selectedTier?.id === tier.id;
+            <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Select Category</Text>
               
-              // Robust price calculation for the list item
+              {marathonCategories.length > 0 && (
+                <RNView style={{ backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: colors.tint }}>{selectedKM} KM</Text>
+                </RNView>
+              )}
+            </RNView>
+
+            {marathonCategories.length > 0 && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
+              >
+                {[...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b).map(km => (
+                  <Pressable 
+                    key={km}
+                    onPress={() => {
+                      setSelectedKM(km);
+                      const firstTier = marathonCategories.find(c => Number(c.distance_km) === km);
+                      if (firstTier) setSelectedTier(firstTier);
+                    }}
+                    style={[
+                      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+                      selectedKM === km && { backgroundColor: colors.tint, borderColor: colors.tint }
+                    ]}
+                  >
+                    <Text style={[
+                      { fontSize: 12, fontWeight: '800', color: colors.muted },
+                      selectedKM === km && { color: '#fff' }
+                    ]}>{km} KM</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
+            {(marathonCategories.length > 0 
+              ? marathonCategories.filter(c => !selectedKM || Number(c.distance_km) === selectedKM)
+              : ticketTiers
+            ).map((tier: any, i: number) => {
+              const isSelected = selectedTier?.id === tier.id || (selectedTier?.name === tier.name && !tier.id);
+              
               const tierPrice = (() => {
+                if (tier.price !== undefined) return Number(tier.price);
                 const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
                 if (Array.isArray(rawRates) && rawRates.length > 0) {
                   return Math.min(...rawRates.map((r: any) => Number(r.price || 0)));
@@ -689,7 +776,7 @@ export default function BookEventScreen() {
 
               return (
                 <Pressable
-                  key={i}
+                  key={tier.id || i}
                   onPress={() => {
                     setSelectedTier(tier);
                     const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
@@ -720,11 +807,15 @@ export default function BookEventScreen() {
                     </RNView>
                     <RNView>
                       <Text style={[styles.tierName, { color: colors.text }]}>
-                        {tier.name || tier.type || 'General'}
+                        {tier.title || tier.name || tier.type || 'General'}
                       </Text>
-                      {(tier.description || tier.gender) && (
+                      {(tier.min_age !== undefined || tier.gender || tier.description) && (
                         <Text style={[styles.tierDesc, { color: colors.muted }]}>
-                          {[tier.gender, tier.description].filter(Boolean).join(' • ')}
+                          {[
+                            tier.min_age !== undefined ? `Age ${tier.min_age}-${tier.max_age}` : null,
+                            tier.gender,
+                            tier.description
+                          ].filter(Boolean).join(' • ')}
                         </Text>
                       )}
                     </RNView>

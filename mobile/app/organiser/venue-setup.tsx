@@ -116,8 +116,8 @@ export default function SmartVenueSetup() {
           style={[styles.dropdownTrigger, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={() => setActiveDropdown(isOpen ? null : field)}
         >
-          <Text style={[styles.dropdownValue, { color: venue[field] ? colors.text : colors.muted }]}>
-            {venue[field] || `Select ${label}`}
+          <Text style={[styles.dropdownValue, { color: (venue as any)[field] ? colors.text : colors.muted }]}>
+            {(venue as any)[field] || `Select ${label}`}
           </Text>
           <ChevronDown size={18} color={colors.muted} />
         </Pressable>
@@ -140,7 +140,7 @@ export default function SmartVenueSetup() {
                   }}
                 >
                   <Text style={[styles.dropdownItemText, { color: colors.text }]}>{opt}</Text>
-                  {venue[field] === opt && <CheckCircle2 size={16} color="#f844a4" />}
+                  {(venue as any)[field] === opt && <CheckCircle2 size={16} color="#f844a4" />}
                 </Pressable>
               ))}
             </MotiView>
@@ -214,10 +214,10 @@ export default function SmartVenueSetup() {
 
           <View style={styles.grid}>
             {renderDropdown("State", "state", INDIAN_STATES)}
-            {renderDropdown("District", "district", DISTRICTS[venue.state] || [])}
+            {renderDropdown("District", "district", (DISTRICTS as any)[venue.state] || [])}
           </View>
 
-          {renderDropdown("City", "city", CITIES[venue.district] || [])}
+          {renderDropdown("City", "city", (CITIES as any)[venue.district] || [])}
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Pincode / Zip Code</Text>

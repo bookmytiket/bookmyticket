@@ -54,7 +54,7 @@ export default function ProviderProfileScreen() {
               bio: turf.description,
               starting_price: turf.price_per_hour,
               isTurf: true,
-              portfolio: Array.isArray(turf.images) ? turf.images.map(img => ({ url: img })) : [{ url: turf.images }]
+              portfolio: Array.isArray(turf.images) ? turf.images.map((img: string) => ({ url: img })) : [{ url: turf.images }]
             });
           }
         }
