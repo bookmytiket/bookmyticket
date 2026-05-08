@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, View as RNView, Platform, StatusBar } from 'react-native';
+import { StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, View as RNView, Platform, StatusBar, Image } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -94,12 +94,20 @@ export default function PartnerRequestScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <ChevronLeft size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Partner Request</Text>
-        <View style={{ width: 40 }} />
+      <View style={[styles.header, { borderBottomColor: colors.border, height: 140, justifyContent: 'center' }]}>
+        <View style={styles.headerAbsoluteTop}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <ChevronLeft size={24} color={colors.text} />
+          </Pressable>
+        </View>
+        <View style={{ alignItems: 'center', marginTop: 35 }}>
+          <Image 
+            source={require('../assets/images/logo_brand.png')} 
+            style={{ width: 180, height: 65 }}
+            resizeMode="contain"
+          />
+          <Text style={[styles.headerTitle, { marginTop: 4 }]}>Partner Request</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -247,10 +255,13 @@ export default function PartnerRequestScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1 },
+  headerAbsoluteTop: { position: 'absolute', top: Platform.OS === 'ios' ? 50 : 30, left: 16, zIndex: 10 },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '900' },
   content: { paddingBottom: 100 },
+  logoContainer: { alignItems: 'center', marginTop: 20, marginBottom: 10 },
+  largeLogo: { width: 220, height: 80 },
   heroBanner: { margin: 20, borderRadius: 24, overflow: 'hidden' },
   bannerGradient: { padding: 24, gap: 8 },
   bannerTitle: { color: '#fff', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
