@@ -21,6 +21,7 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { motion, AnimatePresence } from "framer-motion";
 import SportsEventForm from "./components/SportsEventForm";
 import UniversalEventForm from "./components/UniversalEventForm";
+import MarathonEventForm from "./components/MarathonEventForm";
 import WalletDashboard from "./components/WalletDashboard";
 import CouponManagement from "./components/CouponManagement";
 import GoogleInlineMap from "./components/GoogleInlineMap";
@@ -791,6 +792,33 @@ function OrganiserPanel() {
     const [createStaffMutation] = useSupabaseMutation("profiles", "insert"); // Staff are entries in profiles with role 'staff'
     const [updateStaffMutation] = useSupabaseMutation("profiles", "update", (q, p) => q.eq("id", p.id));
     const [deleteStaffMutation] = useSupabaseMutation("profiles", "delete", (q, p) => q.eq("id", p.id));
+
+    const handleDeleteEvent = async (event) => {
+        if (!confirm(`Are you sure you want to delete "${event.title}"? This action cannot be undone.`)) return;
+
+        try {
+            // 0. Manual Cascade: Delete dependent bookings/registrations to avoid FK constraints
+            if (event.type === 'Marathon') {
+                await supabase.from('marathon_registrations').delete().eq('marathon_id', event.id);
+                await supabase.from('marathon_categories').delete().eq('marathon_id', event.id);
+            }
+            await supabase.from('bookings').delete().eq('event_id', event.id);
+
+            // 1. Delete from specialized marathon table if it's a marathon
+            if (event.type === 'Marathon') {
+                await supabase.from('marathon_events').delete().eq('id', event.id);
+            }
+            
+            // 2. Delete from shadow events table
+            await deleteEventMutation({ id: event.id });
+            
+            showToast("Event deleted successfully", "success");
+            refreshEvents();
+        } catch (err) {
+            console.error("Delete error:", err);
+            showToast("Failed to delete event: " + (err.message || "Unknown error"), "error");
+        }
+    };
 
     const internalMeetingPortalEnabled = useMemo(() => {
         const cfg = systemConfigs.find(c => c.key === "internal_meeting_portal_enabled");
@@ -2864,6 +2892,16 @@ function OrganiserPanel() {
                 );
             };
             switch (activeTab) {
+                case "marathon_publish":
+                    return (
+                        <MarathonEventForm 
+                            onCancel={() => setActiveTab("dashboard")} 
+                            onPublish={() => {
+                                refreshEvents();
+                                setActiveTab("manage_events");
+                            }}
+                        />
+                    );
                 case "dashboard":
                     return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -2889,6 +2927,47 @@ function OrganiserPanel() {
                                     </div>
                                     <p style={{ fontSize: "28px", fontWeight: 800, margin: "0 0 4px", color: t.textMain }}>{Number(convexBookings.length).toLocaleString()}</p>
                                     <p style={{ fontSize: "13px", fontWeight: 600, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Bookings</p>
+                                </div>
+                            </div>
+
+                            {/* V2 Specialized Publishing Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div 
+                                    onClick={() => setActiveTab("marathon_publish")}
+                                    className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-[2.5rem] text-white cursor-pointer group hover:shadow-2xl hover:shadow-indigo-500/30 transition-all duration-500"
+                                >
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                        <Trophy size={120} />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-6">
+                                            <Activity size={24} className="text-indigo-200" />
+                                        </div>
+                                        <h3 className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Publish Marathon</h3>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200/80">New V2 Image-Driven Infrastructure</p>
+                                        <div className="mt-8 flex items-center gap-2 text-xs font-bold text-white bg-white/10 w-fit px-4 py-2 rounded-full backdrop-blur-sm group-hover:bg-indigo-400/30 transition-colors">
+                                            Launch System <ChevronRight size={14} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div 
+                                    onClick={() => setActiveTab("post_event")}
+                                    className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-rose-600 p-8 rounded-[2.5rem] text-white cursor-pointer group hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-500"
+                                >
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                        <Sparkles size={120} />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-6">
+                                            <Ticket size={24} className="text-rose-200" />
+                                        </div>
+                                        <h3 className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Regular Event</h3>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200/80">Standard Ticketing & Seating System</p>
+                                        <div className="mt-8 flex items-center gap-2 text-xs font-bold text-white bg-white/10 w-fit px-4 py-2 rounded-full backdrop-blur-sm group-hover:bg-rose-400/30 transition-colors">
+                                            Create Now <ChevronRight size={14} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -3118,7 +3197,7 @@ function OrganiserPanel() {
                                                                                     <Grid size={14} /> Map
                                                                                 </button>
                                                                             )}
-                                                                            <button onClick={() => deleteEventMutation({ id: ev.id }).catch(e => console.error(e))} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
+                                                                            <button onClick={() => handleDeleteEvent(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                                 <Trash2 size={16} />
                                                                             </button>
                                                                             {!isExpiredSection && (
@@ -3232,17 +3311,12 @@ function OrganiserPanel() {
                                             key={st.id}
                                             onClick={() => {
                                                 if (st.id === "Marathon") {
-                                                    setPostEvent(pe => ({
-                                                        ...pe,
-                                                        type: "Dynamic",
-                                                        category: "Sports",
-                                                        sportType: "Marathon",
-                                                        seatingEnabled: false
-                                                    }));
+                                                    setActiveTab("marathon_publish");
+                                                    setAddEventStep("select_type"); // Reset for next time
                                                 } else {
                                                     setPostEvent(pe => ({ ...pe, sportType: st.id }));
+                                                    setAddEventStep("form");
                                                 }
-                                                setAddEventStep("form");
                                             }}
                                             className="group relative bg-white border border-slate-100 rounded-[2rem] p-8 flex flex-col items-center gap-6 cursor-pointer overflow-hidden transition-all  hover:shadow-2xl hover:border-blue-200 hover:-translate-y-2"
                                         >
@@ -4280,7 +4354,7 @@ function OrganiserPanel() {
                                                             {ev.seating_enabled !== false && (
                                                                 <button onClick={() => { setSelectedEventForSeatMap(ev); setActiveTab("seat_map"); }} style={{ border: "none", background: "#6366f120", color: "#6366f1", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Seat Map</button>
                                                             )}
-                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                            <button onClick={() => handleDeleteEvent(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -4364,7 +4438,7 @@ function OrganiserPanel() {
                                                     <td style={{ padding: "16px", borderRadius: "0 12px 12px 0" }}>
                                                         <div style={{ display: "flex", gap: "8px" }}>
                                                             <button style={{ border: "none", background: "#3b82f620", color: "#3b82f6", padding: "8px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Manage Link</button>
-                                                            <button onClick={() => { if (confirm("Delete?")) deleteEventMutation({ id: ev.id }); }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
+                                                            <button onClick={() => handleDeleteEvent(ev)} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#ef4444", padding: "8px", borderRadius: "8px", cursor: "pointer" }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
                                                 </tr>

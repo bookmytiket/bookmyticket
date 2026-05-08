@@ -12,7 +12,7 @@ const MapPicker = dynamic(() => import("@/components/MapPicker"), {
  * OSMInlineMap — OpenStreetMap replacement for GoogleInlineMap.
  * Zero-billing, robust, and performs exactly like the original.
  */
-const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
+const GoogleInlineMap = ({ lat, lng, onLocationSelect, ...props }) => {
   const center = useMemo(() => ({ 
     lat: Number(lat) || 20.5937, 
     lng: Number(lng) || 78.9629 
@@ -25,6 +25,7 @@ const GoogleInlineMap = ({ lat, lng, onLocationSelect }) => {
         lng={center.lng} 
         onLocationSelect={(data) => onLocationSelect(data.lat, data.lng)}
         height="100%"
+        {...props}
       />
     </div>
   );

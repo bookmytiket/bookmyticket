@@ -11,6 +11,7 @@ import { useSupabaseQuery } from "@/hooks/useSupabase";
 import { useAuth } from "@/components/AuthContext";
 import Footer from '@/components/Footer';
 import EventMap from './EventMap';
+import { getFeeBreakdown, resolveFeeSettings, DEFAULT_FEE_SETTINGS } from '@/app/utils/feeBreakdown';
 
 const DEFAULT_IMG = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80";
 const DEFAULT_FEATURES = [
@@ -76,6 +77,12 @@ export default function EventDetailClient({ id }) {
     , [user, id]);
 
     const existingBooking = userBookings && userBookings.length > 0;
+    
+    // Fetch Marathon Categories if it's a marathon
+    const isMarathon = rawEvent?.type === 'Marathon';
+    const { data: marathonCategories } = useSupabaseQuery('marathon_categories', (q) => 
+        q.select('*').eq('marathon_id', id).order('distance_km', { ascending: true })
+    , [id], { enabled: isMarathon });
 
     const event = useMemo(() => {
         if (!rawEvent) return null;
@@ -138,7 +145,18 @@ export default function EventDetailClient({ id }) {
         }
     }, [event?.dynamic_config]);
 
-    const categories = parsedConfig?.categories || [];
+    const categories = useMemo(() => {
+        if (isMarathon && marathonCategories?.length > 0) {
+            return marathonCategories.map(c => ({
+                id: c.id,
+                name: `${c.category_name} (${c.distance_km}KM) - ${c.age_group}`,
+                price: c.price,
+                distance: c.distance_km,
+                ageGroup: c.age_group
+            }));
+        }
+        return parsedConfig?.categories || [];
+    }, [isMarathon, marathonCategories, parsedConfig?.categories]);
     const selectedCat = useMemo(() => {
         if (categories.length === 0) return null;
         return categories.find(c => c.id === selectedCatId) || categories[0];
@@ -396,7 +414,7 @@ export default function EventDetailClient({ id }) {
                                             }}
                                             className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-[24px] font-bold uppercase tracking-[0.3em] text-[12px] shadow-2xl shadow-pink-500/40 hover:scale-[1.02] active:scale-95 transition-all"
                                         >
-                                            {event.isFree ? "Get Free Ticket" : "Reserve Spot Now"}
+                                            {event.isFree ? "Register for Free" : (isMarathon ? "Register Now" : "Reserve Spot Now")}
                                         </button>
                                     )}
                                 </>

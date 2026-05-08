@@ -60,7 +60,10 @@ export default function EventDetailScreen() {
   const { user } = useAuth();
 
   const [event, setEvent] = useState<any>(null);
+  const [marathonV2, setMarathonV2] = useState<any>(null);
   const [marathonCategories, setMarathonCategories] = useState<any[]>([]);
+  const [sponsors, setSponsors] = useState<any[]>([]);
+  const [benefits, setBenefits] = useState<any[]>([]);
   const [selectedKM, setSelectedKM] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -80,18 +83,60 @@ export default function EventDetailScreen() {
       if (error) throw error;
       setEvent(data);
 
-      // Fetch Marathon Categories if available
-      const { data: catData, error: catError } = await supabase
-        .from('marathon_categories')
+      // Check if it's a V2 Marathon
+      const { data: v2Data } = await supabase
+        .from('marathon_events')
         .select('*')
-        .eq('event_id', id)
-        .order('distance_km', { ascending: true });
+        .eq('id', id)
+        .single();
       
-      if (!catError && catData) {
-        setMarathonCategories(catData);
-        if (catData.length > 0) {
-          const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
-          setSelectedKM(kms[0]);
+      if (v2Data) {
+        setMarathonV2(v2Data);
+        
+        // Fetch V2 Categories
+        const { data: catData } = await supabase
+          .from('marathon_categories')
+          .select('*')
+          .eq('marathon_id', id)
+          .order('distance_km', { ascending: true });
+        
+        if (catData) {
+          setMarathonCategories(catData);
+          if (catData.length > 0) {
+            const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+            setSelectedKM(kms[0]);
+          }
+        }
+
+        // Fetch Sponsors
+        const { data: sponData } = await supabase
+          .from('marathon_sponsors')
+          .select('*')
+          .eq('marathon_id', id)
+          .order('rank_order', { ascending: true });
+        if (sponData) setSponsors(sponData);
+
+        // Fetch Benefits
+        const { data: benData } = await supabase
+          .from('marathon_benefits')
+          .select('*')
+          .eq('marathon_id', id);
+        if (benData) setBenefits(benData);
+
+      } else {
+        // Fallback to legacy categories if not V2
+        const { data: catData } = await supabase
+          .from('marathon_categories')
+          .select('*')
+          .eq('event_id', id)
+          .order('distance_km', { ascending: true });
+        
+        if (catData) {
+          setMarathonCategories(catData);
+          if (catData.length > 0) {
+            const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+            setSelectedKM(kms[0]);
+          }
         }
       }
     } catch (err) {
@@ -136,18 +181,31 @@ export default function EventDetailScreen() {
           event: '*',
           schema: 'public',
           table: 'marathon_categories',
-          filter: `event_id=eq.${id}`,
+          filter: `marathon_id=eq.${id}`,
         },
-        (payload) => {
-          console.log('[Supabase] Categories updated:', payload.eventType);
-          fetchEvent(); // Re-fetch all to be safe with sorting/KM logic
-        }
+        () => fetchEvent()
+      )
+      .subscribe();
+
+    // Listen for changes to marathon V2 details
+    const v2Channel = supabase
+      .channel(`marathon-v2-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'marathon_events',
+          filter: `id=eq.${id}`,
+        },
+        () => fetchEvent()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(eventChannel);
       supabase.removeChannel(catChannel);
+      supabase.removeChannel(v2Channel);
     };
   }, [id]);
 
@@ -316,9 +374,16 @@ export default function EventDetailScreen() {
         >
           {/* Title + Price */}
           <RNView style={styles.titleRow}>
-            <Text style={[styles.eventTitle, { color: colors.text }]}>
-              {event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event Details'}
-            </Text>
+            <RNView style={{ flex: 1 }}>
+              <Text style={[styles.eventTitle, { color: colors.text }]}>
+                {marathonV2?.title || event.name || event.title || dynamicConfig?.basicInfo?.eventName || dynamicConfig?.title || 'Event Details'}
+              </Text>
+              {(marathonV2?.subtitle || marathonV2?.awareness_text) && (
+                <Text style={[styles.eventSubtitle, { color: colors.muted }]}>
+                  {marathonV2.awareness_text || marathonV2.subtitle}
+                </Text>
+              )}
+            </RNView>
             <RNView
               style={[
                 styles.pricePill,
@@ -351,7 +416,7 @@ export default function EventDetailScreen() {
           </RNView>
 
           {/* Event Map Section */}
-          {eventLat && eventLng && (
+          {(eventLat && eventLng) && (
             <RNView style={styles.mapSection}>
               <RNView style={[styles.mapContainer, { borderColor: colors.border, backgroundColor: colors.card }]}>
                 <WebView 
@@ -407,22 +472,25 @@ export default function EventDetailScreen() {
                 </Pressable>
               </RNView>
 
-              {(dynamicConfig.location?.startingPoint || dynamicConfig.location?.routeMapUrl) && (
+              {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint || dynamicConfig.location?.routeMapUrl) && (
                 <RNView style={[styles.marathonDetails, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  {dynamicConfig.location?.startingPoint && (
+                  {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint) && (
                     <RNView style={styles.marathonRow}>
                       <RNView style={styles.marathonIcon}>
                         <MapPin size={16} color={colors.tint} />
                       </RNView>
-                      <RNView>
+                      <RNView style={{ flex: 1 }}>
                         <Text style={[styles.marathonLabel, { color: colors.muted }]}>STARTING POINT</Text>
-                        <Text style={[styles.marathonValue, { color: colors.text }]}>{dynamicConfig.location.startingPoint}</Text>
+                        <Text style={[styles.marathonValue, { color: colors.text }]}>{marathonV2?.starting_point || dynamicConfig.location.startingPoint}</Text>
                       </RNView>
                     </RNView>
                   )}
-                  {dynamicConfig.location?.routeMapUrl && (
+                  {(marathonV2?.route_map_image || dynamicConfig.location?.routeMapUrl) && (
                     <Pressable 
-                      onPress={() => Linking.openURL(dynamicConfig.location.routeMapUrl)}
+                      onPress={() => {
+                        const url = marathonV2?.route_map_image || dynamicConfig.location.routeMapUrl;
+                        if (url) Linking.openURL(url);
+                      }}
                       style={[styles.routeBtn, { backgroundColor: colors.tint + '10' }]}
                     >
                       <Globe size={14} color={colors.tint} />
@@ -431,6 +499,16 @@ export default function EventDetailScreen() {
                   )}
                 </RNView>
               )}
+            </RNView>
+          )}
+
+          {/* Route Map Image (V2) */}
+          {marathonV2?.route_map_image && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Route Map</Text>
+              <RNView style={[styles.routeImageContainer, { borderColor: colors.border }]}>
+                <Image source={{ uri: marathonV2.route_map_image }} style={styles.routeImage} contentFit="contain" />
+              </RNView>
             </RNView>
           )}
 
@@ -541,8 +619,53 @@ export default function EventDetailScreen() {
             </RNView>
           )}
 
-          {/* Amenities Grid */}
-          {dynamicConfig.amenities?.length > 0 && (
+          {/* Benefits Section (V2) */}
+          {benefits.length > 0 && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Benefits</Text>
+              <RNView style={styles.amenitiesGrid}>
+                {benefits.map((ben, i) => (
+                  <RNView key={i} style={styles.amenityItem}>
+                    <RNView style={[styles.amenityIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <AmenityIcon name={ben.icon_key} color={colors.tint} />
+                    </RNView>
+                    <Text style={[styles.amenityLabel, { color: colors.muted }]} numberOfLines={2}>
+                      {ben.benefit_name}
+                    </Text>
+                  </RNView>
+                ))}
+              </RNView>
+            </RNView>
+          )}
+
+          {/* Sponsors Section (V2) */}
+          {sponsors.length > 0 && (
+            <RNView style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Partners</Text>
+              <RNView style={styles.sponsorsContainer}>
+                {['Title', 'Powered By', 'Associate', 'Partner', 'Media', 'Hydration'].map(type => {
+                  const filtered = sponsors.filter(s => s.sponsor_type === type);
+                  if (filtered.length === 0) return null;
+                  return (
+                    <RNView key={type} style={styles.sponsorGroup}>
+                      <Text style={[styles.sponsorTypeLabel, { color: colors.muted }]}>{type.toUpperCase()}</Text>
+                      <RNView style={styles.sponsorLogos}>
+                        {filtered.map(s => (
+                          <RNView key={s.id} style={styles.sponsorLogoCard}>
+                            <Image source={{ uri: s.logo_url }} style={styles.sponsorLogo} contentFit="contain" />
+                            <Text style={[styles.sponsorName, { color: colors.text }]} numberOfLines={1}>{s.sponsor_name}</Text>
+                          </RNView>
+                        ))}
+                      </RNView>
+                    </RNView>
+                  );
+                })}
+              </RNView>
+            </RNView>
+          )}
+
+          {/* Amenities Grid (Legacy) */}
+          {(dynamicConfig.amenities?.length > 0 && benefits.length === 0) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Amenities</Text>
               <RNView style={styles.amenitiesGrid}>
@@ -827,4 +950,14 @@ const styles = StyleSheet.create({
   marathonValue: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   routeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(248,68,100,0.3)' },
   routeBtnText: { fontSize: 11, fontWeight: '900' },
+  eventSubtitle: { fontSize: 13, fontWeight: '700', marginTop: 4 },
+  routeImageContainer: { height: 300, borderRadius: 20, overflow: 'hidden', borderWidth: 1, backgroundColor: '#f8fafc' },
+  routeImage: { width: '100%', height: '100%' },
+  sponsorsContainer: { gap: 20 },
+  sponsorGroup: { gap: 12 },
+  sponsorTypeLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, opacity: 0.6 },
+  sponsorLogos: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  sponsorLogoCard: { width: '30%', alignItems: 'center', gap: 6 },
+  sponsorLogo: { width: '100%', height: 60, borderRadius: 12 },
+  sponsorName: { fontSize: 10, fontWeight: '700', textAlign: 'center' },
 });

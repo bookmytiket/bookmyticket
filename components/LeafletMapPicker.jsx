@@ -363,42 +363,7 @@ export default function LeafletMapPicker({
         {userPos && <Marker position={[userPos.lat, userPos.lng]} icon={USER_ICON} />}
       </MapContainer>
 
-      {/* ── Set Location Button ── */}
-      {pinMarker && (
-        <div className="absolute bottom-6 right-6 z-[1000]">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onLocationSelect) {
-                onLocationSelect({
-                  lat: pinMarker.lat,
-                  lng: pinMarker.lng,
-                  address: address?.fullAddress || "",
-                  city: address?.city || "",
-                  district: address?.district || "",
-                  state: address?.state || "",
-                  pincode: address?.pincode || "",
-                  country: address?.country || "India"
-                });
-              }
-            }}
-            className="px-6 py-3 bg-[#f84464] text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-[#ec4899] hover:scale-105 transition-all shadow-xl shadow-[#f84464]/30 flex items-center gap-2"
-          >
-            <MapPin size={16} />
-            Set Location
-          </button>
-        </div>
-      )}
-
-      {/* ── Overlay ── */}
-      {isDragging && (
-        <div className="absolute inset-0 z-[1001] pointer-events-none flex items-center justify-center bg-black/5 backdrop-blur-[1px]">
-          <div className="px-4 py-2 bg-white shadow-2xl rounded-full text-[10px] font-black uppercase tracking-widest text-[#f84464] animate-bounce">
-            Relocating Pin...
-          </div>
-        </div>
-      )}
+      {/* Removed Set Location Button - Map automatically syncs on pin move/click */}
     </div>
   );
 }
