@@ -79,7 +79,7 @@ export default async function SlugEventPage({ params }) {
 
     if (!event) notFound();
 
-    const isDynamic = event.type === 'Dynamic';
+    const isDynamic = event.type === 'Dynamic' || event.event_type === 'marathon' || event.title?.toLowerCase().includes('marathon');
 
     return (
         <>

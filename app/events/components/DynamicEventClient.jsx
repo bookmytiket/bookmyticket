@@ -14,11 +14,11 @@ import {
     AlertTriangle, Map
 } from 'lucide-react';
 import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthContext';
 import { getFeeBreakdown, DEFAULT_FEE_SETTINGS, resolveFeeSettings } from '@/app/utils/feeBreakdown';
 import EventMap from './EventMap';
 import { Outfit } from 'next/font/google';
-
 const outfit = Outfit({ 
     subsets: ['latin'],
     weight: ['400', '500', '600', '700', '800', '900'],
@@ -61,19 +61,44 @@ export default function DynamicEventClient({ event }) {
     
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedAgeRate, setSelectedAgeRate] = useState(null);
+    const [quantity, setQuantity] = useState(1);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponDiscount, setCouponDiscount] = useState(0);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [availableCoupons, setAvailableCoupons] = useState([]);
+    const [showCouponsModal, setShowCouponsModal] = useState(false);
+    const [couponError, setCouponError] = useState('');
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+    const [formValues, setFormValues] = useState({});
     const [selectedKM, setSelectedKM] = useState(null);
     const [isAgeDropdownOpen, setIsAgeDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({});
     const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
     const [notification, setNotification] = useState(null);
+    const [marathonCategories, setMarathonCategories] = useState([]);
 
     // Initialize selected KM if marathon categories exist
     useEffect(() => {
-        if (config?.marathonCategories?.length > 0 && !selectedKM) {
-            const kms = [...new Set(config.marathonCategories.map(c => c.distance_km))].sort((a, b) => a - b);
+        const categories = marathonCategories.length > 0 ? marathonCategories : (config?.marathonCategories || config?.marathon_categories || []);
+        if (categories.length > 0 && !selectedKM) {
+            const kms = [...new Set(categories.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
             if (kms.length > 0) setSelectedKM(kms[0]);
         }
-    }, [config?.marathonCategories, selectedKM]);
+    }, [marathonCategories, config?.marathonCategories, config?.marathon_categories, selectedKM]);
+
+    // Auto-select category when KM changes to keep Order Details in sync
+    useEffect(() => {
+        const allCategories = marathonCategories.length > 0 ? marathonCategories : (config.marathonCategories || config.marathon_categories || []);
+        const filtered = allCategories.filter(c => Number(c.distance_km) === Number(selectedKM));
+        
+        if (filtered.length > 0) {
+            // Auto-select if nothing is selected OR if current selection doesn't match new KM
+            if (!selectedCategory || Number(selectedCategory.distance_km) !== Number(selectedKM)) {
+                setSelectedCategory(filtered[0]);
+                setSelectedAgeRate(null);
+            }
+        }
+    }, [selectedKM, marathonCategories, config.marathonCategories, config.marathon_categories, selectedCategory]);
 
     // Handle timer
     useEffect(() => {
@@ -143,9 +168,9 @@ export default function DynamicEventClient({ event }) {
     // Robust age rate normalization
     const normalizedAgeRates = useMemo(() => {
         if (!selectedCategory) return [];
-        const rawRates = selectedCategory.ageRates || selectedCategory.agePricing || selectedCategory.age_rates || selectedCategory.age_pricing || config.ageRates || config.agePricing || [];
-        return (Array.isArray(rawRates) ? rawRates : []).map(r => ({
-            id: `${r.min || r.minAge}-${r.max || r.maxAge}`,
+        const rawRates = selectedCategory.ageRates || selectedCategory.agePricing || selectedCategory.age_rates || selectedCategory.age_pricing || selectedCategory.pricing || config.ageRates || config.agePricing || [];
+        return (Array.isArray(rawRates) ? rawRates : []).map((r, i) => ({
+            id: r.id || `${r.min || r.minAge || 0}-${r.max || r.maxAge || 999}-${i}`,
             min: parseInt(r.min || r.minAge || 0),
             max: parseInt(r.max || r.maxAge || 999),
             price: parseFloat(r.price || 0)
@@ -181,14 +206,107 @@ export default function DynamicEventClient({ event }) {
         return selectedCategory.price || 0;
     }, [selectedCategory, formData, config.registrationForm, normalizedAgeRates, selectedAgeRate]);
 
+    useEffect(() => {
+        const fetchEventData = async () => {
+            // Fetch coupons
+            const { data: couponData } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('is_active', true);
+            
+            if (couponData) {
+                const validCoupons = couponData.filter(c => 
+                    !c.applicable_events || 
+                    c.applicable_events.length === 0 || 
+                    c.applicable_events.includes(event.id)
+                );
+                setAvailableCoupons(validCoupons);
+            }
+
+            // Fetch real-time categories for slots
+            const { data: catData } = await supabase
+                .from('marathon_categories')
+                .select('*')
+                .eq('marathon_id', event.id)
+                .order('distance_km', { ascending: true });
+            
+            if (catData && catData.length > 0) {
+                setMarathonCategories(catData);
+            } else {
+                // Fallback to config
+                setMarathonCategories(config.marathonCategories || config.marathon_categories || []);
+            }
+        };
+        fetchEventData();
+    }, [event.id, config]);
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode) return;
+        setIsApplyingCoupon(true);
+        setCouponError('');
+        
+        try {
+            // Import the logic or use local check
+            const { data: coupon, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', couponCode)
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (error || !coupon) {
+                setCouponError('Invalid coupon code');
+                setCouponDiscount(0);
+                setAppliedCoupon(null);
+                return;
+            }
+
+            // Basic validation
+            if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
+                setCouponError('Coupon has expired');
+                return;
+            }
+
+            if (quantity < (coupon.min_tickets || 0)) {
+                setCouponError(`Min ${coupon.min_tickets} tickets required`);
+                return;
+            }
+
+            if (coupon.applicable_events && coupon.applicable_events.length > 0 && !coupon.applicable_events.includes(event.id)) {
+                setCouponError('Not valid for this event');
+                return;
+            }
+
+            // Calculate discount
+            const baseAmount = (selectedCategory?.price || 0) * quantity;
+            let discount = 0;
+            if (coupon.type === 'percent') {
+                discount = (baseAmount * coupon.value) / 100;
+            } else {
+                discount = Math.min(baseAmount, coupon.value);
+            }
+
+            setCouponDiscount(discount);
+            setAppliedCoupon(coupon);
+            setCouponError('');
+        } catch (err) {
+            setCouponError('Error applying coupon');
+        } finally {
+            setIsApplyingCoupon(false);
+        }
+    };
+
     const fees = useMemo(() => {
         if (!selectedCategory) return { convenienceFee: 0, gst: 0, total: 0 };
-        return getFeeBreakdown(calculatedPrice, feeSettings);
-    }, [selectedCategory, calculatedPrice, feeSettings]);
+        const base = (calculatedPrice || 0) * quantity;
+        const afterDiscount = Math.max(0, base - couponDiscount);
+        return getFeeBreakdown(afterDiscount, feeSettings);
+    }, [selectedCategory, calculatedPrice, quantity, couponDiscount, feeSettings]);
 
     const uniqueFormFields = useMemo(() => {
         const seen = new Set();
-        return (config.registrationForm || []).filter(field => {
+        const rawFields = config.registrationForm || config.form_fields || [];
+        return rawFields.filter(field => {
             if (!field || !field.label) return false;
             const label = String(field.label).toLowerCase();
             let key = label;
@@ -200,7 +318,7 @@ export default function DynamicEventClient({ event }) {
             seen.add(key);
             return true;
         });
-    }, [config.registrationForm]);
+    }, [config.registrationForm, config.form_fields]);
 
     const handleBooking = async () => {
         if (!selectedCategory) {
@@ -226,7 +344,7 @@ export default function DynamicEventClient({ event }) {
         const packageParam = `&package=${encodeURIComponent(selectedCategory.name)}`;
         const regDataParam = `&regData=${encodeURIComponent(JSON.stringify(formData))}`;
         const priceParam = `&price=${calculatedPrice}`;
-        router.push(`/events/book/checkout?id=${event.id}${packageParam}${regDataParam}${priceParam}&qty=1`);
+        router.push(`/events/book/checkout?id=${event.id}${packageParam}${regDataParam}${priceParam}&qty=${quantity}`);
     };
 
     return (
@@ -283,17 +401,20 @@ export default function DynamicEventClient({ event }) {
                 </div>
 
                 {/* HERO BANNER */}
-                <div className="relative w-full h-[200px] md:h-[260px] rounded-[2.5rem] overflow-hidden shadow-lg mb-6">
-                    <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover" alt={event.title} />
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative h-[450px] rounded-[3rem] overflow-hidden shadow-2xl group mb-8"
+                >
+                    <img src={event.img || DEFAULT_IMG} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={event.title} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute bottom-10 left-10 right-10 z-10">
-                        <h1 className="text-2xl md:text-3xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">
+                        <h1 className="text-4xl md:text-5xl font-[900] text-white uppercase tracking-tighter leading-none shadow-sm">
                             {event.title}
                         </h1>
                     </div>
-                </div>
-                
-                {/* SCHEDULE & VENUE QUICK INFO */}
+                </motion.div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-5">
                         <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-[#ec4899] shadow-inner">
@@ -330,10 +451,10 @@ export default function DynamicEventClient({ event }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                     
-                    {/* Left Column: Form Content */}
-                    <div className="lg:col-span-8 space-y-6">
+                    {/* Left Column: Event Content */}
+                    <div className="lg:col-span-8 space-y-8">
 
                         <motion.div 
                             initial={{ clipPath: 'inset(0 100% 0 0)' }}
@@ -350,33 +471,63 @@ export default function DynamicEventClient({ event }) {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="text-2xl md:text-3xl font-[900] uppercase tracking-normal bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
                                 >
+                                    About Event
+                                </motion.h2>
+                                {config.subtitle && <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{config.subtitle}</p>}
+                            </div>
+
+                            <div className="space-y-6">
+                                {config.awareness_text && (
+                                    <div className="p-6 bg-gradient-to-br from-[#ec4899]/5 to-[#8b5cf6]/5 border border-[#ec4899]/10 rounded-[2rem]">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <Sparkles className="text-[#ec4899]" size={20} />
+                                            <h4 className="text-xs font-black text-slate-900 uppercase">Special Note</h4>
+                                        </div>
+                                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{config.awareness_text}"</p>
+                                    </div>
+                                )}
+
+                                <div className="prose prose-slate max-w-none">
+                                    <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                        {event.description || config.description || "No description provided."}
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-5 md:p-6 space-y-4"
+                        >
+                            <div className="space-y-0.5">
+                                <motion.h2 
+                                    className="text-2xl md:text-3xl font-[900] uppercase tracking-normal text-slate-900"
+                                >
                                     Registration
                                 </motion.h2>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Participant Details</p>
-
                             </div>
 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {uniqueFormFields.map((field, idx) => (
                                         <div key={idx} className="space-y-1">
-                                            <label className="text-[8px] font-black text-slate-900 uppercase tracking-tight ml-1">
+                                            <label className="text-[8px] font-semibold text-slate-900 uppercase tracking-tight ml-1">
                                                 {field.label} {field.required && <span className="text-rose-500">*</span>}
                                             </label>
                                             {field.type === 'select' ? (
-                                                <div className="relative group">
-                                                    <CustomSelect 
-                                                        options={field.options || []}
-                                                        value={formData[field.label]}
-                                                        onChange={(val) => setFormData({...formData, [field.label]: val})}
-                                                        placeholder={`Select`}
-                                                    />
-                                                </div>
+                                                <CustomSelect 
+                                                    options={Array.isArray(field.options) ? field.options : (typeof field.options === 'string' ? field.options.split(',').map(s => s.trim()) : [])}
+                                                    value={formData[field.label]}
+                                                    onChange={(val) => setFormData({...formData, [field.label]: val})}
+                                                    placeholder="Select"
+                                                />
                                             ) : (
                                                 <input 
                                                     type={field.type}
                                                     placeholder={`Enter ${field.label.toLowerCase()}`}
-                                                    className="w-full bg-slate-50 border border-slate-100 p-2.5 rounded-[12px] text-[11px] font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all placeholder:text-slate-300"
+                                                    className="w-full bg-slate-50 border border-slate-100 p-2.5 rounded-[12px] text-[11px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/10 focus:bg-white transition-all placeholder:text-slate-300"
                                                     onChange={e => setFormData({...formData, [field.label]: e.target.value})}
                                                 />
                                             )}
@@ -385,43 +536,65 @@ export default function DynamicEventClient({ event }) {
                                 </div>
 
                                 <div className="space-y-6 pt-8 border-t border-slate-50">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Category</h4>
-                                        {config.marathonCategories?.length > 0 && (
-                                            <div className="flex gap-2">
-                                                {[...new Set(config.marathonCategories.map(c => c.distance_km))].sort((a,b) => a-b).map(km => (
-                                                    <button 
-                                                        key={km}
-                                                        onClick={() => setSelectedKM(km)}
-                                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                                            selectedKM === km 
-                                                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                                                            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-900 hover:text-slate-900'
-                                                        }`}
-                                                    >
-                                                        {km} KM
-                                                    </button>
-                                                ))}
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div className="space-y-2 flex-1">
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Select Distance</h4>
+                                            {(config.marathonCategories || config.marathon_categories)?.length > 0 && (
+                                                <div className="w-full">
+                                                    <CustomSelect 
+                                                        options={[...new Set((config.marathonCategories || config.marathon_categories).map(c => `${c.distance_km} KM`))].sort()}
+                                                        value={selectedKM ? `${selectedKM} KM` : "Select Distance"}
+                                                        onChange={(val) => setSelectedKM(parseInt(val))}
+                                                        placeholder="Choose KM"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2 w-full md:w-32">
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Quantity</h4>
+                                            <div className="flex items-center h-10 bg-slate-50 border border-slate-100 rounded-lg px-2">
+                                                <button 
+                                                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-[#ec4899]"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                <div className="flex-1 text-center font-black text-slate-900 text-xs">{quantity}</div>
+                                                <button 
+                                                    onClick={() => setQuantity(prev => Math.min(10, prev + 1))}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-[#ec4899]"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {(config.marathonCategories?.length > 0 
-                                            ? config.marathonCategories.filter(c => !selectedKM || c.distance_km === selectedKM)
-                                            : (config.categories || [])
-                                        ).map((cat, idx) => {
-                                            const isSelected = selectedCategory?.id === cat.id;
-                                            const priceDisplay = cat.price > 0 ? `₹${cat.price}` : "Free";
+                                    <div className="flex flex-col gap-6">
+                                        {(marathonCategories.length > 0 ? marathonCategories : (config.marathonCategories || config.marathon_categories || [])).filter(c => Number(c.distance_km) === Number(selectedKM)).map((cat, idx) => {
+                                            const isSelected = selectedCategory?.id === cat.id || (selectedCategory?.category_name === cat.category_name && !cat.id);
+                                            const priceDisplay = (() => {
+                                                if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
+                                                const rates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
+                                                if (rates.length > 0) {
+                                                    const prices = rates.map(r => Number(r.price || 0));
+                                                    const min = Math.min(...prices);
+                                                    const max = Math.max(...prices);
+                                                    return min === max ? `₹${min}` : `₹${min}-₹${max}`;
+                                                }
+                                                return `₹${cat.price || 0}`;
+                                            })();
+                                            
+                                            // Handle various slot field names
+                                            const slotsAvailable = cat.slots_total || cat.total_slots || cat.slots || cat.totalSlots;
                                             
                                             return (
                                                 <div 
                                                     key={idx}
                                                     onClick={() => {
-                                                        if (cat.slots > 0 || cat.totalSlots > 0) {
-                                                            setSelectedCategory(cat);
-                                                            setSelectedAgeRate(null);
-                                                        }
+                                                        setSelectedCategory(cat);
+                                                        setSelectedAgeRate(null);
                                                     }}
                                                     className={`p-6 rounded-[32px] border-2 transition-all cursor-pointer relative group flex flex-col justify-between h-full ${
                                                         isSelected 
@@ -434,10 +607,10 @@ export default function DynamicEventClient({ event }) {
                                                             <div className={`text-[8px] font-black uppercase tracking-[0.2em] mb-1 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
                                                                 {cat.distance_km ? `${cat.distance_km}KM DISTANCE` : 'Category'}
                                                             </div>
-                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.title || cat.name}</h5>
-                                                            {cat.min_age !== undefined && (
+                                                            <h5 className={`text-base font-bold uppercase tracking-normal ${isSelected ? 'text-white' : 'text-slate-900'}`}>{cat.category_name || cat.title || cat.name}</h5>
+                                                            {cat.age_group && (
                                                                 <p className={`text-[9px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
-                                                                    Age: {cat.min_age} - {cat.max_age} Years
+                                                                    Age: {cat.age_group}
                                                                 </p>
                                                             )}
                                                         </div>
@@ -450,7 +623,7 @@ export default function DynamicEventClient({ event }) {
 
                                                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/20">
                                                         <span className={`text-[11px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/90' : 'text-slate-400'}`}>
-                                                            {cat.slots || cat.totalSlots} Slots Available
+                                                            {slotsAvailable ? `${slotsAvailable} Slots` : "Unlimited Slots"}
                                                         </span>
                                                         {isSelected && <CheckCircle2 size={24} className="text-[#fde047]" />}
                                                     </div>
@@ -566,70 +739,121 @@ export default function DynamicEventClient({ event }) {
                     </div>
 
                     {/* Right Column Sidebar */}
-                    <div className="lg:col-span-4 space-y-8 sticky top-8">
+                    <div className="lg:col-span-4 space-y-4 sticky top-8">
 
                         {/* Summary Widget */}
-                        <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl p-8 space-y-8">
+                        <div className="bg-white rounded-[1.25rem] border border-slate-100 shadow-xl p-4 space-y-3 overflow-hidden">
                             <div className="flex items-center justify-between">
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     <motion.h3 
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="text-lg font-[900] uppercase tracking-normal bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
+                                        className="text-sm font-[900] uppercase tracking-tight bg-gradient-to-r from-[#ec4899] via-[#8b5cf6] to-[#ec4899] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x"
                                     >
-                                        Order Details
+                                        Order Summary
                                     </motion.h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Review Summary</p>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Review & Pay</p>
                                 </div>
-                                <Trophy size={24} className="text-pink-100" />
+                                <Trophy size={16} className="text-pink-100" />
                             </div>
-
-
+                            
                             {selectedCategory ? (
-                                <div className="space-y-6">
+                                <div className="space-y-8">
                                     <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest">Payable Amount</p>
-                                            <div className="text-4xl font-black text-slate-900 tracking-tighter">₹{fees.total.toFixed(2)}</div>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest">Payable Amount</p>
+                                            <div className="text-2xl font-black text-slate-900 tracking-tighter">₹{fees.total.toFixed(0)}</div>
                                         </div>
-                                        <div className="text-[#ec4899] pb-1">
-                                            <ShieldCheck size={32} />
+                                        <div className="text-[#ec4899] pb-0.5">
+                                            <ShieldCheck size={24} />
                                         </div>
                                     </div>
-                                    <div className="p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-5">
-                                        <div className="flex justify-between text-xs font-black uppercase tracking-tight">
-                                            <span className="text-slate-500">{selectedCategory.name}</span>
-                                            <span className="text-slate-900">₹{calculatedPrice}</span>
+
+                                    {/* Coupon Section */}
+                                    <div className="pt-2 space-y-1">
+                                        <div className="flex justify-between items-center px-1">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Have a coupon?</p>
+                                            <button 
+                                                onClick={() => setShowCouponsModal(true)}
+                                                className="text-[8px] font-black text-[#ec4899] uppercase tracking-widest hover:underline"
+                                            >
+                                                View All
+                                            </button>
                                         </div>
-                                        {selectedAgeRate && (
-                                            <div className="flex justify-between text-[10px] font-black text-[#ec4899] uppercase tracking-widest">
-                                                <span>Age Group: {selectedAgeRate.min}-{selectedAgeRate.max}</span>
-                                                <span>Active</span>
+                                        <div className="relative group">
+                                            <input 
+                                                type="text"
+                                                value={couponCode}
+                                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                                placeholder={appliedCoupon ? `APPLIED: ${appliedCoupon.code}` : "ENTER CODE"}
+                                                className={`w-full h-10 pl-3 pr-16 bg-slate-50 border rounded-lg text-[9px] font-black tracking-widest outline-none transition-all uppercase ${
+                                                    appliedCoupon ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-slate-100 focus:border-[#ec4899]/30'
+                                                }`}
+                                            />
+                                            <button 
+                                                onClick={handleApplyCoupon}
+                                                disabled={isApplyingCoupon}
+                                                className={`absolute right-1 top-1 bottom-1 px-3 border rounded-md text-[8px] font-black uppercase tracking-widest transition-all shadow-sm ${
+                                                    appliedCoupon 
+                                                    ? 'bg-emerald-500 text-white border-emerald-500' 
+                                                    : 'bg-white border-slate-100 text-[#ec4899] hover:bg-[#ec4899] hover:text-white'
+                                                }`}
+                                            >
+                                                {isApplyingCoupon ? '...' : appliedCoupon ? 'Applied' : 'Apply'}
+                                            </button>
+                                        </div>
+                                        {couponError && (
+                                            <p className="text-[8px] font-bold text-rose-500 px-1">{couponError}</p>
+                                        )}
+                                        {appliedCoupon && !couponError && (
+                                            <p className="text-[8px] font-bold text-emerald-600 px-1 flex justify-between">
+                                                Coupon Applied! 
+                                                <button onClick={() => {setAppliedCoupon(null); setCouponDiscount(0); setCouponCode('');}} className="underline">Remove</button>
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                                        <div className="flex justify-between items-start py-1 border-b border-slate-100/50">
+                                            <div className="space-y-0.5">
+                                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Selected Plan</span>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{selectedKM}KM - {selectedCategory?.category_name || selectedCategory?.title}</p>
+                                            </div>
+                                            <span className="text-[10px] font-black text-pink-500 uppercase">{quantity}x</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-1 border-b border-slate-100/50 last:border-0">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Base Price</span>
+                                            <span className="text-xs font-black text-slate-900">₹{calculatedPrice}</span>
+                                        </div>
+                                        {couponDiscount > 0 && (
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-100/50 last:border-0 text-[#ec4899]">
+                                                <span className="text-[8px] font-black uppercase tracking-widest">Discount</span>
+                                                <span className="text-xs font-black">- ₹{couponDiscount}</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
-                                            <span className="text-slate-500">Platform Fee</span>
-                                            <span className="text-slate-900">₹{fees.convenienceFee.toFixed(2)}</span>
+                                        <div className="flex justify-between items-center py-1 border-b border-slate-100/50 last:border-0">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Platform Fee</span>
+                                            <span className="text-xs font-black text-slate-900">₹{fees.convenienceFee.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
-                                            <span className="text-slate-500">GST ({fees.gstPercent}%)</span>
-                                            <span className="text-slate-900">₹{fees.gst.toFixed(2)}</span>
+                                        <div className="flex justify-between items-center py-1 border-b border-slate-100/50 last:border-0">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">GST (18%)</span>
+                                            <span className="text-xs font-black text-slate-900">₹{fees.gst.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center py-10 px-6 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
-                                    <Trophy size={40} className="mx-auto text-slate-300 mb-4 opacity-50" />
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Selection</p>
+                                <div className="text-center py-8 px-5 bg-slate-50 rounded-[1.25rem] border border-dashed border-slate-200">
+                                    <Trophy size={32} className="mx-auto text-slate-300 mb-3 opacity-50" />
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Category</p>
                                 </div>
                             )}
 
-                            <div className="flex flex-col items-center gap-3 pt-6 border-t border-slate-50">
-                                <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                    <CreditCard size={14} className="text-blue-500" /> Secure Payment
+                            <div className="flex flex-col items-center gap-2 pt-4 border-t border-slate-50">
+                                <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                    <ShieldCheck size={12} className="text-emerald-500" /> Secure Payment
                                 </div>
-                                <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                    <Zap size={14} className="text-amber-500" /> Instant Confirmation
+                                <div className="flex items-center gap-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                    <Zap size={12} className="text-amber-500" /> Instant Confirmation
                                 </div>
                             </div>
                         </div>
@@ -680,7 +904,7 @@ export default function DynamicEventClient({ event }) {
                         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6">
                             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-5 text-center">Available Amenities</h3>
                             <div className="grid grid-cols-3 gap-y-6 gap-x-2">
-                                {(config.amenities || []).map(id => {
+                                {(config.amenities || config.benefits?.map(b => b.icon_key) || []).map(id => {
                                     const Icon = AMENITY_ICONS[id] || Star;
                                     return (
                                         <div key={id} className="group flex flex-col items-center gap-2 text-center">
@@ -704,22 +928,22 @@ export default function DynamicEventClient({ event }) {
                                     address={config.location?.address || event.location || event.address}
                                 />
                                 
-                                {(config.location.startingPoint || config.location.routeMapUrl) && (
+                                {(config.location?.startingPoint || event.starting_point || config.location?.routeMapUrl || event.route_map_image) && (
                                     <div className="pt-4 border-t border-slate-50 flex flex-wrap gap-4 items-center justify-between">
-                                        {config.location.startingPoint && (
+                                        {(config.location?.startingPoint || event.starting_point) && (
                                             <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
                                                     <MapPin size={16} />
                                                 </div>
                                                 <div>
                                                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Starting Point</p>
-                                                    <p className="text-xs font-bold text-slate-900">{config.location.startingPoint}</p>
+                                                    <p className="text-xs font-bold text-slate-900">{config.location?.startingPoint || event.starting_point}</p>
                                                 </div>
                                             </div>
                                         )}
-                                        {config.location.routeMapUrl && (
+                                        {(config.location?.routeMapUrl || event.route_map_image) && (
                                             <a 
-                                                href={config.location.routeMapUrl} 
+                                                href={config.location?.routeMapUrl || event.route_map_image} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all"
@@ -735,6 +959,101 @@ export default function DynamicEventClient({ event }) {
 
                 </div>
             </div>
+            {/* Coupons Modal */}
+            <AnimatePresence>
+                {showCouponsModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        onClick={() => setShowCouponsModal(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-black text-slate-900 uppercase">Available Offers</h3>
+                                    <p className="text-[10px] font-black text-[#ec4899] uppercase tracking-widest">Exclusive deals for you</p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowCouponsModal(false)}
+                                    className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-8 max-h-[60vh] overflow-y-auto space-y-4 custom-scrollbar">
+                                {availableCoupons.length > 0 ? (
+                                    availableCoupons.map((coupon, idx) => (
+                                        <div 
+                                            key={idx}
+                                            className="group relative p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl hover:border-[#ec4899]/30 transition-all cursor-pointer"
+                                            onClick={() => {
+                                                setCouponCode(coupon.code);
+                                                setShowCouponsModal(false);
+                                                // Automatically try applying it
+                                                setTimeout(() => handleApplyCoupon(), 100);
+                                            }}
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 text-sm font-black text-[#ec4899] tracking-widest shadow-sm">
+                                                    {coupon.code}
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-lg font-black text-slate-900">
+                                                        {coupon.type === 'percent' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                                                    </p>
+                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Discount Value</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <p className="text-xs font-bold text-slate-600 leading-tight">
+                                                    {coupon.description || `Get ${coupon.value}${coupon.type === 'percent' ? '%' : ' INR'} off on your booking.`}
+                                                </p>
+                                                <div className="flex items-center gap-4 pt-2">
+                                                    <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                        <Trophy size={10} className="text-amber-500" /> Min {coupon.min_tickets || 1} Tix
+                                                    </div>
+                                                    {coupon.expiry_date && (
+                                                        <div className="flex items-center gap-1.5 text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                            <Zap size={10} className="text-pink-500" /> Ends {new Date(coupon.expiry_date).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="absolute right-6 bottom-6 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                                                <div className="text-[9px] font-black text-[#ec4899] uppercase tracking-widest flex items-center gap-1">
+                                                    Apply Now <CheckCircle2 size={12} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12 px-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                                        <Trophy size={48} className="mx-auto text-slate-300 mb-4 opacity-50" />
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No coupons available</p>
+                                        <p className="text-[8px] font-medium text-slate-400 mt-1 italic">Check back later for exclusive offers</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-8 bg-slate-50 border-t border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                    Terms & Conditions apply to all promotional codes
+                                </p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }
@@ -748,7 +1067,7 @@ function CustomSelect({ options, value, onChange, placeholder }) {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full bg-slate-50 border border-slate-100 p-2.5 rounded-[12px] flex items-center justify-between cursor-pointer transition-all hover:bg-white hover:border-pink-200 ${isOpen ? 'ring-2 ring-pink-500/10 border-pink-300' : ''}`}
             >
-                <span className={`text-[11px] font-black ${value ? 'text-slate-900' : 'text-slate-300'}`}>
+                <span className={`text-[11px] font-semibold ${value ? 'text-slate-900' : 'text-slate-300'}`}>
                     {value || placeholder}
                 </span>
                 <ChevronDown size={12} className={`text-slate-300 transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : ''}`} />
@@ -762,14 +1081,14 @@ function CustomSelect({ options, value, onChange, placeholder }) {
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className="absolute z-[100] w-full mt-2 bg-white/95 backdrop-blur-xl border border-rose-100 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar"
                     >
-                        {options.map((opt) => (
+                        {(Array.isArray(options) ? options : []).map((opt) => (
                             <div 
                                 key={opt}
                                 onClick={() => {
                                     onChange(opt);
                                     setIsOpen(false);
                                 }}
-                                className={`px-5 py-3 text-[13px] font-black cursor-pointer transition-colors hover:bg-pink-50 ${value === opt ? 'text-[#ec4899] bg-pink-50/50' : 'text-slate-600 hover:text-[#ec4899]'}`}
+                                className={`px-5 py-3 text-[13px] font-semibold cursor-pointer transition-colors hover:bg-pink-50 ${value === opt ? 'text-[#ec4899] bg-pink-50/50' : 'text-slate-600 hover:text-[#ec4899]'}`}
                             >
                                 {opt}
                             </div>

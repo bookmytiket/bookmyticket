@@ -155,6 +155,19 @@ export default function EventBookClient({ id }) {
     const baseAmount = isSeating ? totalSeatPrice : currentPrice * quantity;
     const { convenienceFee, gst, total } = getFeeBreakdown(baseAmount, feeSettings);
 
+    const isMarathon = event?.type === 'Marathon';
+    const [bookingStep, setBookingStep] = useState(1);
+    const [participantData, setParticipantData] = useState({});
+
+    const marathonSteps = [
+        { id: 1, title: "Category", icon: Ticket },
+        { id: 2, title: "Identity", icon: Users },
+        { id: 3, title: "Details", icon: Info },
+        { id: 4, title: "Amenities", icon: Sparkles },
+        { id: 5, title: "Review", icon: CheckCircle },
+        { id: 6, title: "Payment", icon: CreditCard }
+    ];
+
     if (eventLoading || !storageLoaded) {
         return (
             <main className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
@@ -193,6 +206,14 @@ export default function EventBookClient({ id }) {
     }
 
     const handleContinue = () => {
+        if (isMarathon) {
+            if (bookingStep < 5) {
+                if (bookingStep === 1 && !selectedPackage) return;
+                setBookingStep(bookingStep + 1);
+                return;
+            }
+        }
+
         if (isSeating && selectedSeats.length === 0) return;
         const seatParam = selectedSeats.length > 0
             ? `&seats=${encodeURIComponent(JSON.stringify(selectedSeats))}`
@@ -200,7 +221,9 @@ export default function EventBookClient({ id }) {
         const qtyParam = !isSeating ? `&qty=${quantity}` : '';
         const packageParam = selectedPackage ? `&package=${encodeURIComponent(selectedPackage.title || selectedPackage.name)}` : '';
         const priceParam = !isSeating ? `&price=${currentPrice}` : '';
-        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}`);
+        const participantParam = isMarathon ? `&participant=${encodeURIComponent(JSON.stringify(participantData))}` : '';
+        
+        router.push(`/events/book/checkout?id=${id}${qtyParam}${seatParam}${packageParam}${priceParam}${participantParam}`);
     };
 
     return (
@@ -215,246 +238,271 @@ export default function EventBookClient({ id }) {
                         <span>Back to event details</span>
                     </Link>
                     
-                    <div className="flex items-center gap-4">
-                        <div className="flex -space-x-2">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 overflow-hidden">
-                                    <img src={`https://i.pravatar.cc/100?u=${i + id}`} alt="User" />
-                                </div>
+                    {isMarathon ? (
+                        <div className="flex items-center gap-6 overflow-x-auto no-scrollbar py-2">
+                            {marathonSteps.map((s, idx) => (
+                                <React.Fragment key={s.id}>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] transition-all ${
+                                            bookingStep >= s.id ? 'bg-pink-500 text-white shadow-lg shadow-pink-200' : 'bg-slate-50 text-slate-400'
+                                        }`}>
+                                            <s.icon size={14} />
+                                        </div>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${bookingStep >= s.id ? 'text-slate-900' : 'text-slate-300'}`}>
+                                            {s.title}
+                                        </span>
+                                    </div>
+                                    {idx < marathonSteps.length - 1 && <div className="w-4 h-[1px] bg-slate-100" />}
+                                </React.Fragment>
                             ))}
                         </div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            <span className="text-pink-500">12+ people</span> booking right now
+                    ) : (
+                        <div className="flex items-center gap-4">
+                            <div className="flex -space-x-2">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 overflow-hidden">
+                                        <img src={`https://i.pravatar.cc/100?u=${i + id}`} alt="User" />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <span className="text-pink-500">12+ people</span> booking right now
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
-            <div className="max-w-[950px] mx-auto px-4 md:px-6 py-4">
+            <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     
                     {/* Left Column: Selection Flow */}
                     <div className="lg:col-span-8 space-y-8">
                         
-                        {/* Step 1: Event Summary Card */}
-                        <motion.div 
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/10 rounded-bl-full -z-0" />
-                            
-                            <div className="relative z-10">
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black rounded-xl text-[10px] font-black uppercase tracking-widest mb-8 shadow-sm">
-                                    <ShieldCheck size={14} /> Official Ticketing Partner
-                                </div>
-                                <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-[0.95] mb-8">
-                                    {event.title}
-                                </h1>
-                                
-                                <div className="flex flex-wrap gap-8">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-pink-500 shadow-inner">
-                                            <Calendar size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Schedule</p>
-                                            <p className="text-sm font-black text-slate-900">
-                                                {selectedDate ? selectedDate.toDateString() : (
-                                                    event.date + (event.end_date && event.end_date !== event.date ? ` - ${event.end_date}` : '')
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-500 shadow-inner">
-                                            <MapPin size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Venue</p>
-                                            <p className="text-sm font-black text-slate-900">{event.location}</p>
-                                        </div>
-                                    </div>
-                                    {event.dateSlots?.length > 0 && (
-                                        <button 
-                                            onClick={() => setIsCalendarOpen(true)}
-                                            className="ml-auto px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform flex items-center gap-2 shadow-lg shadow-slate-900/20"
-                                        >
-                                            <Clock size={14} /> Change Date
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Interactive Map in Summary */}
-                                {event.dynamic_config?.location?.coordinates?.lat && (
-                                    <div className="mt-12 pt-8 border-t border-slate-50">
-                                        <EventMap 
-                                            lat={event.dynamic_config.location.coordinates.lat}
-                                            lng={event.dynamic_config.location.coordinates.lng}
-                                            venueName={event.dynamic_config.location.venueName || event.venue}
-                                            address={event.dynamic_config.location.address || event.location}
-                                        />
-                                    </div>
-                                )}
+                        {isMarathon && (
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-2">
+                                    {marathonSteps[bookingStep - 1].title} Registration
+                                </h2>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {bookingStep} of 6</p>
                             </div>
-                        </motion.div>
+                        )}
 
-                        {/* Step 2: Seating or Package Selection */}
                         <AnimatePresence mode="wait">
-                            {isSeating ? (
+                            {/* Step 1: Category Selection */}
+                            {(!isMarathon || bookingStep === 1) && (
                                 <motion.div 
-                                    key="seating"
+                                    key="step1"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
                                     className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
                                 >
-                                    <div className="flex items-center justify-between mb-12">
-                                        <div>
-                                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Secure Your Seat</h2>
-                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select from the interactive map below</p>
-                                        </div>
-                                        <div className="flex gap-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full bg-slate-100 border border-slate-200" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Available</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full bg-pink-500 shadow-sm" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Selected</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-50">
-                                                <div className="w-3 h-3 rounded-full bg-slate-300" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sold</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Responsive Seat Map Container */}
-                                    <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 overflow-x-auto custom-scrollbar">
-                                        <div className="min-w-[600px]">
-                                            {(layout === 'stage' || layout === 'rate') && (
-                                                <div className="mb-16 text-center space-y-4">
-                                                    <div className="h-2 w-1/2 mx-auto bg-gradient-to-r from-transparent via-slate-300 to-transparent rounded-full shadow-[0_15px_30px_rgba(0,0,0,0.05)]" />
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">STAGE AREA</p>
-                                                </div>
-                                            )}
-
-                                            <div className="flex flex-col gap-4 items-center">
-                                                {[...Array(totalRows)].map((_, rIdx) => {
-                                                    const rowLabel = ROW_LABELS[rIdx] || `${rIdx + 1}`;
-                                                    const cat = getCategoryForRow(event.seatCategories, rIdx);
-                                                    const color = cat ? getCatColor(cat.name) : '#CBD5E1';
-                                                    
-                                                    return (
-                                                        <div key={rIdx} className="flex gap-3 items-center">
-                                                            <span className="w-8 text-right font-black text-[11px] text-slate-300 mr-2">{rowLabel}</span>
-                                                            <div className="flex gap-2">
-                                                                {[...Array(cols)].map((_, cIdx) => {
-                                                                    const seatId = `${rowLabel}${cIdx + 1}`;
-                                                                    const isSelected = selectedSeats.some(s => s.id === seatId);
-                                                                    const isBooked = isSeatBooked(seatId);
-                                                                    
-                                                                    return (
-                                                                        <motion.button
-                                                                            key={cIdx}
-                                                                            whileHover={!isBooked ? { scale: 1.2, zIndex: 10 } : {}}
-                                                                            whileTap={!isBooked ? { scale: 0.9 } : {}}
-                                                                            onClick={() => !isBooked && cat && toggleSeat(seatId, cat)}
-                                                                            className={`
-                                                                                w-7 h-8 rounded-lg flex items-center justify-center text-[8px] font-black transition-all
-                                                                                ${isBooked 
-                                                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-none' 
-                                                                                    : isSelected 
-                                                                                        ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40 border-none' 
-                                                                                        : 'bg-white border-2 hover:border-slate-900 text-slate-400'}
-                                                                            `}
-                                                                            style={{ borderColor: !isBooked && !isSelected ? `${color}40` : undefined }}
-                                                                        >
-                                                                            {cIdx + 1}
-                                                                        </motion.button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            <span className="w-8 text-left font-black text-[11px] text-slate-300 ml-2">{rowLabel}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <PackageSelector 
+                                        packages={event.ticketTypes || event.dynamic_config?.categories || [
+                                            { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
+                                        ]}
+                                        selectedPackage={selectedPackage}
+                                        onSelect={(p) => {
+                                            setSelectedPackage(p);
+                                            if (!isMarathon) setQuantity(1);
+                                        }}
+                                        type={isMarathon ? "marathon" : "event"}
+                                    />
                                     
-                                    {/* Seat Pricing Key */}
-                                    <div className="mt-8 flex flex-wrap gap-6 justify-center">
-                                        {event.seatCategories.map(cat => (
-                                            <div key={cat.name} className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCatColor(cat.name) }} />
-                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{cat.name}</span>
-                                                <span className="text-[10px] font-bold text-pink-500">₹{cat.price}</span>
+                                    {!isMarathon && selectedPackage && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8"
+                                        >
+                                            <div className="flex items-center gap-8">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Tickets</p>
+                                                    <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                                                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">−</button>
+                                                        <span className="text-xl font-black w-12 text-center">{quantity}</span>
+                                                        <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black shadow-sm">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onClick={handleContinue} className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl">Secure Booking <ArrowRight size={16} /></button>
+                                        </motion.div>
+                                    )}
+                                </motion.div>
+                            )}
+
+                            {/* Marathon Step 2: Identity */}
+                            {isMarathon && bookingStep === 2 && (
+                                <motion.div 
+                                    key="step2"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Full Name (As on ID)</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="Enter full name"
+                                                value={participantData.fullName || ""}
+                                                onChange={e => setParticipantData({...participantData, fullName: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Email Address</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="name@email.com"
+                                                value={participantData.email || ""}
+                                                onChange={e => setParticipantData({...participantData, email: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Phone Number</label>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                placeholder="+91 XXXXX XXXXX"
+                                                value={participantData.phone || ""}
+                                                onChange={e => setParticipantData({...participantData, phone: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">Date of Birth</label>
+                                            <input 
+                                                type="date"
+                                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                value={participantData.dob || ""}
+                                                onChange={e => setParticipantData({...participantData, dob: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Marathon Step 3: Details (Custom Fields) */}
+                            {isMarathon && bookingStep === 3 && (
+                                <motion.div 
+                                    key="step3"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {(event.dynamic_config?.form_fields || []).map(field => (
+                                            <div key={field.id}>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 pl-1">
+                                                    {field.label} {field.required && <span className="text-pink-500">*</span>}
+                                                </label>
+                                                {field.type === 'select' ? (
+                                                    <select 
+                                                        className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none"
+                                                        onChange={e => setParticipantData({...participantData, [field.label]: e.target.value})}
+                                                    >
+                                                        <option value="">Select Option</option>
+                                                        {(Array.isArray(field.options) ? field.options : (typeof field.options === 'string' ? field.options.split(',').map(s => s.trim()) : ['S', 'M', 'L', 'XL', 'XXL'])).map(o => <option key={o} value={o}>{o}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <input 
+                                                        className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-black text-slate-900 outline-none focus:border-pink-500"
+                                                        placeholder={`Enter ${field.label}`}
+                                                        onChange={e => setParticipantData({...participantData, [field.label]: e.target.value})}
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+                                        {(!event.dynamic_config?.form_fields || event.dynamic_config.form_fields.length === 0) && (
+                                            <div className="col-span-2 text-center py-12">
+                                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No additional details required</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Marathon Step 4: Amenities */}
+                            {isMarathon && bookingStep === 4 && (
+                                <motion.div 
+                                    key="step4"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
+                                >
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        {(event.dynamic_config?.benefits || [
+                                            { benefit_name: "Finisher Medal", icon_key: "medal" },
+                                            { benefit_name: "Technical T-Shirt", icon_key: "tshirt" },
+                                            { benefit_name: "E-Certificate", icon_key: "certificate" },
+                                            { benefit_name: "Post-Run Breakfast", icon_key: "breakfast" }
+                                        ]).map((ben, idx) => (
+                                            <div key={idx} className="flex flex-col items-center gap-3 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-pink-500 shadow-sm">
+                                                    <Star size={18} />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase text-slate-900 text-center leading-tight">{ben.benefit_name}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </motion.div>
-                            ) : (
+                            )}
+
+                            {/* Marathon Step 5: Review */}
+                            {isMarathon && bookingStep === 5 && (
                                 <motion.div 
-                                    key="packages"
+                                    key="step5"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm"
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className="bg-white rounded-[40px] p-8 md:p-12 border border-slate-100 shadow-sm space-y-8"
                                 >
-                                    <PackageSelector 
-                                        packages={event.ticketTypes || [
-                                            { id: 'gen', title: 'Ticket', price: ticketPrice, description: 'Standard admission for the event.', features: ['Access to main area', 'General Seating'] }
-                                        ]}
-                                        selectedPackage={selectedPackage}
-                                        onSelect={setSelectedPackage}
-                                        type="event"
-                                    />
-                                    
-                                    <AnimatePresence>
-                                        {selectedPackage && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8"
-                                            >
-                                                <div className="flex items-center gap-8">
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 text-center md:text-left">Tickets</p>
-                                                        <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                                                            <button 
-                                                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                                                className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black text-xl hover:scale-105 transition-all shadow-sm"
-                                                            >
-                                                                −
-                                                            </button>
-                                                            <span className="text-xl font-black text-slate-900 w-12 text-center">{quantity}</span>
-                                                            <button 
-                                                                onClick={() => setQuantity(q => q + 1)}
-                                                                className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black text-xl hover:scale-105 transition-all shadow-sm"
-                                                            >
-                                                                +
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="hidden md:block">
-                                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Unit Price</p>
-                                                        <p className="text-2xl font-black text-slate-900 tracking-tight">₹{selectedPackage.price}</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <button 
-                                                    onClick={handleContinue}
-                                                    className="w-full md:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2"
-                                                >
-                                                    Secure Booking <ArrowRight size={16} />
-                                                </button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                    <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-6">
+                                        <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Runner Details</span>
+                                            <button onClick={() => setBookingStep(2)} className="text-[10px] font-black text-pink-500 uppercase">Edit</button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-y-4">
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Name</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase">{participantData.fullName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                                <p className="text-xs font-black text-pink-500 uppercase">{selectedPackage?.name || selectedPackage?.title}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center">
+                                            <ShieldCheck size={16} />
+                                        </div>
+                                        <p className="text-[10px] font-bold text-emerald-700 uppercase leading-tight">Everything looks good! Proceed to secure payment gateway.</p>
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
+
+                        {/* Navigation Buttons for Marathon */}
+                        {isMarathon && (
+                            <div className="flex justify-between items-center pt-8">
+                                <button 
+                                    onClick={() => bookingStep > 1 && setBookingStep(bookingStep - 1)}
+                                    className={`px-8 py-4 text-[11px] font-black uppercase tracking-widest transition-all ${bookingStep === 1 ? 'opacity-0' : 'text-slate-400 hover:text-slate-900'}`}
+                                >
+                                    Previous Step
+                                </button>
+                                <button 
+                                    onClick={handleContinue}
+                                    className="px-12 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-slate-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3"
+                                >
+                                    {bookingStep === 5 ? 'Confirm & Pay' : 'Next Step'} <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        )}
+
 
                         <div className="px-6">
                             <BookingDisclaimer type="event" />

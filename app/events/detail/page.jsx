@@ -54,11 +54,10 @@ export default async function EventDetailPage({ searchParams }) {
 
     if (!event) notFound();
 
-    const isDynamic = event.type === 'Dynamic';
+    const isDynamic = event.type === 'Dynamic' || event.type === 'Marathon';
 
     return (
         <>
-            <h1>{event.title}</h1>
             {event && (
                 <script
                     type="application/ld+json"

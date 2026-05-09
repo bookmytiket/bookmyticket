@@ -38,7 +38,7 @@ export function useSupabaseQuery(
         setError(null);
       }
     } catch (err) {
-      console.error(`useSupabaseQuery error (${table}):`, err);
+      console.warn(`useSupabaseQuery error (${table}):`, err);
       if (isMounted.current) setError(err);
     } finally {
       if (isMounted.current) setLoading(false);

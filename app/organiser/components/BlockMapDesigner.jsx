@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Upload, Plus, Trash2, Edit2, Check, Move, Maximize2, X } from "lucide-react";
+import { CloudUpload, Plus, Trash2, Edit2, Check, Move, Maximize2, X } from "lucide-react";
 
 export default function BlockMapDesigner({ postEvent, setPostEvent }) {
     const containerRef = useRef(null);
@@ -93,7 +93,7 @@ export default function BlockMapDesigner({ postEvent, setPostEvent }) {
                         <p className="text-[11px] font-black tracking-widest text-slate-900 uppercase mb-3">Background Map</p>
                         {!postEvent.seatMapBackgroundUrl ? (
                             <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors group text-center px-4">
-                                <Upload size={24} className="text-slate-400 group-hover:text-pink-500 mb-2 transition-colors" />
+                                <CloudUpload size={24} className="text-slate-400 group-hover:text-pink-500 mb-2 transition-colors" />
                                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Upload Stadium/Ground</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </label>

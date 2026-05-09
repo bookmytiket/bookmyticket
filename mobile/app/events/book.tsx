@@ -29,6 +29,13 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronDown,
+  Users,
+  Info,
+  Sparkles,
+  CreditCard,
+  ShieldCheck,
+  ArrowRight,
+  Star,
 } from 'lucide-react-native';
 import { getFeeBreakdown, resolveFeeSettings } from '@/lib/feeBreakdown';
 
@@ -61,6 +68,8 @@ export default function BookEventScreen() {
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [showCouponsModal, setShowCouponsModal] = useState(false);
   const [selectionField, setSelectionField] = useState<any>(null);
+  const [bookingStep, setBookingStep] = useState(1);
+  const [dob, setDob] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -118,7 +127,7 @@ export default function BookEventScreen() {
     const ticketsData = safeParse(data.tickets);
     const parsedTickets = (Array.isArray(ticketsData) && ticketsData.length > 0) 
       ? ticketsData 
-      : (parsedConfig.tickets || parsedConfig.categories || []);
+      : (parsedConfig.marathonCategories || parsedConfig.marathon_categories || parsedConfig.tickets || parsedConfig.categories || []);
     const tiers = Array.isArray(parsedTickets) ? parsedTickets : [];
     if (tiers.length > 0) {
       setSelectedTier(tiers[0]);
@@ -129,7 +138,7 @@ export default function BookEventScreen() {
     }
     
     // Pre-fill form with defaults
-    const form = parsedConfig.registrationForm || [];
+    const form = parsedConfig.registrationForm || parsedConfig.form_fields || [];
     const initialResponses: any = {};
     let initialName = user?.user_metadata?.full_name || '';
     let initialEmail = user?.email || '';
@@ -189,20 +198,29 @@ export default function BookEventScreen() {
       processEventData(data);
 
       // Fetch Marathon Categories
-      const { data: catData, error: catError } = await supabase
+      const { data: cats, error: catError } = await supabase
         .from('marathon_categories')
         .select('*')
-        .eq('event_id', id)
+        .eq('marathon_id', id)
         .order('distance_km', { ascending: true });
       
-      if (!catError && catData) {
-        setMarathonCategories(catData);
-        if (catData.length > 0) {
-          const kms = [...new Set(catData.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+      const parsedConfig = safeParse(data.dynamic_config) || {};
+      const configCats = parsedConfig.marathonCategories || parsedConfig.marathon_categories || [];
+      
+      const allCats = [...(cats || []), ...configCats];
+      if (allCats.length > 0) {
+        setMarathonCategories(allCats);
+        const kms = [...new Set(allCats.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+        if (kms.length > 0) {
           setSelectedKM(kms[0]);
-          // Auto-select first tier in first KM
-          const firstTier = catData.find(c => Number(c.distance_km) === kms[0]);
-          if (firstTier) setSelectedTier(firstTier);
+          const firstTier = allCats.find(c => Number(c.distance_km) === kms[0]);
+          if (firstTier) {
+            setSelectedTier(firstTier);
+            const rawRates = firstTier.ageRates || firstTier.agePricing || firstTier.age_rates || firstTier.age_pricing || firstTier.pricing || [];
+            if (Array.isArray(rawRates) && rawRates.length > 0) {
+              setSelectedAgeGroup(rawRates[0]);
+            }
+          }
         }
       }
     } catch (err) {
@@ -217,6 +235,16 @@ export default function BookEventScreen() {
     ? ticketsData 
     : (dynamicConfig.tickets || dynamicConfig.categories || []);
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+  const isMarathon = event?.type === 'Marathon' || marathonCategories.length > 0;
+  const marathonSteps = [
+    { id: 1, title: 'Category', icon: Ticket },
+    { id: 2, title: 'Identity', icon: Users },
+    { id: 3, title: 'Details', icon: Info },
+    { id: 4, title: 'Amenities', icon: Sparkles },
+    { id: 5, title: 'Review', icon: CheckCircle },
+    { id: 6, title: 'Payment', icon: CreditCard },
+  ];
+
   
   const getVenueDetails = () => {
     const venueName = event?.venue || event?.location || dynamicConfig?.venue?.name || dynamicConfig?.basicInfo?.venue || 'TBA';
@@ -595,15 +623,44 @@ export default function BookEventScreen() {
 
       {/* Header */}
       <RNView style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} hitSlop={12}>
+        <Pressable onPress={() => {
+          if (isMarathon && bookingStep > 1) setBookingStep(bookingStep - 1);
+          else router.canGoBack() ? router.back() : router.replace('/(tabs)');
+        }} hitSlop={12}>
           <ArrowLeft size={22} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Book Tickets</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {isMarathon ? `Step ${bookingStep} of 6` : 'Book Tickets'}
+        </Text>
         <RNView style={{ width: 22 }} />
       </RNView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Event summary */}
+      {/* Marathon step progress rail */}
+      {isMarathon && (
+        <RNView style={{ backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {marathonSteps.map((s, idx) => (
+            <React.Fragment key={s.id}>
+              <RNView style={{ alignItems: 'center', gap: 3 }}>
+                <RNView style={[
+                  { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+                  bookingStep >= s.id ? { backgroundColor: colors.tint } : { backgroundColor: colors.border }
+                ]}>
+                  <s.icon size={12} color={bookingStep >= s.id ? '#fff' : colors.muted} />
+                </RNView>
+                <Text style={{ fontSize: 7, fontWeight: '900', color: bookingStep >= s.id ? colors.tint : colors.muted, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  {s.title}
+                </Text>
+              </RNView>
+              {idx < marathonSteps.length - 1 && (
+                <RNView style={{ flex: 1, height: 1.5, backgroundColor: bookingStep > s.id ? colors.tint : colors.border, marginBottom: 12 }} />
+              )}
+            </React.Fragment>
+          ))}
+        </RNView>
+      )}
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+        {/* Event summary mini card (always visible) */}
         <RNView style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Image
             source={{ uri: event.img || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200' }}
@@ -634,8 +691,12 @@ export default function BookEventScreen() {
           </RNView>
         </RNView>
 
+        {/* ─── STEP 1: Category (Marathon) OR single-page category (non-marathon) ─── */}
+        {(!isMarathon || bookingStep === 1) && (
+          <>
+
         {/* Event Map */}
-        {dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
+        {!isMarathon && dynamicConfig?.location?.coordinates?.lat && dynamicConfig?.location?.coordinates?.lng && (
           <RNView style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden', height: 220, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
             <WebView 
               scrollEnabled={false}
@@ -719,6 +780,10 @@ export default function BookEventScreen() {
             </Pressable>
           </RNView>
         )}
+          </>
+        )}
+        {(!isMarathon || bookingStep === 1) && (
+          <>
         {(marathonCategories.length > 0 || ticketTiers.length > 0) && (
           <RNView style={styles.section}>
             <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -742,8 +807,17 @@ export default function BookEventScreen() {
                     key={km}
                     onPress={() => {
                       setSelectedKM(km);
-                      const firstTier = marathonCategories.find(c => Number(c.distance_km) === km);
-                      if (firstTier) setSelectedTier(firstTier);
+                      const currentCats = marathonCategories.length > 0 ? marathonCategories : (safeParse(event.dynamic_config)?.marathonCategories || []);
+                      const firstTier = currentCats.find((c: any) => Number(c.distance_km) === km);
+                      if (firstTier) {
+                        setSelectedTier(firstTier);
+                        const rawRates = firstTier.ageRates || firstTier.agePricing || firstTier.age_rates || firstTier.age_pricing || firstTier.pricing || [];
+                        if (Array.isArray(rawRates) && rawRates.length > 0) {
+                          setSelectedAgeGroup(rawRates[0]);
+                        } else {
+                          setSelectedAgeGroup(null);
+                        }
+                      }
                     }}
                     style={[
                       { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
@@ -767,7 +841,7 @@ export default function BookEventScreen() {
               
               const tierPrice = (() => {
                 if (tier.price !== undefined) return Number(tier.price);
-                const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
+                const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || tier.pricing || [];
                 if (Array.isArray(rawRates) && rawRates.length > 0) {
                   return Math.min(...rawRates.map((r: any) => Number(r.price || 0)));
                 }
@@ -779,7 +853,7 @@ export default function BookEventScreen() {
                   key={tier.id || i}
                   onPress={() => {
                     setSelectedTier(tier);
-                    const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || [];
+                    const rawRates = tier.ageRates || tier.agePricing || tier.age_rates || tier.age_pricing || tier.pricing || [];
                     if (Array.isArray(rawRates) && rawRates.length > 0) {
                       setSelectedAgeGroup(rawRates[0]);
                     } else {
@@ -807,17 +881,15 @@ export default function BookEventScreen() {
                     </RNView>
                     <RNView>
                       <Text style={[styles.tierName, { color: colors.text }]}>
-                        {tier.title || tier.name || tier.type || 'General'}
+                        {tier.category_name || tier.title || tier.name || tier.type || 'General'}
                       </Text>
-                      {(tier.min_age !== undefined || tier.gender || tier.description) && (
                         <Text style={[styles.tierDesc, { color: colors.muted }]}>
                           {[
-                            tier.min_age !== undefined ? `Age ${tier.min_age}-${tier.max_age}` : null,
-                            tier.gender,
+                            tier.age_group ? `Age: ${tier.age_group}` : (tier.min_age !== undefined ? `Age ${tier.min_age}-${tier.max_age}` : null),
+                            tier.gender_category || tier.gender,
                             tier.description
                           ].filter(Boolean).join(' • ')}
                         </Text>
-                      )}
                     </RNView>
                   </RNView>
                   <Text style={[styles.tierPrice, { color: colors.tint }]}>
@@ -828,10 +900,12 @@ export default function BookEventScreen() {
             })}
           </RNView>
         )}
+          </>
+        )}
 
-        {/* Age Group selection */}
-        {(() => {
-          const rawRates = selectedTier?.ageRates || selectedTier?.agePricing || selectedTier?.age_rates || selectedTier?.age_pricing || [];
+        {/* Age Group selection — non-marathon only */}
+        {!isMarathon && (() => {
+          const rawRates = selectedTier?.ageRates || selectedTier?.agePricing || selectedTier?.age_rates || selectedTier?.age_pricing || selectedTier?.pricing || [];
           if (Array.isArray(rawRates) && rawRates.length > 0) {
             return (
               <RNView style={styles.section}>
@@ -885,13 +959,61 @@ export default function BookEventScreen() {
               <Plus size={18} color="#fff" />
             </Pressable>
           </RNView>
+          {isMarathon && (
+            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.muted, marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              * You can book for up to 10 participants
+            </Text>
+          )}
         </RNView>
 
-        {/* Dynamic Registration Form */}
+        {/* Coupon - Moved Up */}
+        <RNView style={styles.section}>
+          <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0, color: colors.text }]}>Apply Coupon</Text>
+            {availableCoupons.length > 0 && (
+              <Pressable onPress={() => setShowCouponsModal(true)}>
+                <Text style={{ color: colors.tint, fontWeight: '800', fontSize: 13 }}>View All</Text>
+              </Pressable>
+            )}
+          </RNView>
+          
+          {!appliedCoupon ? (
+            <RNView style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                style={[styles.fieldInput, { flex: 1, backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                placeholder="ENTER CODE"
+                placeholderTextColor={colors.muted}
+                value={couponCode}
+                onChangeText={setCouponCode}
+                autoCapitalize="characters"
+              />
+              <Pressable 
+                onPress={handleApplyCoupon}
+                disabled={validatingCoupon || !couponCode}
+                style={[styles.applyBtn, { backgroundColor: colors.tint, opacity: (validatingCoupon || !couponCode) ? 0.5 : 1 }]}
+              >
+                <Text style={styles.applyBtnText}>{validatingCoupon ? '...' : 'Apply'}</Text>
+              </Pressable>
+            </RNView>
+          ) : (
+            <RNView style={[styles.couponBadge, { backgroundColor: '#22c55e15', borderColor: '#22c55e' }]}>
+              <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <CheckCircle size={16} color="#22c55e" />
+                <Text style={{ color: '#22c55e', fontWeight: '800' }}>{appliedCoupon.code} Applied</Text>
+              </RNView>
+              <Pressable onPress={() => setAppliedCoupon(null)}>
+                <Text style={{ color: colors.muted, fontWeight: '700' }}>Remove</Text>
+              </Pressable>
+            </RNView>
+          )}
+        </RNView>
+
+        {/* Participant Details — non-marathon only */}
+        {!isMarathon && (
         <RNView style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
           <RNView style={styles.formFields}>
-            {(dynamicConfig.registrationForm || [])
+            {(parsedConfig.registrationForm || parsedConfig.form_fields || [])
               .filter((field: any, index: number, self: any[]) => {
                 const label = (field.label || '').toLowerCase();
                 // Deduplicate email fields: Skip "Email ID" if "Email Address" exists
@@ -969,48 +1091,139 @@ export default function BookEventScreen() {
             )}
           </RNView>
         </RNView>
+        )}
 
-        {/* Coupon code input */}
-        <RNView style={styles.section}>
-          <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={[styles.sectionTitle, { marginBottom: 0, color: colors.text }]}>Apply Coupon</Text>
-            {availableCoupons.length > 0 && (
-              <Pressable onPress={() => setShowCouponsModal(true)}>
-                <Text style={{ color: colors.tint, fontWeight: '800', fontSize: 13 }}>View All</Text>
-              </Pressable>
-            )}
-          </RNView>
-          
-          {!appliedCoupon ? (
-            <RNView style={{ flexDirection: 'row', gap: 10 }}>
-              <TextInput
-                style={[styles.fieldInput, { flex: 1, backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-                placeholder="ENTER CODE"
-                placeholderTextColor={colors.muted}
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
-              />
-              <Pressable 
-                onPress={handleApplyCoupon}
-                disabled={validatingCoupon || !couponCode}
-                style={[styles.applyBtn, { backgroundColor: colors.tint, opacity: (validatingCoupon || !couponCode) ? 0.5 : 1 }]}
-              >
-                <Text style={styles.applyBtnText}>{validatingCoupon ? '...' : 'Apply'}</Text>
-              </Pressable>
-            </RNView>
-          ) : (
-            <RNView style={[styles.couponBadge, { backgroundColor: '#22c55e15', borderColor: '#22c55e' }]}>
-              <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <CheckCircle size={16} color="#22c55e" />
-                <Text style={{ color: '#22c55e', fontWeight: '800' }}>{appliedCoupon.code} Applied</Text>
+
+        {/* ─── MARATHON STEP 2: Identity ─── */}
+        {isMarathon && bookingStep === 2 && (
+          <RNView style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Runner Identity</Text>
+            <RNView style={styles.formFields}>
+              {[{ label: 'Full Name', key: 'fullName', keyboard: 'default' as any, cap: 'words' as any },
+                { label: 'Email Address', key: 'email', keyboard: 'email-address' as any, cap: 'none' as any },
+                { label: 'Phone Number', key: 'phone', keyboard: 'phone-pad' as any, cap: 'none' as any },
+              ].map(f => (
+                <RNView key={f.key} style={styles.fieldWrapper}>
+                  <Text style={[styles.label, { color: colors.muted }]}>{f.label} *</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                    placeholder={`Enter ${f.label.toLowerCase()}`}
+                    placeholderTextColor={colors.muted}
+                    value={formResponses[f.key] || ''}
+                    onChangeText={(v) => setFormResponses({ ...formResponses, [f.key]: v })}
+                    keyboardType={f.keyboard}
+                    autoCapitalize={f.cap}
+                  />
+                </RNView>
+              ))}
+              <RNView style={styles.fieldWrapper}>
+                <Text style={[styles.label, { color: colors.muted }]}>Date of Birth</Text>
+                <TextInput
+                  style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                  placeholder="DD/MM/YYYY"
+                  placeholderTextColor={colors.muted}
+                  value={dob}
+                  onChangeText={setDob}
+                  keyboardType="numeric"
+                />
               </RNView>
-              <Pressable onPress={() => setAppliedCoupon(null)}>
-                <Text style={{ color: colors.muted, fontWeight: '700' }}>Remove</Text>
-              </Pressable>
             </RNView>
-          )}
-        </RNView>
+          </RNView>
+        )}
+
+        {/* ─── MARATHON STEP 3: Custom Details ─── */}
+        {isMarathon && bookingStep === 3 && (
+          <RNView style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Participant Details</Text>
+            <RNView style={styles.formFields}>
+              {(dynamicConfig.form_fields || dynamicConfig.registrationForm || []).map((field: any) => (
+                <RNView key={field.id} style={styles.fieldWrapper}>
+                  <Text style={[styles.label, { color: colors.muted }]}>
+                    {field.label} {field.required ? '*' : ''}
+                  </Text>
+                  {field.type === 'select' ? (
+                    <Pressable
+                      onPress={() => setSelectionField(field)}
+                      style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: 'center' }]}
+                    >
+                      <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: formResponses[field.id] ? colors.text : colors.muted, fontSize: 15, fontWeight: '600' }}>
+                          {formResponses[field.id] || `Select ${field.label.toLowerCase()}`}
+                        </Text>
+                        <ChevronDown size={18} color={colors.muted} />
+                      </RNView>
+                    </Pressable>
+                  ) : (
+                    <TextInput
+                      style={[styles.fieldInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      placeholderTextColor={colors.muted}
+                      value={formResponses[field.id] || ''}
+                      onChangeText={(v) => setFormResponses({ ...formResponses, [field.id]: v })}
+                    />
+                  )}
+                </RNView>
+              ))}
+              {(dynamicConfig.form_fields || dynamicConfig.registrationForm || []).length === 0 && (
+                <RNView style={{ padding: 24, backgroundColor: colors.card, borderRadius: 20, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 13 }}>No additional details required</Text>
+                </RNView>
+              )}
+            </RNView>
+          </RNView>
+        )}
+
+        {/* ─── MARATHON STEP 4: Amenities ─── */}
+        {isMarathon && bookingStep === 4 && (
+          <RNView style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Race Amenities</Text>
+            <RNView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {(dynamicConfig.benefits || [
+                { benefit_name: 'Finisher Medal' }, { benefit_name: 'Technical T-Shirt' },
+                { benefit_name: 'E-Certificate' }, { benefit_name: 'Post-Run Breakfast' },
+                { benefit_name: 'Hydration Stations' }, { benefit_name: 'First Aid' },
+              ]).map((b: any, i: number) => (
+                <RNView key={i} style={{ width: '47%', padding: 16, borderRadius: 20, borderWidth: 1, alignItems: 'center', gap: 8, backgroundColor: colors.card, borderColor: colors.border }}>
+                  <RNView style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.tint + '20', alignItems: 'center', justifyContent: 'center' }}>
+                    <Star size={18} color={colors.tint} />
+                  </RNView>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: colors.text, textAlign: 'center' }}>{b.benefit_name}</Text>
+                </RNView>
+              ))}
+            </RNView>
+          </RNView>
+        )}
+
+        {/* ─── MARATHON STEP 5: Review ─── */}
+        {isMarathon && bookingStep === 5 && (
+          <RNView style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Review Registration</Text>
+            <RNView style={{ backgroundColor: colors.card, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 20, gap: 16 }}>
+              <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 }}>
+                <Text style={{ fontWeight: '900', fontSize: 14, color: colors.text }}>Runner Details</Text>
+                <Pressable onPress={() => setBookingStep(2)}>
+                  <Text style={{ color: colors.tint, fontWeight: '800', fontSize: 13 }}>Edit</Text>
+                </Pressable>
+              </RNView>
+              {[
+                { label: 'Name', value: formResponses.fullName },
+                { label: 'Email', value: formResponses.email },
+                { label: 'Phone', value: formResponses.phone },
+                { label: 'Category', value: selectedTier?.name || selectedTier?.title || selectedTier?.type },
+                { label: 'Distance', value: selectedKM ? `${selectedKM} KM` : null },
+              ].filter(r => r.value).map(r => (
+                <RNView key={r.label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>{r.label}</Text>
+                  <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{r.value}</Text>
+                </RNView>
+              ))}
+            </RNView>
+            <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, padding: 16, backgroundColor: '#22c55e15', borderRadius: 16, borderWidth: 1, borderColor: '#22c55e30' }}>
+              <ShieldCheck size={18} color="#22c55e" />
+              <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 12, flex: 1 }}>All set! Proceed to complete your registration.</Text>
+            </RNView>
+          </RNView>
+        )}
 
         {/* Coupons Modal */}
         <Modal visible={showCouponsModal} animationType="slide" transparent={true}>
@@ -1056,60 +1269,119 @@ export default function BookEventScreen() {
           </RNView>
         </Modal>
 
-        {/* Price breakdown */}
-        <RNView style={[styles.priceBreakdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.breakdownTitle, { color: colors.text }]}>Order Details</Text>
+        {(selectedTier && (!isMarathon || bookingStep >= 1)) && (
+        <RNView style={[styles.priceBreakdown, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 28, padding: 24, marginTop: 24 }]}>
+          <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={[styles.breakdownTitle, { color: colors.text, marginBottom: 0 }]}>Order Summary</Text>
+            <RNView style={{ backgroundColor: colors.tint + '10', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+              <Text style={{ fontSize: 9, fontWeight: '900', color: colors.tint }}>{quantity}X TICKETS</Text>
+            </RNView>
+          </RNView>
+
           <RNView style={styles.breakdownRow}>
-            <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-              {selectedTier?.name || 'General'} {selectedAgeGroup ? `(${selectedAgeGroup.label || `${selectedAgeGroup.minAge || selectedAgeGroup.min}-${selectedAgeGroup.maxAge || selectedAgeGroup.max} Yrs`})` : ''} × {quantity}
-            </Text>
-            <Text style={[styles.breakdownValue, { color: colors.text }]}>
-              {subtotal === 0 ? 'FREE' : `₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            <RNView style={{ flex: 1 }}>
+              <Text style={{ fontSize: 7, fontWeight: '900', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Plan / Category</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>
+                {selectedTier?.title || selectedTier?.name || 'General Admission'}
+              </Text>
+            </RNView>
+            <Text style={[styles.breakdownValue, { color: colors.text, fontSize: 14, fontWeight: '900' }]}>
+               ₹{basePrice.toLocaleString('en-IN')}
             </Text>
           </RNView>
           
-          {discountAmount > 0 && (
-            <RNView style={styles.breakdownRow}>
-              <Text style={[styles.breakdownLabel, { color: '#22c55e' }]}>
-                Coupon Discount
-              </Text>
-              <Text style={[styles.breakdownValue, { color: '#22c55e' }]}>
-                - ₹{discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            </RNView>
-          )}
+          <RNView style={{ height: 1, backgroundColor: colors.border, marginVertical: 16, opacity: 0.3 }} />
 
-          <RNView style={styles.breakdownRow}>
-            <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-              Subtotal
-            </Text>
-            <Text style={[styles.breakdownValue, { color: colors.text }]}>
-              ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {/* Detailed Breakdown */}
+          <RNView style={{ gap: 10 }}>
+            <RNView style={styles.breakdownRow}>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>Ticket Subtotal</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>₹{subtotal.toLocaleString('en-IN')}</Text>
+            </RNView>
+
+            {discountAmount > 0 && (
+              <RNView style={styles.breakdownRow}>
+                <Text style={{ fontSize: 9, fontWeight: '900', color: '#10b981', textTransform: 'uppercase' }}>Promo Discount</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#10b981' }}>- ₹{discountAmount.toLocaleString('en-IN')}</Text>
+              </RNView>
+            )}
+
+            <RNView style={styles.breakdownRow}>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>Platform Fee</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>₹{convenienceFee.toLocaleString('en-IN')}</Text>
+            </RNView>
+
+            <RNView style={styles.breakdownRow}>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>GST (18%)</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>₹{gst.toLocaleString('en-IN')}</Text>
+            </RNView>
+          </RNView>
+
+          <RNView style={{ 
+            marginTop: 16, 
+            padding: 12, 
+            backgroundColor: colors.tint + '05', 
+            borderRadius: 12, 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            gap: 8,
+            borderWidth: 1,
+            borderColor: colors.tint + '10'
+          }}>
+            <ShieldCheck size={14} color={colors.tint} />
+            <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Split Payment Enabled
             </Text>
           </RNView>
 
-          {(convenienceFee + gst) > 0 && (
-            <RNView style={styles.breakdownRow}>
-              <Text style={[styles.breakdownLabel, { color: colors.muted }]}>
-                Fees + GST
-              </Text>
-              <Text style={[styles.breakdownValue, { color: colors.text }]}>
-                ₹{(convenienceFee + gst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            </RNView>
-          )}
-          <RNView style={[styles.breakdownDivider, { backgroundColor: colors.border }]} />
+          <LinearGradient
+            colors={[colors.border, 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ height: 1, marginVertical: 20, opacity: 0.5 }}
+          />
+
           <RNView style={styles.breakdownRow}>
-            <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
-            <Text style={[styles.totalValue, { color: colors.tint }]}>
-              {total === 0 ? 'FREE' : `₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            <RNView>
+              <Text style={{ fontSize: 9, fontWeight: '900', color: colors.text, textTransform: 'uppercase', letterSpacing: 1.5 }}>Total Payable</Text>
+              <Text style={{ fontSize: 7, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' }}>Secure Transaction</Text>
+            </RNView>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: colors.tint }}>
+              ₹{total.toLocaleString('en-IN')}
             </Text>
           </RNView>
         </RNView>
+        )}
       </ScrollView>
 
-      {/* CTA */}
+      {/* CTA Footer */}
       <RNView style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        {isMarathon && bookingStep < 6 ? (
+          <Pressable
+            onPress={() => {
+              if (bookingStep === 1 && !selectedTier) {
+                Alert.alert('Select Category', 'Please select a race category first.');
+                return;
+              }
+              if (bookingStep === 5) { handleBook(); return; }
+              setBookingStep(bookingStep + 1);
+            }}
+            disabled={submitting}
+            style={({ pressed }) => [styles.bookBtn, pressed && { opacity: 0.85 }]}
+          >
+            <LinearGradient
+              colors={colors.gradient as any}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.bookBtnGradient}
+            >
+              {bookingStep === 5 ? <Ticket size={18} color="#fff" /> : <ArrowRight size={18} color="#fff" />}
+              <Text style={styles.bookBtnText}>
+                {submitting ? 'Processing...' : bookingStep === 5 ? `Pay ₹${total.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : 'Next Step'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        ) : (
         <Pressable
           onPress={handleBook}
           disabled={submitting}
@@ -1131,6 +1403,7 @@ export default function BookEventScreen() {
             </Text>
           </LinearGradient>
         </Pressable>
+        )}
       </RNView>
       {/* Custom Selection Modal */}
       <Modal

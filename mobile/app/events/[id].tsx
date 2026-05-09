@@ -128,7 +128,7 @@ export default function EventDetailScreen() {
         const { data: catData } = await supabase
           .from('marathon_categories')
           .select('*')
-          .eq('event_id', id)
+          .or(`marathon_id.eq.${data.id},event_id.eq.${data.id}`)
           .order('distance_km', { ascending: true });
         
         if (catData) {
@@ -149,9 +149,12 @@ export default function EventDetailScreen() {
   useEffect(() => {
     if (!id) return;
     
+    // Use unique channel IDs to avoid "callback after subscribe" errors during Fast Refresh
+    const uniqueId = Math.random().toString(36).substring(7);
+    
     // Listen for changes to the event itself
     const eventChannel = supabase
-      .channel(`event-sync-${id}`)
+      .channel(`event-sync-${id}-${uniqueId}`)
       .on(
         'postgres_changes',
         {
@@ -174,7 +177,7 @@ export default function EventDetailScreen() {
 
     // Listen for changes to marathon categories
     const catChannel = supabase
-      .channel(`marathon-cats-${id}`)
+      .channel(`marathon-cats-${id}-${uniqueId}`)
       .on(
         'postgres_changes',
         {
@@ -189,7 +192,7 @@ export default function EventDetailScreen() {
 
     // Listen for changes to marathon V2 details
     const v2Channel = supabase
-      .channel(`marathon-v2-${id}`)
+      .channel(`marathon-v2-${id}-${uniqueId}`)
       .on(
         'postgres_changes',
         {
@@ -269,9 +272,14 @@ export default function EventDetailScreen() {
   };
 
   const dynamicConfig = safeParse(event.dynamic_config) || {};
-  const parsedTickets = safeParse(event.tickets) || dynamicConfig.tickets || dynamicConfig.categories || [];
+  const parsedTickets = safeParse(event.tickets) || dynamicConfig.marathonCategories || dynamicConfig.marathon_categories || dynamicConfig.tickets || dynamicConfig.categories || [];
   
   const ticketTiers = Array.isArray(parsedTickets) ? parsedTickets : [];
+  
+  // Sync sponsors and benefits from dynamic_config if they are empty
+  const displaySponsors = sponsors.length > 0 ? sponsors : (dynamicConfig.sponsors || []);
+  const displayBenefits = benefits.length > 0 ? benefits : (dynamicConfig.benefits || []);
+  const displayAmenities = dynamicConfig.amenities || displayBenefits.map((b: any) => b.icon_key || b.benefit_name) || [];
   
   // Robust price calculation for dynamic events
   const getMinPrice = () => {
@@ -472,23 +480,23 @@ export default function EventDetailScreen() {
                 </Pressable>
               </RNView>
 
-              {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint || dynamicConfig.location?.routeMapUrl) && (
+              {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint || dynamicConfig.starting_point) && (
                 <RNView style={[styles.marathonDetails, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint) && (
+                  {(marathonV2?.starting_point || dynamicConfig.location?.startingPoint || dynamicConfig.starting_point) && (
                     <RNView style={styles.marathonRow}>
                       <RNView style={styles.marathonIcon}>
                         <MapPin size={16} color={colors.tint} />
                       </RNView>
                       <RNView style={{ flex: 1 }}>
                         <Text style={[styles.marathonLabel, { color: colors.muted }]}>STARTING POINT</Text>
-                        <Text style={[styles.marathonValue, { color: colors.text }]}>{marathonV2?.starting_point || dynamicConfig.location.startingPoint}</Text>
+                        <Text style={[styles.marathonValue, { color: colors.text }]}>{marathonV2?.starting_point || dynamicConfig.location?.startingPoint || dynamicConfig.starting_point}</Text>
                       </RNView>
                     </RNView>
                   )}
-                  {(marathonV2?.route_map_image || dynamicConfig.location?.routeMapUrl) && (
+                  {(marathonV2?.route_map_image || dynamicConfig.location?.routeMapUrl || dynamicConfig.route_map_image) && (
                     <Pressable 
                       onPress={() => {
-                        const url = marathonV2?.route_map_image || dynamicConfig.location.routeMapUrl;
+                        const url = marathonV2?.route_map_image || dynamicConfig.location?.routeMapUrl || dynamicConfig.route_map_image;
                         if (url) Linking.openURL(url);
                       }}
                       style={[styles.routeBtn, { backgroundColor: colors.tint + '10' }]}
@@ -503,11 +511,11 @@ export default function EventDetailScreen() {
           )}
 
           {/* Route Map Image (V2) */}
-          {marathonV2?.route_map_image && (
+          {(marathonV2?.route_map_image || dynamicConfig.route_map_image) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Route Map</Text>
               <RNView style={[styles.routeImageContainer, { borderColor: colors.border }]}>
-                <Image source={{ uri: marathonV2.route_map_image }} style={styles.routeImage} contentFit="contain" />
+                <Image source={{ uri: marathonV2?.route_map_image || dynamicConfig.route_map_image }} style={styles.routeImage} contentFit="contain" />
               </RNView>
             </RNView>
           )}
@@ -527,95 +535,90 @@ export default function EventDetailScreen() {
             </RNView>
           )}
 
-          {/* Ticket Categories & Prizes */}
+          {/* Ticket Categories - Dropdown UI */}
           {(marathonCategories.length > 0 || dynamicConfig.categories?.length > 0) && (
             <RNView style={styles.section}>
-              <RNView style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Ticket Categories</Text>
-                
-                {marathonCategories.length > 0 && (
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
-                    contentContainerStyle={styles.kmTabs}
-                  >
-                    {[...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b).map(km => (
-                      <Pressable 
-                        key={km}
-                        onPress={() => setSelectedKM(km)}
-                        style={[
-                          styles.kmTab,
-                          selectedKM === km && { backgroundColor: colors.tint, borderColor: colors.tint }
-                        ]}
-                      >
-                        <Text style={[
-                          styles.kmTabText,
-                          selectedKM === km && { color: '#fff' }
-                        ]}>{km} KM</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
-              </RNView>
-
-              {(marathonCategories.length > 0 
-                ? marathonCategories.filter(c => !selectedKM || Number(c.distance_km) === selectedKM)
-                : (dynamicConfig.categories || [])
-              ).map((cat: any, i: number) => (
-                <RNView
-                  key={cat.id || i}
-                  style={[
-                    styles.categoryCard,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Select Category</Text>
+              
+              {/* Distance Picker Dropdown */}
+              {marathonCategories.length > 0 && (
+                <Pressable
+                  onPress={() => {
+                    const kms = [...new Set(marathonCategories.map(c => Number(c.distance_km)))].sort((a, b) => a - b);
+                    Alert.alert(
+                      'Select Distance',
+                      'Choose a race category to view details',
+                      [
+                        ...kms.map(km => ({
+                          text: `${km} KM`,
+                          onPress: () => setSelectedKM(km)
+                        })),
+                        { text: 'Cancel', style: 'cancel' }
+                      ]
+                    );
+                  }}
+                  style={[styles.dropdownTrigger, { backgroundColor: colors.card, borderColor: colors.border }]}
                 >
-                  <RNView style={styles.categoryHeader}>
-                    <RNView style={{ flex: 1 }}>
-                      <Text style={[styles.categoryName, { color: colors.text }]}>{cat.title || cat.name}</Text>
-                      {cat.min_age !== undefined && (
-                        <Text style={[styles.categoryAge, { color: colors.muted }]}>
-                          Age: {cat.min_age} - {cat.max_age} Years
+                  <RNView style={styles.dropdownInner}>
+                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Activity size={18} color={colors.tint} />
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{selectedKM} KM DISTANCE</Text>
+                    </RNView>
+                    <ChevronRight size={20} color={colors.muted} style={{ transform: [{ rotate: '90deg' }] }} />
+                  </RNView>
+                </Pressable>
+              )}
+
+              <RNView style={{ marginTop: 12, gap: 12 }}>
+                {(marathonCategories.length > 0 
+                  ? marathonCategories.filter(c => !selectedKM || Number(c.distance_km) === selectedKM)
+                  : (dynamicConfig.marathonCategories || dynamicConfig.marathon_categories || dynamicConfig.categories || [])
+                ).map((cat: any, i: number) => (
+                  <RNView
+                    key={cat.id || i}
+                    style={[
+                      styles.categoryCardV3,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                  >
+                    <RNView style={styles.catV3Main}>
+                      <RNView style={{ flex: 1 }}>
+                        <Text style={[styles.catV3Label, { color: colors.muted }]}>CATEGORY</Text>
+                        <Text style={[styles.catV3Name, { color: colors.text }]}>{cat.category_name || cat.title || cat.name}</Text>
+                        <Text style={[styles.catV3Age, { color: colors.tint }]}>
+                          {cat.age_group || (cat.min_age !== undefined ? `${cat.min_age}-${cat.max_age} Yrs` : 'All Ages')}
                         </Text>
-                      )}
-                    </RNView>
-                    <Text style={[styles.categoryPrice, { color: colors.tint }]}>
-                      {(() => {
-                        if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
-                        const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
-                        if (Array.isArray(rawRates) && rawRates.length > 0) {
-                          const prices = rawRates.map((r: any) => Number(r.price || 0));
-                          const min = Math.min(...prices);
-                          const max = Math.max(...prices);
-                          return min === max ? `₹${min}` : `₹${min} - ₹${max}`;
-                        }
-                        return `₹${cat.price || 0}`;
-                      })()}
-                    </Text>
-                  </RNView>
-                  
-                  {cat.prizes?.length > 0 && (
-                    <RNView style={styles.prizeList}>
-                      {cat.prizes.map((p: any, pi: number) => (
-                        <RNView key={pi} style={styles.prizeRow}>
-                          <Text style={[styles.prizeLabel, { color: colors.muted }]}>{p.label}</Text>
-                          <Text style={[styles.prizeValue, { color: colors.text }]}>{p.value}</Text>
-                        </RNView>
-                      ))}
-                    </RNView>
-                  )}
-                  
-                  <RNView style={styles.categoryFooter}>
-                    <Text style={[styles.categorySlots, { color: colors.muted }]}>
-                      {(cat.slots !== undefined ? cat.slots : cat.totalSlots) || 0} SLOTS AVAILABLE
-                    </Text>
-                    {cat.distance_km && (
-                      <RNView style={[styles.kmBadge, { backgroundColor: colors.tint + '15' }]}>
-                        <Text style={[styles.kmBadgeText, { color: colors.tint }]}>{cat.distance_km} KM</Text>
                       </RNView>
-                    )}
+                      <RNView style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.catV3Price, { color: colors.text }]}>
+                          {(() => {
+                            if (cat.price !== undefined) return Number(cat.price) === 0 ? 'FREE' : `₹${cat.price}`;
+                            const rawRates = cat.ageRates || cat.agePricing || cat.age_rates || cat.age_pricing || [];
+                            if (Array.isArray(rawRates) && rawRates.length > 0) {
+                              const prices = rawRates.map((r: any) => Number(r.price || 0));
+                              return `₹${Math.min(...prices)}+`;
+                            }
+                            return `₹${cat.price || 0}`;
+                          })()}
+                        </Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' }}>PER RUNNER</Text>
+                      </RNView>
+                    </RNView>
+                    
+                    <RNView style={[styles.catV3Footer, { borderTopColor: colors.border + '50' }]}>
+                       <Text style={{ fontSize: 10, fontWeight: '800', color: colors.muted }}>
+                         {(cat.slots_total || cat.total_slots || cat.slots || 0)} SLOTS AVAILABLE
+                       </Text>
+                       <Pressable 
+                        onPress={handleBook}
+                        style={[styles.catV3Action, { backgroundColor: colors.tint }]}
+                       >
+                         <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>SELECT</Text>
+                       </Pressable>
+                    </RNView>
                   </RNView>
-                </RNView>
-              ))}
+                ))}
+              </RNView>
             </RNView>
           )}
 
@@ -639,21 +642,26 @@ export default function EventDetailScreen() {
           )}
 
           {/* Sponsors Section (V2) */}
-          {sponsors.length > 0 && (
+          {displaySponsors.length > 0 && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Partners</Text>
               <RNView style={styles.sponsorsContainer}>
-                {['Title', 'Powered By', 'Associate', 'Partner', 'Media', 'Hydration'].map(type => {
-                  const filtered = sponsors.filter(s => s.sponsor_type === type);
+                {['Title', 'Powered By', 'Associate', 'Partner', 'Media', 'Hydration', 'Sponsor', 'Co-Sponsor'].map(type => {
+                  const filtered = displaySponsors.filter((s: any) => s.sponsor_type === type || s.type === type);
                   if (filtered.length === 0) return null;
                   return (
                     <RNView key={type} style={styles.sponsorGroup}>
                       <Text style={[styles.sponsorTypeLabel, { color: colors.muted }]}>{type.toUpperCase()}</Text>
                       <RNView style={styles.sponsorLogos}>
-                        {filtered.map(s => (
-                          <RNView key={s.id} style={styles.sponsorLogoCard}>
-                            <Image source={{ uri: s.logo_url }} style={styles.sponsorLogo} contentFit="contain" />
-                            <Text style={[styles.sponsorName, { color: colors.text }]} numberOfLines={1}>{s.sponsor_name}</Text>
+                        {filtered.map((s: any) => (
+                          <RNView key={s.id || s.sponsor_name} style={styles.sponsorLogoCard}>
+                            <Image 
+                              source={{ uri: s.logo_url || s.logo || s.image_url }} 
+                              style={styles.sponsorLogo} 
+                              contentFit="contain" 
+                              cachePolicy="memory-disk"
+                            />
+                            <Text style={[styles.sponsorName, { color: colors.text }]} numberOfLines={1}>{s.sponsor_name || s.name}</Text>
                           </RNView>
                         ))}
                       </RNView>
@@ -665,20 +673,24 @@ export default function EventDetailScreen() {
           )}
 
           {/* Amenities Grid (Legacy) */}
-          {(dynamicConfig.amenities?.length > 0 && benefits.length === 0) && (
+          {(displayAmenities.length > 0) && (
             <RNView style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Amenities</Text>
               <RNView style={styles.amenitiesGrid}>
-                {dynamicConfig.amenities.map((item: string, i: number) => (
-                  <RNView key={i} style={styles.amenityItem}>
-                    <RNView style={[styles.amenityIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      <AmenityIcon name={item} color={colors.tint} />
+                {displayAmenities.map((item: any, i: number) => {
+                  const label = typeof item === 'string' ? item : (item.benefit_name || item.label || 'Amenity');
+                  const iconKey = typeof item === 'string' ? item : (item.icon_key || item.icon || 'Star');
+                  return (
+                    <RNView key={i} style={styles.amenityItem}>
+                      <RNView style={[styles.amenityIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <AmenityIcon name={iconKey} color={colors.tint} />
+                      </RNView>
+                      <Text style={[styles.amenityLabel, { color: colors.muted }]} numberOfLines={1}>
+                        {label}
+                      </Text>
                     </RNView>
-                    <Text style={[styles.amenityLabel, { color: colors.muted }]} numberOfLines={1}>
-                      {item}
-                    </Text>
-                  </RNView>
-                ))}
+                  );
+                })}
               </RNView>
             </RNView>
           )}
@@ -889,9 +901,62 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, fontWeight: '500', lineHeight: 22 },
   categoryCard: { borderRadius: 20, borderWidth: 1, padding: 16, marginBottom: 12 },
   categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  categoryName: { fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
-  categoryAge: { fontSize: 11, fontWeight: '700', marginTop: 2 },
-  categoryPrice: { fontSize: 18, fontWeight: '900' },
+  categoryCardV3: {
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  catV3Main: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  catV3Label: {
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  catV3Name: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  catV3Age: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  catV3Price: {
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  catV3Footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  catV3Action: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  dropdownTrigger: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 8,
+  },
+  dropdownInner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   prizeList: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', gap: 8 },
   prizeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   prizeLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },

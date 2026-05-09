@@ -51,7 +51,7 @@ class OrganiserErrorBoundary extends Component {
 import {
     LayoutDashboard, Settings, Video, Image as ImageIcon, Sparkles,
     CheckCircle, Ticket, Users, Menu, Bell, Save, X, Plus, Minus, Trash2,
-    Mail, Lock, Code, Globe, Shield, Wallet, Upload,
+    Mail, Lock, Code, Globe, Shield, Wallet,
     ArrowRight, FileText, Calendar, Clock, MapPin, Building, Grid, Tag,
     CloudUpload, ChevronDown, ChevronRight, ChevronLeft, Monitor, ArrowLeftRight, Home, LogOut, Camera, AlertCircle, QrCode, BarChart3, Search, XCircle, UserCheck, Check, ExternalLink, ArrowLeft, LifeBuoy,
     Briefcase, Package, DollarSign, Activity, TrendingUp, PieChart, BarChart, Info, Share, ShieldCheck, Zap, FileCheck2, Armchair, CheckCircle2, Landmark, Languages, Navigation, UserPlus, Trophy, Goal, Timer, Dribbble, Target
@@ -536,6 +536,12 @@ function OrganiserPanel() {
             const ev = eventsData.find(e => String(e.id) === String(editId));
             if (ev) {
                 console.log("OrganiserPanel: Found event to edit:", ev.title);
+                if (ev.type === 'Marathon') {
+                    // Route marathon events to the dedicated marathon form
+                    setEditingMarathonId(ev.id);
+                    setEditingEvent(ev);
+                    setActiveTab("marathon_publish");
+                } else {
                 setEditingEvent(ev);
                 setPostEvent({
                     ...getInitialPostEvent(),
@@ -552,6 +558,7 @@ function OrganiserPanel() {
                 });
                 setActiveTab("post_event");
                 setAddEventStep("form");
+                }
             } else {
                 console.warn("OrganiserPanel: editId present but event not found in current dataset.");
             }
@@ -883,6 +890,7 @@ function OrganiserPanel() {
 
     // Editing state must be declared before effects that reference it
     const [editingEvent, setEditingEvent] = useState(null);
+    const [editingMarathonId, setEditingMarathonId] = useState(null);
 
     // Multiple write operation: queue of { key, value }; process one at a time to avoid concurrent writes
     const scheduleWrite = useCallback((key, value) => {
@@ -2895,8 +2903,15 @@ function OrganiserPanel() {
                 case "marathon_publish":
                     return (
                         <MarathonEventForm 
-                            onCancel={() => setActiveTab("dashboard")} 
+                            marathonId={editingMarathonId}
+                            onCancel={() => {
+                                setEditingMarathonId(null);
+                                setEditingEvent(null);
+                                setActiveTab("dashboard");
+                            }} 
                             onPublish={() => {
+                                setEditingMarathonId(null);
+                                setEditingEvent(null);
                                 refreshEvents();
                                 setActiveTab("manage_events");
                             }}
@@ -3187,8 +3202,14 @@ function OrganiserPanel() {
                                                                                     bannerPreview: ev.banner_preview || ev.bannerPreview || ev.img,
                                                                                     image_url: ev.banner_preview || ev.bannerPreview || ev.img, // Used by Sports/Universal forms
                                                                                 });
+                                                                                if (ev.type === 'Marathon') {
+                                                                                    setEditingMarathonId(ev.id);
+                                                                                    setEditingEvent(ev);
+                                                                                    setActiveTab("marathon_publish");
+                                                                                } else {
                                                                                 setAddEventStep("form");
                                                                                 setActiveTab("post_event");
+                                                                                }
                                                                             }} style={{ border: `1px solid ${t.border}`, background: t.cardBg, color: "#3b82f6", padding: "8px", borderRadius: "8px", cursor: "pointer" }}>
                                                                                 <Settings size={16} />
                                                                             </button>
@@ -4904,7 +4925,7 @@ function OrganiserPanel() {
                                             <div style={{ gridColumn: "span 2" }}>
                                                 <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: t.textMain, marginBottom: "12px" }}>Attachment</label>
                                                 <div style={{ padding: "32px", border: `2px dashed ${t.border}`, borderRadius: "12px", textAlign: "center", cursor: "pointer", position: "relative" }}>
-                                                    <Upload size={32} style={{ color: t.textSub, marginBottom: "12px" }} />
+                                                    <CloudUpload size={32} style={{ color: t.textSub, marginBottom: "12px" }} />
                                                     <p style={{ margin: 0, fontSize: "14px", color: t.textMain, fontWeight: 600 }}>Click to upload or drag & drop</p>
                                                     <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.textSub }}>Upload only ZIP Files, Max File Size is 20 MB</p>
                                                     <input type="file" accept=".zip" style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }} onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; setSupportTicketForm(prev => ({ ...prev, attachmentFileName: f.name })); }} />
